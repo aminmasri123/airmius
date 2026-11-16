@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountRoleApplicationController;
 use App\Http\Controllers\AdminClubController;
+use App\Http\Controllers\AdminClubWorkspaceController;
 use App\Http\Controllers\Api\V1\AccountDeletionController as MobileAccountDeletionController;
 use App\Http\Controllers\Api\V1\AccountSecurityController;
 use App\Http\Controllers\Api\V1\AdminBackofficeController;
@@ -105,6 +106,7 @@ use App\Http\Controllers\Api\V1\UserBadgeController as MobileUserBadgeController
 use App\Http\Controllers\Api\V1\UserSocialProfileController;
 use App\Http\Controllers\Api\V1\WorkAutomationJobController;
 use App\Http\Controllers\ClubDeletionController;
+use App\Http\Controllers\ClubMemberRemovalController;
 use App\Http\Controllers\ClubMemberTimelineController;
 use App\Http\Controllers\CommerceCheckoutController as MobileCommerceCheckoutController;
 use App\Http\Controllers\ContentReportController;
@@ -122,10 +124,16 @@ use App\Http\Controllers\PublicClubController;
 use App\Http\Controllers\PublicCommerceCatalogController;
 use App\Http\Controllers\PublicLearningController as MobilePublicLearningController;
 use App\Http\Controllers\PublicMarketplaceController;
+use App\Http\Controllers\RideLocationController;
+use App\Http\Controllers\RoleAssignmentController;
 use App\Http\Controllers\SavedViewController;
+use App\Http\Controllers\SponsorInquiryController;
 use App\Http\Controllers\SponsorTeamController;
 use App\Http\Controllers\TrainerCockpitController as MobileTrainerCockpitController;
+use App\Http\Controllers\TrainerResignationController;
+use App\Http\Controllers\TrainingAiGenerationController;
 use App\Http\Controllers\TrainingController as MobileTrainingAiController;
+use App\Http\Controllers\TrainingPlanEvaluationController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureApiProcessingPurpose;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
@@ -295,9 +303,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         });
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('/role-applications', [AccountRoleApplicationController::class, 'index'])->name('role-applications.index');
-        Route::get('/trainer-resignation', [\App\Http\Controllers\TrainerResignationController::class, 'index'])->name('trainer-resignation.index');
-    Route::post('/trainer-resignation', [\App\Http\Controllers\TrainerResignationController::class, 'store'])->name('trainer-resignation.store');
-    Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('role-applications.store');
+        Route::get('/trainer-resignation', [TrainerResignationController::class, 'index'])->name('trainer-resignation.index');
+        Route::post('/trainer-resignation', [TrainerResignationController::class, 'store'])->name('trainer-resignation.store');
+        Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('role-applications.store');
         Route::delete('/role-applications/{application}', [AccountRoleApplicationController::class, 'withdraw'])->name('role-applications.withdraw');
         Route::post('/me/email/verification-notification', [MobileEmailVerificationController::class, 'send'])
             ->middleware('throttle:6,1')
@@ -554,10 +562,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/editorial/categories/{blogCategory}', [EditorialController::class, 'updateCategory'])->name('editorial.categories.update');
         Route::delete('/editorial/categories/{blogCategory}', [EditorialController::class, 'destroyCategory'])->name('editorial.categories.destroy');
         Route::get('/sponsor-management', [SponsorManagementController::class, 'index'])->name('sponsor-management.index');
-        Route::get('/sponsor-inquiries', [\App\Http\Controllers\SponsorInquiryController::class, 'index'])->name('sponsor-inquiries.index');
-        Route::post('/sponsor-inquiries', [\App\Http\Controllers\SponsorInquiryController::class, 'store'])->middleware('throttle:10,1')->name('sponsor-inquiries.store');
-        Route::post('/sponsor-inquiries/{inquiry}/respond', [\App\Http\Controllers\SponsorInquiryController::class, 'respond'])->name('sponsor-inquiries.respond');
-        Route::delete('/sponsor-inquiries/{inquiry}', [\App\Http\Controllers\SponsorInquiryController::class, 'withdraw'])->name('sponsor-inquiries.withdraw');
+        Route::get('/sponsor-inquiries', [SponsorInquiryController::class, 'index'])->name('sponsor-inquiries.index');
+        Route::post('/sponsor-inquiries', [SponsorInquiryController::class, 'store'])->middleware('throttle:10,1')->name('sponsor-inquiries.store');
+        Route::post('/sponsor-inquiries/{inquiry}/respond', [SponsorInquiryController::class, 'respond'])->name('sponsor-inquiries.respond');
+        Route::delete('/sponsor-inquiries/{inquiry}', [SponsorInquiryController::class, 'withdraw'])->name('sponsor-inquiries.withdraw');
         Route::post('/sponsor-management', [SponsorManagementController::class, 'store'])->name('sponsor-management.store');
         Route::put('/sponsor-management/{sponsor}', [SponsorManagementController::class, 'update'])->name('sponsor-management.update');
         Route::post('/sponsor-management/{sponsor}/review', [SponsorManagementController::class, 'review'])->name('sponsor-management.review');
@@ -568,7 +576,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/sponsor-management/{sponsor}/deliverables', [SponsorDeliverableManagementController::class, 'store'])->name('sponsor-management.deliverables.store');
         Route::put('/sponsor-management/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'update'])->name('sponsor-management.deliverables.update');
         Route::delete('/sponsor-management/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'destroy'])->name('sponsor-management.deliverables.destroy');
-        Route::get('/rides/locations', \App\Http\Controllers\RideLocationController::class)->middleware('throttle:ride-geocoding')->name('rides.locations');
+        Route::get('/rides/locations', RideLocationController::class)->middleware('throttle:ride-geocoding')->name('rides.locations');
         Route::get('/rides', [MobileRideController::class, 'index'])->name('rides.index');
         Route::post('/rides', [MobileRideController::class, 'store'])->name('rides.store');
         Route::put('/rides/{ride}', [MobileRideController::class, 'update'])->name('rides.update');
@@ -598,6 +606,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/reports/{report}/appeal', [ContentReportController::class, 'appeal'])->middleware('throttle:content-reports')->name('reports.appeal');
         Route::post('/support/contact', [MobileContactController::class, 'store'])->middleware('throttle:content-reports')->name('support.contact.store');
         Route::get('/support/tickets', [SupportTicketController::class, 'index'])->name('support.tickets.index');
+        Route::patch('/support/inbox-preferences', [SupportTicketController::class, 'updateInboxPreferences'])->name('support.inbox-preferences.update');
         Route::post('/support/tickets', [SupportTicketController::class, 'store'])->middleware('throttle:content-reports')->name('support.tickets.store');
         Route::get('/support/tickets/{supportTicket}', [SupportTicketController::class, 'show'])->name('support.tickets.show');
         Route::post('/support/tickets/{supportTicket}/messages', [SupportTicketController::class, 'storeMessage'])->middleware('throttle:content-comments')->name('support.tickets.messages.store');
@@ -869,9 +878,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/club-external-invitations/{token}/decline', [ClubController::class, 'declineExternalInvitation'])->name('club-external-invitations.decline');
         Route::post('/clubs/{club}/leave', [ClubController::class, 'leaveClub'])->name('clubs.leave');
         Route::post('/clubs/{club}/removal-objections', [ClubController::class, 'objectToRemoval'])->name('clubs.removal-objections.store');
-        Route::get('/member-removals/{removal}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'show']);
-        Route::match(['get', 'post'], '/member-removal-notifications/{notification}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'legacy']);
-        Route::post('/member-removals/{removal}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'respond']);
+        Route::get('/member-removals/{removal}', [ClubMemberRemovalController::class, 'show']);
+        Route::match(['get', 'post'], '/member-removal-notifications/{notification}', [ClubMemberRemovalController::class, 'legacy']);
+        Route::post('/member-removals/{removal}', [ClubMemberRemovalController::class, 'respond']);
         Route::post('/clubs/{club}/pause-requests', [ClubController::class, 'storePauseRequest'])->name('clubs.pause-requests.store');
         Route::post('/clubs/{club}/membership-change-requests', [ClubController::class, 'requestMembershipChange'])->name('clubs.membership-change-requests.store');
         Route::post('/clubs/{club}/termination-requests', [ClubController::class, 'requestMembershipTermination'])->name('clubs.termination-requests.store');
@@ -1134,7 +1143,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('/training/plans/{trainingPlan}/items/{trainingPlanItem}/duplicate', [TrainingController::class, 'duplicatePlanItem'])->name('training.plans.items.duplicate');
             Route::post('/training/plans/{trainingPlan}/items/{trainingPlanItem}/missed', [TrainingController::class, 'markPlanItemMissed'])->name('training.plans.items.missed');
             Route::post('/training/ai/plans/preview', [MobileTrainingAiController::class, 'previewAiTrainingPlan'])->name('training.ai.plans.preview');
-            Route::get('/training/ai/generations/{generation?}', [\App\Http\Controllers\TrainingAiGenerationController::class, 'show'])->name('training.ai.generations.show');
+            Route::get('/training/ai/generations/{generation?}', [TrainingAiGenerationController::class, 'show'])->name('training.ai.generations.show');
             Route::post('/training/ai/plans', [MobileTrainingAiController::class, 'storeAiTrainingPlan'])->name('training.ai.plans.store');
             Route::get('/training/logs', [TrainingController::class, 'logs'])->name('training.logs.index');
             Route::post('/training/logs', [TrainingController::class, 'storeLog'])->name('training.logs.store');
@@ -1161,9 +1170,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->where('slash', '/?')
             ->middleware('rollout:coach_daily_control')
             ->name('trainer-cockpit.index');
-        Route::get('/trainer-cockpit/plan-evaluation', [\App\Http\Controllers\TrainingPlanEvaluationController::class, 'index'])
+        Route::get('/trainer-cockpit/plan-evaluation', [TrainingPlanEvaluationController::class, 'index'])
             ->middleware('rollout:coach_daily_control')->name('trainer-cockpit.plan-evaluation');
-        Route::post('/trainer-cockpit/plan-evaluation/logs/{trainingLog}/feedback', [\App\Http\Controllers\TrainingPlanEvaluationController::class, 'feedback'])
+        Route::post('/trainer-cockpit/plan-evaluation/logs/{trainingLog}/feedback', [TrainingPlanEvaluationController::class, 'feedback'])
             ->middleware(['rollout:coach_daily_control', 'throttle:content-comments'])->name('trainer-cockpit.plan-evaluation.feedback');
         Route::post('/trainer-cockpit/logs/{trainingLog}/feedback', [TrainingFeedbackController::class, 'store'])
             ->middleware(['throttle:content-comments', 'rollout:coach_daily_control'])
@@ -1264,6 +1273,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('/admin/mail/deliveries/{mailDelivery}/resend', [AdminMailController::class, 'resend'])->name('admin.mail.deliveries.resend');
             Route::put('/admin/mail/deliveries/{mailDelivery}/resolve', [AdminMailController::class, 'resolve'])->name('admin.mail.deliveries.resolve');
             Route::get('/admin/support/tickets', [SupportTicketController::class, 'adminIndex'])->name('admin.support.tickets.index');
+            Route::post('/admin/support/safety-operators', [SupportTicketController::class, 'assignSafetyOperator'])->name('admin.support.safety-operators.store');
             Route::patch('/admin/support/tickets/{supportTicket}', [SupportTicketController::class, 'adminUpdate'])->name('admin.support.tickets.update');
             Route::post('/admin/clubs/{club}/deletion-finance-review', [ClubDeletionController::class, 'decideReview'])->middleware('throttle:3,1')->name('admin.clubs.deletion-finance-review');
             Route::get('/admin/clubs/{club}/deletion-finance-review', [ClubDeletionController::class, 'reviewStatus'])->name('admin.clubs.deletion-finance-review.show');
@@ -1302,8 +1312,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::patch('/admin/backoffice/contracts/{operatingContract}', [AdminBackofficeController::class, 'updateContract'])->name('admin.backoffice.contracts.update');
             Route::delete('/admin/backoffice/contracts/{operatingContract}', [AdminBackofficeController::class, 'destroyContract'])->name('admin.backoffice.contracts.destroy');
             Route::get('/admin/platform', [PlatformAdminController::class, 'dashboard'])->name('admin.platform.dashboard');
-            Route::get('/admin/platform/role-assignments', [\App\Http\Controllers\RoleAssignmentController::class, 'index'])->name('admin.platform.role-assignments.index');
-            Route::patch('/admin/platform/role-assignments/{user}', [\App\Http\Controllers\RoleAssignmentController::class, 'update'])->name('admin.platform.role-assignments.update');
+            Route::get('/admin/platform/role-assignments', [RoleAssignmentController::class, 'index'])->name('admin.platform.role-assignments.index');
+            Route::patch('/admin/platform/role-assignments/{user}', [RoleAssignmentController::class, 'update'])->name('admin.platform.role-assignments.update');
             Route::get('/admin/media-guidelines', [MediaGuidelineController::class, 'index'])->name('admin.media-guidelines');
             Route::post('/admin/media-guidelines/visuals', [MediaGuidelineController::class, 'updateVisuals'])->middleware('throttle:file-uploads')->name('admin.media-guidelines.visuals');
             Route::get('/admin/members', [MemberController::class, 'index'])->middleware('can:users.view')->name('admin.members.index');
@@ -1311,8 +1321,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('/admin/members/{user}', [MemberController::class, 'edit'])->middleware('can:users.edit')->name('admin.members.edit');
             Route::put('/admin/members/{user}', [MemberController::class, 'update'])->middleware('can:users.edit')->name('admin.members.update');
             Route::delete('/admin/members/{user}', [MemberController::class, 'destroy'])->middleware('can:users.delete')->name('admin.members.destroy');
-            Route::get('/admin/clubs/{club}', [\App\Http\Controllers\AdminClubWorkspaceController::class, 'show'])->middleware('can:system.manage')->name('admin.clubs.show');
-            Route::patch('/admin/clubs/{club}', [\App\Http\Controllers\AdminClubWorkspaceController::class, 'update'])->middleware('can:system.manage')->name('admin.clubs.update');
+            Route::get('/admin/clubs/{club}', [AdminClubWorkspaceController::class, 'show'])->middleware('can:system.manage')->name('admin.clubs.show');
+            Route::patch('/admin/clubs/{club}', [AdminClubWorkspaceController::class, 'update'])->middleware('can:system.manage')->name('admin.clubs.update');
             Route::get('/admin/clubs', [AdminClubController::class, 'index'])->middleware('can:system.manage')->name('admin.clubs.index');
             Route::delete('/admin/clubs/{club}', [AdminClubController::class, 'destroy'])->middleware('can:system.manage')->name('admin.clubs.destroy');
             Route::get('/admin/operations', [AdminInsightsController::class, 'operations'])->middleware('rollout:admin_operations')->name('admin.operations');

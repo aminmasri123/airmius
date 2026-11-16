@@ -1,6 +1,22 @@
 <?php
 
 return [
+    'inbox' => [
+        'safety_user' => 'Schutzbeauftragtes Konto (E-Mail)',
+        'grant_safety' => 'Schutzrolle zuweisen',
+        'safety_granted' => 'Schutzrolle zugewiesen.',
+        'assignee' => 'Bearbeiter',
+        'unassigned' => 'Nicht zugewiesen',
+        'new_title' => 'Neue Supportanfrage',
+        'assigned_title' => 'Support-Ticket zugewiesen',
+        'notification_body' => 'Ein Vorgang wartet im geschützten Supporteingang auf dich.',
+        'general' => 'Allgemeiner Support',
+        'safety' => 'Sicherheit & Schutz',
+        'admin_alerts' => 'Neue Supportanfragen als Admin melden',
+        'admin_alerts_hint' => 'Zusätzliche Eingangsmeldungen für dein Administratorkonto. Zugewiesene Vorgänge bleiben davon unberührt.',
+        'assign_me' => 'Mir zuweisen',
+        'saved' => 'Einstellungen gespeichert',
+    ],
     'responses' => [
         'created' => 'Support-Ticket erstellt.',
         'updated' => 'Support-Ticket aktualisiert.',

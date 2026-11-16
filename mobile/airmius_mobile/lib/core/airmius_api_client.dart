@@ -4291,11 +4291,13 @@ class AirmiusApiClient {
   Future<AirmiusJson> adminSupportTickets({
     String? status,
     String? priority,
+    String inbox = 'general',
     bool overdue = false,
   }) => _json(
     'GET',
     '/api/v1/admin/support/tickets',
     query: {
+      'inbox': inbox,
       if (status != null && status.isNotEmpty) 'status': status,
       if (priority != null && priority.isNotEmpty) 'priority': priority,
       if (overdue) 'overdue': '1',
@@ -4306,6 +4308,12 @@ class AirmiusApiClient {
     int ticketId,
     AirmiusJson body,
   ) => _json('PATCH', '/api/v1/admin/support/tickets/$ticketId', body: body);
+
+  Future<AirmiusJson> updateSupportInboxPreferences(bool enabled) => _json(
+    'PATCH',
+    '/api/v1/support/inbox-preferences',
+    body: {'support_admin_alerts': enabled},
+  );
 
   Future<AirmiusJson> sendPublicContact(AirmiusJson body) =>
       _json('POST', '/api/v1/public/contact', body: body);

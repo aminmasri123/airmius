@@ -309,6 +309,10 @@ Route::get('/blog/rss.xml', PublicBlogFeedController::class)
     ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
     ->name('guest.blog.rss');
 
+Route::get('/rss.xml', PublicBlogFeedController::class)
+    ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
+    ->name('guest.blog.rss.alias');
+
 Route::get('/top-inhalte', fn () => Inertia::render('Guest/Top-Inhalte', [
     'canLogin' => Route::has('login'),
     'canRegister' => Route::has('register'),

@@ -348,8 +348,9 @@ class SupportTicketApiTest extends TestCase
             ->assertJsonCount(0, 'data');
 
         $support = $this->supportActor($club, $owner, 'safety_support_viewer', [ClubPermissions::SUPPORT_VIEW]);
+        $support->givePermissionTo('support.safety');
         Sanctum::actingAs($support);
-        $this->getJson('/api/v1/admin/support/tickets?category=safety')
+        $this->getJson('/api/v1/admin/support/tickets?inbox=safety&category=safety')
             ->assertOk()
             ->assertJsonPath('data.tickets.0.id', $ticketId)
             ->assertJsonPath('data.tickets.0.requester.name', 'Vertrauensperson')
@@ -651,7 +652,7 @@ class SupportTicketApiTest extends TestCase
 
     public function test_confidential_safety_report_migration_is_reversible(): void
     {
-        $migration = require database_path('migrations/2026_09_26_000020_add_confidential_safety_fields_to_support_tickets.php');
+        $migration = require database_path('migrations/2026_09_26_000065_add_confidential_safety_fields_to_support_tickets.php');
 
         $migration->down();
         $this->assertFalse(Schema::hasColumn('support_tickets', 'is_confidential'));
@@ -677,6 +678,8 @@ class SupportTicketApiTest extends TestCase
         ]);
         $caseLead = $this->supportActor($club, $owner, 'case_lead', [ClubPermissions::SUPPORT_EDIT, ClubPermissions::SUPPORT_ASSIGN]);
         $conflicted = $this->supportActor($club, $owner, 'conflicted_case_worker', [ClubPermissions::SUPPORT_EDIT]);
+        $caseLead->givePermissionTo('support.safety');
+        $conflicted->givePermissionTo('support.safety');
 
         Sanctum::actingAs($requester);
         $ticketId = $this->postJson('/api/v1/safety/reports', [
@@ -714,7 +717,7 @@ class SupportTicketApiTest extends TestCase
         $this->patchJson("/api/v1/admin/support/tickets/{$ticketId}", [
             'assigned_to' => $conflicted->id,
             'conflict_user_ids' => [$conflicted->id],
-        ])->assertUnprocessable();
+        ])->assertForbidden();
 
         $audits = SupportTicketConfidentialAudit::query()
             ->where('support_ticket_id', $ticketId)

@@ -17,6 +17,7 @@ use App\Models\Message;
 use App\Models\Notification;
 use App\Models\Post;
 use App\Models\Ride;
+use App\Models\SupportTicket;
 use App\Models\Team;
 use App\Models\TrainingLog;
 use App\Models\User;
@@ -25,6 +26,7 @@ use App\Notifications\LoginLockoutNotification;
 use App\Notifications\LoginSuccessfulNotification;
 use App\Observers\CommerceOrderObserver;
 use App\Observers\LearningEnrollmentObserver;
+use App\Observers\SupportTicketObserver;
 use App\Observers\TrainingLogObserver;
 use App\Policies\ClubPolicy;
 use App\Policies\CommentPolicy;
@@ -41,9 +43,11 @@ use App\Policies\TeamPolicy;
 use App\Policies\UserPolicy;
 use App\Policies\UserSubscriptionPolicy;
 use App\Support\Performance\RequestPerformanceTracker;
+use App\Support\ProgressiveLoginLockout;
 use App\Support\Roles;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
@@ -96,6 +100,7 @@ class AppServiceProvider extends ServiceProvider
         }
 
         CommerceOrder::observe(CommerceOrderObserver::class);
+        SupportTicket::observe(SupportTicketObserver::class);
         LearningEnrollment::observe(LearningEnrollmentObserver::class);
         TrainingLog::observe(TrainingLogObserver::class);
 
@@ -106,19 +111,20 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::before(function (User $user, string $ability, array $arguments = []) {
             $file = $arguments[0] ?? null;
-            if ($file instanceof \App\Models\File && $file->posts()->where('visibility', 'private')->where('user_id', '!=', $user->id)->exists()) {
+            if ($file instanceof File && $file->posts()->where('visibility', 'private')->where('user_id', '!=', $user->id)->exists()) {
                 return false;
             }
-            if ($file instanceof \App\Models\File && $file->posts()->where('visibility', 'friends')->get()->contains(fn ($post) => ! $user->can('view', $post))) {
+            if ($file instanceof File && $file->posts()->where('visibility', 'friends')->get()->contains(fn ($post) => ! $user->can('view', $post))) {
                 return false;
             }
             $post = $arguments[0] ?? null;
-            if ($post instanceof \App\Models\Post && $post->visibility === 'private' && $post->user_id !== $user->id) {
+            if ($post instanceof Post && $post->visibility === 'private' && $post->user_id !== $user->id) {
                 return false;
             }
-            if ($post instanceof \App\Models\Post && $post->visibility === 'friends' && $post->user_id !== $user->id && ! $user->isFriendsWith($post->user)) {
+            if ($post instanceof Post && $post->visibility === 'friends' && $post->user_id !== $user->id && ! $user->isFriendsWith($post->user)) {
                 return false;
             }
+
             return $user->hasAnyRole(Roles::FULL_ACCESS) ? true : null;
         });
 
@@ -277,7 +283,7 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
-            $lockout = app(\App\Support\ProgressiveLoginLockout::class);
+            $lockout = app(ProgressiveLoginLockout::class);
             if ($lockout->recordFailure($email) && $event->user instanceof User) {
                 try {
                     $event->user->notify(new LoginLockoutNotification(
@@ -292,8 +298,8 @@ class AppServiceProvider extends ServiceProvider
             $lockout->ensureAllowed($email);
         });
 
-        EventFacade::listen(\Illuminate\Auth\Events\PasswordReset::class, function ($event): void {
-            app(\App\Support\ProgressiveLoginLockout::class)->reset($event->user->email);
+        EventFacade::listen(PasswordReset::class, function ($event): void {
+            app(ProgressiveLoginLockout::class)->reset($event->user->email);
         });
 
         Inertia::share([

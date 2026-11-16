@@ -159,6 +159,7 @@ class RolesPermissionsSeeder extends Seeder
             // COMMUNITY
             ['name' => 'community.moderate', 'description' => 'Community moderieren'],
             ['name' => 'support.tickets', 'description' => 'Support Tickets bearbeiten'],
+            ['name' => 'support.safety', 'description' => 'Vertrauliche Schutzfälle bearbeiten'],
 
             // EVENTS
             ['name' => 'events.manage', 'description' => 'Events verwalten'],
@@ -190,6 +191,7 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'platform_engineer', 'description' => 'Technischer Betrieb ohne standardmäßigen Zugriff auf Produktiv-Personendaten'],
             ['name' => 'security_admin', 'description' => 'Sicherheitsbetrieb und Incident Response ohne Commerce- oder Inhaltsrechte'],
             ['name' => 'support', 'description' => 'Support Mitarbeiter für Tickets & Hilfe'],
+            ['name' => 'safety_support', 'description' => 'Sicherheit & Schutz: vertrauliche Supportfälle'],
             ['name' => 'redaktor', 'description' => 'Website Redaktion für Blog und Inhalte'],
             ['name' => 'marketplace_manager', 'description' => 'Marketplace, Bestellungen und Commerce-Prozesse verwalten'],
             ['name' => 'outfit_subscription_manager', 'description' => 'Sportkleidung-Abos und Outfit-Prozesse verwalten'],
@@ -247,7 +249,7 @@ class RolesPermissionsSeeder extends Seeder
         */
 
         Role::findByName('super_admin')
-            ->givePermissionTo(Permission::all());
+            ->givePermissionTo(Permission::where('name', '!=', 'support.safety')->get());
 
         Role::findByName('admin')->givePermissionTo([
             'user.manage', 'org.create', 'org.manage',
@@ -277,6 +279,8 @@ class RolesPermissionsSeeder extends Seeder
             'support.tickets',
             'community.moderate',
         ]);
+
+        Role::findByName('safety_support')->givePermissionTo(['support.tickets', 'support.safety']);
 
         Role::findByName('club_owner')->givePermissionTo([
             'org.create', 'org.manage',

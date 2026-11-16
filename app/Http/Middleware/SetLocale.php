@@ -15,7 +15,7 @@ class SetLocale
     {
         $locale = $this->resolveLocale($request);
         App::setLocale($locale);
-        if (! $request->routeIs('robots', 'sitemap', 'guest.blog.rss', 'site.webmanifest')
+        if (! $request->routeIs('robots', 'sitemap', 'guest.blog.rss*', 'site.webmanifest')
             && $request->hasSession()
             && SupportedLocale::normalize($request->query('locale')) === $locale) {
             Session::put('locale', $locale);

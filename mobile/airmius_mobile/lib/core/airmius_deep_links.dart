@@ -25,6 +25,7 @@ enum AirmiusDeepLinkTargetType {
   adminSponsorApplications,
   adminSponsorManagement,
   passwordReset,
+  support,
   emailVerification,
   unknown,
 }
@@ -86,6 +87,7 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.profile => 'profile',
     AirmiusDeepLinkTargetType.memberCard => 'member_card',
     AirmiusDeepLinkTargetType.passwordReset => 'password_reset',
+    AirmiusDeepLinkTargetType.support => 'support',
     AirmiusDeepLinkTargetType.emailVerification => 'email_verification',
     AirmiusDeepLinkTargetType.unknown => 'unknown',
   };
@@ -115,6 +117,14 @@ class AirmiusDeepLinkResolver {
     }
 
     final root = pathSegments.first.toLowerCase();
+    if (root == 'support') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.support,
+        path: path,
+        id: int.tryParse(query['ticket'] ?? ''),
+        query: query,
+      );
+    }
     final id = pathSegments.length > 1 ? int.tryParse(pathSegments[1]) : null;
 
     final isApiEmailVerification =

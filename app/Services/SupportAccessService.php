@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Club;
 use App\Models\ClubDepartment;
+use App\Models\SupportTicket;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\ClubPermissions;
@@ -12,6 +13,29 @@ use Illuminate\Validation\ValidationException;
 
 class SupportAccessService
 {
+    public const SAFETY_PERMISSION = 'support.safety';
+
+    public function canHandleSafety(User $user): bool
+    {
+        // Deliberately bypass Gate's blanket admin grant: confidential cases
+        // require an explicitly assigned permission, including for admins.
+        return $user->getAllPermissions()->contains('name', self::SAFETY_PERMISSION);
+    }
+
+    public function canAccessTicket(User $user, SupportTicket $ticket, ?string $permission = null): bool
+    {
+        if ($ticket->is_confidential && (! $this->canHandleSafety($user)
+            || in_array((int) $user->id, array_map('intval', $ticket->conflict_user_ids ?? []), true))) {
+            return false;
+        }
+        $scope = $this->operatorScope($user, $permission);
+
+        return $scope['global']
+            || in_array((int) $ticket->club_id, $scope['club_ids'], true)
+            || in_array((int) $ticket->club_department_id, $scope['department_ids'], true)
+            || in_array((int) $ticket->team_id, $scope['team_ids'], true);
+    }
+
     /** @return array{global: bool, club_ids: array<int, int>, department_ids: array<int, int>, team_ids: array<int, int>} */
     public function operatorScope(User $user, ?string $permission = null): array
     {

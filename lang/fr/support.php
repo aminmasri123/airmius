@@ -1,6 +1,22 @@
 <?php
 
 return [
+    'inbox' => [
+        'safety_user' => 'Compte de protection (e-mail)',
+        'grant_safety' => 'Attribuer le rôle de protection',
+        'safety_granted' => 'Rôle de protection attribué.',
+        'assignee' => 'Responsable',
+        'unassigned' => 'Non attribué',
+        'new_title' => 'Nouvelle demande d’assistance',
+        'assigned_title' => 'Ticket d’assistance attribué',
+        'notification_body' => 'Un dossier vous attend dans la boîte d’assistance protégée.',
+        'general' => 'Assistance générale',
+        'safety' => 'Sécurité et protection',
+        'admin_alerts' => 'Signaler les nouvelles demandes aux administrateurs',
+        'admin_alerts_hint' => 'Alertes supplémentaires pour votre compte administrateur. Les dossiers attribués ne sont pas concernés.',
+        'assign_me' => 'M’attribuer',
+        'saved' => 'Préférences enregistrées',
+    ],
     'responses' => [
         'created' => 'Ticket d’assistance créé.',
         'updated' => 'Ticket d’assistance mis à jour.',

@@ -12,7 +12,9 @@ import 'legal_status_center_screen.dart';
 import 'privacy_consent_center_screen.dart';
 
 class SupportHelpdeskScreen extends StatefulWidget {
-  const SupportHelpdeskScreen({super.key});
+  const SupportHelpdeskScreen({super.key, this.initialTicketId});
+
+  final int? initialTicketId;
 
   @override
   State<SupportHelpdeskScreen> createState() => _SupportHelpdeskScreenState();
@@ -36,6 +38,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
   List<AirmiusSupportTicket> _tickets = const [];
   List<ClubSummary> _clubs = const [];
   int? _selectedClubId;
+  bool _initialTicketOpened = false;
 
   @override
   void dispose() {
@@ -50,7 +53,36 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final user = AirmiusServicesScope.of(context).authState.user;
+    if (user != null &&
+        widget.initialTicketId != null &&
+        !_initialTicketOpened) {
+      _initialTicketOpened = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openInitialTicket());
+    }
     if (user != null && !_ticketsLoaded && !_ticketsLoading) _loadTickets();
+  }
+
+  Future<void> _openInitialTicket() async {
+    if (!mounted) return;
+    final services = AirmiusServicesScope.of(context);
+    try {
+      final result = await services
+          .clientForSession(services.authState.session)
+          .supportTicket(widget.initialTicketId!);
+      if (mounted) {
+        await _openTicket(
+          AirmiusSupportTicket.fromJson(
+            Map<String, dynamic>.from(result['data'] as Map),
+          ),
+        );
+      }
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    }
   }
 
   Future<void> _loadTickets() async {
@@ -280,7 +312,9 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                             if (mounted) await _loadTickets();
                           } on AirmiusApiException catch (error) {
                             if (dialogContext.mounted) {
-                              setDialogState(() => loadError = error.userMessage);
+                              setDialogState(
+                                () => loadError = error.userMessage,
+                              );
                             }
                           } finally {
                             if (dialogContext.mounted) {
@@ -452,7 +486,9 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                           ..._clubs.map(
                             (club) => DropdownMenuItem<int?>(
                               value: club.id,
-                              child: Text("${t('support.contactClub')}: ${club.name}"),
+                              child: Text(
+                                "${t('support.contactClub')}: ${club.name}",
+                              ),
                             ),
                           ),
                         ],

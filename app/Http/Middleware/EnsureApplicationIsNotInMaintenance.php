@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Setting;
+use App\Support\MaintenanceSettings;
 use Closure;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,6 +13,13 @@ class EnsureApplicationIsNotInMaintenance
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // Machine-readable public responses have no session. Rendering the
+        // Inertia maintenance page here would make Jetstream access a missing
+        // session and turn maintenance into a 500 for crawlers and PWA clients.
+        if ($request->routeIs('robots', 'sitemap', 'guest.blog.rss*', 'site.webmanifest')) {
+            return $next($request);
+        }
+
         if (! Setting::boolFor('maintenance_mode')) {
             return $next($request);
         }
@@ -21,7 +29,7 @@ class EnsureApplicationIsNotInMaintenance
         }
 
         return Inertia::render('Maintenance', [
-            ...\App\Support\MaintenanceSettings::data(),
+            ...MaintenanceSettings::data(),
             'canLogin' => ! $request->user(),
         ])->toResponse($request)->setStatusCode(503);
     }
@@ -45,7 +53,8 @@ class EnsureApplicationIsNotInMaintenance
             'password.*',
             'verification.*',
             'two-factor.*',
-            'user.language.update'
+            'user.language.update',
+            'social-auth.*'
         );
     }
 }

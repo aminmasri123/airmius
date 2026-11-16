@@ -183,6 +183,7 @@ class AdminOperationsService
         if ($user->can('support.tickets') || $user->can('system.manage')) {
             [$rows, $more] = $this->limited(
                 SupportTicket::query()
+                    ->where('is_confidential', false)
                     ->whereIn('status', ['open', 'in_progress', 'waiting_user'])
                     ->orderByRaw("CASE priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 ELSE 4 END")
                     ->latest('id'),

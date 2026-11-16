@@ -1395,7 +1395,8 @@ class AirmiusClubVolunteerProfile {
             : _int(json['workload_limit_minutes_per_week']),
         visibility: _string(json['visibility'], fallback: 'club_managers'),
         preferredTeamIds: (json['preferred_team_ids'] as List? ?? const [])
-            .map((value) => _int(value)).toList(),
+            .map((value) => _int(value))
+            .toList(),
         preferredAreas: _stringList(json['preferred_areas']),
         name: json['name']?.toString(),
       );
@@ -1586,6 +1587,8 @@ class AirmiusSupportTicket {
     this.responseOverdue = false,
     this.resolutionOverdue = false,
     this.isOverdue = false,
+    this.canAssign = false,
+    this.assigneeId,
   });
 
   final int id;
@@ -1612,6 +1615,8 @@ class AirmiusSupportTicket {
   final bool responseOverdue;
   final bool resolutionOverdue;
   final bool isOverdue;
+  final bool canAssign;
+  final int? assigneeId;
 
   factory AirmiusSupportTicket.fromJson(JsonMap json) {
     final club = json['club'];
@@ -1619,6 +1624,10 @@ class AirmiusSupportTicket {
 
     return AirmiusSupportTicket(
       id: _int(json['id']),
+      canAssign: _bool(json['can_assign']),
+      assigneeId: json['assignee'] is JsonMap
+          ? _nullableInt((json['assignee'] as JsonMap)['id'])
+          : null,
       subject: _string(json['subject']),
       message: _string(json['message']),
       category: _string(json['category'], fallback: 'technical'),
@@ -4079,7 +4088,11 @@ abstract class AirmiusClubRepository {
   Future<void> acknowledgeAnnouncement(int clubId, int announcementId);
   Future<AirmiusClub> createClub(JsonMap payload);
   Future<AirmiusClub> updateClub(int id, JsonMap payload);
-  Future<void> deleteClub(int id, {required String confirmation, required String code});
+  Future<void> deleteClub(
+    int id, {
+    required String confirmation,
+    required String code,
+  });
   Future<AirmiusClubManagement> updateMembershipSettings(
     int clubId,
     JsonMap payload,

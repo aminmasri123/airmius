@@ -5,17 +5,22 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\ClubDepartment;
+use App\Models\Role;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketConfidentialAudit;
 use App\Models\SupportTicketMessage;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\SupportAccessService;
+use App\Services\SupportInboxNotificationService;
 use App\Services\SupportSlaService;
 use App\Support\AppNotification;
 use App\Support\ClubPermissions;
+use App\Support\NotificationRouting;
+use App\Support\Roles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class SupportTicketController extends Controller
@@ -47,6 +52,32 @@ class SupportTicketController extends Controller
             ->get();
 
         return response()->json(['data' => $tickets->map(fn (SupportTicket $ticket) => $this->payload($ticket, false))]);
+    }
+
+    public function updateInboxPreferences(Request $request)
+    {
+        abort_unless($request->user()->hasAnyRole(Roles::FULL_ACCESS), 403);
+        $data = $request->validate(['support_admin_alerts' => ['required', 'boolean']]);
+        $request->user()->update(['notification_channels' => array_replace(
+            NotificationRouting::preferencesFor($request->user()), $data,
+        )]);
+
+        return response()->json(['data' => $data]);
+    }
+
+    public function assignSafetyOperator(Request $request)
+    {
+        abort_unless($request->user()->hasRole('super_admin'), 403);
+        $data = $request->validate(['email' => ['required', 'email', Rule::exists('users', 'email')]]);
+        $role = Role::where('name', 'safety_support')->where('guard_name', 'web')->first();
+        abort_unless($role && $role->permissions()->whereIn('name', ['support.tickets', 'support.safety'])->count() === 2, 422);
+        $target = User::where('email', $data['email'])->sole();
+        // This explicit, step-up protected enrollment only adds the fixed
+        // safeguarding role. Generic self-service role editing stays forbidden.
+        $target->assignRole($role);
+        Log::notice('Safety support operator enrolled', ['actor_id' => $request->user()->id, 'user_id' => $target->id]);
+
+        return response()->json(['message' => __('support.inbox.safety_granted')]);
     }
 
     public function store(Request $request)
@@ -137,6 +168,8 @@ class SupportTicketController extends Controller
             'messages' => $supportTicket->messages->map(fn (SupportTicketMessage $message) => $this->messagePayload($message))->values(),
             'can_reply' => $canReply,
             'attachments_supported' => false,
+            'assignees' => $internal && $this->access->canAccessTicket($request->user(), $supportTicket, ClubPermissions::SUPPORT_ASSIGN)
+                ? app(SupportInboxNotificationService::class)->assignees($supportTicket) : [],
         ]]);
     }
 
@@ -167,18 +200,26 @@ class SupportTicketController extends Controller
                 'support.ticket_reply',
                 'support.notifications.reply_title',
                 'support.notifications.reply_body',
-                ['subject' => $supportTicket->subject],
+                ['subject' => $supportTicket->is_confidential
+                    ? AppNotification::translatedReplacement('support.categories.safety', 'Safety')
+                    : $supportTicket->subject],
                 ['url' => '/support?ticket='.$supportTicket->id, 'support_ticket_id' => $supportTicket->id],
             );
         } elseif (! $internal) {
             foreach (array_unique(array_filter([$supportTicket->assigned_to, $supportTicket->responsible_user_id])) as $recipientId) {
+                $recipient = User::find($recipientId);
+                if (! $recipient || ! $this->access->canAccessTicket($recipient, $supportTicket)) {
+                    continue;
+                }
                 AppNotification::sendLocalized(
                     (int) $recipientId,
                     'support.requester_reply',
                     'support.notifications.requester_reply_title',
                     'support.notifications.requester_reply_body',
-                    ['subject' => $supportTicket->subject],
-                    ['url' => '/support?tab=operations&ticket='.$supportTicket->id, 'support_ticket_id' => $supportTicket->id],
+                    ['subject' => $supportTicket->is_confidential
+                    ? AppNotification::translatedReplacement('support.categories.safety', 'Safety')
+                    : $supportTicket->subject],
+                    ['url' => '/support?tab=operations&inbox='.($supportTicket->is_confidential ? 'safety' : 'general').'&ticket='.$supportTicket->id, 'support_ticket_id' => $supportTicket->id],
                 );
             }
         }
@@ -383,6 +424,7 @@ class SupportTicketController extends Controller
         }
 
         $scope = $this->supportScopeForUser($user, $write);
+        abort_unless($this->access->canAccessTicket($user, $ticket, $write ? ClubPermissions::SUPPORT_EDIT : null), 403);
         abort_unless($this->scopeAllowsTicket($scope, $ticket), 403);
         abort_if($ticket->is_confidential && in_array($user->id, $ticket->conflict_user_ids ?? [], true), 403);
 
@@ -421,6 +463,7 @@ class SupportTicketController extends Controller
             'team_id' => ['nullable', 'integer', 'min:1', Rule::exists('teams', 'id')],
             'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'overdue' => ['nullable', 'boolean'],
+            'inbox' => ['nullable', Rule::in(['general', 'safety'])],
         ]);
 
         if (! $scope['global'] && isset($filters['club_id'])) {
@@ -433,7 +476,10 @@ class SupportTicketController extends Controller
             abort_unless($this->scopeAllowsTeam($scope, (int) $filters['team_id']), 403);
         }
 
-        $baseQuery = $this->scopedSupportQuery($scope);
+        $inbox = $filters['inbox'] ?? 'general';
+        abort_if($inbox === 'safety' && ! $this->access->canHandleSafety($request->user()), 403);
+        $baseQuery = $this->scopedSupportQuery($scope)
+            ->where('is_confidential', $inbox === 'safety');
         $tickets = (clone $baseQuery)
             ->with(['club:id,name', 'department:id,name', 'team:id,name', 'user:id,name,email', 'assignee:id,name,email', 'responsibleUser:id,name,email'])
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
@@ -467,6 +513,8 @@ class SupportTicketController extends Controller
             ],
             'abilities' => [
                 'manage' => true,
+                'safety' => $this->access->canHandleSafety($request->user()),
+                'admin_alerts_configurable' => $request->user()->hasAnyRole(Roles::FULL_ACCESS),
                 'edit' => $this->scopeCanOperate($actionScopes[ClubPermissions::SUPPORT_EDIT]),
                 'assign' => $this->scopeCanOperate($actionScopes[ClubPermissions::SUPPORT_ASSIGN]),
                 'resolve' => $this->scopeCanOperate($actionScopes[ClubPermissions::SUPPORT_RESOLVE]),
@@ -476,6 +524,9 @@ class SupportTicketController extends Controller
                 'team_ids' => $scope['global'] ? [] : $scope['team_ids'],
             ],
             'sla_policy_version' => SupportSlaService::VERSION,
+            'support_admin_alerts' => NotificationRouting::preferencesFor($request->user())['support_admin_alerts'],
+            'inbox_copy' => __('support.inbox'),
+            'current_user_id' => (int) $request->user()->id,
         ]]);
     }
 
@@ -483,6 +534,7 @@ class SupportTicketController extends Controller
     {
         $scope = $this->supportScope($request);
         abort_unless($this->scopeAllowsTicket($scope, $supportTicket), 403);
+        abort_unless($this->access->canAccessTicket($request->user(), $supportTicket), 403);
         $data = $request->validate([
             'status' => ['sometimes', Rule::in(['open', 'in_progress', 'waiting_user', 'resolved', 'closed'])],
             'priority' => ['sometimes', Rule::in(['low', 'normal', 'high', 'urgent'])],
@@ -522,6 +574,7 @@ class SupportTicketController extends Controller
         if (array_key_exists('assigned_to', $data) && $data['assigned_to'] !== null) {
             $assignee = User::query()->findOrFail((int) $data['assigned_to']);
             $assigneeScope = $this->access->operatorScope($assignee, ClubPermissions::SUPPORT_EDIT);
+            abort_unless($this->access->canAccessTicket($assignee, $supportTicket, ClubPermissions::SUPPORT_EDIT), 403);
             abort_unless($this->scopeAllowsTicket($assigneeScope, $supportTicket), 403);
         }
         $conflictUserIds = array_key_exists('conflict_user_ids', $data)
@@ -533,6 +586,7 @@ class SupportTicketController extends Controller
         if ($responsibleUserId !== null) {
             $responsible = User::query()->findOrFail($responsibleUserId);
             $responsibleScope = $this->access->operatorScope($responsible, ClubPermissions::SUPPORT_EDIT);
+            abort_unless($this->access->canAccessTicket($responsible, $supportTicket, ClubPermissions::SUPPORT_EDIT), 403);
             abort_unless($this->scopeAllowsTicket($responsibleScope, $supportTicket), 403);
             abort_if(in_array($responsibleUserId, $conflictUserIds, true), 422, __('validation.support_scope'));
         }
@@ -593,7 +647,7 @@ class SupportTicketController extends Controller
                 'support.notifications.updated_title',
                 'support.notifications.updated_body',
                 [
-                    'subject' => $supportTicket->subject,
+                    'subject' => $supportTicket->is_confidential ? AppNotification::translatedReplacement('support.categories.safety', 'Safety') : $supportTicket->subject,
                     'status' => AppNotification::translatedReplacement('support.statuses.'.$status, $status),
                 ],
                 [
@@ -668,13 +722,18 @@ class SupportTicketController extends Controller
 
     private function scopedSupportQuery(array $scope)
     {
-        return SupportTicket::query()->when(! $scope['global'], function ($query) use ($scope): void {
-            $query->where(function ($visible) use ($scope): void {
-                $visible->whereIn('club_id', $scope['club_ids'])
-                    ->orWhereIn('club_department_id', $scope['department_ids'])
-                    ->orWhereIn('team_id', $scope['team_ids']);
+        return SupportTicket::query()
+            ->when(! $this->access->canHandleSafety(request()->user()), fn ($query) => $query->where('is_confidential', false))
+            ->where(function ($query): void {
+                $query->whereNull('conflict_user_ids')->orWhereJsonDoesntContain('conflict_user_ids', (int) request()->user()->id);
+            })
+            ->when(! $scope['global'], function ($query) use ($scope): void {
+                $query->where(function ($visible) use ($scope): void {
+                    $visible->whereIn('club_id', $scope['club_ids'])
+                        ->orWhereIn('club_department_id', $scope['department_ids'])
+                        ->orWhereIn('team_id', $scope['team_ids']);
+                });
             });
-        });
     }
 
     private function scopeAllowsClub(array $scope, int $clubId): bool

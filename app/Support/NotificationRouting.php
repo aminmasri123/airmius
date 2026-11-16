@@ -21,6 +21,7 @@ final class NotificationRouting
             'club' => true,
             'billing' => true,
             'marketing' => false,
+            'support_admin_alerts' => true,
         ];
     }
 
@@ -123,6 +124,11 @@ final class NotificationRouting
     /** @return array<string, mixed> */
     public static function normalizeActionData(string $type, array $data): array
     {
+        if (Str::startsWith($type, 'support.') && ($ticketId = self::positiveIdentifier($data['support_ticket_id'] ?? null)) !== null) {
+            return self::withAction($data, self::existingWebAction($data) ?? '/support?ticket='.$ticketId,
+                'airmius://support?ticket='.$ticketId, false);
+        }
+
         if ($type === 'role.application_review_requested' && ($data['application_type'] ?? 'trainer') === 'trainer' && ! empty($data['application_id'])) {
             return self::withAction(
                 $data,

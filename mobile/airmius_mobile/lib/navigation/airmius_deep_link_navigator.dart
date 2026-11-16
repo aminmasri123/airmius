@@ -7,6 +7,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../screens/clubs_screen.dart';
+import '../screens/support_helpdesk_screen.dart';
 import '../screens/sport_matching_screen.dart';
 import '../screens/admin_platform_settings_screen.dart';
 import '../screens/billing_detail_screen.dart';
@@ -71,6 +72,9 @@ class AirmiusDeepLinkNavigator {
     return switch (target.type) {
       AirmiusDeepLinkTargetType.sportMatching => SportMatchingScreen(
         initialMatchingId: target.id,
+      ),
+      AirmiusDeepLinkTargetType.support => SupportHelpdeskScreen(
+        initialTicketId: target.id,
       ),
       AirmiusDeepLinkTargetType.sponsorApplication =>
         target.section == 'overview'
@@ -238,6 +242,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.adminSponsorApplications => 'Sponsor-Anträge',
       AirmiusDeepLinkTargetType.adminSponsorManagement => 'Sponsorverwaltung',
       AirmiusDeepLinkTargetType.passwordReset => 'Passwort zurücksetzen',
+      AirmiusDeepLinkTargetType.support => 'Support & Hilfe',
       AirmiusDeepLinkTargetType.emailVerification => 'E-Mail bestätigen',
       AirmiusDeepLinkTargetType.unknown => 'Sicherer Fallback',
     };

@@ -22837,6 +22837,7 @@ const _deepLinkDe = {
   'deepLink.destination.profile': 'Profil',
   'deepLink.destination.member_card': 'Mitgliedskarte',
   'deepLink.destination.password_reset': 'Passwort zurücksetzen',
+  'deepLink.destination.support': 'Support & Hilfe',
   'deepLink.destination.email_verification': 'E-Mail bestätigen',
   'deepLink.destination.unknown': 'Sicherer Fallback',
   'deepLink.recognized': 'DEEP LINK ERKANNT',
@@ -22925,6 +22926,7 @@ const _deepLinkEn = {
   'deepLink.destination.profile': 'Profile',
   'deepLink.destination.member_card': 'Member card',
   'deepLink.destination.password_reset': 'Reset password',
+  'deepLink.destination.support': 'Support & help',
   'deepLink.destination.email_verification': 'Verify email',
   'deepLink.destination.unknown': 'Secure fallback',
   'deepLink.recognized': 'DEEP LINK DETECTED',
@@ -23011,6 +23013,7 @@ final _deepLinkFr = {
   'deepLink.destination.profile': 'Profil',
   'deepLink.destination.member_card': 'Carte de membre',
   'deepLink.destination.password_reset': 'Réinitialiser le mot de passe',
+  'deepLink.destination.support': 'Assistance et aide',
   'deepLink.destination.email_verification': 'Vérifier l’adresse e-mail',
   'deepLink.destination.unknown': 'Repli sécurisé',
   'deepLink.chat.body':
@@ -23100,6 +23103,7 @@ final _deepLinkAr = {
   'deepLink.destination.profile': 'الملف الشخصي',
   'deepLink.destination.member_card': 'بطاقة العضوية',
   'deepLink.destination.password_reset': 'إعادة تعيين كلمة المرور',
+  'deepLink.destination.support': 'الدعم والمساعدة',
   'deepLink.destination.email_verification': 'تأكيد البريد الإلكتروني',
   'deepLink.destination.unknown': 'مسار آمن بديل',
   'deepLink.chat.body':

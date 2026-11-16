@@ -12,10 +12,38 @@ const props = defineProps({
     currentUser: { type: Object, required: true },
     copy: { type: Object, required: true },
     options: { type: Object, required: true },
+    inboxCopy: { type: Object, required: true },
+    supportAdminAlerts: { type: Boolean, default: true },
 })
 
 const page = usePage()
 const activeTab = ref('mine')
+const inbox = ref(new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search).get('inbox') === 'safety' ? 'safety' : 'general')
+const adminAlerts = ref(props.supportAdminAlerts)
+const preferencesSaving = ref(false)
+const safetyEmail = ref('')
+const grantingSafety = ref(false)
+const grantSafety = async () => {
+    if (grantingSafety.value) return
+    grantingSafety.value = true
+    try {
+        const response = await window.axios.post(route('api.v1.admin.support.safety-operators.store'), { email: safetyEmail.value })
+        notice.value = response.data.message
+        window.location.reload()
+    } catch (requestError) { error.value = requestMessage(requestError) }
+    finally { grantingSafety.value = false }
+}
+const saveInboxPreferences = async () => {
+    if (preferencesSaving.value) return
+    preferencesSaving.value = true
+    try {
+        await window.axios.patch(route('api.v1.support.inbox-preferences.update'), { support_admin_alerts: adminAlerts.value })
+        notice.value = props.inboxCopy.saved
+    } catch (requestError) {
+        adminAlerts.value = !adminAlerts.value
+        error.value = requestMessage(requestError)
+    } finally { preferencesSaving.value = false }
+}
 const tickets = ref([])
 const ticketsLoaded = ref(false)
 const ticketsLoading = ref(false)
@@ -191,6 +219,7 @@ const loadOperations = async () => {
     error.value = ''
 
     const params = Object.fromEntries(Object.entries(filters.value).filter(([, value]) => value !== '' && value !== false))
+    params.inbox = inbox.value
     if (filters.value.overdue) params.overdue = 1
 
     try {
@@ -319,6 +348,7 @@ const resetFilters = () => {
 const assignToMe = (ticket) => {
     if (!ticket.can_assign) return
     ticket.form.assigned_to = props.currentUser.id
+    void saveTicket(ticket)
 }
 
 const statusOptionDisabled = (ticket, status) => ['resolved', 'closed'].includes(status)
@@ -554,6 +584,24 @@ onBeforeUnmount(() => {
         </section>
 
         <section v-else-if="abilities.operate" class="space-y-6" role="tabpanel" aria-labelledby="operations-title">
+            <div class="surface-card space-y-3 p-5">
+                <label class="block font-bold text-primary">
+                    <select v-model="inbox" class="rounded-lg border border-border bg-card px-3 py-2" @change="loadOperations">
+                        <option value="general">{{ inboxCopy.general }}</option>
+                        <option v-if="abilities.safety" value="safety">{{ inboxCopy.safety }}</option>
+                    </select>
+                </label>
+                <label v-if="abilities.admin_alerts_configurable" class="block text-primary">
+                    <input v-model="adminAlerts" type="checkbox" :disabled="preferencesSaving" @change="saveInboxPreferences" /> {{ inboxCopy.admin_alerts }}
+                    <span class="block text-sm text-secondary">{{ inboxCopy.admin_alerts_hint }}</span>
+                </label>
+                <form v-if="abilities.configure_safety" class="flex flex-wrap items-end gap-3" @submit.prevent="grantSafety">
+                    <label class="text-sm text-primary">{{ inboxCopy.safety_user }}
+                        <input v-model.trim="safetyEmail" type="email" required class="block rounded-lg border border-border bg-card p-2" />
+                    </label>
+                    <button :disabled="grantingSafety" class="rounded-lg bg-buttonPrimary px-3 py-2 text-buttonTextPrimary">{{ inboxCopy.grant_safety }}</button>
+                </form>
+            </div>
             <div>
                 <h2 id="operations-title" class="text-2xl font-black text-primary">{{ text('operations_title') }}</h2>
                 <p class="mt-1 text-sm text-secondary">{{ text('operations_body') }}</p>
@@ -635,6 +683,13 @@ onBeforeUnmount(() => {
                                         <label class="text-xs font-bold text-secondary">{{ text('priority') }}<select v-model="ticket.form.priority" :disabled="!ticket.can_edit" class="mt-1 min-h-10 w-full rounded-lg border border-border bg-card px-2 text-sm text-primary disabled:cursor-not-allowed disabled:opacity-60"><option v-for="option in options.priorities" :key="option.value" :value="option.value">{{ option.label }}</option></select></label>
                                     </div>
                                     <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm"><span class="text-secondary"><strong>{{ text('assignee') }}:</strong> {{ ticket.form.assigned_to === currentUser.id ? currentUser.name : (ticket.assignee?.name || text('unassigned')) }}</span><button v-if="ticket.can_assign && ticket.form.assigned_to !== currentUser.id" type="button" class="font-bold text-air-blue underline" @click="assignToMe(ticket)">{{ text('assign_me') }}</button></div>
+                                    <label v-if="ticket.can_assign && ticketDetails[ticket.id]?.assignees?.length" class="mt-3 block text-sm text-primary">
+                                        {{ text('assignee') }}
+                                        <select v-model="ticket.form.assigned_to" :disabled="isSaving(ticket)" class="block w-full rounded-lg border border-border bg-card p-2">
+                                            <option :value="null">{{ text('unassigned') }}</option>
+                                            <option v-for="person in ticketDetails[ticket.id].assignees" :key="person.id" :value="person.id">{{ person.name }}</option>
+                                        </select>
+                                    </label>
                                     <label class="mt-3 block text-xs font-bold text-secondary">{{ text('internal_note') }}<textarea v-model.trim="ticket.form.admin_note" :disabled="!ticket.can_edit" rows="3" maxlength="4000" class="mt-1 w-full rounded-lg border border-border bg-card px-2 py-2 text-sm text-primary disabled:cursor-not-allowed disabled:opacity-60"></textarea><span class="mt-1 block font-normal">{{ text('internal_note_hint') }}</span></label>
                                     <label class="mt-3 flex items-center gap-2 text-sm font-bold text-primary"><input v-model="ticket.form.escalated" :disabled="!ticket.can_edit" type="checkbox" class="rounded border-border text-air-blue focus:ring-air-blue disabled:cursor-not-allowed disabled:opacity-60">{{ text('escalated') }}</label>
                                     <button v-if="canChangeTicket(ticket)" type="button" :disabled="isSaving(ticket)" class="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-xl bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary disabled:opacity-50" @click="saveTicket(ticket)"><i class="las me-2" :class="isSaving(ticket) ? 'la-circle-notch animate-spin' : 'la-save'" aria-hidden="true"></i>{{ isSaving(ticket) ? text('saving') : text('save') }}</button>

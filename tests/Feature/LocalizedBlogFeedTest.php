@@ -150,7 +150,7 @@ class LocalizedBlogFeedTest extends TestCase
 
         $this->assertStringContainsString('->take(self::MAX_ITEMS)', $controller);
         $this->assertStringContainsString("'public:blog-rss:v5:'.\$locale", $controller);
-        $this->assertStringContainsString("routeIs('robots', 'sitemap', 'guest.blog.rss', 'site.webmanifest')", $middleware);
+        $this->assertStringContainsString("routeIs('robots', 'sitemap', 'guest.blog.rss*', 'site.webmanifest')", $middleware);
         $this->assertStringContainsString('const resolvedFeedUrl = computed', $seoHead);
         $this->assertStringContainsString('type="application/rss+xml"', $seoHead);
         $this->assertStringContainsString(':feed="route(\'guest.blog.rss\')"', File::get(resource_path('js/Pages/Guest/Blog/Index.vue')));

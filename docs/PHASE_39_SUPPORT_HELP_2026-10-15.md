@@ -29,3 +29,30 @@ Stand: 2026-10-15
 6. Das Ticket schliessen und eine weitere Antwort versuchen. Die API muss mit 422 ablehnen und darf keine Nachricht speichern.
 7. Im Konto mit zwei Vereinen je ein Ticket fuer Verein A und B erstellen. Kontext und Arbeitsrechte nach dem Vereinswechsel vergleichen.
 8. `Sicherheit & Schutz` waehlen, einen Verein angeben und absenden. Nur eine zustaendige Supportrolle darf den vertraulichen Fall in ihrer Arbeitsliste sehen.
+
+## Supporteingang und Benachrichtigungen (2026-11-16)
+
+- Neue Tickets benachrichtigen berechtigte Supportpersonen und standardmaessig Plattformadministratoren. Vereinsanfragen beruecksichtigen den tatsaechlichen Vereins-/Abteilungs-/Teamzugriff; normale Mitglieder erhalten keine Eingangsmeldung.
+- Unter `Support -> Support steuern` gibt es getrennte Eingaenge fuer allgemeinen Support und `Sicherheit & Schutz`. Listen, Kennzahlen, Details, Antworten, Zuweisungen und Empfaengerlisten schuetzen vertrauliche Faelle serverseitig. Der allgemeine Betriebsueberblick enthaelt keine vertraulichen Supportfaelle.
+- Schutzfaelle benoetigen die ausdruecklich vergebene Berechtigung `support.safety` zusaetzlich zum passenden Supportbereich. Der allgemeine Admin-Vollzugriff ersetzt diese Freigabe nicht. Konfliktpersonen bleiben ausgeschlossen.
+- Die Rolle `safety_support` enthaelt `support.tickets` und `support.safety`. Sie wird keiner bestehenden Person automatisch zugewiesen. Super-Admins koennen im Supportbereich gezielt ein vorhandenes Konto per E-Mail fuer die Schutzrolle anmelden; dieser feste Schritt ist durch die bestehende Admin-2FA-/Step-up-Pruefung geschuetzt. Allgemeine Selbstzuweisung beliebiger Rollen bleibt gesperrt.
+- Administratoren koennen ihre zusaetzlichen Meldungen zu neuen Anfragen im Supportbereich individuell abschalten. Die Einstellung `notification_channels.support_admin_alerts` ist standardmaessig aktiv. Zuweisungs- und Antwortmeldungen werden dadurch nicht deaktiviert.
+- Web und Android bieten `Mir zuweisen` sowie eine Auswahl berechtigter Bearbeiter. Im Web wird die Auswahl beim Oeffnen des Ticketverlaufs geladen. Zuweisungen benachrichtigen den Bearbeiter; weitere Antworten gehen an weiterhin berechtigte zugewiesene/verantwortliche Personen.
+- Neue Eingangsmeldungen und Zuweisungen enthalten keine Betreff-/Beschreibungstexte oder Reporteridentitaeten. Benachrichtigungslinks oeffnen das konkrete geschuetzte Ticket, auch nativ. Push bleibt von den vorhandenen Geraete-/Kontoeinstellungen abhaengig.
+- Ohne zugewiesene Schutzperson gibt es keinen allgemeinen Admin-Fallback fuer vertrauliche Inhalte. Vor Freigabe dieses Eingangs mindestens eine Schutzperson einrichten.
+
+Einrichtung auf einer neuen Installation:
+
+```bash
+php artisan migrate --force
+php artisan airmius:configure-support --safety-user=schutzkonto@example.test --dry-run
+php artisan airmius:configure-support --safety-user=schutzkonto@example.test
+```
+
+Alternativ: Rolle und Berechtigungen in der Rollenverwaltung anlegen; anschliessend im Supportbereich das gewuenschte vorhandene Schutzkonto eintragen. Die Migration ist idempotent zu dieser manuellen Einrichtung. Bestehende Rollen bleiben erhalten.
+
+Pruefnachweis: 66 gezielte Backendtests, 1.129 Assertions; sechs native Routing-/Benachrichtigungstests; Web-Produktionsbuild erfolgreich. Die geaenderten nativen Modelle, Screens, Deep Links und Tests wurden ohne Analysebefund geprueft. Android-Version: `1.0.72+158`.
+
+Live-Abnahme am 2026-11-16: PHP-Dateien und beide Build-Verzeichnisse nach Ausgangsvergleich und lokaler Sicherung aktualisiert. Support-Arbeitsliste und standardmaessig aktiver Admin-Schalter wurden im angemeldeten Browser geladen. Die ausdruecklich benannte Schutzperson wurde ueber den neuen Super-Admin-Schritt angemeldet; die Rollenverwaltung bestaetigt ein zugeordnetes Konto mit `support.tickets` und `support.safety`. Es wurden keine zusaetzlichen produktiven Testtickets oder Nachrichten versandt. Die Android-APK wurde erfolgreich signiert gebaut; Installation und Push-Zustellung auf einem echten Geraet bleiben die manuelle Abnahme.
+
+Erweiterte Regression: 254 Tests / 5.244 Assertions, davon ein Fehler, elf fehlgeschlagene und zwei uebersprungene Tests. Alle zwoelf Fehler wurden mit denselben Testmethoden gegen einen isolierten unveraenderten Git-Ausgangsstand reproduziert (15 Tests / 1.792 Assertions). Betroffen sind bestehende Admin-Redirect-Erwartungen, Guardian-Einladung, ein externes Mitglied ohne Pflicht-E-Mail, Rechnungs-Snapshot-Reihenfolge, Frontend-/Rechtstextlokalisierung, ein veralteter Rollen-API-Pfad sowie Sponsor-Antrags-/Workspace-Tests. Sie wurden im Rahmen dieser Supportaenderung nicht veraendert.

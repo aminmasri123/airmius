@@ -1092,3 +1092,28 @@ Die vollständige, weiterhin offene Gesamtplanung wird in [AIRMIUS_VEREINSPLATTF
 - [x] Gezielte Backendtests (9 Tests/40 Assertions), Webtests (3 Tests), Web-Build erfolgreich.
 - [ ] Flutter-Regressionstests ausfuehren: lokaler Testprozess endet mit Windows-Code 0xC0000008; geaenderte Dateien statisch analysieren.
 - [ ] Smoke-Test mit aktualisierter App auf zwei echten Geraeten und aktualisiertem Backend.
+
+## T40-09: oeffentliche Maschinenendpunkte im Wartungsmodus (2026-11-16)
+
+- [x] Produktionsfehler anhand des Logs und eines roten Regressionstests nachgewiesen: Die Inertia-Wartungsseite greift ueber Jetstream auf eine fehlende Sitzung zu.
+- [x] Robots, Sitemap, RSS und Manifest gezielt von der Inertia-Wartungsseite ausnehmen; der Wartungsmodus fuer normale Seiten bleibt aktiv.
+- [x] `/rss.xml` als zustandslosen Alias fuer `/blog/rss.xml` ergaenzen; Sprache und kanonische Feed-Adressen bleiben erhalten.
+- [x] 11 gezielte Tests mit 374 Assertions, PHP-Syntaxpruefung und `git diff --check` erfolgreich.
+- [x] Drei Produktionsdateien nach Ausgangsvergleich und lokaler Sicherung gezielt aktualisiert und bytegenau zurueckgelesen.
+- [x] Live: alle fuenf Endpunkte HTTP 200, XML/JSON parsebar, ohne Sitzungscookies, ETag und HTTP 304 bestaetigt. RSS/Alias/Manifest in DE/EN/FR/AR geprueft. Startseite weiterhin HTTP 503.
+- [ ] Vollstaendige T40-09-Abnahme mit eigenen Entwuerfen/privaten Gegenproben und externen Formatvalidatoren separat abschliessen.
+
+Pruefskript: `artifacts/t40_verify_public.py`. Die breitere lokale Vorpruefung hatte einen unabhaengigen bestehenden Fehler in `GuestExperienceOptimizationTest::test_guest_images_defer_decoding_and_identify_critical_images` (fehlendes `decoding="async"` in `Sponsors.vue`); die fuer diese Reparatur relevanten Tests bestehen.
+
+## T39: Supporteingang, Schutzrolle und Adminmeldungen (2026-11-16)
+
+- [x] Berechtigtes Supportteam und standardmaessig Admins ueber neue Anfragen informieren; pro Admin abschaltbar.
+- [x] Berechtigte Bearbeiter in Web/App auswaehlen oder Vorgang selbst uebernehmen; Zuweisungsmeldung und Zugriff nach Rechteentzug pruefen.
+- [x] Getrennter Schutzeingang mit ausdruecklichem `support.safety`-Recht, Konfliktausschluss und minimierten Benachrichtigungsvorschauen.
+- [x] Super-Admin-Einrichtung einer benannten Schutzperson ohne Freigabe allgemeiner Selbst-Rollenzuweisung; Rolle live zugewiesen und bestaetigt.
+- [x] 66 gezielte Backendtests / 1.129 Assertions und sechs Fluttertests bestanden; geaenderte native Screens/Modelle/Deep Links ohne Analysebefund; Web-Build erfolgreich.
+- [x] Live-Web/Backend mit Dateisicherungen veroeffentlicht; Support-Arbeitsliste und Admin-Schalter sichtbar.
+- [x] Android `1.0.72+158` signiert als APK gebaut.
+- [ ] Neue APK auf dem Testgeraet installieren; T39-04/T39-07 sowie Push-Zustellung mit den Testkonten manuell abnehmen.
+
+Details und bestehende, am unveraenderten Ausgangsstand reproduzierte Regressionstestfehler: `docs/PHASE_39_SUPPORT_HELP_2026-10-15.md`.

@@ -5,6 +5,7 @@ import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import 'support_helpdesk_screen.dart';
 
 /// Permission-scoped support operations for support staff and platform admins.
 ///
@@ -22,6 +23,14 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
   Future<AirmiusJson>? _future;
   String _filter = 'open';
   bool _busy = false;
+  String _inbox = 'general';
+  int? _currentUserId;
+  Map<String, dynamic> _inboxCopy = {};
+  bool _canSafety = false;
+  bool _canConfigureAlerts = false;
+  bool _adminAlerts = true;
+
+  String inboxText(String key) => _inboxCopy[key]?.toString() ?? key;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -36,11 +45,37 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
     _future ??= _load();
   }
 
-  Future<AirmiusJson> _load() {
-    return _client.adminSupportTickets(
+  Future<AirmiusJson> _load() async {
+    final result = await _client.adminSupportTickets(
+      inbox: _inbox,
       overdue: _filter == 'overdue',
       status: _filter == 'open' || _filter == 'overdue' ? null : _filter,
     );
+    final data = result['data'] as Map<String, dynamic>? ?? {};
+    _inboxCopy = Map<String, dynamic>.from(data['inbox_copy'] as Map? ?? {});
+    final abilities = data['abilities'] as Map? ?? {};
+    _canSafety = abilities['safety'] == true;
+    _canConfigureAlerts = abilities['admin_alerts_configurable'] == true;
+    _adminAlerts = data['support_admin_alerts'] != false;
+    _currentUserId = data['current_user_id'] as int?;
+    return result;
+  }
+
+  Future<void> _saveAdminAlerts(bool value) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await _client.updateSupportInboxPreferences(value);
+      if (mounted) setState(() => _adminAlerts = value);
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   void _reload() => setState(() => _future = _load());
@@ -70,6 +105,33 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
   }
 
   Future<void> _openEditor(AirmiusSupportTicket ticket) async {
+    if (_busy) return;
+    List<Map<String, dynamic>> assignees = [];
+    if (ticket.canAssign) {
+      setState(() => _busy = true);
+      try {
+        final result = await _client.supportTicket(ticket.id);
+        final data = result['data'] as Map? ?? {};
+        assignees = (data['assignees'] as List? ?? [])
+            .whereType<Map>()
+            .map((value) => Map<String, dynamic>.from(value))
+            .toList();
+      } on AirmiusApiException catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+      if (!mounted) return;
+    }
+    var assigneeId =
+        assignees.any((person) => person['id'] == ticket.assigneeId)
+        ? ticket.assigneeId
+        : null;
     var status = ticket.status;
     var priority = ticket.priority;
     var escalated = ticket.escalatedAt != null;
@@ -84,6 +146,27 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (ticket.canAssign)
+                  DropdownButtonFormField<int>(
+                    initialValue: assigneeId,
+                    decoration: InputDecoration(
+                      labelText: inboxText('assignee'),
+                    ),
+                    items: [
+                      DropdownMenuItem<int>(
+                        value: null,
+                        child: Text(inboxText('unassigned')),
+                      ),
+                      ...assignees.map(
+                        (person) => DropdownMenuItem<int>(
+                          value: person['id'] as int,
+                          child: Text(person['name'].toString()),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setDialogState(() => assigneeId = value),
+                  ),
                 DropdownButtonFormField<String>(
                   initialValue: status,
                   decoration: InputDecoration(
@@ -156,6 +239,7 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
                 'priority': priority,
                 'escalated': escalated,
                 'admin_note': note.text.trim(),
+                if (ticket.canAssign) 'assigned_to': assigneeId,
               }),
               child: Text(t('common.save')),
             ),
@@ -245,6 +329,35 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Eyebrow(t('support.admin.eyebrow')),
+                      DropdownButtonFormField<String>(
+                        initialValue: _inbox,
+                        items: [
+                          DropdownMenuItem(
+                            value: 'general',
+                            child: Text(inboxText('general')),
+                          ),
+                          if (_canSafety)
+                            DropdownMenuItem(
+                              value: 'safety',
+                              child: Text(inboxText('safety')),
+                            ),
+                        ],
+                        onChanged: _busy
+                            ? null
+                            : (value) {
+                                if (value != null) {
+                                  _inbox = value;
+                                  _reload();
+                                }
+                              },
+                      ),
+                      if (_canConfigureAlerts)
+                        SwitchListTile.adaptive(
+                          title: Text(inboxText('admin_alerts')),
+                          subtitle: Text(inboxText('admin_alerts_hint')),
+                          value: _adminAlerts,
+                          onChanged: _busy ? null : _saveAdminAlerts,
+                        ),
                       const SizedBox(height: 7),
                       Text(
                         t('support.admin.headline'),
@@ -414,7 +527,34 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
                 ),
               ],
             ),
+            if (ticket.canAssign &&
+                _currentUserId != null &&
+                ticket.assigneeId != _currentUserId)
+              TextButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () => _updateTicket(
+                        ticket,
+                        values: {'assigned_to': _currentUserId},
+                      ),
+                icon: const Icon(Icons.person_add_alt_1),
+                label: Text(inboxText('assign_me')),
+              ),
             const SizedBox(height: 5),
+            TextButton.icon(
+              onPressed: () => Navigator.of(context)
+                  .push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          SupportHelpdeskScreen(initialTicketId: ticket.id),
+                    ),
+                  )
+                  .then((_) {
+                    if (mounted) _reload();
+                  }),
+              icon: const Icon(Icons.forum_outlined),
+              label: Text(t('support.reply')),
+            ),
             Text(
               [
                 requester,

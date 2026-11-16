@@ -1,6 +1,22 @@
 <?php
 
 return [
+    'inbox' => [
+        'safety_user' => 'Safeguarding account (email)',
+        'grant_safety' => 'Assign safeguarding role',
+        'safety_granted' => 'Safeguarding role assigned.',
+        'assignee' => 'Assignee',
+        'unassigned' => 'Unassigned',
+        'new_title' => 'New support request',
+        'assigned_title' => 'Support ticket assigned',
+        'notification_body' => 'A case is waiting for you in the protected support inbox.',
+        'general' => 'General support',
+        'safety' => 'Safety & safeguarding',
+        'admin_alerts' => 'Notify me of new requests as an admin',
+        'admin_alerts_hint' => 'Additional inbox alerts for your admin account. Assigned cases are unaffected.',
+        'assign_me' => 'Assign to me',
+        'saved' => 'Preferences saved',
+    ],
     'responses' => [
         'created' => 'Support ticket created.',
         'updated' => 'Support ticket updated.',

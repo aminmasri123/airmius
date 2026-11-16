@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\SupportAccessService;
+use App\Support\NotificationRouting;
+use App\Support\Roles;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -45,11 +47,16 @@ class SupportCenterController extends Controller
                 : $clubs->filter(fn ($club) => $supportClubIds->contains($club->id))->map($supportClubPayload)->values(),
             'abilities' => [
                 'operate' => $this->access->canOperate($user),
+                'safety' => $this->access->canHandleSafety($user),
+                'configure_safety' => $user->hasRole('super_admin'),
+                'admin_alerts_configurable' => $user->hasAnyRole(Roles::FULL_ACCESS),
                 'cross_tenant' => $scope['global'],
                 'approve_club_deletion' => $user->hasRole('super_admin'),
             ],
             'currentUser' => $user->only(['id', 'name']),
             'copy' => __('support.web'),
+            'inboxCopy' => __('support.inbox'),
+            'supportAdminAlerts' => NotificationRouting::preferencesFor($user)['support_admin_alerts'],
             'options' => [
                 'categories' => $this->options(['technical', 'club', 'membership', 'payment', 'privacy', 'safety'], 'support.categories'),
                 'priorities' => $this->options(['low', 'normal', 'high', 'urgent'], 'support.priorities'),
