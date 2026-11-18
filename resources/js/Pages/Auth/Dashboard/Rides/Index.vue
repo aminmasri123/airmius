@@ -5,9 +5,9 @@ import CountrySelect from '@/Components/CountrySelect.vue'
 import RideLocationField from '@/Components/Rides/RideLocationField.vue'
 import RidePriceFields from '@/Components/Rides/RidePriceFields.vue'
 import RidePriceSummary from '@/Components/Rides/RidePriceSummary.vue'
-import { ridePricingText } from '@/support/ridePricing'
+import { ridePricingText, rideCurrencyCatalog } from '@/support/ridePricing'
 import { useRideLocationCopy } from '@/support/rideLocations'
-import { Head, router, useForm } from '@inertiajs/vue3'
+import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -28,6 +28,8 @@ const props = defineProps({
     visibilities: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
 })
+const page = usePage()
+const pricingCatalog = computed(() => rideCurrencyCatalog(props.pricing_catalog, page.props.auth?.user?.country))
 
 const showCreateModal = ref(false)
 const showDeleteModal = ref(false)
@@ -145,7 +147,7 @@ const form = useForm({
     departure_time: '',
     seats: 3,
     contact_details: '',
-    pricing_details: true, cost_mode: '', cost_amount: '', cost_currency: props.pricing_catalog.default_currency || '',
+    pricing_details: true, cost_mode: '', cost_amount: '', cost_currency: pricingCatalog.value.default_currency || '',
 })
 
 const chooseAddress = (prefix, item) => {
@@ -221,7 +223,7 @@ const resetForm = () => {
     form.event_id = ''
     form.cost_mode = ''
     form.cost_amount = ''
-    form.cost_currency = props.pricing_catalog.default_currency || ''
+    form.cost_currency = pricingCatalog.value.default_currency || ''
 }
 
 const openCreateModal = () => {
@@ -251,7 +253,7 @@ const openEditModal = (ride) => {
     form.contact_details = ride.contact_details || ''
     form.cost_mode = ride.pricing?.mode || ''
     form.cost_amount = ride.pricing?.amount || ''
-    form.cost_currency = ride.pricing?.currency || props.pricing_catalog.default_currency || ''
+    form.cost_currency = ride.pricing?.currency || pricingCatalog.value.default_currency || ''
     form.clearErrors()
     showCreateModal.value = true
 }
@@ -571,7 +573,7 @@ const confirmDeleteRide = () => {
                     <p v-if="form.errors.team_id" class="mt-1 text-xs text-error">{{ form.errors.team_id }}</p>
                 </div>
 
-                <RidePriceFields :form="form" :catalog="pricing_catalog" :editing="Boolean(editTarget)" />
+                <RidePriceFields :form="form" :catalog="pricingCatalog" :editing="Boolean(editTarget)" />
                 <div>
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Plätze</label>
                     <input v-model="form.seats" type="number" min="1" max="20" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required />

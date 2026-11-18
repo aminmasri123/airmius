@@ -1,12 +1,12 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ridePricingText } from '@/support/ridePricing'
+import { ridePricingText, rideCurrencyCatalog } from '@/support/ridePricing'
 const props = defineProps({ form: { type: Object, required: true }, catalog: { type: Object, default: () => ({}) }, editing: Boolean })
 const { locale } = useI18n()
 const search = ref('')
 const text = key => ridePricingText(locale.value, key)
-const currencies = computed(() => Object.keys(props.catalog.currencies || {}).filter(code => code === props.form.cost_currency || code.includes(search.value.trim().toUpperCase())))
+const currencies = computed(() => Object.keys(rideCurrencyCatalog(props.catalog).currencies).sort().filter(code => code === props.form.cost_currency || code.includes(search.value.trim().toUpperCase())))
 </script>
 
 <template>

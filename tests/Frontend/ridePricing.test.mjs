@@ -8,11 +8,13 @@ import { createI18n } from 'vue-i18n'
 
 const root = new URL('../../', import.meta.url)
 const copy = JSON.parse(await readFile(new URL('resources/data/ride-pricing-copy.json', root)))
+const currencyData = JSON.parse(await readFile(new URL('resources/data/ride-currencies.json', root)))
 const asModule = source => `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`
 const helperSource = (await readFile(new URL('resources/js/support/ridePricing.js', root), 'utf8'))
     .replace(/import copy from [^\n]+/, `const copy = ${JSON.stringify(copy)}`)
+    .replace(/import currencyData from [^\n]+/, `const currencyData = ${JSON.stringify(currencyData)}`)
 const helperUrl = asModule(helperSource)
-const { ridePriceLabel, ridePricingText } = await import(helperUrl)
+const { ridePriceLabel, ridePricingText, rideCurrencyCatalog } = await import(helperUrl)
 async function component(name) {
     const source = await readFile(new URL(`resources/js/Components/Rides/${name}.vue`, root), 'utf8')
     const { descriptor } = parse(source)
@@ -43,6 +45,19 @@ test('international money labels preserve ISO currency and currency precision', 
         for (const value of Object.values(copy[locale])) assert.ok(value.length > 0)
     }
     assert.equal(ridePricingText('fr-FR', 'free'), copy.fr.free)
+})
+
+test('missing server currency catalog falls back to CLDR and the account country', async () => {
+    for (const [country, currency] of Object.entries({ DE: 'EUR', MA: 'MAD', JP: 'JPY', KW: 'KWD' })) {
+        const catalog = rideCurrencyCatalog({}, country)
+        assert.equal(catalog.default_currency, currency)
+        assert.ok(Object.keys(catalog.currencies).length > 100)
+    }
+    assert.equal(rideCurrencyCatalog({}, null).default_currency, null)
+    const html = await render(Fields, { form: { cost_mode: 'contribution', cost_currency: '', cost_amount: '10', errors: {} }, catalog: {} })
+    assert.match(html, /value="EUR"/)
+    assert.match(html, /value="MAD"/)
+    assert.match(html, /value="JPY"/)
 })
 
 test('web summary displays both the agreed and changed price before confirmation', async () => {

@@ -6,6 +6,7 @@ import 'package:airmius/core/airmius_services_scope.dart';
 import 'package:airmius/screens/carpool_center_screen.dart';
 import 'package:airmius/screens/carpool_ride_screen.dart';
 import 'package:airmius/widgets/ride_pricing.dart';
+import 'package:airmius/core/ride_currency_catalog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -233,7 +234,7 @@ void main() {
   });
 
   testWidgets(
-    'cost choice is mandatory and suggested MAD currency can be changed',
+    'missing server catalog still lists currencies and allows changing suggested MAD',
     (tester) async {
       final amount = TextEditingController();
       addTearDown(amount.dispose);
@@ -248,9 +249,7 @@ void main() {
               child: ListView(
                 children: [
                   RideCostEditor(
-                    catalog: const {
-                      'currencies': {'MAD': 2, 'EUR': 2, 'JPY': 0},
-                    },
+                    catalog: const {},
                     mode: mode,
                     currency: currency,
                     amount: amount,
@@ -270,6 +269,14 @@ void main() {
       await tester.tap(find.text('Kostenbeteiligung').last);
       await tester.pumpAndSettle();
       expect(find.text('MAD'), findsWidgets);
+      final menu = tester.widget<DropdownMenu<String>>(
+        find.byKey(const ValueKey('ride-cost-currency')),
+      );
+      expect(menu.dropdownMenuEntries.length, greaterThan(100));
+      expect(
+        menu.filterCallback!(menu.dropdownMenuEntries, 'MAD').length,
+        greaterThan(100),
+      );
       await tester.enterText(
         find.byKey(const ValueKey('ride-cost-amount')),
         '12,50',
@@ -284,6 +291,28 @@ void main() {
       await tester.pumpAndSettle();
       expect(currency, 'JPY');
       expect(form.currentState!.validate(), true);
+    },
+  );
+
+  test(
+    'fallback currency follows account country without guessing unknown countries',
+    () {
+      for (final entry in {
+        'DE': 'EUR',
+        'MA': 'MAD',
+        'JP': 'JPY',
+        'KW': 'KWD',
+      }.entries) {
+        expect(
+          rideCurrencyCatalog({}, country: entry.key)['default_currency'],
+          entry.value,
+        );
+      }
+      expect(rideCurrencyCatalog({})['default_currency'], isNull);
+      expect(
+        rideCurrencyCatalog({'default_currency': 'CHF'})['default_currency'],
+        'CHF',
+      );
     },
   );
 }

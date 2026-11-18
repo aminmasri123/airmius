@@ -9,6 +9,7 @@ import '../widgets/airmius_widgets.dart';
 import '../widgets/ride_information_panel.dart';
 import '../widgets/ride_pricing.dart';
 import '../core/ride_pricing_copy.dart';
+import '../core/ride_currency_catalog.dart';
 import '../widgets/country_field.dart';
 import '../widgets/ride_location_field.dart';
 import '../core/ride_location_copy.dart';
@@ -334,7 +335,10 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
           }
 
           final root = _rideMap(snapshot.data?['data']);
-          _pricingCatalog = _rideMap(root['pricing_catalog']);
+          _pricingCatalog = rideCurrencyCatalog(
+            _rideMap(root['pricing_catalog']),
+            country: AirmiusServicesScope.of(context).authState.user?.country,
+          );
           final rides = _rideList(root['rides']);
           final clubs = _rideList(root['clubs']);
           final teams = _rideList(root['teams']);

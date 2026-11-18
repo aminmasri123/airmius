@@ -1,4 +1,9 @@
 import copy from '../../data/ride-pricing-copy.json'
+import currencyData from '../../data/ride-currencies.json'
+
+export const rideCurrencyCatalog = (remote = {}, country = null) => Object.keys(remote?.currencies || {}).length
+    ? remote
+    : { currencies: currencyData.currencies, default_currency: remote?.default_currency || currencyData.countries[String(country || '').toUpperCase()] || null }
 
 export const ridePricingText = (locale, key) => (copy[String(locale).split('-')[0]] || copy.en)[key] || key
 export const ridePriceLabel = (pricing, locale = 'en') => {

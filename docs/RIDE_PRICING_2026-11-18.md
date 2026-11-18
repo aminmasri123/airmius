@@ -32,3 +32,9 @@ Die Tests verwenden eine lokale SQLite-Testdatenbank beziehungsweise simulierte 
 4. Mit zwei Testkonten auf dem Zielsystem eine bepreiste Fahrt anlegen, anfragen, freigeben, Preis ändern und erneut bestätigen beziehungsweise zurückziehen. Ein fremdes Konto darf keine Preisvereinbarung bestätigen.
 
 Stand: lokal implementiert und geprüft; noch nicht auf Hostinger veröffentlicht und noch kein neuer Android-Release gebaut.
+
+## Nachprüfung: leere Währungsauswahl
+
+Die Auswahl war ausschließlich vom Katalog aus der Serverantwort abhängig. Bei einer älteren oder unvollständigen Antwort ohne `pricing_catalog.currencies` blieb sie leer. Web und App besitzen jetzt einen eingebundenen CLDR-Ersatzkatalog. Der Währungsvorschlag wird dann weiterhin aus dem Kontoland ermittelt; ein vorhandener Serverkatalog hat Vorrang. Der mobile Suchfilter zeigt beim Öffnen mit einer bereits ausgewählten Währung wieder alle Einträge an und akzeptiert auch kleingeschriebene Suchbegriffe.
+
+Regressionstest: fehlender Serverkatalog, über 100 auswählbare Währungen, Kontoländer DE/MA/JP/KW, unbekanntes Kontoland und Wechsel von MAD zu JPY. **6 Flutter-Tests und 4 Web-Tests erfolgreich**, Web-Build erfolgreich. Diese Nachbesserung ist ebenfalls noch lokal.

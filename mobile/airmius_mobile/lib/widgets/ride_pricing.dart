@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/ride_pricing_copy.dart';
+import '../core/ride_currency_catalog.dart';
 
 JsonMap ridePricing(JsonMap ride) => ride['pricing'] is Map
     ? Map<String, dynamic>.from(ride['pricing'] as Map)
@@ -148,9 +149,7 @@ class RideCostEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String t(String key) => ridePricingText(context, key);
-    final currencies = catalog['currencies'] is Map
-        ? catalog['currencies'] as Map
-        : const {};
+    final currencies = rideCurrencyCatalog(catalog)['currencies'] as Map;
     final codes = currencies.keys.map((key) => '$key').toList()..sort();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -242,6 +241,11 @@ class _RideCurrencyFieldState extends State<_RideCurrencyField> {
       label: Text(ridePricingText(context, 'currency')),
       enableFilter: true,
       enableSearch: true,
+      filterCallback: (entries, query) {
+        final search = query.trim().toUpperCase();
+        if (search.isEmpty || search == widget.value) return entries;
+        return entries.where((entry) => entry.value.contains(search)).toList();
+      },
       requestFocusOnTap: true,
       menuHeight: 250,
       errorText: field.errorText,
