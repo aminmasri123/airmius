@@ -9,6 +9,7 @@ use App\Models\ClubRoleAssignment;
 use App\Models\Event;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Performance\ResourceReadCache;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
@@ -503,6 +504,14 @@ class ClubPermissions
     }
 
     public static function effectiveFor(Club $club, User $user, ?array $scope = null): array
+    {
+        return ResourceReadCache::remember(
+            'club-permissions:'.$club->id.':'.$user->id.':'.json_encode($scope),
+            fn () => self::calculateEffectiveFor($club, $user, $scope),
+        );
+    }
+
+    private static function calculateEffectiveFor(Club $club, User $user, ?array $scope = null): array
     {
         if ($club->owner_id === $user->id || $user->hasAnyRole(Roles::FULL_ACCESS)) {
             return array_fill_keys(self::ALL, true);

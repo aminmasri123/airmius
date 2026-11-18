@@ -9,6 +9,7 @@ use App\Models\Ride;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\RideAddressService;
+use App\Services\RidePricingService;
 use App\Services\RideService;
 use App\Support\AppNotification;
 use App\Support\Roles;
@@ -69,6 +70,7 @@ class RideController extends Controller
         return response()->json([
             'data' => [
                 'rides' => $rides,
+                'pricing_catalog' => app(RidePricingService::class)->catalog($user),
                 'clubs' => Club::query()
                     ->whereIn('id', $clubIds)
                     ->select(['id', 'name'])
@@ -110,7 +112,7 @@ class RideController extends Controller
             'ride_seats_below_participants',
         );
 
-        $ride->update([
+        $this->service->update($ride, [
             ...$data,
             'club_id' => in_array($data['visibility'], ['club', 'team'], true)
                 ? ($data['club_id'] ?? null)
@@ -142,6 +144,8 @@ class RideController extends Controller
     {
         $data = $request->validate([
             'message' => ['nullable', 'string', 'max:500'],
+            'price_version' => ['nullable', 'integer', 'min:0'],
+            'price_acknowledged' => ['nullable', 'boolean'],
         ]);
         $ride->loadMissing('users:id,name');
         $user = $request->user();
@@ -159,7 +163,7 @@ class RideController extends Controller
 
         abort_unless($joinState['can_join'], 422, $joinState['join_block_reason'] ?? 'unavailable');
 
-        $result = $this->service->requestToJoin($ride, $user, $data['message'] ?? null);
+        $result = $this->service->requestToJoin($ride, $user, $data['message'] ?? null, isset($data['price_version']) ? (int) $data['price_version'] : null, (bool) ($data['price_acknowledged'] ?? false));
         abort_if($result === RideService::RESULT_FULL, 422, 'full');
         abort_unless(
             in_array($result, [
@@ -189,6 +193,17 @@ class RideController extends Controller
             ...$this->responseContract($result),
             'data' => $this->freshRideData($ride, $user),
         ]);
+    }
+
+    public function confirmPrice(Request $request, Ride $ride): JsonResponse
+    {
+        $this->authorize('view', $ride);
+        $data = $request->validate(['price_version' => ['required', 'integer', 'min:0'], 'price_acknowledged' => ['required', 'accepted']]);
+        if ($this->service->confirmPrice($ride, $request->user(), (int) $data['price_version'])) {
+            AppNotification::sendLocalized($ride->driver_id, 'ride.price_confirmed', 'ride_pricing.confirmed_title', 'ride_pricing.confirmed_body', ['name' => $request->user()->name], ['ride_id' => $ride->id]);
+        }
+
+        return response()->json(['message' => 'price_confirmed', 'data' => $this->freshRideData($ride, $request->user())]);
     }
 
     public function leave(Request $request, Ride $ride): JsonResponse
@@ -405,8 +420,10 @@ class RideController extends Controller
                 'id' => $member->id,
                 'name' => $member->name,
                 'message' => $member->pivot?->message,
+                'price_confirmation_required' => (bool) $member->pivot?->price_confirmation_required,
                 'requested_at' => $member->pivot?->created_at?->toIso8601String(),
             ])->values() : [],
+            'pricing' => app(RidePricingService::class)->payload($ride, $ownPivot),
             'is_driver' => $isDriver,
             'is_joined' => $isJoined,
             'has_pending_request' => $hasPending,
@@ -466,7 +483,7 @@ class RideController extends Controller
             $data['pickup_country'] = strtoupper((string) $data['pickup_country']);
         }
 
-        return [...$data, ...app(RideAddressService::class)->validate($request)];
+        return [...$data, ...app(RideAddressService::class)->validate($request), ...app(RidePricingService::class)->validate($request)];
     }
 
     private function visibleEvents(User $user)
@@ -592,7 +609,7 @@ class RideController extends Controller
         ?int $excludeUserId = null,
     ): void {
         foreach ($ride->users as $participant) {
-            if ((int) $participant->id !== (int) $excludeUserId) {
+            if ((int) $participant->id !== (int) $excludeUserId && in_array($participant->pivot?->status, [Ride::MEMBER_STATUS_REQUESTED, Ride::MEMBER_STATUS_ACCEPTED], true)) {
                 AppNotification::sendLocalized($participant, $type, $titleKey, $bodyKey, $replace, $data);
             }
         }

@@ -80,6 +80,37 @@ class RideAddressTest extends TestCase
         $this->getJson('/api/v1/rides?to_q=57000')->assertJsonPath('data.rides.0.destination_street', 'Private Zielstraße');
     }
 
+    public function test_accepted_passenger_gets_updated_house_numbers_notes_and_contact_from_notification_detail_endpoint(): void
+    {
+        $driver = $this->user();
+        $passenger = $this->user();
+        $other = $this->user();
+        Sanctum::actingAs($driver);
+        $id = $this->postJson('/api/v1/rides', $this->data())->assertCreated()->json('data.id');
+        Sanctum::actingAs($passenger);
+        $this->postJson('/api/v1/rides/'.$id.'/join')->assertOk();
+        Sanctum::actingAs($driver);
+        $this->postJson('/api/v1/rides/'.$id.'/requests/'.$passenger->id.'/approve')->assertOk();
+        $this->putJson('/api/v1/rides/'.$id, [...$this->data(),
+            'pickup_house_number' => '18b', 'destination_house_number' => '42',
+            'pickup_note' => 'Am Seiteneingang', 'contact_details' => 'Nur nach Zusage',
+        ])->assertOk();
+        Sanctum::actingAs($passenger);
+        $response = $this->getJson('/api/v1/rides/'.$id)->assertOk()
+            ->assertJsonPath('data.pickup_house_number', '18b')
+            ->assertJsonPath('data.destination_house_number', '42')
+            ->assertJsonPath('data.pickup_note', 'Am Seiteneingang')
+            ->assertJsonPath('data.contact_details', 'Nur nach Zusage');
+        $this->assertStringContainsString('18b', $response->json('data.pickup_private_label'));
+        $this->assertStringContainsString('42', $response->json('data.destination_private_label'));
+        Sanctum::actingAs($other);
+        $this->getJson('/api/v1/rides/'.$id)->assertOk()
+            ->assertJsonPath('data.pickup_house_number', null)
+            ->assertJsonPath('data.destination_house_number', null)
+            ->assertJsonPath('data.pickup_note', null)
+            ->assertJsonPath('data.contact_details', null);
+    }
+
     public function test_web_saves_destination_and_old_edits_do_not_erase_it(): void
     {
         $user = $this->user();

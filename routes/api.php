@@ -582,6 +582,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/rides', [MobileRideController::class, 'store'])->name('rides.store');
         Route::put('/rides/{ride}', [MobileRideController::class, 'update'])->name('rides.update');
         Route::post('/rides/{ride}/join', [MobileRideController::class, 'join'])->name('rides.join');
+        Route::post('/rides/{ride}/price/confirm', [MobileRideController::class, 'confirmPrice'])->name('rides.price.confirm');
         Route::post('/rides/{ride}/leave', [MobileRideController::class, 'leave'])->name('rides.leave');
         Route::post('/rides/{ride}/requests/{user}/approve', [MobileRideController::class, 'approveRequest'])->name('rides.requests.approve');
         Route::post('/rides/{ride}/requests/{user}/reject', [MobileRideController::class, 'rejectRequest'])->name('rides.requests.reject');

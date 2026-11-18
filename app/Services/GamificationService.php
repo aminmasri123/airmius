@@ -12,6 +12,7 @@ use App\Models\UserBadge;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class GamificationService
@@ -179,10 +180,36 @@ class GamificationService
         });
     }
 
-    public function summaryFor(Model $owner, ?string $actorType = null): array
+    public function summariesForUsers(Collection $users): array
+    {
+        $ids = $users->pluck('id')->unique();
+        if ($ids->isEmpty()) {
+            return [];
+        }
+        $owner = 'CASE WHEN owner_type IS NULL THEN user_id ELSE owner_id END';
+        $totals = GamificationXpEvent::query()
+            ->where(fn ($query) => $query
+                ->where(fn ($owned) => $owned->where('owner_type', User::class)->whereIn('owner_id', $ids))
+                ->orWhere(fn ($legacy) => $legacy->whereNull('owner_type')->whereIn('user_id', $ids)))
+            ->selectRaw($owner.' as summary_user_id, actor_type, SUM(amount) as xp, SUM(CASE WHEN DATE(created_at) = ? THEN amount ELSE 0 END) as earned_today', [Carbon::today()->toDateString()])
+            ->groupByRaw($owner.', actor_type')->get()
+            ->keyBy(fn ($row) => $row->summary_user_id.':'.$row->actor_type);
+
+        return $users->mapWithKeys(function (User $user) use ($totals) {
+            $actorType = $this->actorTypeForOwner($user);
+            $total = $totals->get($user->id.':'.$actorType);
+
+            return [$user->id => $this->summaryFor($user, $actorType, [
+                'xp' => (int) ($total?->xp ?? 0),
+                'earned_today' => (int) ($total?->earned_today ?? 0),
+            ])];
+        })->all();
+    }
+
+    public function summaryFor(Model $owner, ?string $actorType = null, ?array $totals = null): array
     {
         $actorType ??= $this->actorTypeForOwner($owner);
-        $xp = (int) $this->xpQueryForOwner($owner, $actorType)->sum('amount');
+        $xp = $totals['xp'] ?? (int) $this->xpQueryForOwner($owner, $actorType)->sum('amount');
         $level = $this->levelForXp($xp);
 
         return [
@@ -194,7 +221,7 @@ class GamificationService
             'current_level_xp' => $level['current_level_xp'],
             'progress' => $level['progress'],
             'xp_to_next_level' => max(0, $level['next_level_xp'] - $xp),
-            'earned_today' => (int) $this->xpQueryForOwner($owner, $actorType)
+            'earned_today' => $totals['earned_today'] ?? (int) $this->xpQueryForOwner($owner, $actorType)
                 ->whereDate('created_at', Carbon::today())
                 ->sum('amount'),
             'trust_score' => $owner instanceof User ? (int) ($owner->trust_score ?? 100) : null,

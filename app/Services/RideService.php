@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Ride;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class RideService
 {
@@ -25,6 +26,7 @@ class RideService
         return DB::transaction(function () use ($user, $data) {
             return Ride::create([
                 ...$data,
+                'price_version' => isset($data['cost_mode']) ? 1 : 0,
                 'club_id' => in_array($data['visibility'], ['club', 'team'], true)
                     ? ($data['club_id'] ?? null)
                     : null,
@@ -59,10 +61,63 @@ class RideService
         return true;
     }
 
-    public function requestToJoin(Ride $ride, User $user, ?string $message = null): string
+    public function update(Ride $ride, array $data): void
     {
-        return DB::transaction(function () use ($ride, $user, $message) {
+        DB::transaction(function () use ($ride, $data) {
+            $locked = Ride::query()->whereKey($ride->id)->lockForUpdate()->firstOrFail();
+            abort_if((int) $data['seats'] < $this->acceptedParticipantsCount($ride->id), 422, 'ride_seats_below_participants');
+            $changed = array_key_exists('cost_mode', $data) && (
+                $locked->cost_mode !== $data['cost_mode']
+                || $locked->cost_currency !== $data['cost_currency']
+                || $locked->cost_amount_minor !== $data['cost_amount_minor']
+            );
+            if ($changed) {
+                $data['price_version'] = (int) $locked->price_version + 1;
+            }
+            $locked->update($data);
+            if ($changed) {
+                DB::table('ride_users')->where('ride_id', $ride->id)->where('user_id', '!=', $locked->driver_id)
+                    ->whereIn('status', [Ride::MEMBER_STATUS_REQUESTED, Ride::MEMBER_STATUS_ACCEPTED])
+                    ->update(['price_confirmation_required' => true, 'updated_at' => now()]);
+            }
+            $ride->refresh();
+        });
+    }
+
+    public function confirmPrice(Ride $ride, User $user, int $version): bool
+    {
+        return DB::transaction(function () use ($ride, $user, $version) {
+            $locked = Ride::query()->whereKey($ride->id)->lockForUpdate()->firstOrFail();
+            $member = DB::table('ride_users')->where('ride_id', $ride->id)->where('user_id', $user->id)->first();
+            abort_unless($member && (int) $locked->driver_id !== (int) $user->id
+                && in_array($member->status, [Ride::MEMBER_STATUS_REQUESTED, Ride::MEMBER_STATUS_ACCEPTED], true), 403);
+            $this->assertPrice($locked, $version, true);
+            if ($version !== (int) $locked->price_version) {
+                throw ValidationException::withMessages(['price_version' => __('ride_pricing.price_changed')]);
+            }
+            if (! $member->price_confirmation_required) {
+                return false;
+            }
+            DB::table('ride_users')->where('id', $member->id)->update([
+                ...app(RidePricingService::class)->terms($locked), 'updated_at' => now(),
+            ]);
+
+            return true;
+        });
+    }
+
+    private function assertPrice(Ride $ride, ?int $version, bool $acknowledged): void
+    {
+        if ($ride->cost_mode !== null && (! $acknowledged || $version !== (int) $ride->price_version)) {
+            throw ValidationException::withMessages(['price_version' => __('ride_pricing.price_changed')]);
+        }
+    }
+
+    public function requestToJoin(Ride $ride, User $user, ?string $message = null, ?int $priceVersion = null, bool $acknowledged = false): string
+    {
+        return DB::transaction(function () use ($ride, $user, $message, $priceVersion, $acknowledged) {
             $lockedRide = Ride::query()->whereKey($ride->id)->lockForUpdate()->firstOrFail();
+            $this->assertPrice($lockedRide, $priceVersion, $acknowledged);
 
             $membership = DB::table('ride_users')
                 ->where('ride_id', $ride->id)
@@ -99,11 +154,12 @@ class RideService
                     'status' => Ride::MEMBER_STATUS_REQUESTED,
                     'message' => $message,
                     'responded_at' => null,
+                    ...app(RidePricingService::class)->terms($lockedRide),
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]],
                 ['ride_id', 'user_id'],
-                ['status', 'message', 'responded_at', 'updated_at'],
+                ['status', 'message', 'responded_at', 'updated_at', 'agreed_cost_mode', 'agreed_cost_amount_minor', 'agreed_cost_currency', 'agreed_price_version', 'price_confirmation_required'],
             );
 
             return self::RESULT_REQUESTED;
@@ -122,6 +178,10 @@ class RideService
 
             if (! $membership || $membership->status !== Ride::MEMBER_STATUS_REQUESTED) {
                 return self::RESULT_NOT_FOUND;
+            }
+
+            if ($membership->price_confirmation_required) {
+                throw ValidationException::withMessages(['price_version' => __('ride_pricing.awaiting_confirmation')]);
             }
 
             if ($this->acceptedParticipantsCount($lockedRide->id) >= (int) $lockedRide->seats) {

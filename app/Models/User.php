@@ -639,6 +639,11 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
         Storage::disk($this->profilePhotoDisk())->delete(array_unique($paths));
     }
 
+    public function profileBadgeAwards()
+    {
+        return $this->morphMany(UserBadge::class, 'awardable')->latest('id')->limit(12);
+    }
+
     public function getProfilePhotoUrlAttribute()
     {
         if ($this->profile_photo_path) {

@@ -142,6 +142,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Fahrt anbieten'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('ride-cost-mode')));
+    await tester.tap(find.byKey(const ValueKey('ride-cost-mode')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kostenlos').last);
+    await tester.pumpAndSettle();
     Future<void> fill(String label, String value, {bool last = false}) async {
       final matching = find.widgetWithText(TextFormField, label);
       final field = last ? matching.last : matching.first;
@@ -174,7 +179,13 @@ void main() {
     expect(saved.body?['destination_postal_code'], '57000');
     expect(saved.body?['destination_city'], 'Metz');
     expect(find.text('Adresse prüfen'), findsOneWidget);
-    expect(tester.widget<TextFormField>(find.widgetWithText(TextFormField, 'Ort').last).controller?.text, 'Metz');
+    expect(
+      tester
+          .widget<TextFormField>(find.widgetWithText(TextFormField, 'Ort').last)
+          .controller
+          ?.text,
+      'Metz',
+    );
     expect(tester.takeException(), isNull);
   });
 }

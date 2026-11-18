@@ -1,5 +1,15 @@
 # Mitfahranfragen aus Benachrichtigungen
 
+## Ergänzung am 18. November: vollständige Fahrtdetails
+
+Die App verwendet in der Benachrichtigungsansicht und in der normalen Fahrtdetailansicht dieselbe Komponente `RideInformationPanel`. Sie zeigt Fahrer, vollständige lokale Abfahrtszeit, belegte und freie Plätze, Teilnahme-/Anfragestatus, Start- und Zieladresse einschließlich Hausnummer, PLZ, Ort und Land, Treffpunktname, Treffpunkthinweis, Kontakt, Sichtbarkeit, Verein, Team und Termin, soweit gespeichert und freigegeben.
+
+Strukturierte Adressfelder haben Vorrang vor alten zusammengesetzten Adressbeschriftungen. Aktualisieren lädt den aktuellen Serverstand; ein Test ändert beide Hausnummern und prüft, dass die alten Werte verschwinden. Private Straßen, Hausnummern, Hinweise und Kontakt werden nur für Fahrer, bestätigte Mitfahrer oder berechtigte Bearbeiter angezeigt. Der Backend-Test prüft die Aktualisierung und das Verbergen der Angaben gegenüber einem unbestätigten Nutzer.
+
+Diese Darstellung benötigt ein App-Update. Für die vorhandenen Felder wurde kein neues Backend-Format eingeführt. Die ebenfalls vorbereitete Performance-Optimierung ist eine getrennte Änderung.
+
+Prüfung dieser Ergänzung: 20 Backend-Tests / 522 Assertions und 14 Flutter-Tests bestanden. Dazu gehören geänderte Hausnummern beider Adressen nach Aktualisieren, vollständige Informationen auf einem kleinen Bildschirm, Schutz privater Angaben, die Absageansicht und das Annehmen/Ablehnen nach Scrollen durch die erweiterten Details.
+
 ## Ergänzung: Benachrichtigung nach dem Löschen
 
 `ride.deleted` öffnet jetzt einen eigenen Absagebildschirm mit einer Schaltfläche zur Fahrtensuche. Die gelöschte Fahrt wird dabei nicht erneut geladen. Das gilt auch für bestehende Löschbenachrichtigungen mit der früheren Fahrt-URL und für den bisherigen Benachrichtigungsdetailbildschirm. Andere alte Fahrtlinks erklären HTTP 404 als fehlende Fahrt; HTTP 401/403, Netzwerkfehler und Serverfehler erhalten getrennte Meldungen.

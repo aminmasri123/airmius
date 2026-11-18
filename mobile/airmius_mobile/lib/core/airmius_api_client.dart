@@ -3940,14 +3940,18 @@ class AirmiusApiClient {
   Future<AirmiusJson> updateRide(int rideId, AirmiusJson body) =>
       _json('PUT', '/api/v1/rides/$rideId', body: body);
 
-  Future<AirmiusJson> requestRide(int rideId, {String? message}) => _json(
+  Future<AirmiusJson> requestRide(int rideId, {String? message, int? priceVersion, bool priceAcknowledged = false}) => _json(
     'POST',
     '/api/v1/rides/$rideId/join',
     body: {
+      if (priceVersion != null) 'price_version': priceVersion,
+      'price_acknowledged': priceAcknowledged,
       if (message != null && message.trim().isNotEmpty)
         'message': message.trim(),
     },
   );
+
+  Future<AirmiusJson> confirmRidePrice(int rideId, int version) => _json('POST', '/api/v1/rides/$rideId/price/confirm', body: {'price_version': version, 'price_acknowledged': true});
 
   Future<AirmiusJson> leaveRide(int rideId) =>
       _json('POST', '/api/v1/rides/$rideId/leave');

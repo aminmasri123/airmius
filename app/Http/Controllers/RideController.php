@@ -8,6 +8,7 @@ use App\Models\Ride;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\RideAddressService;
+use App\Services\RidePricingService;
 use App\Services\RideService;
 use App\Support\AppNotification;
 use App\Support\Roles;
@@ -111,8 +112,10 @@ class RideController extends Controller
                         'id' => $member->id,
                         'name' => $member->name,
                         'message' => $member->pivot?->message,
+                        'price_confirmation_required' => (bool) $member->pivot?->price_confirmation_required,
                         'requested_at' => $member->pivot?->created_at,
                     ])->values() : [],
+                    'pricing' => app(RidePricingService::class)->payload($ride, $ownPivot),
                     'is_driver' => $isDriver,
                     'is_joined' => $isJoined,
                     'has_pending_request' => $hasPendingRequest,
@@ -125,6 +128,7 @@ class RideController extends Controller
 
         return Inertia::render('Auth/Dashboard/Rides/Index', [
             'rides' => $rides,
+            'pricing_catalog' => app(RidePricingService::class)->catalog($user),
             'filters' => $request->only(['from_q', 'to_q', 'radius_km', 'from_lat', 'from_lng', 'to_lat', 'to_lng']),
             'clubs' => Club::query()
                 ->whereIn('id', $clubIds)
@@ -167,7 +171,7 @@ class RideController extends Controller
 
         abort_if((int) $data['seats'] < $participantsCount, 422, __('rides.flash.seats_below_participants'));
 
-        $ride->update([
+        $this->service->update($ride, [
             ...$data,
             'club_id' => $data['visibility'] === 'club' ? ($data['club_id'] ?? null) : ($data['visibility'] === 'team' ? ($data['club_id'] ?? null) : null),
             'team_id' => $data['visibility'] === 'team' ? ($data['team_id'] ?? null) : null,
@@ -213,9 +217,11 @@ class RideController extends Controller
 
         $data = request()->validate([
             'message' => ['nullable', 'string', 'max:500'],
+            'price_version' => ['nullable', 'integer', 'min:0'],
+            'price_acknowledged' => ['nullable', 'boolean'],
         ]);
 
-        $result = $this->service->requestToJoin($ride, auth()->user(), $data['message'] ?? null);
+        $result = $this->service->requestToJoin($ride, auth()->user(), $data['message'] ?? null, isset($data['price_version']) ? (int) $data['price_version'] : null, (bool) ($data['price_acknowledged'] ?? false));
 
         if ($result === RideService::RESULT_FULL) {
             return back()->with('error', __('rides.flash.full'));
@@ -251,6 +257,17 @@ class RideController extends Controller
         }
 
         return back()->with('success', __('rides.flash.request_sent'));
+    }
+
+    public function confirmPrice(Request $request, Ride $ride)
+    {
+        $this->authorize('view', $ride);
+        $data = $request->validate(['price_version' => ['required', 'integer', 'min:0'], 'price_acknowledged' => ['required', 'accepted']]);
+        if ($this->service->confirmPrice($ride, $request->user(), (int) $data['price_version'])) {
+            AppNotification::sendLocalized($ride->driver_id, 'ride.price_confirmed', 'ride_pricing.confirmed_title', 'ride_pricing.confirmed_body', ['name' => $request->user()->name], ['ride_id' => $ride->id]);
+        }
+
+        return back()->with('success', __('ride_pricing.confirmed'));
     }
 
     public function leave(Ride $ride)
@@ -459,7 +476,7 @@ class RideController extends Controller
             $data['pickup_country'] = strtoupper((string) $data['pickup_country']);
         }
 
-        return [...$data, ...app(RideAddressService::class)->validate($request)];
+        return [...$data, ...app(RideAddressService::class)->validate($request), ...app(RidePricingService::class)->validate($request)];
     }
 
     private function visibleEvents(User $user)

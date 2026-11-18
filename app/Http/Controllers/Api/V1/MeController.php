@@ -9,6 +9,7 @@ use App\Support\AccountType;
 use App\Support\GuardianConsentNotifier;
 use App\Support\GuardianConsentState;
 use App\Support\MinorSafety;
+use App\Support\Performance\ResourceReadCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -23,7 +24,7 @@ class MeController extends Controller
         GuardianConsentState::sync($user);
         $user->loadCount(['followers', 'following', 'posts']);
 
-        return new UserResource(
+        return ResourceReadCache::render($request, fn () => (new UserResource(
             $user->loadMissing([
                 'roles',
                 'permissions',
@@ -31,7 +32,7 @@ class MeController extends Controller
                 'teams.club',
                 'sportProfiles.sport',
             ])
-        );
+        ))->toResponse($request));
     }
 
     public function updateLanguage(Request $request, UpdateUserLanguage $updateLanguage)

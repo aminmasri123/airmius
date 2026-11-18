@@ -17,8 +17,10 @@ class RequestTransport implements AirmiusApiTransport {
     this.driver = true,
     this.fail = false,
     this.loadStatus = 200,
+    this.details = const {},
   });
   final int loadStatus;
+  Map<String, dynamic> details;
   final bool driver;
   final bool fail;
   final calls = <AirmiusApiRequest>[];
@@ -75,6 +77,7 @@ class RequestTransport implements AirmiusApiTransport {
           'available_seats': 3 - members.length,
           'pending_requests': driver ? pending : [],
           'users': members,
+          ...details,
         },
       }),
     );
@@ -113,6 +116,126 @@ Future<void> showRide(
 }
 
 void main() {
+  testWidgets(
+    'updated ride notification shows both complete addresses and current information',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final transport = RequestTransport(
+        driver: false,
+        details: {
+          'is_joined': true, 'visibility': 'team',
+          'pickup_street': 'Avenue Al Qadissia', 'pickup_house_number': '18b',
+          'pickup_postal_code': '14000',
+          'pickup_city': 'Kenitra',
+          'pickup_country': 'MA',
+          'pickup_name': 'Sporthalle', 'pickup_note': 'Am Seiteneingang warten',
+          'destination_street': 'Calle del Deporte',
+          'destination_house_number': '42',
+          'destination_postal_code': '50001',
+          'destination_city': 'Saragossa',
+          'destination_country': 'ES',
+          'contact_details': 'Telefon: +00 Testkontakt',
+          'club': {'id': 1, 'name': 'Testverein'},
+          'team': {'id': 2, 'name': 'Laufteam'},
+          'event': {'id': 3, 'title': 'Wettkampf'},
+          // Old combined labels must not hide an updated structured house number.
+          'pickup_private_label': 'Avenue Al Qadissia 1',
+          'destination_private_label': 'Calle del Deporte 2',
+        },
+      );
+      await showRide(
+        tester,
+        transport,
+        home: NotificationDetailScreen(
+          notification: AirmiusNotification.fromJson({
+            'id': 1,
+            'read': true,
+            'type': 'ride.updated',
+            'data': {'ride_id': 12},
+          }),
+          typeLabel: 'Fahrgemeinschaften',
+          icon: Icons.notifications,
+          onChanged: () {},
+        ),
+      );
+      for (final value in [
+        'Avenue Al Qadissia 18b\n14000 Kenitra\nMA',
+        'Calle del Deporte 42\n50001 Saragossa\nES',
+        'Sporthalle',
+        'Am Seiteneingang warten',
+        'Telefon: +00 Testkontakt',
+        'Testverein',
+        'Laufteam',
+        'Wettkampf',
+      ]) {
+        expect(find.text(value), findsOneWidget);
+      }
+      transport.details = {
+        ...transport.details,
+        'pickup_house_number': '99',
+        'destination_house_number': '108a',
+      };
+      await tester.tap(find.byTooltip('Aktualisieren'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Avenue Al Qadissia 99\n14000 Kenitra\nMA'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Calle del Deporte 108a\n50001 Saragossa\nES'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Avenue Al Qadissia 18b\n14000 Kenitra\nMA'),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'unapproved viewers only see public addresses even with unexpected private fields',
+    (tester) async {
+      await showRide(
+        tester,
+        RequestTransport(
+          driver: false,
+          details: {
+            'is_joined': false,
+            'can_update': false,
+            'pickup_street': 'Secret Start',
+            'pickup_house_number': '7',
+            'pickup_city': 'Kenitra',
+            'pickup_country': 'MA',
+            'destination_street': 'Secret Destination',
+            'destination_house_number': '8',
+            'destination_city': 'Saragossa',
+            'destination_country': 'ES',
+            'pickup_private_label': 'Secret pickup label',
+            'destination_private_label': 'Secret destination label',
+            'pickup_note': 'Private note',
+            'contact_details': 'Private phone',
+          },
+        ),
+      );
+      expect(find.text('Kenitra\nMA'), findsOneWidget);
+      expect(find.text('Saragossa\nES'), findsOneWidget);
+      for (final privateText in [
+        'Secret Start',
+        'Secret Destination',
+        'Secret pickup label',
+        'Secret destination label',
+        'Private note',
+        'Private phone',
+      ]) {
+        expect(find.textContaining(privateText), findsNothing);
+      }
+    },
+  );
+
   testWidgets(
     'deleted ride notification shows cancellation without loading the deleted ride',
     (tester) async {
@@ -211,6 +334,11 @@ void main() {
         ),
       );
       expect(find.byType(CarpoolRideScreen), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('approve-2')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Annehmen'), findsNWidgets(2));
       expect(find.text('Als gelesen markieren'), findsNothing);
     },
@@ -245,7 +373,11 @@ void main() {
       final transport = RequestTransport();
       await showRide(tester, transport);
       expect(find.byType(CarpoolRideScreen), findsOneWidget);
-      await tester.ensureVisible(find.text('Annehmen').first);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('approve-2')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('Annehmen').first);
       await tester.pumpAndSettle();
       expect(transport.calls.last.path, '/api/v1/rides/12/requests/2/approve');
@@ -255,7 +387,11 @@ void main() {
       await tester.tap(find.text('Ablehnen'));
       await tester.pumpAndSettle();
       expect(transport.calls.last.path, '/api/v1/rides/12/requests/3/reject');
-      await tester.drag(find.byType(ListView).first, const Offset(0, 800));
+      await tester.scrollUntilVisible(
+        find.text('Keine offenen Mitfahranfragen.'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       expect(find.text('Keine offenen Mitfahranfragen.'), findsOneWidget);
       expect(find.byType(CarpoolRideScreen), findsOneWidget);
@@ -273,7 +409,11 @@ void main() {
     'failed decision keeps pending request and shows the server error',
     (tester) async {
       await showRide(tester, RequestTransport(fail: true));
-      await tester.ensureVisible(find.text('Annehmen').first);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('approve-2')),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('Annehmen').first);
       await tester.pumpAndSettle();
       expect(find.text('Anfrage nicht mehr verfügbar'), findsOneWidget);

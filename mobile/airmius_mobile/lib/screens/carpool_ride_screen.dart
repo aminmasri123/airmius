@@ -3,6 +3,9 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/ride_information_panel.dart';
+import '../widgets/ride_pricing.dart';
+import '../core/ride_pricing_copy.dart';
 import 'carpool_center_screen.dart';
 
 String _rideCopy(BuildContext context, String key) =>
@@ -131,6 +134,49 @@ class _CarpoolRideScreenState extends State<CarpoolRideScreen> {
     }
   }
 
+  Future<void> _reviewPrice() async {
+    if (_busy || _ride == null) return;
+    final decision = await showRidePricingReview(
+      context,
+      _ride!,
+      changed: true,
+    );
+    if (!mounted || decision == null) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      if (decision == 'decline') {
+        await _client.leaveRide(widget.rideId);
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const CarpoolCenterScreen()),
+        );
+      } else {
+        final response = await _client.confirmRidePrice(
+          widget.rideId,
+          (ridePricing(_ride!)['version'] as num).toInt(),
+        );
+        if (mounted) {
+          setState(
+            () => _ride = Map<String, dynamic>.from(response['data'] as Map),
+          );
+        }
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = error is AirmiusApiException
+              ? error.userMessage
+              : t('rides.actionError'),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -171,42 +217,16 @@ class _CarpoolRideScreenState extends State<CarpoolRideScreen> {
         final ride = _ride!;
         final requests = (ride['pending_requests'] as List? ?? []).cast<Map>();
         final members = (ride['users'] as List? ?? []).cast<Map>();
-        final driver = ride['driver'] as Map?;
-        final departure = DateTime.tryParse(
-          '${ride['departure_time']}',
-        )?.toLocal();
-        final date = departure == null
-            ? ''
-            : MaterialLocalizations.of(context).formatMediumDate(departure);
-        final time = departure == null
-            ? ''
-            : MaterialLocalizations.of(
-                context,
-              ).formatTimeOfDay(TimeOfDay.fromDateTime(departure));
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            AirmiusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${ride['from']} → ${ride['to']}',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 12),
-                  Text('${t('rides.driver')}: ${driver?['name'] ?? ''}'),
-                  Text('$date · $time'),
-                  Text(
-                    t('rides.seatCount')
-                        .replaceAll('{used}', '${ride['participants_count']}')
-                        .replaceAll('{total}', '${ride['seats']}'),
-                  ),
-                  if (ride['pickup_private_label'] != null)
-                    Text('${ride['pickup_private_label']}'),
-                ],
+            RideInformationPanel(ride: ride),
+            if (ridePricing(ride)['requires_confirmation'] == true)
+              AirmiusButton(
+                label: ridePricingText(context, 'confirm'),
+                icon: Icons.price_check,
+                onPressed: _busy ? null : _reviewPrice,
               ),
-            ),
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -245,10 +265,13 @@ class _CarpoolRideScreenState extends State<CarpoolRideScreen> {
                           runSpacing: 8,
                           children: [
                             AirmiusButton(
+                              key: ValueKey('approve-${request['id']}'),
                               label: t('rides.approve'),
                               icon: Icons.check,
                               onPressed:
                                   _busy ||
+                                      request['price_confirmation_required'] ==
+                                          true ||
                                       (ride['available_seats'] as num? ?? 0) <=
                                           0
                                   ? null
@@ -258,6 +281,7 @@ class _CarpoolRideScreenState extends State<CarpoolRideScreen> {
                                     ),
                             ),
                             AirmiusButton(
+                              key: ValueKey('reject-${request['id']}'),
                               label: t('rides.reject'),
                               icon: Icons.close,
                               onPressed: _busy
@@ -271,6 +295,10 @@ class _CarpoolRideScreenState extends State<CarpoolRideScreen> {
                         ),
                         if ((ride['available_seats'] as num? ?? 0) <= 0)
                           Text(copy('full')),
+                        if (request['price_confirmation_required'] == true)
+                          Text(
+                            ridePricingText(context, 'awaiting_confirmation'),
+                          ),
                       ],
                     ),
                   ),

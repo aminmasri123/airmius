@@ -6,6 +6,9 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/ride_information_panel.dart';
+import '../widgets/ride_pricing.dart';
+import '../core/ride_pricing_copy.dart';
 import '../widgets/country_field.dart';
 import '../widgets/ride_location_field.dart';
 import '../core/ride_location_copy.dart';
@@ -26,6 +29,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
   String _filter = 'upcoming';
   int _eventFilterId = 0;
   bool _busy = false;
+  JsonMap _pricingCatalog = {};
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -116,6 +120,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
       isDismissible: false,
       enableDrag: false,
       builder: (context) => _RideEditorSheet(
+        catalog: _pricingCatalog,
         clubs: clubs,
         teams: teams,
         events: events,
@@ -138,45 +143,38 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
 
   Future<void> _requestRide(JsonMap ride) async {
     final controller = TextEditingController();
-    final send = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('rides.requestTitle')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(t('rides.requestHint'), style: TextStyle(height: 1.4)),
-            const SizedBox(height: 14),
-            TextField(
-              controller: controller,
-              maxLength: 500,
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: t('rides.messageOptional'),
-                prefixIcon: Icon(Icons.message_outlined),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(t('cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(t('rides.sendRequest')),
-          ),
-        ],
-      ),
+    final send = await showRidePricingReview(
+      context,
+      ride,
+      message: controller,
     );
     final message = controller.text;
     controller.dispose();
-    if (send != true || !mounted) return;
+    if (send != 'confirm' || !mounted) return;
     await _run(
-      () => _client.requestRide(_rideInt(ride['id']), message: message),
+      () => _client.requestRide(
+        _rideInt(ride['id']),
+        message: message,
+        priceVersion: _rideInt(ridePricing(ride)['version']),
+        priceAcknowledged: true,
+      ),
       t('rides.requestSent'),
+    );
+  }
+
+  Future<void> _reviewRidePrice(JsonMap ride) async {
+    final decision = await showRidePricingReview(context, ride, changed: true);
+    if (!mounted || decision == null) return;
+    await _run(
+      () => decision == 'decline'
+          ? _client.leaveRide(_rideInt(ride['id']))
+          : _client.confirmRidePrice(
+              _rideInt(ride['id']),
+              _rideInt(ridePricing(ride)['version']),
+            ),
+      decision == 'decline'
+          ? t('rides.left')
+          : ridePricingText(context, 'confirmed'),
     );
   }
 
@@ -250,6 +248,10 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
       builder: (sheetContext) => _RideDetailsSheet(
         ride: ride,
         busy: _busy,
+        onReviewPrice: () {
+          Navigator.pop(sheetContext);
+          _reviewRidePrice(ride);
+        },
         onEdit: () {
           Navigator.pop(sheetContext);
           _editRide(clubs, teams, events, ride: ride);
@@ -332,6 +334,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
           }
 
           final root = _rideMap(snapshot.data?['data']);
+          _pricingCatalog = _rideMap(root['pricing_catalog']);
           final rides = _rideList(root['rides']);
           final clubs = _rideList(root['clubs']);
           final teams = _rideList(root['teams']);
@@ -726,6 +729,10 @@ class _RideCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
+                Text(
+                  ridePriceLabel(context, ridePricing(ride)),
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -766,6 +773,7 @@ class _RideDetailsSheet extends StatelessWidget {
   const _RideDetailsSheet({
     required this.ride,
     required this.busy,
+    required this.onReviewPrice,
     required this.onEdit,
     required this.onJoin,
     required this.onLeave,
@@ -777,6 +785,7 @@ class _RideDetailsSheet extends StatelessWidget {
 
   final JsonMap ride;
   final bool busy;
+  final VoidCallback onReviewPrice;
   final VoidCallback onEdit;
   final VoidCallback onJoin;
   final VoidCallback onLeave;
@@ -788,9 +797,6 @@ class _RideDetailsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    final privatePickup = _rideText(ride['pickup_private_label']);
-    final publicPickup = _rideText(ride['pickup_public_label']);
-    final contact = _rideText(ride['contact_details']);
     final members = _rideList(ride['users']);
     final requests = _rideList(ride['pending_requests']);
     final reason = _rideText(ride['join_block_reason']);
@@ -861,80 +867,13 @@ class _RideDetailsSheet extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 18),
-            AirmiusPanel(
-              child: Column(
-                children: [
-                  _DetailLine(
-                    icon: Icons.schedule_outlined,
-                    label: t('rides.departure'),
-                    value: _formatRideDate(
-                      context,
-                      _rideDate(ride['departure_time']),
-                    ),
-                  ),
-                  if (_rideMap(ride['event']).isNotEmpty)
-                    _DetailLine(
-                      icon: Icons.event_outlined,
-                      label: t('rides.event'),
-                      value: _rideText(_rideMap(ride['event'])['title']),
-                    ),
-                  _DetailLine(
-                    icon: Icons.event_seat_outlined,
-                    label: t('rides.seats'),
-                    value: t('rides.seatCount')
-                        .replaceFirst(
-                          '{used}',
-                          '${_rideInt(ride['participants_count'])}',
-                        )
-                        .replaceFirst('{total}', '${_rideInt(ride['seats'])}'),
-                  ),
-                  _DetailLine(
-                    icon: Icons.visibility_outlined,
-                    label: t('rides.visibility'),
-                    value: t(
-                      'rides.visibility.${_rideText(ride['visibility'], fallback: 'public')}',
-                    ),
-                  ),
-                  _DetailLine(
-                    icon: Icons.flag_outlined,
-                    label: t('rides.destinationAddress'),
-                    value: _rideText(
-                      ride['destination_private_label'] ??
-                          ride['destination_public_label'] ??
-                          ride['to'],
-                    ),
-                  ),
-                  if (publicPickup.isNotEmpty)
-                    _DetailLine(
-                      icon: Icons.location_on_outlined,
-                      label: privatePickup.isEmpty
-                          ? t('rides.approxPickup')
-                          : t('rides.pickup'),
-                      value: privatePickup.isNotEmpty
-                          ? privatePickup
-                          : publicPickup,
-                    ),
-                  if (privatePickup.isEmpty && publicPickup.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        t('rides.privateAfterApproval'),
-                        style: TextStyle(
-                          color: airmiusMutedColor(context),
-                          fontSize: 13,
-                          height: 1.35,
-                        ),
-                      ),
-                    ),
-                  if (contact.isNotEmpty)
-                    _DetailLine(
-                      icon: Icons.contact_phone_outlined,
-                      label: t('rides.contact'),
-                      value: contact,
-                    ),
-                ],
+            RideInformationPanel(ride: ride, showHeader: false),
+            if (ridePricing(ride)['requires_confirmation'] == true)
+              AirmiusButton(
+                label: ridePricingText(context, 'confirm'),
+                icon: Icons.price_check,
+                onPressed: busy ? null : onReviewPrice,
               ),
-            ),
             if (members.isNotEmpty) ...[
               const SizedBox(height: 14),
               AirmiusPanel(
@@ -998,6 +937,13 @@ class _RideDetailsSheet extends StatelessWidget {
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
+                            if (request['price_confirmation_required'] == true)
+                              Text(
+                                ridePricingText(
+                                  context,
+                                  'awaiting_confirmation',
+                                ),
+                              ),
                             if (_rideText(request['message']).isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Text(
@@ -1016,7 +962,10 @@ class _RideDetailsSheet extends StatelessWidget {
                                 AirmiusButton(
                                   label: t('rides.approve'),
                                   icon: Icons.check_outlined,
-                                  onPressed: busy
+                                  onPressed:
+                                      busy ||
+                                          request['price_confirmation_required'] ==
+                                              true
                                       ? null
                                       : () =>
                                             onApprove(_rideInt(request['id'])),
@@ -1108,6 +1057,7 @@ class _RideEditorSheet extends StatefulWidget {
     required this.events,
     required this.onSave,
     required this.client,
+    required this.catalog,
     this.ride,
   });
 
@@ -1117,6 +1067,7 @@ class _RideEditorSheet extends StatefulWidget {
   final JsonMap? ride;
   final Future<void> Function(JsonMap) onSave;
   final AirmiusApiClient client;
+  final JsonMap catalog;
 
   @override
   State<_RideEditorSheet> createState() => _RideEditorSheetState();
@@ -1138,6 +1089,8 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
   late final TextEditingController _contact;
   late final TextEditingController _seats;
   final _destination = <String, TextEditingController>{};
+  final _costAmount = TextEditingController();
+  String? _costMode, _costCurrency;
   late String _visibility;
   int? _clubId;
   int? _teamId;
@@ -1150,6 +1103,11 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
   void initState() {
     super.initState();
     final ride = widget.ride ?? const <String, dynamic>{};
+    final pricing = ridePricing(ride);
+    _costMode = pricing['mode'] as String?;
+    _costCurrency =
+        (pricing['currency'] ?? widget.catalog['default_currency']) as String?;
+    _costAmount.text = '${pricing['amount'] ?? ''}';
     for (final field in [
       'street',
       'house_number',
@@ -1204,6 +1162,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
       _city,
       _country,
       _note,
+      _costAmount,
       _contact,
       _seats,
       ..._destination.values,
@@ -1303,6 +1262,10 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
     }
 
     final payload = <String, dynamic>{
+      'pricing_details': true,
+      'cost_mode': _costMode,
+      'cost_amount': _costAmount.text,
+      'cost_currency': _costCurrency,
       'address_details': true,
       for (final entry in _destination.entries)
         'destination_' + entry.key: _nullable(entry.value.text),
@@ -1415,6 +1378,16 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
                     _eventId = null;
                   }
                 }),
+              ),
+              const SizedBox(height: 12),
+              RideCostEditor(
+                catalog: widget.catalog,
+                mode: _costMode,
+                currency: _costCurrency,
+                amount: _costAmount,
+                editing: widget.ride != null,
+                onMode: (value) => setState(() => _costMode = value),
+                onCurrency: (value) => setState(() => _costCurrency = value),
               ),
               const SizedBox(height: 12),
               if (_visibility == 'club' || _visibility == 'team')
@@ -1724,56 +1697,6 @@ class _RideField extends StatelessWidget {
             }
             return null;
           },
-    );
-  }
-}
-
-class _DetailLine extends StatelessWidget {
-  const _DetailLine({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: airmiusAccentColor(context), size: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: airmiusMutedColor(context),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: airmiusTextColor(context),
-                    fontWeight: FontWeight.w800,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

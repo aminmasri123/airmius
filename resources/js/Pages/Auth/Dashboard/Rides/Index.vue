@@ -3,9 +3,12 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
 import CountrySelect from '@/Components/CountrySelect.vue'
 import RideLocationField from '@/Components/Rides/RideLocationField.vue'
+import RidePriceFields from '@/Components/Rides/RidePriceFields.vue'
+import RidePriceSummary from '@/Components/Rides/RidePriceSummary.vue'
+import { ridePricingText } from '@/support/ridePricing'
 import { useRideLocationCopy } from '@/support/rideLocations'
 import { Head, router, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
@@ -18,6 +21,7 @@ const tx = (key, fallback, values = {}) => {
 
 const props = defineProps({
     rides: { type: Array, default: () => [] },
+    pricing_catalog: { type: Object, default: () => ({}) },
     clubs: { type: Array, default: () => [] },
     teams: { type: Array, default: () => [] },
     events: { type: Array, default: () => [] },
@@ -32,6 +36,24 @@ const deleteConfirmation = ref('')
 const editTarget = ref(null)
 const requestTarget = ref(null)
 const requestMessage = ref('')
+const priceAcknowledged = ref(false)
+const priceReviewTarget = ref(null)
+const priceReviewAcknowledged = ref(false)
+const priceText = key => ridePricingText(locale.value, key)
+watch(() => requestTarget.value?.pricing?.version, () => { priceAcknowledged.value = false })
+watch(() => priceReviewTarget.value?.pricing?.version, () => { priceReviewAcknowledged.value = false })
+const openPriceReview = ride => { priceReviewTarget.value = ride; priceReviewAcknowledged.value = false }
+const confirmRidePrice = () => {
+    if (!priceReviewTarget.value || !priceReviewAcknowledged.value) return
+    router.post(route('auth.rides.price.confirm', priceReviewTarget.value.id), { price_version: priceReviewTarget.value.pricing.version, price_acknowledged: true }, { preserveScroll: true, onSuccess: () => { priceReviewTarget.value = null }, onError: () => {
+        priceReviewTarget.value = props.rides.find(ride => ride.id === priceReviewTarget.value?.id) || priceReviewTarget.value
+        priceReviewAcknowledged.value = false
+    } })
+}
+const declineRidePrice = () => {
+    if (!priceReviewTarget.value) return
+    router.post(route('auth.rides.leave', priceReviewTarget.value.id), {}, { preserveScroll: true, onSuccess: () => { priceReviewTarget.value = null } })
+}
 const removeMemberTarget = ref(null)
 const showPastRides = ref(false)
 const eventFilter = ref('')
@@ -123,6 +145,7 @@ const form = useForm({
     departure_time: '',
     seats: 3,
     contact_details: '',
+    pricing_details: true, cost_mode: '', cost_amount: '', cost_currency: props.pricing_catalog.default_currency || '',
 })
 
 const chooseAddress = (prefix, item) => {
@@ -196,6 +219,9 @@ const resetForm = () => {
     form.seats = 3
     form.pickup_country = 'DE'
     form.event_id = ''
+    form.cost_mode = ''
+    form.cost_amount = ''
+    form.cost_currency = props.pricing_catalog.default_currency || ''
 }
 
 const openCreateModal = () => {
@@ -223,6 +249,9 @@ const openEditModal = (ride) => {
     form.departure_time = toDateTimeLocal(ride.departure_time)
     form.seats = ride.seats || 1
     form.contact_details = ride.contact_details || ''
+    form.cost_mode = ride.pricing?.mode || ''
+    form.cost_amount = ride.pricing?.amount || ''
+    form.cost_currency = ride.pricing?.currency || props.pricing_catalog.default_currency || ''
     form.clearErrors()
     showCreateModal.value = true
 }
@@ -352,6 +381,7 @@ const seatBadgeMeta = (ride) => {
 
 const openRequestModal = (ride) => {
     requestTarget.value = ride
+    priceAcknowledged.value = false
     requestMessage.value = ''
 }
 
@@ -361,13 +391,18 @@ const closeRequestModal = () => {
 }
 
 const sendRideRequest = () => {
-    if (!requestTarget.value) return
+    if (!requestTarget.value || !priceAcknowledged.value) return
 
     router.post(route('auth.rides.join', requestTarget.value.id), {
         message: requestMessage.value,
+        price_version: requestTarget.value.pricing?.version ?? 0, price_acknowledged: true,
     }, {
         preserveScroll: true,
         onSuccess: () => closeRequestModal(),
+        onError: () => {
+            requestTarget.value = props.rides.find(ride => ride.id === requestTarget.value?.id) || requestTarget.value
+            priceAcknowledged.value = false
+        },
     })
 }
 
@@ -536,6 +571,7 @@ const confirmDeleteRide = () => {
                     <p v-if="form.errors.team_id" class="mt-1 text-xs text-error">{{ form.errors.team_id }}</p>
                 </div>
 
+                <RidePriceFields :form="form" :catalog="pricing_catalog" :editing="Boolean(editTarget)" />
                 <div>
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Plätze</label>
                     <input v-model="form.seats" type="number" min="1" max="20" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required />
@@ -703,6 +739,19 @@ const confirmDeleteRide = () => {
             </div>
         </Modal>
 
+        <Modal :show="Boolean(priceReviewTarget)" max-width="md" @close="priceReviewTarget = null">
+            <div v-if="priceReviewTarget" class="space-y-4">
+                <h2 class="text-lg font-semibold">{{ priceText('changed') }}</h2>
+                <p>{{ priceReviewTarget.from }} → {{ priceReviewTarget.to }}</p>
+                <RidePriceSummary :pricing="priceReviewTarget.pricing" />
+                <p v-if="$page.props.errors.price_version" role="alert" class="text-error">{{ $page.props.errors.price_version }}</p>
+                <label class="flex items-start gap-2"><input v-model="priceReviewAcknowledged" type="checkbox" /><span>{{ priceText('acknowledge') }}</span></label>
+                <button type="button" :disabled="!priceReviewAcknowledged" class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary disabled:opacity-50" @click="confirmRidePrice">{{ priceText('confirm') }}</button>
+                <p class="text-sm text-secondary">{{ priceText('decline_hint') }}</p>
+                <button type="button" class="rounded-lg border border-error p-3 text-error" @click="declineRidePrice">{{ priceText('decline') }}</button>
+            </div>
+        </Modal>
+
         <Modal :show="Boolean(requestTarget)" max-width="md" @close="closeRequestModal">
             <div v-if="requestTarget" class="space-y-4">
                 <div>
@@ -715,6 +764,9 @@ const confirmDeleteRide = () => {
                     </p>
                 </div>
 
+                <RidePriceSummary :pricing="requestTarget.pricing" />
+                <p v-if="$page.props.errors.price_version" role="alert" class="text-error">{{ $page.props.errors.price_version }}</p>
+                <label class="flex items-start gap-2"><input v-model="priceAcknowledged" type="checkbox" class="mt-1" /><span>{{ priceText("acknowledge") }}</span></label>
                 <label class="block">
                     <span class="text-sm font-semibold text-primary">Nachricht optional</span>
                     <textarea
@@ -736,6 +788,7 @@ const confirmDeleteRide = () => {
                     <button
                         type="button"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                        :disabled="!priceAcknowledged"
                         @click="sendRideRequest"
                     >
                         Anfrage senden
@@ -863,6 +916,8 @@ const confirmDeleteRide = () => {
                     </p>
                 </div>
 
+                <RidePriceSummary class="mt-4" :pricing="ride.pricing" />
+                <button v-if="ride.pricing?.requires_confirmation" type="button" class="mt-3 rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary" @click="openPriceReview(ride)">{{ priceText("confirm") }}</button>
                 <div v-if="ride.is_driver && ride.pending_requests?.length" class="mt-4 rounded-lg border border-air-blue/30 bg-air-blue/10 p-3">
                     <h3 class="text-sm font-semibold text-primary">Offene Anfragen</h3>
                     <div class="mt-3 space-y-3">
@@ -872,11 +927,12 @@ const confirmDeleteRide = () => {
                                     <p class="font-semibold text-primary">{{ request.name }}</p>
                                     <p v-if="request.message" class="mt-1 text-sm text-secondary">{{ request.message }}</p>
                                     <p v-else class="mt-1 text-xs text-secondary">Keine Nachricht angegeben.</p>
+                                    <p v-if="request.price_confirmation_required" class="mt-1 text-sm text-warning">{{ priceText("awaiting_confirmation") }}</p>
                                 </div>
                                 <div class="flex gap-2">
                                     <button
                                         class="inline-flex items-center gap-1 rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
-                                        :disabled="rideIsFull(ride)"
+                                        :disabled="rideIsFull(ride) || request.price_confirmation_required"
                                         :title="rideIsFull(ride) ? 'Keine freien Plätze mehr.' : 'Mitfahranfrage annehmen.'"
                                         @click="approveRequest(ride, request)"
                                     >

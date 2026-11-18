@@ -18,11 +18,13 @@ use App\Models\MessageReaction;
 use App\Models\MessageReceipt;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\ApiUserPayloadLoader;
 use App\Services\ChatLatestMessageLoader;
 use App\Services\ChatService;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
 use App\Support\GuardianConsentState;
+use App\Support\Performance\ResourceReadCache;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -75,7 +77,19 @@ class ChatController extends Controller
             ['sender', 'receipts', 'attachments.file', 'reactions.user'],
         );
 
-        return ConversationResource::collection($conversations);
+        $users = $conversations->getCollection()->flatMap(function ($conversation) {
+            $latest = $conversation->latestVisibleMessage;
+
+            return $conversation->users
+                ->concat([$conversation->owner, $latest?->sender])
+                ->concat($latest?->reactions->pluck('user') ?? []);
+        })->filter();
+        app(ApiUserPayloadLoader::class)->load($users);
+
+        return ResourceReadCache::render(
+            $request,
+            fn () => ConversationResource::collection($conversations)->toResponse($request),
+        );
     }
 
     public function invitations(Request $request)

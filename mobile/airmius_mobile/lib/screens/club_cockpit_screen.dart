@@ -629,16 +629,20 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                 icon: Icons.people_alt_outlined,
                 value: '${club.members}',
                 label: t('clubHub.totalMembers'),
+                onTap: () => _openMembership(club),
               ),
               _CompactClubMetric(
                 icon: Icons.groups_2_outlined,
                 value: '${club.teams}',
                 label: t('clubHub.clubTeams'),
+                onTap: () => _openTeams(club),
               ),
               _CompactClubMetric(
                 icon: Icons.mark_email_unread_outlined,
                 value: '${club.pendingMembershipRequests}',
                 label: t('clubHub.requests'),
+                onTap: () =>
+                    _open(ClubRequestInboxScreen(initialClubId: club.id)),
               ),
             ],
           ),
@@ -844,7 +848,8 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: OutlinedButton.icon(
-                  onPressed: () => _open(ClubVolunteerCandidatesScreen(clubId: club.id)),
+                  onPressed: () =>
+                      _open(ClubVolunteerCandidatesScreen(clubId: club.id)),
                   icon: const Icon(Icons.people_outline),
                   label: const Text('Ehrenamtskandidaten'),
                 ),
@@ -1247,6 +1252,14 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     final organizationAreas = [
       if (club.isMember || club.canManage)
         _ClubArea(
+          icon: Icons.checklist_outlined,
+          title: t('clubTasks.title'),
+          body: '',
+          color: theme.colorScheme.primary,
+          onTap: () => _open(ClubTasksScreen(clubId: club.id)),
+        ),
+      if (club.isMember || club.canManage)
+        _ClubArea(
           icon: Icons.emoji_events_outlined,
           title: planningLabel(
             AirmiusScope.of(context).language,
@@ -1597,35 +1610,41 @@ class _CompactClubMetric extends StatelessWidget {
     required this.icon,
     required this.value,
     required this.label,
+    required this.onTap,
   });
 
   final IconData icon;
   final String value;
   final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Expanded(
-      child: Padding(
-        padding: const EdgeInsetsDirectional.only(end: 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 20, color: theme.colorScheme.primary),
-            Text(
-              value,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(4, 8, 4, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 20, color: theme.colorScheme.primary),
+              Text(
+                value,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
-            Text(
-              label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
+              Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
         ),
       ),
     );

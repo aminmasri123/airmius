@@ -5,6 +5,7 @@ namespace App\Http\Resources\Api\V1;
 use App\Models\User;
 use App\Models\UserBadge;
 use App\Services\GamificationService;
+use App\Support\Performance\ResourceReadCache;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,7 +16,14 @@ class UserResource extends JsonResource
         $roleLabel = $this->relationLoaded('roles')
             ? $this->roles->pluck('name')->first()
             : null;
-        $gamification = app(GamificationService::class)->summaryFor($this->resource);
+        $gamification = $this->relationLoaded('apiGamificationSummary')
+            ? $this->resource->getRelation('apiGamificationSummary')
+            : app(GamificationService::class)->summaryFor($this->resource);
+        $avatar = $this->profile_photo_url;
+        $thumb = ResourceReadCache::remember(
+            'avatar-thumb:'.$this->id.':'.$this->profile_photo_path,
+            fn () => $this->profile_photo_thumb,
+        );
 
         return [
             'id' => $this->id,
@@ -42,8 +50,8 @@ class UserResource extends JsonResource
             'city' => $this->city,
             'state' => $this->state,
             'bio' => $this->bio,
-            'profile_photo_url' => $this->profile_photo_url,
-            'profile_photo_thumb' => $this->profile_photo_thumb,
+            'profile_photo_url' => $avatar,
+            'profile_photo_thumb' => $thumb,
             'followers_count' => $this->followers_count,
             'following_count' => $this->following_count,
             'posts_count' => $this->posts_count,
@@ -74,13 +82,13 @@ class UserResource extends JsonResource
                 'streak_days' => $gamification['streak_days'],
                 'health_label' => $gamification['health_label'],
             ],
-            'badges' => UserBadge::query()
+            'badges' => ($this->relationLoaded('profileBadgeAwards') ? $this->profileBadgeAwards : UserBadge::query()
                 ->where('awardable_type', User::class)
                 ->where('awardable_id', $this->id)
                 ->with('badge:id,key,name,description,icon')
                 ->latest('id')
                 ->limit(12)
-                ->get()
+                ->get())
                 ->pluck('badge')
                 ->filter()
                 ->map(fn ($badge) => [
@@ -96,8 +104,8 @@ class UserResource extends JsonResource
                 'display_name' => $this->name,
                 'subtitle' => $roleLabel ?: 'Member',
                 'role_label' => $roleLabel ?: 'Member',
-                'avatar_url' => $this->profile_photo_url,
-                'avatar_thumb' => $this->profile_photo_thumb,
+                'avatar_url' => $avatar,
+                'avatar_thumb' => $thumb,
                 'initials' => $this->initialsFor($this->name),
                 'status' => $this->status,
                 'profile_visibility' => $this->profile_visibility ?? 'public',

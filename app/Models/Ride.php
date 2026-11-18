@@ -22,6 +22,7 @@ class Ride extends Model
     public const MEMBER_STATUS_CONFIRMED = self::MEMBER_STATUS_ACCEPTED;
 
     protected $fillable = [
+        'cost_mode', 'cost_amount_minor', 'cost_currency', 'price_version',
         'club_id',
         'team_id',
         'event_id',
@@ -53,6 +54,8 @@ class Ride extends Model
     protected function casts(): array
     {
         return [
+            'price_version' => 'integer',
+            'cost_amount_minor' => 'integer',
             'departure_time' => 'datetime',
         ];
     }
@@ -80,7 +83,7 @@ class Ride extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'ride_users')
-            ->withPivot(['status', 'message', 'responded_at'])
+            ->withPivot(['status', 'message', 'responded_at', 'agreed_cost_mode', 'agreed_cost_amount_minor', 'agreed_cost_currency', 'agreed_price_version', 'price_confirmation_required'])
             ->withTimestamps();
     }
 

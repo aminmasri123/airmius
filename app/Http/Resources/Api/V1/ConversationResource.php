@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\Conversation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,6 +10,15 @@ class ConversationResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $viewerId = (int) $request->user()?->id;
+        $viewerRole = (int) $this->owner_id === $viewerId && $viewerId > 0
+            ? Conversation::ROLE_OWNER
+            : ($this->relationLoaded('users')
+                ? $this->users->firstWhere('id', $viewerId)?->pivot?->role
+                : $this->resource->roleFor($viewerId));
+        $isOwner = $viewerRole === Conversation::ROLE_OWNER;
+        $canManage = $isOwner || $viewerRole === Conversation::ROLE_MODERATOR;
+
         return [
             'id' => $this->id,
             'club_id' => $this->club_id,
@@ -24,16 +34,16 @@ class ConversationResource extends JsonResource
             'users' => UserResource::collection($this->whenLoaded('users')),
             'viewer_role' => $this->when(
                 $request->user() && $this->type === 'group',
-                fn () => $this->resource->roleFor((int) $request->user()->id),
+                fn () => $viewerRole,
             ),
             'permissions' => $this->when(
                 $request->user() && $this->type === 'group',
                 fn () => [
-                    'can_edit_group' => $this->resource->isOwner((int) $request->user()->id),
-                    'can_manage_members' => $this->resource->canManageMembers((int) $request->user()->id),
-                    'can_manage_roles' => $this->resource->isOwner((int) $request->user()->id),
-                    'can_delete_group' => $this->resource->isOwner((int) $request->user()->id),
-                    'can_send_messages' => $this->resource->canSendMessages((int) $request->user()->id),
+                    'can_edit_group' => $isOwner,
+                    'can_manage_members' => $canManage,
+                    'can_manage_roles' => $isOwner,
+                    'can_delete_group' => $isOwner,
+                    'can_send_messages' => $this->posting_policy !== Conversation::POSTING_MANAGEMENT || $canManage,
                 ],
             ),
             'direct_peer_has_blocked' => $this->when(
