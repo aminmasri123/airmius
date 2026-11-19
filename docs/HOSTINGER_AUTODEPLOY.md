@@ -50,7 +50,7 @@ wenn der öffentliche Pfad nicht auf das bisherige `current/public` zeigt.
 
 SSH-Port laut gezeigter hPanel-Sitzung: `65002`; Benutzer `u270834523`; Host
 `46.202.158.65`. Diese Angaben sind vor Einrichtung des neuen Zugangs zu verifizieren.
-PHP CLI und PHP-FPM müssen die Composer-Anforderungen erfüllen (Workflow PHP 8.3,
+PHP CLI und PHP-FPM müssen die Composer-Anforderungen erfüllen (Workflow PHP 8.2,
 insbesondere GD, mbstring, intl sowie Produktions-Datenbanktreiber).
 
 ## GitHub-Konfiguration
@@ -85,6 +85,14 @@ API mit einem berechtigten Testkonto prüfen. App-Oberflächen werden separat ge
 und verteilt; ein Backend-Deployment aktualisiert keine installierte App.
 
 Die Workflow-Datei allein aktiviert noch keinen Zugang und veröffentlicht noch nichts.
+
+Lesende SSH-Prüfung am 19.11.2026: PHP CLI 8.2.36; tatsächliches Projektverzeichnis
+`/home/u270834523/domains/airmius.com/public_html/airmius`. Der vorhandene Root-
+`index.php` lädt `storage`, `vendor` und `bootstrap` direkt aus diesem Verzeichnis.
+Eine `index.php` im übergeordneten `public_html` war nicht vorhanden. Damit ist
+die Umstellung auf einen öffentlichen `current/public`-Pfad ein notwendiger,
+separat zu prüfender Einrichtungsschritt; die aktuellen Dateien dürfen nicht
+ungeprüft durch einen Standard-Laravel-Frontcontroller ersetzt werden.
 
 Lokale Vorprüfung: Workflow-YAML geparst, Bash-Syntax geprüft, aktueller Vite-Build
 vollständig gegen sein Manifest geprüft, vier Tests für vollständige/fehlende Assets

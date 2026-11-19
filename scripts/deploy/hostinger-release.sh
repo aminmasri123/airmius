@@ -13,7 +13,7 @@ expected_hash=${5:?archive checksum required}
 [[ "$site_url" =~ ^https://[a-zA-Z0-9.-]+$ ]]
 [[ "$sha" =~ ^[a-f0-9]{40}$ && "$expected_hash" =~ ^[a-f0-9]{64}$ ]]
 for tool in php curl flock tar sha256sum readlink; do command -v "$tool" >/dev/null; done
-php -r 'exit(version_compare(PHP_VERSION, "8.3.0", ">=") ? 0 : 1);'
+php -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);'
 test -d "$base/incoming" && test -d "$base/releases"
 test -f "$base/shared/.env" && test -d "$base/shared/storage"
 # Provisioning is a separate operation: never replace an existing production directory.
