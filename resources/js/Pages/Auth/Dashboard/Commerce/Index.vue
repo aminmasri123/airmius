@@ -737,7 +737,7 @@ const {
                     <p v-if="productForm.errors.digital_delivery_note" class="text-sm text-error">{{ productForm.errors.digital_delivery_note }}</p>
                     <div v-if="isLearningOffer" class="grid gap-3 rounded-lg border border-border bg-bg p-3">
                         <div>
-                            <label for="product-learning-course" class="text-xs font-semibold uppercase text-secondary">Mit Sportschule-Kurs verknüpfen</label>
+                            <label for="product-learning-course" class="text-xs font-semibold uppercase text-secondary">Mit Lernplattform-Kurs verknüpfen</label>
                             <select id="product-learning-course" v-model="productForm.learning_course_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option value="">Keinen Kurs automatisch freischalten</option>
                                 <option v-for="course in learningCourses" :key="course.id" :value="course.id">

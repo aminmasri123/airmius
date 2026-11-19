@@ -37,6 +37,23 @@ const learningExperienceCopy = {
     "empty": "Keine passenden Kurse gefunden.",
     "finish": "Lektionen abgeschlossen – prüfe deine Quizze und Aufgaben.",
     "preview_hint": "Sieh dir eine freigegebene Lektion vor der Anmeldung an.",
+    "leave": "Kurs verlassen",
+    "hide": "Kurs ausblenden",
+    "show": "Wieder einblenden",
+    "resume": "Erneut teilnehmen",
+    "left": "Verlassene Kurse",
+    "hidden": "Ausgeblendete Kurse",
+    "history": "Frühere Zugänge",
+    "active": "Aktive Kurse",
+    "cancel": "Abbrechen",
+    "confirm": "Bestätigen",
+    "leave_hint":
+        "Deine aktive Teilnahme endet. Fortschritt, Abgaben, Zertifikate und dein gekaufter Zugang bleiben erhalten. Du kannst später erneut teilnehmen, sofern der Kurs verfügbar ist und Plätze frei sind.",
+    "hide_hint":
+        "Der Kurs wird aus deiner normalen Übersicht ausgeblendet. Teilnahme, Fortschritt und gekaufter Zugang bleiben unverändert. Du findest ihn unter „Ausgeblendete Kurse“.",
+    "show_hint": "Der Kurs wird wieder in deiner Übersicht angezeigt.",
+    "resume_hint":
+        "Du nimmst mit deinem bisherigen Fortschritt erneut teil. Dein vorhandener Zugang wird verwendet; es wird kein neuer Kauf ausgelöst.",
   },
   "en": {
     "discover": "Discover",
@@ -72,6 +89,23 @@ const learningExperienceCopy = {
     "empty": "No matching courses found.",
     "finish": "Lessons completed – check your quizzes and assignments.",
     "preview_hint": "Try a released lesson before enrolling.",
+    "leave": "Leave course",
+    "hide": "Hide course",
+    "show": "Unhide course",
+    "resume": "Rejoin course",
+    "left": "Left courses",
+    "hidden": "Hidden courses",
+    "history": "Past access",
+    "active": "Active courses",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "leave_hint":
+        "Your active participation ends. Progress, submissions, certificates and purchased access remain saved. You can rejoin later if the course is available and places are free.",
+    "hide_hint":
+        "This course is hidden from your normal list. Participation, progress and purchased access remain unchanged. Find it under Hidden courses.",
+    "show_hint": "The course will appear in your list again.",
+    "resume_hint":
+        "Rejoin with your saved progress and existing access. No new purchase will be made.",
   },
   "fr": {
     "discover": "Découvrir",
@@ -107,6 +141,23 @@ const learningExperienceCopy = {
     "empty": "Aucun cours correspondant.",
     "finish": "Leçons terminées : consultez vos quiz et devoirs.",
     "preview_hint": "Essayez une leçon accessible avant de vous inscrire.",
+    "leave": "Quitter le cours",
+    "hide": "Masquer le cours",
+    "show": "Réafficher le cours",
+    "resume": "Reprendre le cours",
+    "left": "Cours quittés",
+    "hidden": "Cours masqués",
+    "history": "Anciens accès",
+    "active": "Cours actifs",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "leave_hint":
+        "Votre participation active prend fin. Votre progression, vos devoirs, certificats et accès acheté sont conservés. Vous pourrez reprendre si le cours et des places sont disponibles.",
+    "hide_hint":
+        "Le cours est masqué de votre liste habituelle. Participation, progression et accès acheté restent inchangés. Retrouvez-le dans les cours masqués.",
+    "show_hint": "Le cours réapparaîtra dans votre liste.",
+    "resume_hint":
+        "Reprenez avec votre progression et votre accès existants, sans nouvel achat.",
   },
   "ar": {
     "discover": "اكتشف",
@@ -142,6 +193,22 @@ const learningExperienceCopy = {
     "empty": "لا توجد دورات مطابقة.",
     "finish": "اكتملت الدروس، راجع الاختبارات والواجبات.",
     "preview_hint": "جرّب درساً متاحاً قبل التسجيل.",
+    "leave": "مغادرة الدورة",
+    "hide": "إخفاء الدورة",
+    "show": "إظهار الدورة",
+    "resume": "الانضمام مجدداً",
+    "left": "الدورات التي غادرتها",
+    "hidden": "الدورات المخفية",
+    "history": "الوصول السابق",
+    "active": "الدورات النشطة",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "leave_hint":
+        "تنتهي مشاركتك النشطة. يبقى تقدمك وواجباتك وشهاداتك والوصول الذي اشتريته محفوظاً. يمكنك العودة إذا كانت الدورة والمقاعد متاحة.",
+    "hide_hint":
+        "تُخفى الدورة من قائمتك المعتادة. تبقى المشاركة والتقدم والوصول المدفوع كما هي. ستجدها في الدورات المخفية.",
+    "show_hint": "ستظهر الدورة في قائمتك مجدداً.",
+    "resume_hint": "عد بتقدمك المحفوظ ووصولك الحالي دون شراء جديد.",
   },
 };
 String learningText(BuildContext context, String key) =>

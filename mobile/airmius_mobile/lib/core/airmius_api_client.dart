@@ -3316,6 +3316,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> enrollLearningCourse(int courseId) =>
       _json('POST', '/api/v1/learning/courses/$courseId/enroll');
 
+  Future<AirmiusJson> updateLearningParticipation(int enrollmentId, String action) =>
+      _json('PUT', '/api/v1/learning/enrollments/$enrollmentId/participation', body: {'action':action});
+
   Future<AirmiusJson> completeLearningLesson(int courseId, int lessonId) =>
       _json(
         'PUT',

@@ -9,7 +9,7 @@ defineProps({
     <section class="surface-card overflow-hidden">
         <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Airmius Sportschule</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Airmius Lernplattform</p>
                 <h1 class="mt-1 text-2xl font-bold text-primary">Kurs-Studio für Trainer und Tutoren</h1>
                 <p class="mt-2 max-w-3xl text-sm text-secondary">
                     Plane echte Online-Kurse mit Kapiteln, Lektionen, Aufgaben, Anhängen, Quiz, Notizen und Kurskommunikation.

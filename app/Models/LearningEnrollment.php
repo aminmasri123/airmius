@@ -17,6 +17,8 @@ class LearningEnrollment extends Model
         'started_at',
         'completed_at',
         'public_status_token',
+        'hidden_at',
+        'left_at',
     ];
 
     protected function casts(): array
@@ -25,6 +27,8 @@ class LearningEnrollment extends Model
             'progress_percent' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
+            'hidden_at' => 'datetime',
+            'left_at' => 'datetime',
         ];
     }
 

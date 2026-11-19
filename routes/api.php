@@ -519,6 +519,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/learning', [MobileLearningController::class, 'index'])->name('learning.index');
         Route::get('/learning/courses/{course}', [MobileLearningController::class, 'show'])->name('learning.courses.show');
         Route::post('/learning/courses/{course}/enroll', [MobileLearningController::class, 'enroll'])->name('learning.courses.enroll');
+        Route::put('/learning/enrollments/{enrollment}/participation', [MobileLearningController::class, 'updateParticipation'])->name('learning.enrollments.participation');
         Route::put('/learning/courses/{course}/lessons/{lesson}/complete', [MobileLearningController::class, 'completeLesson'])->name('learning.lessons.complete');
         Route::put('/learning/courses/{course}/lessons/{lesson}/progress', [MobileLearningController::class, 'trackProgress'])->name('learning.lessons.progress');
         Route::post('/learning/courses/{course}/lessons/{lesson}/notes', [MobileLearningController::class, 'storeNote'])->name('learning.lessons.notes.store');

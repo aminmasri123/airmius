@@ -706,14 +706,14 @@ const submitQuestionReply = (question) => {
 </script>
 
 <template>
-    <Head :title="tx('learning_studio.page_title', 'Airmius Sportschule')" />
+    <Head :title="tx('learning_studio.page_title', 'Airmius Lernplattform')" />
     <LearningDeleteDialog :target="deleteTarget" :busy="deleting" :error="page.props.errors?.confirmation" @close="deleteTarget = null" @confirm="deleteLearningContent" />
 
     <div class="space-y-6">
         <section class="surface-card overflow-hidden">
             <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('learning_studio.eyebrow', 'Airmius Sportschule') }}</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('learning_studio.eyebrow', 'Airmius Lernplattform') }}</p>
                     <h1 class="mt-1 text-2xl font-bold text-primary">{{ tx('learning_studio.title', 'Kurs-Studio für Trainer und Tutoren') }}</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
                         {{ tx('learning_studio.intro', 'Plane echte Online-Kurse mit Kapiteln, Lektionen, Aufgaben, Anhängen, Quiz, Notizen und Kurskommunikation.') }}
@@ -1354,7 +1354,7 @@ const submitQuestionReply = (question) => {
                     <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-border bg-bg">
                         <i class="las la-graduation-cap text-4xl text-air-blue"></i>
                     </div>
-                    <h2 class="mt-4 text-xl font-bold text-primary">{{ tx('learning_studio_ui.start_title', 'Starte deine Online-Sportschule') }}</h2>
+                    <h2 class="mt-4 text-xl font-bold text-primary">{{ tx('learning_studio_ui.start_title', 'Starte deine Online-Lernplattform') }}</h2>
                     <p class="mt-2 text-sm text-secondary">{{ tx('learning_studio_ui.start_intro', 'Lege links deinen ersten Kurs an. Danach kannst du Kapitel, Lektionen und Quiz direkt im Studio bauen.') }}</p>
                 </div>
             </section>

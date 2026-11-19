@@ -303,9 +303,10 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   }
 
   Future<void> _submitAssignment(JsonMap assignment) async {
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (_) => _AssignmentDialog(assignment: assignment),
+    final payload = await Navigator.of(context).push<JsonMap>(
+      MaterialPageRoute(
+        builder: (_) => _AssignmentScreen(assignment: assignment),
+      ),
     );
     if (payload == null || !mounted) return;
     final t = AirmiusScope.of(context).t;
@@ -1141,16 +1142,16 @@ class _QuizDialogState extends State<_QuizDialog> {
   }
 }
 
-class _AssignmentDialog extends StatefulWidget {
-  const _AssignmentDialog({required this.assignment});
+class _AssignmentScreen extends StatefulWidget {
+  const _AssignmentScreen({required this.assignment});
 
   final JsonMap assignment;
 
   @override
-  State<_AssignmentDialog> createState() => _AssignmentDialogState();
+  State<_AssignmentScreen> createState() => _AssignmentScreenState();
 }
 
-class _AssignmentDialogState extends State<_AssignmentDialog> {
+class _AssignmentScreenState extends State<_AssignmentScreen> {
   final JsonMap _answers = {};
   String? _error;
   final _body = TextEditingController();
@@ -1166,90 +1167,104 @@ class _AssignmentDialogState extends State<_AssignmentDialog> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
-      title: Text(
-        _lessonText(
-          widget.assignment['title'],
-          fallback: t('learning.assignment'),
-        ),
-      ),
-      content: SizedBox(
-        width: 560,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                _lessonText(
-                  widget.assignment['instructions'],
-                  fallback: t('learning.noInstructions'),
-                ),
-                style: TextStyle(
-                  color: airmiusMutedColor(context),
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 14),
-              LearningAssessmentAnswerFields(
-                questions: assessmentMaps(widget.assignment['questions']),
-                answers: _answers,
-              ),
-              if (_error != null)
-                Text(
-                  _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              TextField(
-                controller: _body,
-                minLines: 4,
-                maxLines: 10,
-                maxLength: 10000,
-                decoration: InputDecoration(
-                  labelText: t('learning.answerText'),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _url,
-                keyboardType: TextInputType.url,
-                decoration: InputDecoration(
-                  labelText: t('learning.attachmentLink'),
-                  hintText: 'https://',
-                ),
-              ),
-            ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          _lessonText(
+            widget.assignment['title'],
+            fallback: t('learning.assignment'),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(t('cancel')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _lessonText(
+                      widget.assignment['instructions'],
+                      fallback: t('learning.noInstructions'),
+                    ),
+                    style: TextStyle(
+                      color: airmiusMutedColor(context),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  LearningAssessmentAnswerFields(
+                    questions: assessmentMaps(widget.assignment['questions']),
+                    answers: _answers,
+                  ),
+                  if (_error != null)
+                    Text(
+                      _error!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  TextField(
+                    controller: _body,
+                    minLines: 4,
+                    maxLines: 10,
+                    maxLength: 10000,
+                    decoration: InputDecoration(
+                      labelText: t('learning.answerText'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _url,
+                    keyboardType: TextInputType.url,
+                    decoration: InputDecoration(
+                      labelText: t('learning.attachmentLink'),
+                      hintText: 'https://',
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(t('cancel')),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      final questions = assessmentMaps(
+                        widget.assignment['questions'],
+                      );
+                      if (questions.isNotEmpty &&
+                          !assessmentAnswersComplete(questions, _answers)) {
+                        setState(
+                          () => _error = assessmentText(
+                            context,
+                            'answer_required',
+                          ),
+                        );
+                        return;
+                      }
+                      if (questions.isEmpty &&
+                          _body.text.trim().isEmpty &&
+                          _url.text.trim().isEmpty) {
+                        return;
+                      }
+                      Navigator.pop(context, {
+                        'body': _body.text.trim(),
+                        'attachment_url': _url.text.trim(),
+                        if (questions.isNotEmpty) 'answers': _answers,
+                      });
+                    },
+                    child: Text(t('learning.submitAssignment')),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-        FilledButton(
-          onPressed: () {
-            final questions = assessmentMaps(widget.assignment['questions']);
-            if (questions.isNotEmpty &&
-                !assessmentAnswersComplete(questions, _answers)) {
-              setState(
-                () => _error = assessmentText(context, 'answer_required'),
-              );
-              return;
-            }
-            if (questions.isEmpty &&
-                _body.text.trim().isEmpty &&
-                _url.text.trim().isEmpty) {
-              return;
-            }
-            Navigator.pop(context, {
-              'body': _body.text.trim(),
-              'attachment_url': _url.text.trim(),
-              if (questions.isNotEmpty) 'answers': _answers,
-            });
-          },
-          child: Text(t('learning.submitAssignment')),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -46,6 +46,7 @@ return [
         'assignments' => 'الواجبات المطلوبة',
     ],
     'certificate' => [
+        'completion_statement' => 'أتم الدورة التالية بنجاح.',
         'title' => 'شهادة',
         'issued' => 'تاريخ الإصدار',
         'progress' => 'التقدم',

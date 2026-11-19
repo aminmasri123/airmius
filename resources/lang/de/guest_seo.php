@@ -61,7 +61,7 @@ return [
         'provider_name' => 'Airmius Anbieter',
         'provider_title' => ':name im Airmius Marketplace',
         'provider_description' => 'Angebote von :name im Airmius Marketplace ansehen.',
-        'learning_title' => 'Airmius Sportschule',
-        'learning_description' => 'Kurs der Airmius Sportschule ansehen.',
+        'learning_title' => 'Airmius Lernplattform',
+        'learning_description' => 'Kurs der Airmius Lernplattform ansehen.',
     ],
 ];

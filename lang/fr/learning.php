@@ -46,6 +46,7 @@ return [
         'assignments' => 'Devoirs obligatoires',
     ],
     'certificate' => [
+        'completion_statement' => 'a terminé avec succès le cours suivant.',
         'title' => 'CERTIFICAT',
         'issued' => 'Délivré',
         'progress' => 'Progression',

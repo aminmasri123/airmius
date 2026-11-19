@@ -61,7 +61,7 @@ return [
         'provider_name' => 'مقدم خدمة في Airmius',
         'provider_title' => ':name في سوق Airmius',
         'provider_description' => 'استعرض عروض :name في سوق Airmius.',
-        'learning_title' => 'مدرسة Airmius الرياضية',
-        'learning_description' => 'استعرض هذه الدورة في مدرسة Airmius الرياضية.',
+        'learning_title' => 'منصة Airmius التعليمية',
+        'learning_description' => 'استعرض هذه الدورة في منصة Airmius التعليمية.',
     ],
 ];

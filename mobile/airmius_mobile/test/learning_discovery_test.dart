@@ -15,6 +15,67 @@ import 'package:airmius/screens/lesson_detail_screen.dart';
 import 'package:airmius/screens/marketplace_screen.dart';
 
 void main() {
+  testWidgets(
+    'my learning confirms hide, leave and rejoin without buying again',
+    (tester) async {
+      final transport = _Transport()
+        ..enrolled = true
+        ..paid = true;
+      await _pump(tester, transport, const LearningScreen());
+      await tester.tap(find.widgetWithText(ChoiceChip, 'My learning'));
+      await tester.pumpAndSettle();
+      Future<void> menu(String label) async {
+        final finder = find.byType(PopupMenuButton<String>);
+        await tester.ensureVisible(finder);
+        await tester.pumpAndSettle();
+        await tester.tap(finder);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label).last);
+        await tester.pumpAndSettle();
+      }
+
+      Future<void> confirm() async {
+        await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+        await tester.pumpAndSettle();
+      }
+
+      await menu('Hide course');
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(transport.requests.where((r) => r.method == 'PUT'), isEmpty);
+      await menu('Hide course');
+      await confirm();
+      expect(transport.hidden, isTrue);
+      expect(transport.enrolled, isTrue);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Hidden courses'));
+      await tester.pumpAndSettle();
+      await menu('Unhide course');
+      await confirm();
+      expect(transport.hidden, isFalse);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Active courses'));
+      await tester.pumpAndSettle();
+      await menu('Leave course');
+      await confirm();
+      expect(transport.enrolled, isFalse);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Left courses'));
+      await tester.pumpAndSettle();
+      await menu('Rejoin course');
+      await confirm();
+      expect(transport.enrolled, isTrue);
+      expect(
+        transport.requests.where((r) => r.path.contains('/commerce')),
+        isEmpty,
+      );
+      expect(
+        transport.requests
+            .where((r) => r.method == 'PUT')
+            .map((r) => r.body?['action'])
+            .toList(),
+        ['hide', 'show', 'leave', 'resume'],
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
   for (final language in AirmiusLanguage.values) {
     testWidgets(
       'small-screen discovery fits at large text scale in ${language.name}',
@@ -41,7 +102,9 @@ void main() {
       final transport = _Transport();
       await _pump(tester, transport, const LearningScreen());
       expect(find.byType(ChoiceChip), findsNWidgets(3));
-      for (final chip in tester.widgetList<ChoiceChip>(find.byType(ChoiceChip))) {
+      for (final chip in tester.widgetList<ChoiceChip>(
+        find.byType(ChoiceChip),
+      )) {
         expect(chip.label, isA<Text>());
       }
       final search = find.byType(TextField).first;
@@ -210,6 +273,8 @@ class _Store implements AirmiusPreferencesStore {
 }
 
 class _Transport implements AirmiusApiTransport {
+  bool hidden = false;
+  String participationStatus = 'active';
   bool paid = false, enrolled = false;
   int? product = 8;
   final requests = <AirmiusApiRequest>[];
@@ -229,6 +294,8 @@ class _Transport implements AirmiusApiTransport {
     'language': 'en',
     'is_free': !paid,
     'is_enrolled': enrolled,
+    'can_resume': participationStatus == 'left',
+    'enrollment_id': enrolled || participationStatus == 'left' ? 1 : null,
     'price_cents': 2500,
     'currency': 'EUR',
     'purchase_product_id': product,
@@ -250,7 +317,18 @@ class _Transport implements AirmiusApiTransport {
     } else if (request.path == '/api/v1/learning') {
       data = {
         'catalog': [course],
-        'enrollments': [],
+        'enrollments': enrolled || participationStatus == 'left'
+            ? [
+                {
+                  'id': 1,
+                  'status': participationStatus,
+                  'hidden_at': hidden ? '2026-11-19T12:00:00Z' : null,
+                  'course': course,
+                  'progress_percent': 50,
+                  'next_lesson': {'id': 2, 'title': 'Next lesson'},
+                },
+              ]
+            : [],
         'certificates': [],
       };
     } else if (request.path == '/api/v1/learning/courses/4') {
@@ -282,6 +360,20 @@ class _Transport implements AirmiusApiTransport {
           },
         ],
       };
+    }
+    if (request.path == '/api/v1/learning/enrollments/1/participation') {
+      final action = request.body?['action'];
+      if (action == 'hide') hidden = true;
+      if (action == 'show') hidden = false;
+      if (action == 'leave') {
+        enrolled = false;
+        participationStatus = 'left';
+      }
+      if (action == 'resume') {
+        enrolled = true;
+        participationStatus = 'active';
+        hidden = false;
+      }
     }
     return AirmiusApiResponse(
       statusCode: 200,

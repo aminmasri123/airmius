@@ -19,6 +19,7 @@ use App\Models\UserBadge;
 use App\Services\Learning\AssessmentSchema;
 use App\Services\Learning\LearningContinuation;
 use App\Services\Learning\LearningEnrollmentService;
+use App\Services\Learning\LearningParticipationService;
 use App\Services\Learning\LearningProgressService;
 use App\Services\LearningCourseTranslationService;
 use App\Support\AppNotification;
@@ -157,7 +158,7 @@ class LearningController extends Controller
         return response()->json([
             'data' => [
                 'course' => [
-                    ...$this->courseCard($course, $enrollment),
+                    ...$this->courseCard($course, $enrollment ?? LearningEnrollment::where('user_id', $request->user()->id)->where('learning_course_id', $course->id)->where('status', 'left')->first()),
                     'learning_goals' => $course->learning_goals ?: [],
                     'requirements' => $course->requirements ?: [],
                     'target_groups' => $course->target_groups ?: [],
@@ -262,6 +263,14 @@ class LearningController extends Controller
                     : null,
             ],
         ]);
+    }
+
+    public function updateParticipation(Request $request, LearningEnrollment $enrollment): JsonResponse
+    {
+        $data = $request->validate(['action' => ['required', Rule::in(['leave', 'hide', 'show', 'resume'])]]);
+        $result = app(LearningParticipationService::class)->update($request->user(), $enrollment, $data['action']);
+
+        return response()->json(['data' => $this->enrollmentData($result)]);
     }
 
     public function enroll(Request $request, LearningCourse $course): JsonResponse
@@ -537,6 +546,8 @@ class LearningController extends Controller
             'reviews_count' => (int) ($course->reviews_count ?? 0),
             'tutor' => $course->tutor ? ['id' => $course->tutor->id, 'name' => $course->tutor->name] : null,
             'is_enrolled' => $enrollment?->status === 'active',
+            'can_resume' => $enrollment?->status === 'left',
+            'enrollment_id' => $enrollment?->id,
             'progress_percent' => (int) ($enrollment?->progress_percent ?: 0),
             'purchase_product_id' => ! $course->is_free ? $course->marketplaceProducts->where('status', 'published')->sortByDesc('id')->first()?->id : null,
         ];
@@ -547,6 +558,8 @@ class LearningController extends Controller
         return [
             'id' => $enrollment->id,
             'status' => $enrollment->status,
+            'hidden_at' => optional($enrollment->hidden_at)->toIso8601String(),
+            'left_at' => optional($enrollment->left_at)->toIso8601String(),
             'progress_percent' => (int) $enrollment->progress_percent,
             'started_at' => optional($enrollment->started_at)->toIso8601String(),
             'completed_at' => optional($enrollment->completed_at)->toIso8601String(),

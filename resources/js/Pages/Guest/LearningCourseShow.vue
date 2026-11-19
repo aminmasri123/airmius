@@ -18,6 +18,7 @@ const props = defineProps({
     course: { type: Object, required: true },
     enrollment: { type: Object, default: null },
     canUseLearningRoom: Boolean,
+    leftEnrollmentId: Number,
     myReview: { type: Object, default: null },
     translations: { type: Array, default: () => [] },
     seo: { type: Object, default: () => ({}) },
@@ -63,6 +64,7 @@ const completionRequirements = computed(() => {
         .filter((item) => item && Number(item.total || 0) > 0)
 })
 const ctaLabel = computed(() => {
+    if (props.leftEnrollmentId) return ex('resume')
     if (canUseLearningRoom.value) return t('guest.learning.cta.room')
     if (isPaidCourse.value && props.course.purchase_url) return t('guest.learning.cta.buy')
     if (isPaidCourse.value) return t('guest.learning.cta.paid')
@@ -107,6 +109,10 @@ const formatDateTime = (value) => value
 
 const enroll = () => {
     if (canUseLearningRoom.value) return openLesson(nextLearningLesson(allLessons.value) || allLessons.value.find(l=>!l.locked))
+    if (props.leftEnrollmentId) {
+        if (window.confirm(ex('resume_hint'))) router.put(route('auth.learning.enrollments.participation',props.leftEnrollmentId),{action:'resume'},{preserveScroll:true})
+        return
+    }
 
     if (isPaidCourse.value) {
         if (props.course.purchase_url) {
@@ -251,7 +257,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
 <template>
     <SeoHead
         :title="course.title"
-        :description="course.subtitle || course.description || 'Airmius Sportschule Kurs ansehen.'"
+        :description="course.subtitle || course.description || 'Airmius Lernplattform Kurs ansehen.'"
         :canonical="seo.canonical || course.show_url"
         :canonical-locale="seo.canonical_locale || course.language"
         :alternates="seo.alternates || []"
@@ -264,7 +270,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
         <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1" :lang="course.language" :dir="course.content_direction">
             <section class="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
                 <div>
-                    <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">{{ t('Zurück zur Sportschule') }}</Link>
+                    <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">{{ t('Zurück zur Lernplattform') }}</Link>
                     <div v-if="course.is_locale_fallback" class="mt-5 rounded-lg border border-air-orange/40 bg-air-orange/10 px-4 py-3 text-sm leading-relaxed text-air-orange" role="status">
                         {{ lx('fallback_notice', { language: lx(course.language) }) }}
                     </div>
@@ -273,7 +279,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                             <img v-if="course.cover_image" :src="course.cover_image" :alt="course.title" loading="eager" decoding="async" fetchpriority="high" class="h-full w-full object-cover">
                             <div v-else class="text-center">
                                 <i class="las la-graduation-cap text-6xl text-air-orange"></i>
-                                <p class="mt-2 text-sm font-semibold uppercase tracking-wide text-secondary">{{ t('Sportschule') }}</p>
+                                <p class="mt-2 text-sm font-semibold uppercase tracking-wide text-secondary">{{ t('Lernplattform') }}</p>
                             </div>
                         </div>
                         <div class="p-6">
@@ -439,7 +445,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                         <button
                             type="button"
                             class="mt-5 w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60"
-                            :disabled="enrolling || (isPaidCourse && !canUseLearningRoom && !course.purchase_url)"
+                            :disabled="enrolling || (isPaidCourse && !canUseLearningRoom && !leftEnrollmentId && !course.purchase_url)"
                             :aria-busy="enrolling"
                             @click="enroll"
                         >

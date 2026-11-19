@@ -262,6 +262,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/learning/studio/courses/{course}/comments/{comment}', [LearningStudioController::class, 'resolveComment'])->name('auth.learning.studio.comments.update');
     Route::post('/learning/studio/courses/{course}/comments/{comment}/replies', [LearningStudioController::class, 'replyComment'])->name('auth.learning.studio.comments.replies.store');
     Route::post('/learning/courses/{course}/enroll', [PublicLearningController::class, 'enroll'])->name('auth.learning.courses.enroll');
+    Route::put('/learning/enrollments/{enrollment}/participation', [PublicLearningController::class, 'updateParticipation'])->name('auth.learning.enrollments.participation');
     Route::put('/learning/courses/{course}/lessons/{lesson}/complete', [PublicLearningController::class, 'completeLesson'])->name('auth.learning.lessons.complete');
     Route::get('/learning/courses/{course}/lessons/{lesson}/video', [PublicLearningController::class, 'streamLessonVideo'])->name('auth.learning.lessons.video');
     Route::put('/learning/courses/{course}/lessons/{lesson}/progress', [PublicLearningController::class, 'trackLessonProgress'])->name('auth.learning.lessons.progress.update');

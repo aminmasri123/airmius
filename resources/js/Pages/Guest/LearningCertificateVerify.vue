@@ -29,7 +29,7 @@ const formatDate = (value) => value
 
         <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1" :lang="certificate.course_language" :dir="certificate.content_direction">
             <section class="mx-auto max-w-4xl">
-                <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">{{ t('Zurück zur Sportschule') }}</Link>
+                <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">{{ t('Zurück zur Lernplattform') }}</Link>
 
                 <article class="mt-5 overflow-hidden rounded-xl border border-border bg-card">
                     <div class="border-b border-border bg-success/10 p-6">

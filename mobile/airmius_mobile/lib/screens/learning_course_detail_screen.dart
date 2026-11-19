@@ -9,6 +9,7 @@ import '../core/airmius_external_url.dart';
 import '../core/learning_experience_copy.dart';
 import '../widgets/learning_course_cover.dart';
 import '../widgets/airmius_inline_video.dart';
+import '../widgets/learning_participation_confirmation.dart';
 import 'lesson_detail_screen.dart';
 import 'marketplace_screen.dart';
 
@@ -44,6 +45,39 @@ class _LearningCourseDetailScreenState
 
   Future<void> _action(JsonMap data) async {
     final course = _map(data['course']);
+    if (course['can_resume'] == true) {
+      if (!await confirmLearningParticipation(
+            context,
+            '${course['title']}',
+            'resume',
+          ) ||
+          !mounted) {
+        return;
+      }
+      setState(() => _busy = true);
+      try {
+        await _client.updateLearningParticipation(
+          course['enrollment_id'] as int,
+          'resume',
+        );
+        if (mounted) _reload();
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                error is AirmiusApiException
+                    ? error.userMessage
+                    : AirmiusScope.of(context).t('learning.actionError'),
+              ),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+      return;
+    }
     if (data['can_use_learning_room'] == true) {
       final lessons = _maps(
         data['sections'],
@@ -313,6 +347,7 @@ class _LearningCourseDetailScreenState
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (!access &&
+                        course['can_resume'] != true &&
                         !free &&
                         course['purchase_product_id'] == null)
                       Text(learningText(context, 'unavailable')),
@@ -320,6 +355,7 @@ class _LearningCourseDetailScreenState
                       onPressed:
                           _busy ||
                               (!access &&
+                                  course['can_resume'] != true &&
                                   !free &&
                                   course['purchase_product_id'] == null)
                           ? null
@@ -327,6 +363,8 @@ class _LearningCourseDetailScreenState
                       child: Text(
                         access
                             ? learningText(context, 'continue')
+                            : course['can_resume'] == true
+                            ? learningText(context, 'resume')
                             : free
                             ? learningText(context, 'enroll')
                             : '${learningText(context, 'buy')} · $price',

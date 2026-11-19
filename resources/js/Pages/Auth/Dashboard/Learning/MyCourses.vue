@@ -1,18 +1,24 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
+import {computed,ref} from 'vue'
+import LearningParticipationDialog from '@/Components/Learning/LearningParticipationDialog.vue'
 import { useI18n } from 'vue-i18n'
 import LearningCourseCover from '@/Components/Learning/LearningCourseCover.vue'
 import { learningText } from '@/support/learningExperience'
 
 defineOptions({ layout: AppLayout })
 
-defineProps({
+const props = defineProps({
     enrollments: { type: Array, default: () => [] },
 })
 
 const { t, locale } = useI18n()
 const ex = key => learningText(locale.value,key)
+const view=ref('active'), target=ref(null), busy=ref(false), actionError=ref('')
+const visibleEnrollments=computed(()=>props.enrollments.filter(e=>view.value==='hidden'?Boolean(e.hidden_at):!e.hidden_at && (view.value==='active'?e.status==='active':view.value==='left'?e.status==='left':!['active','left'].includes(e.status))))
+const ask=(enrollment,action)=>{actionError.value='';target.value={id:enrollment.id,title:enrollment.course.title,action}}
+const confirm=()=>router.put(route('auth.learning.enrollments.participation',target.value.id),{action:target.value.action},{preserveScroll:true,onStart:()=>busy.value=true,onFinish:()=>busy.value=false,onSuccess:()=>target.value=null,onError:errors=>actionError.value=Object.values(errors).join(' ')})
 const continueUrl = enrollment => enrollment.next_lesson
     ? `${enrollment.course.show_url}?lesson=${enrollment.next_lesson.id}#learning-room`
     : `${enrollment.course.show_url}#learning-room`
@@ -34,14 +40,15 @@ const formatDate = (value) => value
 
     <div class="space-y-6">
         <section class="surface-card p-5">
-            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Sportschule') }}</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Lernplattform') }}</p>
             <h1 class="mt-1 text-2xl font-bold text-primary">{{ ex('mine') }}</h1>
             <Link :href="route('guest.e-learning')" class="mt-3 inline-flex rounded-lg border border-border px-4 py-2 text-sm font-semibold">{{ ex('discover') }}</Link>
             <p class="mt-2 text-sm text-secondary">{{ tx('Alle freigeschalteten Kurse, Fortschritte und Zertifikate an einem Ort.') }}</p>
+            <div class="mt-4 flex flex-wrap gap-2"><button v-for="item in ['active','left','hidden','history']" :key="item" type="button" :aria-pressed="view===item" class="rounded-lg border border-border px-3 py-2" :class="view===item?'bg-muted font-bold':''" @click="view=item">{{ ex(item) }}</button></div>
         </section>
 
         <section class="grid gap-4 xl:grid-cols-2">
-            <article v-for="enrollment in enrollments" :key="enrollment.id" class="surface-card overflow-hidden">
+            <article v-for="enrollment in visibleEnrollments" :key="enrollment.id" class="surface-card overflow-hidden">
                 <div class="grid gap-4 p-5 md:grid-cols-[8rem_minmax(0,1fr)]">
                     <LearningCourseCover :src="enrollment.course?.cover_image" :title="enrollment.course?.title" class="rounded-lg" />
                     <div class="min-w-0">
@@ -65,6 +72,9 @@ const formatDate = (value) => value
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2 border-t border-border p-4">
+                    <button v-if="enrollment.status==='active'" type="button" class="rounded-lg border border-border px-4 py-2 text-sm" @click="ask(enrollment,'leave')">{{ ex('leave') }}</button>
+                    <button v-if="enrollment.status==='left'" type="button" class="rounded-lg border border-border px-4 py-2 text-sm" @click="ask(enrollment,'resume')">{{ ex('resume') }}</button>
+                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm" @click="ask(enrollment,enrollment.hidden_at?'show':'hide')">{{ ex(enrollment.hidden_at?'show':'hide') }}</button>
                     <Link v-if="enrollment.status === 'active'" :href="continueUrl(enrollment)" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
                         {{ tx('Weiterlernen') }}
                     </Link>
@@ -78,7 +88,8 @@ const formatDate = (value) => value
             </article>
         </section>
 
-        <section v-if="!enrollments.length" class="surface-card p-8 text-center">
+        <LearningParticipationDialog :target="target" :busy="busy" :error="actionError" @close="target=null" @confirm="confirm" />
+        <section v-if="!visibleEnrollments.length" class="surface-card p-8 text-center">
             <i class="las la-book-open text-5xl text-air-blue"></i>
             <h2 class="mt-4 text-xl font-bold text-primary">{{ tx('Noch keine Kurse') }}</h2>
             <p class="mt-2 text-sm text-secondary">{{ tx('Sobald du dich einschreibst oder einen Kurs kaufst, erscheint er hier.') }}</p>

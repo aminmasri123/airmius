@@ -46,6 +46,7 @@ return [
         'assignments' => 'Required assignments',
     ],
     'certificate' => [
+        'completion_statement' => 'has successfully completed the following course.',
         'title' => 'CERTIFICATE',
         'issued' => 'Issued',
         'progress' => 'Progress',

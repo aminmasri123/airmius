@@ -16,6 +16,7 @@ import 'lesson_detail_screen.dart';
 import 'learning_course_detail_screen.dart';
 import '../core/learning_experience_copy.dart';
 import '../widgets/learning_course_cover.dart';
+import '../widgets/learning_participation_confirmation.dart';
 
 class LearningScreen extends StatefulWidget {
   const LearningScreen({super.key, this.initialQuery = ''});
@@ -31,7 +32,42 @@ class _LearningScreenState extends State<LearningScreen> {
   String _section = 'catalog';
   String _category = '', _level = '', _price = '', _language = '';
   String _query = '';
-  final bool _busy = false;
+  bool _busy = false;
+  String _participationView = 'active';
+
+  Future<void> _participation(JsonMap course, String action) async {
+    if (_busy ||
+        !await confirmLearningParticipation(
+          context,
+          _learnText(course['title']),
+          action,
+        ) ||
+        !mounted) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await _client.updateLearningParticipation(
+        _learnInt(course['enrollment_id']),
+        action,
+      );
+      if (mounted) _reload();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              error is AirmiusApiException
+                  ? error.userMessage
+                  : AirmiusScope.of(context).t('learning.actionError'),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   void initState() {
@@ -167,11 +203,26 @@ class _LearningScreenState extends State<LearningScreen> {
     final courses =
         (_section == 'mine'
                 ? enrollments
-                      .where((e) => e['status'] == 'active')
+                      .where(
+                        (e) => _participationView == 'hidden'
+                            ? e['hidden_at'] != null
+                            : e['hidden_at'] == null &&
+                                  (_participationView == 'active'
+                                      ? e['status'] == 'active'
+                                      : _participationView == 'left'
+                                      ? e['status'] == 'left'
+                                      : ![
+                                          'active',
+                                          'left',
+                                        ].contains(e['status'])),
+                      )
                       .map(
                         (e) => {
                           ..._learnMap(e['course']),
                           'next_lesson': e['next_lesson'],
+                          'enrollment_id': e['id'],
+                          'participation_status': e['status'],
+                          'hidden_at': e['hidden_at'],
                         },
                       )
                       .toList()
@@ -219,6 +270,22 @@ class _LearningScreenState extends State<LearningScreen> {
         ),
         const SizedBox(height: 16),
         if (_section != 'certificates') ...[
+          if (_section == 'mine') ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final view in ['active', 'left', 'hidden', 'history'])
+                  ChoiceChip(
+                    label: Text(learningText(context, view)),
+                    selected: _participationView == view,
+                    onSelected: (_) =>
+                        setState(() => _participationView = view),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           SearchBox(
             hint: learningText(context, 'search'),
             onChanged: (value) => setState(() => _query = value),
@@ -298,8 +365,13 @@ class _LearningScreenState extends State<LearningScreen> {
                 course: courses[index],
                 busy: _busy,
                 onOpen: () => _openCourse(courses[index]),
-                onContinue: _section == 'mine'
+                onContinue:
+                    _section == 'mine' &&
+                        courses[index]['participation_status'] == 'active'
                     ? () => _openCourse(courses[index], continueLearning: true)
+                    : null,
+                onAction: _section == 'mine'
+                    ? (action) => _participation(courses[index], action)
                     : null,
               ),
               if (index < courses.length - 1) const SizedBox(height: 12),
@@ -361,11 +433,13 @@ class _CourseCard extends StatelessWidget {
     required this.busy,
     required this.onOpen,
     this.onContinue,
+    this.onAction,
   });
   final JsonMap course;
   final bool busy;
   final VoidCallback onOpen;
   final VoidCallback? onContinue;
+  final ValueChanged<String>? onAction;
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
@@ -375,6 +449,35 @@ class _CourseCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (onAction != null)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: PopupMenuButton<String>(
+                tooltip: learningText(context, 'overview'),
+                onSelected: busy ? null : onAction,
+                itemBuilder: (context) => [
+                  if (course['participation_status'] == 'active')
+                    PopupMenuItem(
+                      value: 'leave',
+                      child: Text(learningText(context, 'leave')),
+                    ),
+                  if (course['participation_status'] == 'left')
+                    PopupMenuItem(
+                      value: 'resume',
+                      child: Text(learningText(context, 'resume')),
+                    ),
+                  PopupMenuItem(
+                    value: course['hidden_at'] != null ? 'show' : 'hide',
+                    child: Text(
+                      learningText(
+                        context,
+                        course['hidden_at'] != null ? 'show' : 'hide',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           LearningCourseCover(
             url: course['cover_image'] as String?,
             title: _learnText(course['title']),

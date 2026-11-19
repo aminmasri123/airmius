@@ -21,6 +21,7 @@ use App\Services\Learning\AssessmentSchema;
 use App\Services\Learning\CertificateLogo;
 use App\Services\Learning\LearningContinuation;
 use App\Services\Learning\LearningEnrollmentService;
+use App\Services\Learning\LearningParticipationService;
 use App\Services\Learning\LearningProgressService;
 use App\Services\LearningCourseTranslationService;
 use App\Support\AppNotification;
@@ -279,12 +280,15 @@ class PublicLearningController extends Controller
             : null;
         $course = $this->courseTranslations->decorate($course);
 
+        $leftEnrollment = $request->user() ? LearningEnrollment::where('user_id', $request->user()->id)->where('learning_course_id', $course->id)->where('status', 'left')->first() : null;
+
         return Inertia::render('Guest/LearningCourseShow', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
             'course' => $this->courseDetail($course, $canUseLearningRoom, $completedLessonIds, $quizAttempts, $lessonProgress, $enrollment, $isTutor),
             'enrollment' => $enrollment ? $this->enrollmentResource($enrollment) : null,
             'canUseLearningRoom' => $canUseLearningRoom,
+            'leftEnrollmentId' => $leftEnrollment?->id,
             'myReview' => $myReview,
             'translations' => $this->courseTranslations->variants($course, true)->all(),
             'seo' => [
@@ -293,6 +297,14 @@ class PublicLearningController extends Controller
                 'alternates' => $this->courseTranslations->alternates($course),
             ],
         ]);
+    }
+
+    public function updateParticipation(Request $request, LearningEnrollment $enrollment)
+    {
+        $data = $request->validate(['action' => ['required', Rule::in(['leave', 'hide', 'show', 'resume'])]]);
+        $result = app(LearningParticipationService::class)->update($request->user(), $enrollment, $data['action']);
+
+        return $request->expectsJson() ? response()->json(['data' => $result->only(['id', 'status', 'hidden_at', 'left_at'])]) : back();
     }
 
     public function enroll(Request $request, LearningCourse $course)
@@ -681,6 +693,8 @@ class PublicLearningController extends Controller
             ->map(fn (LearningEnrollment $enrollment) => [
                 'id' => $enrollment->id,
                 'status' => $enrollment->status,
+                'hidden_at' => optional($enrollment->hidden_at)->toIso8601String(),
+                'left_at' => optional($enrollment->left_at)->toIso8601String(),
                 'progress_percent' => $enrollment->progress_percent,
                 'started_at' => optional($enrollment->started_at)->toIso8601String(),
                 'completed_at' => optional($enrollment->completed_at)->toIso8601String(),
@@ -723,24 +737,28 @@ class PublicLearningController extends Controller
         $locale = SupportedLocale::normalize($certificate->course?->language) ?? SupportedLocale::DEFAULT;
         $label = fn (string $key, array $replace = []): string => __("learning.certificate.{$key}", $replace, $locale);
         $pdf = new AirmiusPdfDocument;
-        $pdf->header($label('title'), $certificate->code, 'Airmius Sportschule');
+        $pdf->certificateHeader($label('title'), 'Airmius Lernplattform');
         $logo = $certificate->course ? app(CertificateLogo::class)->bytes($certificate->course) : null;
         if ($logo !== null) {
-            $pdf->image($logo, 48, 748, 46, 50);
+            $pdf->image($logo, 447, 732, 90, 50);
         }
-        $pdf->card(48, 632, 150, 54, $label('issued'), $certificate->issued_at->format('d.m.Y'));
-        $pdf->card(222, 632, 150, 54, $label('progress'), (string) ($certificate->enrollment?->progress_percent ?: 100).'%');
-        $pdf->card(396, 632, 150, 54, $label('status'), $label('completed'), true);
-        $pdf->sectionTitle($label('participant'), 48, 570);
-        $pdf->text($certificate->user?->name ?: $label('default_participant'), 48, 540, 24, true, AirmiusPdfDocument::NAVY, 42);
-        $pdf->sectionTitle($label('course'), 48, 490);
-        $pdf->text($certificate->course?->title ?: $label('default_course'), 48, 458, 22, true, AirmiusPdfDocument::BLUE, 48);
-        $pdf->text($certificate->course?->subtitle ?: ($certificate->course?->description ?: $label('default_description')), 48, 430, 10, false, AirmiusPdfDocument::SLATE, 95);
-        $pdf->sectionTitle($label('course_lead'), 48, 365);
-        $pdf->text($certificate->course?->certificate_signature_name ?: ($certificate->course?->tutor?->name ?: $label('default_tutor')), 48, 338, 13, true);
-        $pdf->strokeColor(...AirmiusPdfDocument::BORDER)->line(48, 285, 546, 285);
-        $pdf->text($certificate->course?->certificate_footer_text ?: $label('default_footer'), 48, 250, 10, false, AirmiusPdfDocument::SLATE, 115);
-        $pdf->text($label('certificate_id', ['code' => $certificate->code]), 48, 224, 9, true, AirmiusPdfDocument::MUTED, 80);
+        $pdf->text($label('participant'), 58, 589, 10, false, AirmiusPdfDocument::SLATE);
+        $pdf->fitText($certificate->user?->name ?: $label('default_participant'), 58, 552, 479, 29, true);
+        $pdf->fitText($label('completion_statement'), 58, 518, 479, 12, false, AirmiusPdfDocument::SLATE);
+        $pdf->fillColor(...AirmiusPdfDocument::SURFACE)->rect(58, 384, 479, 110, true);
+        $pdf->fillColor(111, 189, 55)->rect(58, 384, 3, 110, true);
+        $pdf->text($label('course'), 76, 471, 10, false, AirmiusPdfDocument::SLATE);
+        $pdf->fitText($certificate->course?->title ?: $label('default_course'), 76, 436, 443, 25, true);
+        $pdf->fitText($certificate->course?->subtitle ?: ($certificate->course?->description ?: $label('default_description')), 76, 408, 443, 11, false, AirmiusPdfDocument::SLATE);
+        $pdf->certificateNote($certificate->course?->certificate_footer_text ?: $label('default_footer'));
+        $pdf->fitText($label('status').': '.$label('completed').'  |  '.$label('progress').': '.(string) ($certificate->enrollment?->progress_percent ?: 100).'%', 58, 299, 479, 10, true, AirmiusPdfDocument::SLATE);
+        $pdf->fitText($certificate->course?->certificate_signature_name ?: ($certificate->course?->tutor?->name ?: $label('default_tutor')), 58, 225, 275, 14, true);
+        $pdf->strokeColor(...AirmiusPdfDocument::BORDER)->line(58, 214, 333, 214);
+        $pdf->text($label('course_lead'), 58, 198, 9, false, AirmiusPdfDocument::SLATE);
+        $pdf->text($certificate->issued_at->format('d.m.Y'), 375, 225, 14, true);
+        $pdf->strokeColor(...AirmiusPdfDocument::BORDER)->line(375, 214, 537, 214);
+        $pdf->text($label('issued'), 375, 198, 9, false, AirmiusPdfDocument::SLATE);
+        $pdf->fitText($label('certificate_id', ['code' => $certificate->code]), 58, 157, 479, 9, false, AirmiusPdfDocument::MUTED);
         ProtectedDocumentDownload::audit(
             null,
             $request->user(),
@@ -749,7 +767,7 @@ class PublicLearningController extends Controller
             $certificate,
         );
 
-        return response($pdf->legalFooter([], $label('congratulations'))->render(), 200, [
+        return response($pdf->certificateFooter($label('congratulations'))->render(), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$certificate->code.'.pdf"',
         ]);

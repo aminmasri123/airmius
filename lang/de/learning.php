@@ -46,6 +46,7 @@ return [
         'assignments' => 'Pflicht-Aufgaben',
     ],
     'certificate' => [
+        'completion_statement' => 'hat den folgenden Kurs erfolgreich abgeschlossen.',
         'title' => 'ZERTIFIKAT',
         'issued' => 'Ausgestellt',
         'progress' => 'Fortschritt',

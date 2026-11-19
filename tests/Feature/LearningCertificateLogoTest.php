@@ -38,6 +38,11 @@ class LearningCertificateLogoTest extends TestCase
         $this->assertStringContainsString('/Subtype /Image', $pdf);
         $this->assertStringContainsString('/Im1 Do', $pdf);
         $this->assertStringStartsWith('%PDF-1.4', $pdf);
+        $this->assertStringNotContainsString('RECHNUNG', $pdf);
+        $this->assertStringNotContainsString('Rechnungsnummer', $pdf);
+        $this->assertStringNotContainsString('Diese Rechnung', $pdf);
+        $this->assertStringNotContainsString('Steuernr.', $pdf);
+        $this->assertStringContainsString('LOGO-TEST-001', $pdf);
         $course->user_id = User::factory()->create()->id;
         $this->assertNull(app(CertificateLogo::class)->bytes($course));
         $course->certificate_logo_url = 'http://127.0.0.1/private.png';

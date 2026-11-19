@@ -61,7 +61,7 @@ return [
         'provider_name' => 'Airmius provider',
         'provider_title' => ':name on the Airmius Marketplace',
         'provider_description' => 'View offers from :name on the Airmius Marketplace.',
-        'learning_title' => 'Airmius Sports School',
-        'learning_description' => 'View this Airmius Sports School course.',
+        'learning_title' => 'Airmius Learning Platform',
+        'learning_description' => 'View this Airmius Learning Platform course.',
     ],
 ];

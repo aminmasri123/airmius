@@ -97,6 +97,56 @@ class AirmiusPdfDocument
         return $this;
     }
 
+    public function certificateHeader(string $title, string $subtitle): self
+    {
+        $this->fillColor(255, 255, 255)->rect(0, 0, self::PAGE_WIDTH, self::PAGE_HEIGHT, true);
+        $this->strokeColor(...self::NAVY)->rect(24, 24, 547, 794);
+        $this->strokeColor(...self::BORDER)->rect(31, 31, 533, 780);
+        $this->fillColor(111, 189, 55)->rect(58, 807, 96, 4, true);
+        $logoPath = dirname(__DIR__, 2).'/public/img/logo/Airmius-Logo-Light.png';
+        $logo = is_file($logoPath) ? @file_get_contents($logoPath) : false;
+        if ($logo !== false && function_exists('imagecreatefromstring')) {
+            $this->image($logo, 58, 735, 215, 42);
+        } else {
+            $this->text('AIRMIUS', 58, 749, 28, true);
+        }
+        $this->fitText($subtitle, 58, 714, 479, 11, false, self::SLATE);
+        $this->fitText($title, 58, 651, 479, 34, true);
+        $this->fillColor(111, 189, 55)->rect(58, 630, 64, 3, true);
+
+        return $this;
+    }
+
+    public function certificateFooter(string $message): self
+    {
+        $this->strokeColor(...self::BORDER)->line(58, 126, 537, 126);
+        $this->fitText($message, 58, 103, 479, 10, true);
+        $this->text('airmius.com', 58, 81, 9, false, self::SLATE);
+
+        return $this;
+    }
+
+    public function certificateNote(string $text): self
+    {
+        $text = preg_replace('/\\s+/u', ' ', trim($text)) ?? '';
+        $lines = explode("\n", wordwrap($text, 60, "\n", true));
+        foreach (array_slice($lines, 0, 3) as $index => $line) {
+            $this->fitText($line, 58, 346 - $index * 16, 479, 10, false, self::SLATE);
+        }
+
+        return $this;
+    }
+
+    public function fitText(string $text, float $x, float $y, float $width, int $size = 10, bool $bold = false, array $rgb = self::NAVY): self
+    {
+        $text = preg_replace('/\\s+/u', ' ', trim($text)) ?? '';
+        // Conservative width bound for the built-in Helvetica fonts, including wide capitals.
+        $length = max(1, mb_strlen($text));
+        $size = max(8, min($size, (int) floor($width / ($length * 0.95))));
+
+        return $this->text($text, $x, $y, $size, $bold, $rgb, (int) floor($width / ($size * 0.95)));
+    }
+
     public function card(float $x, float $y, float $w, float $h, string $label, string $value, bool $accent = false): self
     {
         $cardBackground = $accent ? self::SKY : [255, 255, 255];

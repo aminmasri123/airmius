@@ -53,7 +53,7 @@ const componentTitles = {
     'Auth/Dashboard/Notifications/Index': 'Benachrichtigungen',
     'Auth/Dashboard/Settings/Index': 'Einstellungen',
     'Auth/Dashboard/Learning/MyCourses': 'Meine Kurse',
-    'Auth/Dashboard/Learning/Studio': 'Sportschule',
+    'Auth/Dashboard/Learning/Studio': 'Lernplattform',
     'Auth/Dashboard/Commerce/Index': 'Commerce',
     'Auth/Dashboard/Commerce/Cart': 'Warenkorb',
     'Auth/Dashboard/Commerce/BankTransfer': 'Überweisung',

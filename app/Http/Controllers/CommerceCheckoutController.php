@@ -1179,7 +1179,7 @@ class CommerceCheckoutController extends Controller
 
             if (! $linkedCourse || $linkedCourse->status !== 'published' || ! $linkedCourse->is_public) {
                 throw ValidationException::withMessages([
-                    'learning_course_id' => 'Bitte verknüpfe nur veröffentlichte und öffentliche Sportschule-Kurse.',
+                    'learning_course_id' => 'Bitte verknüpfe nur veröffentlichte und öffentliche Lernplattform-Kurse.',
                 ]);
             }
         }

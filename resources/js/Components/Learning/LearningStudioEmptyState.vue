@@ -5,7 +5,7 @@ import AppEmptyState from '@/Components/UI/AppEmptyState.vue';
 <template>
     <section class="surface-card flex min-h-[28rem] items-center justify-center p-8 text-center">
         <AppEmptyState
-            title="Starte deine Online-Sportschule"
+            title="Starte deine Online-Lernplattform"
             description="Lege links deinen ersten Kurs an. Danach kannst du Kapitel, Lektionen und Quiz direkt im Studio bauen."
         >
             <template #icon>
