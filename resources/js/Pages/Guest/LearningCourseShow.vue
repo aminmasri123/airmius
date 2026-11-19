@@ -1,6 +1,6 @@
 ﻿<script setup>
 import { Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -10,6 +10,7 @@ import learningContentLocalization from '@/i18n/learningContentLocalization.json
 import LearningAssessmentAnswers from '@/Components/Learning/LearningAssessmentAnswers.vue'
 import LearningAssignmentResponse from '@/Components/Learning/LearningAssignmentResponse.vue'
 import {assessmentText} from '@/support/learningAssessment'
+import { learningText, nextLearningLesson } from '@/support/learningExperience'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -24,6 +25,7 @@ const props = defineProps({
 
 const page = usePage()
 const { t, locale } = useI18n()
+const ex = key => learningText(locale.value,key)
 const ax=key=>assessmentText(locale.value,key)
 const enrolling = ref(false)
 const localizationCopy = computed(() => learningContentLocalization[locale.value] || learningContentLocalization.de)
@@ -34,6 +36,19 @@ const lx = (key, values = {}) => Object.entries(values).reduce(
 const allLessons = computed(() => props.course.sections?.flatMap((section) => section.lessons || []) || [])
 const firstLesson = computed(() => allLessons.value[0] || null)
 const selectedLesson = ref(firstLesson.value)
+const previewLessons = computed(() => allLessons.value.filter(l => l.is_preview && !l.locked && !l.drip_locked))
+const openLesson = async lesson => {
+    if (!lesson) return
+    selectedLesson.value = lesson
+    await nextTick()
+    document.getElementById('learning-room')?.scrollIntoView({behavior:'smooth',block:'start'})
+}
+onMounted(() => {
+    const requested = Number(new URLSearchParams(window.location.search).get('lesson'))
+    if (window.location.hash === '#learning-room' || requested) {
+        openLesson(allLessons.value.find(l=>l.id===requested && !l.locked && !l.drip_locked) || nextLearningLesson(allLessons.value))
+    }
+})
 const isAuthed = computed(() => Boolean(page.props.auth?.user))
 const canUseLearningRoom = computed(() => props.canUseLearningRoom || (isAuthed.value && (props.enrollment || page.props.auth?.user?.id === props.course.tutor?.id)))
 const canOpenSelectedLesson = computed(() => (canUseLearningRoom.value || Boolean(selectedLesson.value?.is_preview)) && !selectedLesson.value?.locked)
@@ -91,7 +106,7 @@ const formatDateTime = (value) => value
     : ''
 
 const enroll = () => {
-    if (canUseLearningRoom.value) return
+    if (canUseLearningRoom.value) return openLesson(nextLearningLesson(allLessons.value) || allLessons.value.find(l=>!l.locked))
 
     if (isPaidCourse.value) {
         if (props.course.purchase_url) {
@@ -270,6 +285,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                             </div>
                             <h1 class="mt-4 font-heading text-3xl font-900 leading-tight sm:text-5xl">{{ course.title }}</h1>
                             <p class="mt-4 max-w-3xl text-lg leading-relaxed text-secondary">{{ course.subtitle || course.description }}</p>
+                            <p v-if="course.subtitle && course.description" class="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-secondary">{{ course.description }}</p>
                             <nav v-if="translations.length > 1" class="mt-4 flex flex-wrap items-center gap-2" :aria-label="lx('available_languages')">
                                 <span class="text-xs font-semibold text-secondary">{{ lx('available_languages') }}:</span>
                                 <Link
@@ -354,14 +370,19 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                         </article>
                     </section>
 
+                    <section class="mt-6 surface-card p-5">
+                        <h2 class="text-lg font-bold">{{ ex('preview') }}</h2>
+                        <p class="mt-2 text-sm text-secondary">{{ previewLessons.length ? ex('preview_hint') : ex('no_preview') }}</p>
+                        <div class="mt-3 flex flex-wrap gap-2"><button v-for="lesson in previewLessons" :key="lesson.id" type="button" class="rounded-lg border border-air-blue px-4 py-2 font-semibold" @click="openLesson(lesson)"><i class="las la-play-circle"></i> {{ lesson.title }}</button></div>
+                    </section>
                     <section class="mt-6 surface-card overflow-hidden">
                         <div class="border-b border-border p-5">
                             <h2 class="text-lg font-bold text-primary">{{ t('Kursplan') }}</h2>
                             <p class="mt-1 text-sm text-secondary">{{ t('Kapitel, Themen und Lektionen in Reihenfolge.') }}</p>
                         </div>
                         <div class="divide-y divide-border">
-                            <div v-for="section in course.sections" :key="section.id" class="p-5">
-                                <h3 class="font-bold text-primary">{{ section.title }}</h3>
+                            <details v-for="section in course.sections" :key="section.id" class="p-5" open>
+                                <summary class="cursor-pointer font-bold text-primary">{{ section.title }} · {{ section.lessons?.length || 0 }} {{ ex('lessons') }}</summary>
                                 <p v-if="section.description" class="mt-1 text-sm text-secondary">{{ section.description }}</p>
                                 <div class="mt-4 grid gap-2">
                                     <button
@@ -369,7 +390,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                         :key="lesson.id"
                                         type="button"
                                         class="flex items-center justify-between gap-3 rounded-lg border border-border bg-bg p-3 text-left transition hover:border-air-orange"
-                                        @click="selectedLesson = lesson"
+                                        @click="openLesson(lesson)"
                                     >
                                         <div class="min-w-0">
                                             <p class="truncate font-semibold text-primary">{{ lesson.title }}</p>
@@ -381,7 +402,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                         <i v-else class="las la-lock text-secondary"></i>
                                     </button>
                                 </div>
-                            </div>
+                            </details>
                         </div>
                     </section>
 
@@ -479,7 +500,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                         </div>
                     </article>
 
-                    <article v-if="selectedLesson" class="surface-card overflow-hidden">
+                    <article v-if="selectedLesson" id="learning-room" class="surface-card scroll-mt-28 overflow-hidden">
                         <div class="border-b border-border p-5">
                             <p class="text-xs font-semibold uppercase text-secondary">{{ t('Lernraum') }}</p>
                             <h2 class="mt-1 text-lg font-bold text-primary">{{ selectedLesson.title }}</h2>

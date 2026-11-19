@@ -12,6 +12,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/airmius_inline_video.dart';
 import 'badges_center_screen.dart';
 
 class LessonDetailScreen extends StatefulWidget {
@@ -19,10 +20,12 @@ class LessonDetailScreen extends StatefulWidget {
     super.key,
     required this.courseId,
     required this.initialTitle,
+    this.initialLessonId,
   });
 
   final int courseId;
   final String initialTitle;
+  final int? initialLessonId;
 
   @override
   State<LessonDetailScreen> createState() => _LessonDetailScreenState();
@@ -32,6 +35,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   Future<JsonMap>? _future;
   JsonMap _courseResponse = <String, dynamic>{};
   bool _busy = false;
+  final _targetKey = GlobalKey();
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -47,6 +51,14 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   Future<JsonMap> _load() async {
     final response = await _client.learningCourse(widget.courseId);
     _courseResponse = response;
+    if (widget.initialLessonId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final target = _targetKey.currentContext;
+        if (mounted && target != null) {
+          Scrollable.ensureVisible(target, alignment: .1);
+        }
+      });
+    }
     return response;
   }
 
@@ -272,7 +284,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
       if (!mounted) return;
       final attempt = _lessonMap(response['data']);
       _toast(
-        attempt['review_status'] == 'pending' ? assessmentText(context,'pending_review') : _lessonBool(attempt['passed'])
+        attempt['review_status'] == 'pending'
+            ? assessmentText(context, 'pending_review')
+            : _lessonBool(attempt['passed'])
             ? t('learning.quizPassed')
             : t('learning.quizRetry'),
       );
@@ -302,7 +316,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         _lessonInt(assignment['id']),
         body: _lessonText(payload['body']),
         attachmentUrl: _lessonText(payload['attachment_url']),
-        answers: payload['answers'] is Map ? Map<String,dynamic>.from(payload['answers'] as Map) : null,
+        answers: payload['answers'] is Map
+            ? Map<String, dynamic>.from(payload['answers'] as Map)
+            : null,
         revision: (assignment['revision'] as num?)?.toInt(),
       );
       if (!mounted) return;
@@ -460,6 +476,11 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
     final completion = _lessonMap(data['completion_requirements']);
     final progress = _lessonInt(enrollment['progress_percent']);
     final certificate = _lessonMap(enrollment['certificate']);
+    for (final section in sections) {
+      for (final lesson in _lessonMaps(section['lessons'])) {
+        lesson['can_participate'] = enrollment.isNotEmpty;
+      }
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -557,6 +578,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
           ) ...[
             _SectionCard(
               section: sections[sectionIndex],
+              targetLessonId: widget.initialLessonId,
+              targetKey: _targetKey,
               busy: _busy,
               onComplete: _complete,
               onNote: (lesson) => _addText(lesson, comment: false),
@@ -664,9 +687,13 @@ class _SectionCard extends StatelessWidget {
     required this.onComplete,
     required this.onNote,
     required this.onComment,
+    this.targetLessonId,
+    this.targetKey,
   });
 
   final JsonMap section;
+  final int? targetLessonId;
+  final GlobalKey? targetKey;
   final bool busy;
   final ValueChanged<JsonMap> onComplete;
   final ValueChanged<JsonMap> onNote;
@@ -681,7 +708,9 @@ class _SectionCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: ExpansionTile(
-          initiallyExpanded: true,
+          initiallyExpanded:
+              targetLessonId == null ||
+              lessons.any((l) => l['id'] == targetLessonId),
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
           title: Text(
@@ -700,6 +729,8 @@ class _SectionCard extends StatelessWidget {
           children: [
             for (var index = 0; index < lessons.length; index++) ...[
               _LessonCard(
+                key: lessons[index]['id'] == targetLessonId ? targetKey : null,
+                initiallyExpanded: lessons[index]['id'] == targetLessonId,
                 lesson: lessons[index],
                 busy: busy,
                 onComplete: () => onComplete(lessons[index]),
@@ -717,6 +748,8 @@ class _SectionCard extends StatelessWidget {
 
 class _LessonCard extends StatelessWidget {
   const _LessonCard({
+    super.key,
+    this.initiallyExpanded = false,
     required this.lesson,
     required this.busy,
     required this.onComplete,
@@ -725,6 +758,7 @@ class _LessonCard extends StatelessWidget {
   });
 
   final JsonMap lesson;
+  final bool initiallyExpanded;
   final bool busy;
   final VoidCallback onComplete;
   final VoidCallback onNote;
@@ -751,6 +785,7 @@ class _LessonCard extends StatelessWidget {
         color: Colors.transparent,
         child: ExpansionTile(
           enabled: !locked,
+          initiallyExpanded: initiallyExpanded,
           leading: Icon(
             locked
                 ? Icons.lock_outline
@@ -781,6 +816,11 @@ class _LessonCard extends StatelessWidget {
           ),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           children: [
+            if (_lessonText(lesson['video_url']).isNotEmpty)
+              AirmiusInlineVideo(
+                url: _lessonText(lesson['video_url']),
+                title: _lessonText(lesson['title']),
+              ),
             if (_lessonText(lesson['summary']).isNotEmpty)
               Align(
                 alignment: AlignmentDirectional.centerStart,
@@ -826,27 +866,29 @@ class _LessonCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (!completed)
+                if (lesson['can_participate'] == true && !completed)
                   FilledButton.icon(
                     onPressed: busy ? null : onComplete,
                     icon: Icon(Icons.check_circle_outline),
                     label: Text(t('learning.markComplete')),
                   )
-                else
+                else if (completed)
                   StatusPill(
                     t('learning.completed'),
                     color: AirmiusColors.green,
                   ),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : onNote,
-                  icon: Icon(Icons.note_add_outlined),
-                  label: Text(t('learning.addNote')),
-                ),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : onComment,
-                  icon: Icon(Icons.question_answer_outlined),
-                  label: Text(t('learning.askQuestion')),
-                ),
+                if (lesson['can_participate'] == true)
+                  OutlinedButton.icon(
+                    onPressed: busy ? null : onNote,
+                    icon: Icon(Icons.note_add_outlined),
+                    label: Text(t('learning.addNote')),
+                  ),
+                if (lesson['can_participate'] == true)
+                  OutlinedButton.icon(
+                    onPressed: busy ? null : onComment,
+                    icon: Icon(Icons.question_answer_outlined),
+                    label: Text(t('learning.askQuestion')),
+                  ),
               ],
             ),
           ],
@@ -946,15 +988,18 @@ class _QuizCard extends StatelessWidget {
                 if (attempt.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   StatusPill(
-                    attempt['review_status'] == 'pending' ? assessmentText(context,'pending_review') : t('learning.quizScore').replaceFirst(
-                      '{score}',
-                      '${_lessonInt(attempt['score_percent'])}',
-                    ),
+                    attempt['review_status'] == 'pending'
+                        ? assessmentText(context, 'pending_review')
+                        : t('learning.quizScore').replaceFirst(
+                            '{score}',
+                            '${_lessonInt(attempt['score_percent'])}',
+                          ),
                     color: _lessonBool(attempt['passed'])
                         ? AirmiusColors.green
                         : AirmiusColors.amber,
                   ),
-                  if ('${attempt['feedback'] ?? ''}'.isNotEmpty) Text('${attempt['feedback']}'),
+                  if ('${attempt['feedback'] ?? ''}'.isNotEmpty)
+                    Text('${attempt['feedback']}'),
                 ],
               ],
             ),
@@ -1059,8 +1104,15 @@ class _QuizDialogState extends State<_QuizDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              LearningAssessmentAnswerFields(questions: questions, answers: _answers),
-              if (_error != null) Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              LearningAssessmentAnswerFields(
+                questions: questions,
+                answers: _answers,
+              ),
+              if (_error != null)
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
             ],
           ),
         ),
@@ -1073,7 +1125,12 @@ class _QuizDialogState extends State<_QuizDialog> {
         FilledButton(
           onPressed: questions.isNotEmpty
               ? () {
-                  if (!assessmentAnswersComplete(questions,_answers)) { setState(() => _error = assessmentText(context,'answer_required')); return; }
+                  if (!assessmentAnswersComplete(questions, _answers)) {
+                    setState(
+                      () => _error = assessmentText(context, 'answer_required'),
+                    );
+                    return;
+                  }
                   Navigator.pop(context, JsonMap.from(_answers));
                 }
               : null,
@@ -1133,8 +1190,15 @@ class _AssignmentDialogState extends State<_AssignmentDialog> {
                 ),
               ),
               const SizedBox(height: 14),
-              LearningAssessmentAnswerFields(questions: assessmentMaps(widget.assignment['questions']), answers: _answers),
-              if (_error != null) Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              LearningAssessmentAnswerFields(
+                questions: assessmentMaps(widget.assignment['questions']),
+                answers: _answers,
+              ),
+              if (_error != null)
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               TextField(
                 controller: _body,
                 minLines: 4,
@@ -1165,8 +1229,18 @@ class _AssignmentDialogState extends State<_AssignmentDialog> {
         FilledButton(
           onPressed: () {
             final questions = assessmentMaps(widget.assignment['questions']);
-            if (questions.isNotEmpty && !assessmentAnswersComplete(questions,_answers)) { setState(() => _error = assessmentText(context,'answer_required')); return; }
-            if (questions.isEmpty && _body.text.trim().isEmpty && _url.text.trim().isEmpty) return;
+            if (questions.isNotEmpty &&
+                !assessmentAnswersComplete(questions, _answers)) {
+              setState(
+                () => _error = assessmentText(context, 'answer_required'),
+              );
+              return;
+            }
+            if (questions.isEmpty &&
+                _body.text.trim().isEmpty &&
+                _url.text.trim().isEmpty) {
+              return;
+            }
             Navigator.pop(context, {
               'body': _body.text.trim(),
               'attachment_url': _url.text.trim(),

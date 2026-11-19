@@ -3296,6 +3296,7 @@ class AirmiusApiClient {
     String? category,
     String? level,
     String? price,
+    String? language,
   }) => _json(
     'GET',
     '/api/v1/learning',
@@ -3305,6 +3306,7 @@ class AirmiusApiClient {
         'category': category.trim(),
       if (level != null && level.trim().isNotEmpty) 'level': level.trim(),
       if (price != null && price.trim().isNotEmpty) 'price': price.trim(),
+      if (language != null && language.isNotEmpty) 'language': language,
     },
   );
 

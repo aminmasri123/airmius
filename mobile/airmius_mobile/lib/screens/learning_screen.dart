@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -12,6 +13,9 @@ import '../widgets/airmius_widgets.dart';
 import 'learning_quality_review_screen.dart';
 import 'learning_studio_course_suite_screen.dart';
 import 'lesson_detail_screen.dart';
+import 'learning_course_detail_screen.dart';
+import '../core/learning_experience_copy.dart';
+import '../widgets/learning_course_cover.dart';
 
 class LearningScreen extends StatefulWidget {
   const LearningScreen({super.key, this.initialQuery = ''});
@@ -24,10 +28,10 @@ class LearningScreen extends StatefulWidget {
 
 class _LearningScreenState extends State<LearningScreen> {
   Future<JsonMap>? _future;
-  JsonMap _learningResponse = <String, dynamic>{};
-  String _section = 'mine';
+  String _section = 'catalog';
+  String _category = '', _level = '', _price = '', _language = '';
   String _query = '';
-  bool _busy = false;
+  final bool _busy = false;
 
   @override
   void initState() {
@@ -47,8 +51,7 @@ class _LearningScreenState extends State<LearningScreen> {
   }
 
   Future<JsonMap> _load() async {
-    final response = await _client.learning();
-    _learningResponse = response;
+    final response = await _client.learning(language: _language);
     return response;
   }
 
@@ -58,86 +61,26 @@ class _LearningScreenState extends State<LearningScreen> {
     });
   }
 
-  Future<void> _enroll(JsonMap course) async {
-    final t = AirmiusScope.of(context).t;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(t('learning.enrollTitle')),
-        content: Text(
-          t(
-            'learning.enrollQuestion',
-          ).replaceFirst('{course}', _learnText(course['title'])),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(t('cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(t('learning.enroll')),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    setState(() => _busy = true);
-    try {
-      final response = await _client.enrollLearningCourse(
-        _learnInt(course['id']),
-      );
-      if (!mounted) return;
-      final enrollment = _learnMap(response['data']);
-      final data = _learnMap(_learningResponse['data']);
-      setState(() {
-        final catalog = _learnMaps(data['catalog']);
-        final index = catalog.indexWhere(
-          (item) => _learnInt(item['id']) == _learnInt(course['id']),
-        );
-        final enrolledCourse = _learnMap(enrollment['course']);
-        if (index >= 0 && enrolledCourse.isNotEmpty) {
-          catalog[index] = enrolledCourse;
-        }
-        final enrollments = _learnMaps(data['enrollments'])
-          ..removeWhere(
-            (item) => _learnInt(item['id']) == _learnInt(enrollment['id']),
-          )
-          ..insert(0, enrollment);
-        data['catalog'] = catalog;
-        data['enrollments'] = enrollments;
-        _learningResponse['data'] = data;
-        _section = 'mine';
-      });
-      _toast(t('learning.enrolled'));
-    } catch (error) {
-      if (mounted) {
-        _toast(
-          '${t('learning.actionError')} ${error is AirmiusApiException ? error.userMessage : t('common.errorDetails')}',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _openCourse(JsonMap course) async {
+  Future<void> _openCourse(
+    JsonMap course, {
+    bool continueLearning = false,
+  }) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => LessonDetailScreen(
-          courseId: _learnInt(course['id']),
-          initialTitle: _learnText(course['title']),
-        ),
+        builder: (_) => continueLearning
+            ? LessonDetailScreen(
+                courseId: _learnInt(course['id']),
+                initialTitle: _learnText(course['title']),
+                initialLessonId:
+                    _learnInt(_learnMap(course['next_lesson'])['id']) == 0
+                    ? null
+                    : _learnInt(_learnMap(course['next_lesson'])['id']),
+              )
+            : LearningCourseDetailScreen(courseId: _learnInt(course['id'])),
       ),
     );
     if (mounted) _reload();
-  }
-
-  void _toast(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -191,8 +134,15 @@ class _LearningScreenState extends State<LearningScreen> {
         ],
       ),
       body: PageFrame(
-        title: t('learning.title'),
-        subtitle: t('learning.subtitle'),
+        title: learningText(
+          context,
+          _section == 'catalog'
+              ? 'intro'
+              : _section == 'mine'
+              ? 'mine'
+              : 'certificates',
+        ),
+        subtitle: '',
         child: FutureBuilder<JsonMap>(
           future: _future,
           builder: (context, snapshot) {
@@ -214,126 +164,111 @@ class _LearningScreenState extends State<LearningScreen> {
     final catalog = _learnMaps(data['catalog']);
     final enrollments = _learnMaps(data['enrollments']);
     final certificates = _learnMaps(data['certificates']);
-    final normalized = _query.trim().toLowerCase();
     final courses =
         (_section == 'mine'
                 ? enrollments
-                      .map((item) => _learnMap(item['course']))
-                      .where((item) => item.isNotEmpty)
+                      .where((e) => e['status'] == 'active')
+                      .map(
+                        (e) => {
+                          ..._learnMap(e['course']),
+                          'next_lesson': e['next_lesson'],
+                        },
+                      )
                       .toList()
                 : catalog)
             .where((course) {
-              if (normalized.isEmpty) return true;
-              return [
-                course['title'],
-                course['subtitle'],
-                course['description'],
-                course['category'],
-                _learnMap(course['tutor'])['name'],
-              ].any(
-                (value) => _learnText(value).toLowerCase().contains(normalized),
-              );
+              final match =
+                  [
+                    course['title'],
+                    course['subtitle'],
+                    course['description'],
+                    course['category'],
+                    _learnMap(course['tutor'])['name'],
+                  ].any(
+                    (v) => '${v ?? ''}'.toLowerCase().contains(
+                      _query.trim().toLowerCase(),
+                    ),
+                  );
+              return match &&
+                  (_section != 'catalog' ||
+                      ((_category.isEmpty || course['category'] == _category) &&
+                          (_level.isEmpty || course['level'] == _level) &&
+                          (_price.isEmpty ||
+                              (course['is_free'] == true ? 'free' : 'paid') ==
+                                  _price)));
             })
             .toList();
-    final averageProgress = enrollments.isEmpty
-        ? 0
-        : (enrollments.fold<int>(
-                    0,
-                    (sum, item) => sum + _learnInt(item['progress_percent']),
-                  ) /
-                  enrollments.length)
-              .round();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AirmiusPanel(
-          gradient: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Eyebrow(t('learning.overview')),
-              const SizedBox(height: 8),
-              Text(
-                t('learning.overviewHint'),
-                style: TextStyle(
-                  color: airmiusMutedColor(context),
-                  height: 1.4,
-                ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final entry in {
+              'catalog': 'discover',
+              'mine': 'mine',
+              'certificates': 'certificates',
+            }.entries)
+              ChoiceChip(
+                label: Text(learningText(context, entry.value)),
+                selected: _section == entry.key,
+                onSelected: (_) => setState(() => _section = entry.key),
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: MetricCard(
-                      value: '${enrollments.length}',
-                      label: t('learning.myCourses'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: MetricCard(
-                      value: '${certificates.length}',
-                      label: t('learning.certificates'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: MetricCard(
-                      value: '$averageProgress%',
-                      label: t('learning.progress'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+          ],
         ),
-        const SizedBox(height: 14),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SegmentedButton<String>(
-            segments: [
-              ButtonSegment(
-                value: 'mine',
-                icon: Icon(Icons.school_outlined),
-                label: Text(
-                  t('learning.myCourses'),
-                  maxLines: 1,
-                  softWrap: false,
-                ),
-              ),
-              ButtonSegment(
-                value: 'catalog',
-                icon: Icon(Icons.explore_outlined),
-                label: Text(
-                  t('learning.catalog'),
-                  maxLines: 1,
-                  softWrap: false,
-                ),
-              ),
-              ButtonSegment(
-                value: 'certificates',
-                icon: Icon(Icons.verified_outlined),
-                label: Text(
-                  t('learning.certificates'),
-                  maxLines: 1,
-                  softWrap: false,
-                ),
-              ),
-            ],
-            selected: {_section},
-            showSelectedIcon: false,
-            onSelectionChanged: (selection) =>
-                setState(() => _section = selection.first),
-          ),
-        ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         if (_section != 'certificates') ...[
           SearchBox(
-            hint: t('learning.search'),
+            hint: learningText(context, 'search'),
             onChanged: (value) => setState(() => _query = value),
           ),
           const SizedBox(height: 14),
+          if (_section == 'catalog') ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _filter(
+                  'category',
+                  _category,
+                  catalog
+                      .map((c) => '${c['category'] ?? ''}')
+                      .where((v) => v.isNotEmpty)
+                      .toSet()
+                      .toList(),
+                  (v) => setState(() => _category = v),
+                ),
+                _filter('level', _level, [
+                  'beginner',
+                  'intermediate',
+                  'advanced',
+                ], (v) => setState(() => _level = v)),
+                _filter('price', _price, [
+                  'free',
+                  'paid',
+                ], (v) => setState(() => _price = v)),
+                _filter('language', _language, ['de', 'en', 'fr', 'ar'], (v) {
+                  setState(() => _language = v);
+                  _reload();
+                }),
+              ],
+            ),
+            if ([_category, _level, _price, _language].any((v) => v.isNotEmpty))
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _category = '';
+                    _level = '';
+                    _price = '';
+                    _language = '';
+                  });
+                  _reload();
+                },
+                child: Text(learningText(context, 'reset')),
+              ),
+            const SizedBox(height: 14),
+          ],
           if (courses.isEmpty)
             _LearningEmpty(
               icon: _section == 'mine'
@@ -363,7 +298,9 @@ class _LearningScreenState extends State<LearningScreen> {
                 course: courses[index],
                 busy: _busy,
                 onOpen: () => _openCourse(courses[index]),
-                onEnroll: () => _enroll(courses[index]),
+                onContinue: _section == 'mine'
+                    ? () => _openCourse(courses[index], continueLearning: true)
+                    : null,
               ),
               if (index < courses.length - 1) const SizedBox(height: 12),
             ],
@@ -381,6 +318,41 @@ class _LearningScreenState extends State<LearningScreen> {
       ],
     );
   }
+
+  Widget _filter(
+    String key,
+    String value,
+    List<String> values,
+    ValueChanged<String> changed,
+  ) => SizedBox(
+    width: 160,
+    child: DropdownButtonFormField<String>(
+      key: ValueKey('filter-$key-$value'),
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: learningText(context, key)),
+      items: [
+        DropdownMenuItem(value: '', child: Text(learningText(context, 'all'))),
+        for (final v in {...values, if (value.isNotEmpty) value})
+          DropdownMenuItem(
+            value: v,
+            child: Text(
+              key == 'price'
+                  ? learningText(context, v)
+                  : key == 'level'
+                  ? AirmiusScope.of(context).t('learning.level.$v')
+                  : key == 'language'
+                  ? AirmiusLanguage.values
+                        .firstWhere((l) => l.locale.languageCode == v)
+                        .label
+                  : v.toUpperCase(),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+      onChanged: (v) => changed(v ?? ''),
+    ),
+  );
 }
 
 class _CourseCard extends StatelessWidget {
@@ -388,166 +360,84 @@ class _CourseCard extends StatelessWidget {
     required this.course,
     required this.busy,
     required this.onOpen,
-    required this.onEnroll,
+    this.onContinue,
   });
-
   final JsonMap course;
   final bool busy;
   final VoidCallback onOpen;
-  final VoidCallback onEnroll;
-
+  final VoidCallback? onContinue;
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    final enrolled = _learnBool(course['is_enrolled']);
-    final free = _learnBool(course['is_free']);
     final progress = _learnInt(course['progress_percent']);
-    final tutor = _learnMap(course['tutor']);
     return AirmiusPanel(
-      onTap: enrolled ? onOpen : null,
-      borderColor: enrolled
-          ? Theme.of(context).colorScheme.secondary.withValues(alpha: .45)
-          : airmiusBorderColor(context),
+      onTap: onOpen,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          LearningCourseCover(
+            url: course['cover_image'] as String?,
+            title: _learnText(course['title']),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _learnText(course['title']),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _learnText(course['subtitle'] ?? course['description']),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${learningText(context, 'instructor')}: ${_learnMap(course['tutor'])['name'] ?? ''}',
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
             children: [
-              Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.secondary.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(
-                  Icons.play_lesson_outlined,
-                  color: Theme.of(context).colorScheme.secondary,
-                  size: 31,
-                ),
+              Text(t('learning.level.${course['level']}')),
+              Text(
+                '${course['estimated_minutes'] ?? 0} ${learningText(context, 'minutes')}',
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _learnText(
-                        course['title'],
-                        fallback: t('learning.course'),
-                      ),
-                      style: TextStyle(
-                        color: airmiusTextColor(context),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      _learnText(
-                        course['subtitle'] ?? course['description'],
-                        fallback: t('learning.noDescription'),
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: airmiusMutedColor(context),
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 9),
-                    Wrap(
-                      spacing: 7,
-                      runSpacing: 7,
-                      children: [
-                        StatusPill(
-                          t(
-                            'learning.level.${_learnText(course['level'], fallback: 'beginner')}',
-                          ),
-                        ),
-                        StatusPill(
-                          t('learning.lessonCount').replaceFirst(
-                            '{count}',
-                            '${_learnInt(course['lessons_count'])}',
-                          ),
-                          color: airmiusAccentColor(context),
-                        ),
-                        StatusPill(
-                          free ? t('learning.free') : _learningPrice(course),
-                          color: free
-                              ? Theme.of(context).colorScheme.secondary
-                              : Theme.of(context).colorScheme.tertiary,
-                        ),
-                      ],
-                    ),
-                    if (_learnText(tutor['name']).isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        t(
-                          'learning.byTutor',
-                        ).replaceFirst('{name}', _learnText(tutor['name'])),
-                        style: TextStyle(
-                          color: airmiusMutedColor(context),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+              Text(
+                '${course['lessons_count'] ?? 0} ${learningText(context, _learnInt(course['lessons_count']) == 1 ? 'lesson' : 'lessons')}',
               ),
+              Text(
+                course['is_free'] == true
+                    ? learningText(context, 'free')
+                    : _learningPrice(course),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              if (_learnInt(course['reviews_count']) > 0)
+                Text(
+                  '★ ${course['average_rating']} (${course['reviews_count']})',
+                ),
             ],
           ),
-          if (enrolled) ...[
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(99),
-                    child: LinearProgressIndicator(
-                      value: progress.clamp(0, 100) / 100,
-                      minHeight: 10,
-                      backgroundColor: airmiusSurfaceSoftColor(context),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Theme.of(context).colorScheme.secondary,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '$progress%',
-                  style: TextStyle(
-                    color: airmiusTextColor(context),
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
+          if (onContinue != null) ...[
+            const SizedBox(height: 12),
+            LinearProgressIndicator(value: progress.clamp(0, 100) / 100),
+            const SizedBox(height: 6),
+            Text('$progress%'),
+            if (_learnMap(course['next_lesson']).isNotEmpty)
+              Text(
+                '${learningText(context, 'next')}: ${_learnMap(course['next_lesson'])['title']}',
+              ),
           ],
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           AirmiusButton(
-            label: enrolled
-                ? t('learning.continueCourse')
-                : free
-                ? t('learning.enroll')
-                : t('learning.paidCourse'),
-            icon: enrolled
-                ? Icons.play_arrow_outlined
-                : free
-                ? Icons.add_circle_outline
-                : Icons.shopping_bag_outlined,
-            secondary: !enrolled,
-            onPressed: busy
-                ? null
-                : enrolled
-                ? onOpen
-                : free
-                ? onEnroll
-                : () => _paidCourseInfo(context),
+            label: learningText(
+              context,
+              onContinue != null ? 'continue' : 'details',
+            ),
+            icon: onContinue != null ? Icons.play_arrow : Icons.arrow_forward,
+            onPressed: busy ? null : (onContinue ?? onOpen),
           ),
         ],
       ),
@@ -627,23 +517,6 @@ class _CertificateCard extends StatelessWidget {
       ),
     );
   }
-}
-
-Future<void> _paidCourseInfo(BuildContext context) {
-  final t = AirmiusScope.of(context).t;
-  return showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(t('learning.paidTitle')),
-      content: Text(t('learning.paidHint')),
-      actions: [
-        FilledButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(t('learning.understood')),
-        ),
-      ],
-    ),
-  );
 }
 
 Future<void> _openVerifyUrl(BuildContext context, String value) async {
@@ -773,11 +646,8 @@ String _learnText(Object? value, {String fallback = ''}) {
 int _learnInt(Object? value) =>
     value is num ? value.round() : int.tryParse('$value') ?? 0;
 
-bool _learnBool(Object? value) =>
-    value == true || value == 1 || '$value'.toLowerCase() == 'true';
-
 String _learningPrice(JsonMap course) {
   final cents = _learnInt(course['price_cents']);
   final currency = _learnText(course['currency'], fallback: 'EUR');
-  return '${(cents / 100).toStringAsFixed(2).replaceAll('.', ',')} $currency';
+  return NumberFormat.simpleCurrency(name: currency).format(cents / 100);
 }

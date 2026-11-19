@@ -2,6 +2,8 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
+import LearningCourseCover from '@/Components/Learning/LearningCourseCover.vue'
+import { learningText } from '@/support/learningExperience'
 
 defineOptions({ layout: AppLayout })
 
@@ -10,6 +12,10 @@ defineProps({
 })
 
 const { t, locale } = useI18n()
+const ex = key => learningText(locale.value,key)
+const continueUrl = enrollment => enrollment.next_lesson
+    ? `${enrollment.course.show_url}?lesson=${enrollment.next_lesson.id}#learning-room`
+    : `${enrollment.course.show_url}#learning-room`
 const tx = (value, params = {}) => t(value, params)
 
 const statusLabel = (status) => ({
@@ -29,17 +35,15 @@ const formatDate = (value) => value
     <div class="space-y-6">
         <section class="surface-card p-5">
             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Sportschule') }}</p>
-            <h1 class="mt-1 text-2xl font-bold text-primary">{{ tx('Meine Kurse') }}</h1>
+            <h1 class="mt-1 text-2xl font-bold text-primary">{{ ex('mine') }}</h1>
+            <Link :href="route('guest.e-learning')" class="mt-3 inline-flex rounded-lg border border-border px-4 py-2 text-sm font-semibold">{{ ex('discover') }}</Link>
             <p class="mt-2 text-sm text-secondary">{{ tx('Alle freigeschalteten Kurse, Fortschritte und Zertifikate an einem Ort.') }}</p>
         </section>
 
         <section class="grid gap-4 xl:grid-cols-2">
             <article v-for="enrollment in enrollments" :key="enrollment.id" class="surface-card overflow-hidden">
                 <div class="grid gap-4 p-5 md:grid-cols-[8rem_minmax(0,1fr)]">
-                    <div class="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-inputBg md:aspect-square">
-                        <img v-if="enrollment.course?.cover_image" :src="enrollment.course.cover_image" :alt="enrollment.course.title" class="h-full w-full object-cover">
-                        <i v-else class="las la-graduation-cap text-5xl text-air-blue"></i>
-                    </div>
+                    <LearningCourseCover :src="enrollment.course?.cover_image" :title="enrollment.course?.title" class="rounded-lg" />
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
                             <span class="rounded-full bg-bg px-2.5 py-1 text-xs font-semibold text-secondary">{{ statusLabel(enrollment.status) }}</span>
@@ -57,10 +61,11 @@ const formatDate = (value) => value
                             </div>
                         </div>
                         <p class="mt-3 text-xs text-secondary">{{ tx('Start:') }} {{ formatDate(enrollment.started_at) }}</p>
+                        <p v-if="enrollment.next_lesson" class="mt-3 text-sm font-semibold">{{ ex('next') }}: {{ enrollment.next_lesson.title }}</p>
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-2 border-t border-border p-4">
-                    <Link v-if="enrollment.status === 'active'" :href="enrollment.course.show_url" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
+                    <Link v-if="enrollment.status === 'active'" :href="continueUrl(enrollment)" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
                         {{ tx('Weiterlernen') }}
                     </Link>
                     <a v-if="enrollment.certificate?.download_url" :href="enrollment.certificate.download_url" class="rounded-lg border border-success/40 px-4 py-2 text-sm font-semibold text-success">

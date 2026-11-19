@@ -17,6 +17,7 @@ use App\Models\LearningQuiz;
 use App\Models\LearningQuizAttempt;
 use App\Models\UserBadge;
 use App\Services\Learning\AssessmentSchema;
+use App\Services\Learning\LearningContinuation;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningProgressService;
 use App\Services\LearningCourseTranslationService;
@@ -42,25 +43,28 @@ class LearningController extends Controller
             'category' => ['nullable', 'string', 'max:80'],
             'level' => ['nullable', 'string', 'max:80'],
             'price' => ['nullable', Rule::in(['free', 'paid'])],
+            'language' => ['nullable', Rule::in(['de', 'en', 'fr', 'ar'])],
         ]);
         $enrollments = LearningEnrollment::query()
-            ->with(['course.tutor:id,name', 'course.sections', 'course.lessons', 'certificate'])
+            ->with(['course.tutor:id,name', 'course.sections.lessons', 'course.lessons', 'course.marketplaceProducts', 'lessonProgress', 'certificate'])
             ->where('user_id', $request->user()->id)
             ->latest('updated_at')
             ->get();
         $enrolledByCourse = $enrollments->keyBy('learning_course_id');
         $courses = LearningCourse::query()
-            ->with('tutor:id,name')
+            ->with(['tutor:id,name', 'marketplaceProducts' => fn ($query) => $query->where('status', 'published')->latest('id')])
             ->withCount(['sections', 'lessons', 'enrollments'])
             ->withCount(['reviews as reviews_count' => fn ($query) => $query->where('status', 'published')])
             ->withAvg(['reviews as average_rating' => fn ($query) => $query->where('status', 'published')], 'rating')
             ->publishedPublic()
-            ->preferredForLocale($locale)
+            ->preferredForLocale($filters['language'] ?? $locale)
+            ->when($filters['language'] ?? null, fn ($query, $value) => $query->where('language', $value))
             ->when($filters['q'] ?? null, function ($query, string $search) {
                 $query->where(function ($nested) use ($search) {
                     $nested->where('title', 'like', "%{$search}%")
                         ->orWhere('subtitle', 'like', "%{$search}%")
-                        ->orWhere('description', 'like', "%{$search}%");
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhereHas('tutor', fn ($tutor) => $tutor->where('name', 'like', "%{$search}%"));
                 });
             })
             ->when($filters['category'] ?? null, fn ($query, string $value) => $query->where('category', $value))
@@ -112,6 +116,7 @@ class LearningController extends Controller
         $isTutor = (int) $course->user_id === (int) $request->user()->id;
         $course->load([
             'tutor:id,name',
+            'marketplaceProducts' => fn ($query) => $query->where('status', 'published')->latest('id'),
             'sections.lessons.comments.user:id,name',
             'sections.lessons.comments.replies.user:id,name',
             'sections.lessons.assignments',
@@ -119,7 +124,9 @@ class LearningController extends Controller
             'quizzes.lesson',
             'assignments',
             'translationVariants:id,user_id,title,language,status,is_public,published_at,translation_group',
-        ])->loadCount(['sections', 'lessons', 'enrollments']);
+        ])->loadCount(['sections', 'lessons', 'enrollments'])
+            ->loadCount(['reviews as reviews_count' => fn ($query) => $query->where('status', 'published')])
+            ->loadAvg(['reviews as average_rating' => fn ($query) => $query->where('status', 'published')], 'rating');
         $progress = $enrollment
             ? LearningLessonProgress::query()
                 ->where('learning_enrollment_id', $enrollment->id)
@@ -154,6 +161,8 @@ class LearningController extends Controller
                     'learning_goals' => $course->learning_goals ?: [],
                     'requirements' => $course->requirements ?: [],
                     'target_groups' => $course->target_groups ?: [],
+                    'sales_points' => $course->sales_points ?: [],
+                    'faq_items' => $course->faq_items ?: [],
                     'translations' => $this->courseTranslations->variants($course, true)->all(),
                 ],
                 'enrollment' => $enrollment ? $this->enrollmentData($enrollment) : null,
@@ -182,6 +191,8 @@ class LearningController extends Controller
                             'completed' => (bool) $lessonProgress?->completed,
                             'watch_seconds' => (int) ($lessonProgress?->watch_seconds ?: 0),
                             'content' => $canOpen ? $lesson->content : null,
+                            'video_url' => $canOpen ? $lesson->video_url : null,
+                            'can_participate' => (bool) $enrollment,
                             'attachments' => $canOpen ? ($lesson->attachments ?: []) : [],
                             'notes' => $canOpen
                                 ? collect($notes->get($lesson->id, collect()))->map(fn (LearningLessonNote $note) => [
@@ -525,8 +536,9 @@ class LearningController extends Controller
             'average_rating' => $course->average_rating ? round((float) $course->average_rating, 1) : null,
             'reviews_count' => (int) ($course->reviews_count ?? 0),
             'tutor' => $course->tutor ? ['id' => $course->tutor->id, 'name' => $course->tutor->name] : null,
-            'is_enrolled' => (bool) $enrollment,
+            'is_enrolled' => $enrollment?->status === 'active',
             'progress_percent' => (int) ($enrollment?->progress_percent ?: 0),
+            'purchase_product_id' => ! $course->is_free ? $course->marketplaceProducts->where('status', 'published')->sortByDesc('id')->first()?->id : null,
         ];
     }
 
@@ -538,6 +550,7 @@ class LearningController extends Controller
             'progress_percent' => (int) $enrollment->progress_percent,
             'started_at' => optional($enrollment->started_at)->toIso8601String(),
             'completed_at' => optional($enrollment->completed_at)->toIso8601String(),
+            'next_lesson' => app(LearningContinuation::class)->lesson($enrollment),
             'course' => $enrollment->course ? $this->courseCard($enrollment->course, $enrollment) : null,
             'certificate' => $enrollment->certificate ? $this->certificateData($enrollment->certificate) : null,
         ];
@@ -639,6 +652,6 @@ class LearningController extends Controller
 
     private function published(LearningCourse $course): void
     {
-        abort_unless($course->status === 'published' && $course->is_public, 404);
+        abort_unless($course->status === 'published' && $course->is_public && (! $course->published_at || $course->published_at->lte(now())), 404);
     }
 }

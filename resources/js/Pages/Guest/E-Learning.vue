@@ -7,6 +7,8 @@ import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import learningContentLocalization from '@/i18n/learningContentLocalization.json'
+import LearningCourseCover from '@/Components/Learning/LearningCourseCover.vue'
+import { learningText } from '@/support/learningExperience'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -17,20 +19,8 @@ const props = defineProps({
     facets: { type: Object, default: () => ({ categories: [], levels: [] }) },
 })
 
-const courses = [
-    ['las la-calendar-alt', 'guest.learning.courses.organization.title', 'guest.learning.courses.organization.text'],
-    ['las la-comments', 'guest.learning.courses.communication.title', 'guest.learning.courses.communication.text'],
-    ['las la-chart-pie', 'guest.learning.courses.analysis.title', 'guest.learning.courses.analysis.text'],
-    ['las la-shield-alt', 'guest.learning.courses.privacy.title', 'guest.learning.courses.privacy.text'],
-]
-
-const steps = [
-    'guest.learning.steps.learn',
-    'guest.learning.steps.apply',
-    'guest.learning.steps.improve',
-]
-
 const { locale } = useI18n()
+const ex = key => learningText(locale.value,key)
 const localizationCopy = computed(() => learningContentLocalization[locale.value] || learningContentLocalization.de)
 const lx = (key, values = {}) => Object.entries(values).reduce(
     (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
@@ -49,6 +39,7 @@ const filterForm = reactive({
     category: props.filters.category || '',
     level: props.filters.level || '',
     price: props.filters.price || '',
+    language: props.filters.language || '',
 })
 const paginationLabel = (label) => String(label || '')
     .replace(/<[^>]*>/g, '')
@@ -61,6 +52,7 @@ watch(() => props.filters, (filters) => {
     filterForm.category = filters?.category || ''
     filterForm.level = filters?.level || ''
     filterForm.price = filters?.price || ''
+    filterForm.language = filters?.language || ''
 })
 
 const applyFilters = () => {
@@ -90,50 +82,17 @@ const applyFilters = () => {
         <Subnav />
 
         <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
-            <section class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[.95fr_1.05fr]">
-                <div>
-                    <span class="text-sm font-semibold uppercase tracking-wider text-air-orange">{{ $t('E-Learning') }}</span>
-                    <h1 class="mt-3 font-heading text-4xl font-900 leading-tight sm:text-5xl">
-                        {{ $t('guest.learning.hero.title') }}
-                    </h1>
-                    <p class="mt-5 max-w-2xl text-lg leading-relaxed text-secondary">
-                        {{ $t('guest.learning.hero.subtitle') }}
-                    </p>
-                    <div class="mt-8">
-                        <Link
-                            :href="canLogin ? route('auth.learning.studio.index') : route('register')"
-                            class="inline-flex rounded-full bg-air-orange px-6 py-3 font-bold text-white transition hover:bg-orange-600"
-                        >
-                            {{ $t('Sportschule starten') }}
-                        </Link>
-                    </div>
-                </div>
-
-                <div class="surface-card p-5">
-                    <div class="grid gap-3 sm:grid-cols-3">
-                        <div v-for="(step, index) in steps" :key="step" class="rounded-lg border border-border bg-inputBg p-4">
-                            <div class="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-air-orange text-sm font-bold text-white">
-                                {{ index + 1 }}
-                            </div>
-                            <p class="text-sm font-semibold text-primary">{{ $t(step) }}</p>
-                        </div>
-                    </div>
-                </div>
+            <section class="mx-auto max-w-7xl">
+              <p class="text-sm font-semibold text-air-blue">{{ ex('discover') }}</p>
+              <h1 class="mt-2 text-3xl font-bold">{{ ex('intro') }}</h1>
+              <div class="mt-4 flex flex-wrap gap-3">
+                <Link :href="route('auth.learning.my-courses.index')" class="rounded-lg border border-border px-4 py-2">{{ ex('mine') }}</Link>
+                <Link :href="canLogin ? route('auth.learning.studio.index') : route('register')" class="rounded-lg border border-border px-4 py-2">{{ $t('Tutor-Studio öffnen') }}</Link>
+              </div>
             </section>
-
-            <section class="mx-auto mt-16 max-w-7xl pb-20">
-                <div v-if="courseItems.length" class="mb-12">
-                    <div class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                        <div>
-                            <h2 class="text-2xl font-bold text-primary">{{ $t('Online-Sportschule') }}</h2>
-                            <p class="mt-2 text-secondary">{{ $t('Strukturierte Kurse mit Kapiteln, Lektionen, Quiz, Notizen und Tutor-Betreuung.') }}</p>
-                        </div>
-                        <Link :href="canLogin ? route('auth.learning.studio.index') : route('register')" class="text-sm font-semibold text-air-orange">
-                            {{ $t('Tutor-Studio öffnen') }}
-                        </Link>
-                    </div>
-
-                    <form class="mb-8 grid gap-3 rounded-lg border border-border bg-card p-4 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_10rem_auto]" method="get" :action="route('guest.e-learning')" @submit.prevent="applyFilters">
+            <section class="mx-auto mt-6 max-w-7xl pb-20">
+                <div class="mb-12">
+                    <form class="mb-8 grid gap-3 rounded-lg border border-border bg-card p-4 lg:grid-cols-6" method="get" :action="route('guest.e-learning')" @submit.prevent="applyFilters">
                         <input v-model="filterForm.q" name="q" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="$t('Kurse suchen')" :placeholder="$t('Kurse suchen')">
                         <select v-model="filterForm.category" name="category" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="$t('Alle Kategorien')">
                             <option value="">{{ $t('Alle Kategorien') }}</option>
@@ -151,17 +110,17 @@ const applyFilters = () => {
                         <button type="submit" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-wait disabled:opacity-60" :disabled="filtering">
                             {{ filtering ? $t('Wird geladen ...') : $t('Filtern') }}
                         </button>
+                        <select v-model="filterForm.language" name="language" class="rounded-lg border-border bg-inputBg text-sm" :aria-label="ex('language')"><option value="">{{ ex('language') }} · {{ ex('all') }}</option><option v-for="language in ['de','en','fr','ar']" :key="language" :value="language">{{ lx(language) }}</option></select>
+                        <button type="button" class="text-sm underline" @click="Object.keys(filterForm).forEach(key=>filterForm[key]='');applyFilters()">{{ ex('reset') }}</button>
                     </form>
+                    <p v-if="!courseItems.length" role="status" class="rounded-xl border border-dashed border-border p-8 text-center">{{ ex('empty') }}</p>
 
                     <p class="sr-only" aria-live="polite">{{ filtering ? $t('Wird geladen ...') : `${learningCourses.total || courseItems.length} ${$t('Kurse')}` }}</p>
 
                     <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                         <article v-for="course in courseItems" :key="course.id" class="surface-card overflow-hidden" :lang="course.language" :dir="course.content_direction">
                             <Link :href="course.show_url" class="block">
-                                <div class="flex aspect-[16/9] items-center justify-center bg-inputBg">
-                                    <img v-if="course.cover_image" :src="course.cover_image" :alt="course.title" loading="lazy" decoding="async" class="h-full w-full object-cover">
-                                    <i v-else class="las la-graduation-cap text-5xl text-air-orange"></i>
-                                </div>
+                                <LearningCourseCover :src="course.cover_image" :title="course.title" />
                             </Link>
                             <div class="p-5">
                                 <div class="mb-3 flex flex-wrap items-center gap-2">
@@ -172,6 +131,9 @@ const applyFilters = () => {
                                 <Link :href="course.show_url" class="text-lg font-bold text-primary hover:text-air-orange">
                                     {{ course.title }}
                                 </Link>
+                                <p class="mt-2 text-sm">{{ ex('instructor') }}: {{ course.tutor?.name }}</p>
+                                <p v-if="course.reviews_count" class="mt-2 text-sm">★ {{ course.average_rating }} · {{ course.reviews_count }}</p>
+                                <p class="mt-2 font-bold">{{ course.is_free ? ex('free') : formatMoney(course.price_cents,course.currency) }}</p>
                                 <p class="mt-2 line-clamp-3 text-sm leading-relaxed text-secondary">{{ course.subtitle || course.description }}</p>
                                 <p v-if="course.is_locale_fallback" class="mt-3 rounded-lg border border-air-orange/35 bg-air-orange/10 px-3 py-2 text-xs leading-relaxed text-air-orange" role="status">
                                     {{ lx('fallback_notice', { language: lx(course.language) }) }}
@@ -212,27 +174,6 @@ const applyFilters = () => {
                     </nav>
                 </div>
 
-                <div v-else-if="learningProducts.length" class="mb-12">
-                    <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-primary">{{ $t('Aktuelle Kurse und Trainingspläne') }}</h2>
-                        <p class="mt-2 text-secondary">{{ $t('Bestehende digitale Angebote, bis die Sportschule vollständig befüllt ist.') }}</p>
-                    </div>
-                </div>
-
-                <div class="mb-8">
-                    <h2 class="text-2xl font-bold text-primary">{{ $t('guest.learning.library') }}</h2>
-                    <p class="mt-2 text-secondary">{{ $t('guest.learning.library_text') }}</p>
-                </div>
-
-                <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-                    <article v-for="[icon, title, text] in courses" :key="title" class="surface-card p-5">
-                        <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-inputBg">
-                            <i :class="[icon, 'text-2xl text-air-orange']"></i>
-                        </div>
-                        <h3 class="font-bold text-primary">{{ $t(title) }}</h3>
-                        <p class="mt-3 text-sm leading-relaxed text-secondary">{{ $t(text) }}</p>
-                    </article>
-                </div>
             </section>
         </main>
 

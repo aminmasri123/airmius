@@ -19,6 +19,7 @@ use App\Models\UserBadge;
 use App\Services\AirmiusPdfDocument;
 use App\Services\Learning\AssessmentSchema;
 use App\Services\Learning\CertificateLogo;
+use App\Services\Learning\LearningContinuation;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningProgressService;
 use App\Services\LearningCourseTranslationService;
@@ -59,6 +60,7 @@ class PublicLearningController extends Controller
             'category' => ['nullable', 'string', 'max:80'],
             'level' => ['nullable', 'string', 'max:80'],
             'price' => ['nullable', Rule::in(['free', 'paid'])],
+            'language' => ['nullable', Rule::in(['de', 'en', 'fr', 'ar'])],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
@@ -69,13 +71,15 @@ class PublicLearningController extends Controller
             ->withCount(['reviews as reviews_count' => fn ($query) => $query->where('status', 'published')])
             ->withAvg(['reviews as average_rating' => fn ($query) => $query->where('status', 'published')], 'rating')
             ->publishedPublic()
-            ->preferredForLocale($locale)
+            ->preferredForLocale($filters['language'] ?? $locale)
+            ->when($filters['language'] ?? null, fn ($query, $value) => $query->where('language', $value))
             ->when($filters['q'] ?? null, function ($query, string $search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('title', 'like', "%{$search}%")
                         ->orWhere('subtitle', 'like', "%{$search}%")
                         ->orWhere('description', 'like', "%{$search}%")
-                        ->orWhere('sport_type', 'like', "%{$search}%");
+                        ->orWhere('sport_type', 'like', "%{$search}%")
+                        ->orWhereHas('tutor', fn ($tutor) => $tutor->where('name', 'like', "%{$search}%"));
                 });
             })
             ->when($filters['category'] ?? null, fn ($query, string $category) => $query->where('category', $category))
@@ -154,6 +158,7 @@ class PublicLearningController extends Controller
             'category' => ['nullable', 'string', 'max:80'],
             'level' => ['nullable', 'string', 'max:80'],
             'price' => ['nullable', Rule::in(['free', 'paid'])],
+            'language' => ['nullable', Rule::in(['de', 'en', 'fr', 'ar'])],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -163,13 +168,15 @@ class PublicLearningController extends Controller
             ->withCount(['reviews as reviews_count' => fn ($query) => $query->where('status', 'published')])
             ->withAvg(['reviews as average_rating' => fn ($query) => $query->where('status', 'published')], 'rating')
             ->publishedPublic()
-            ->preferredForLocale($locale)
+            ->preferredForLocale($filters['language'] ?? $locale)
+            ->when($filters['language'] ?? null, fn ($query, $value) => $query->where('language', $value))
             ->when($filters['q'] ?? null, function ($query, string $search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('title', 'like', "%{$search}%")
                         ->orWhere('subtitle', 'like', "%{$search}%")
                         ->orWhere('description', 'like', "%{$search}%")
-                        ->orWhere('sport_type', 'like', "%{$search}%");
+                        ->orWhere('sport_type', 'like', "%{$search}%")
+                        ->orWhereHas('tutor', fn ($tutor) => $tutor->where('name', 'like', "%{$search}%"));
                 });
             })
             ->when($filters['category'] ?? null, fn ($query, string $category) => $query->where('category', $category))
@@ -663,6 +670,8 @@ class PublicLearningController extends Controller
                 'course.tutor:id,name,profile_photo_path',
                 'course.sections',
                 'course.lessons',
+                'course.sections.lessons',
+                'lessonProgress',
                 'course.marketplaceProducts' => fn ($query) => $query->where('status', 'published')->latest('id'),
                 'certificate',
             ])
@@ -675,6 +684,7 @@ class PublicLearningController extends Controller
                 'progress_percent' => $enrollment->progress_percent,
                 'started_at' => optional($enrollment->started_at)->toIso8601String(),
                 'completed_at' => optional($enrollment->completed_at)->toIso8601String(),
+                'next_lesson' => app(LearningContinuation::class)->lesson($enrollment),
                 'course' => $enrollment->course ? $this->courseCard($enrollment->course) : null,
                 'certificate' => $enrollment->certificate ? [
                     'code' => $enrollment->certificate->code,
