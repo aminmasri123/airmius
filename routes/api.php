@@ -1137,6 +1137,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('/training/sessions/{trainingSession}', [TrainingSessionController::class, 'show'])->name('training.sessions.show');
             Route::put('/training/sessions/{trainingSession}', [TrainingSessionController::class, 'update'])->name('training.sessions.update');
             Route::delete('/training/sessions/{trainingSession}', [TrainingSessionController::class, 'destroy'])->name('training.sessions.destroy');
+            Route::get('/training/exercises/{trainingExercise}/images/{imageId}', [TrainingExerciseController::class, 'explanationImage'])->name('training.exercises.images.show');
+            Route::get('/training/items/{trainingPlanItem}/images/{imageId}', [TrainingController::class, 'explanationImage'])->name('training.items.images.show');
             Route::get('/training/plans', [TrainingController::class, 'plans'])->name('training.plans.index');
             Route::get('/training/templates', [TrainingController::class, 'templates'])->name('training.templates.index');
             Route::post('/training/plans', [TrainingController::class, 'storePlan'])->name('training.plans.store');

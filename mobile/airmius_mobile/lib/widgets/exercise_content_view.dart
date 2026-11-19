@@ -1,3 +1,4 @@
+import 'exercise_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/airmius_external_url.dart';
@@ -76,15 +77,10 @@ class ExerciseContentView extends StatelessWidget {
                 Semantics(
                   label: '${image['alt'] ?? image['caption'] ?? ''}',
                   image: true,
-                  child: Image.network(
-                    '${image['url']}',
+                  child: ExerciseNetworkImage(
+                    url: '${image['url']}',
                     height: 240,
-                    fit: BoxFit.contain,
                     excludeFromSemantics: true,
-                    errorBuilder: (_, _, _) => const SizedBox(
-                      height: 80,
-                      child: Icon(Icons.broken_image_outlined),
-                    ),
                   ),
                 ),
                 if (image['caption']?.toString().isNotEmpty == true)

@@ -108,6 +108,26 @@ class TrainingExerciseContentService
         return $payload;
     }
 
+    public function imageUrl(TrainingPlanItem|TrainingExercise $item, string $imageId): string
+    {
+        $prefix = request()->is('api/*') ? 'api.v1.' : 'auth.';
+        $route = $item instanceof TrainingExercise ? 'training.exercises.images.show' : 'training.items.images.show';
+
+        return route($prefix.$route, [$item->getKey(), $imageId]);
+    }
+
+    public function imageResponse(TrainingPlanItem|TrainingExercise $item, string $imageId)
+    {
+        $path = $imageId === 'cover' ? $item->image_path
+            : collect($item->explanation_images ?? [])->firstWhere('id', $imageId)['path'] ?? null;
+        abort_unless(is_string($path) && preg_match('#^training-plans/(?:explanations/)?[a-zA-Z0-9._-]+\.(?:jpe?g|png|webp)$#i', $path), 404);
+        abort_unless(Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response($path, null, [
+            'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
     public function present(TrainingPlanItem|TrainingExercise $item, ?string $locale = null): array
     {
         $locale = strtolower(explode('-', str_replace('_', '-', $locale ?? app()->getLocale()))[0]);
@@ -116,7 +136,7 @@ class TrainingExerciseContentService
         $coverPath = $item->image_path ?: data_get($item->explanation_images, '0.path');
         $result = [
             'original_locale' => $original, 'content_locale' => $locale, 'uses_original_fallback' => false,
-            'image_url' => $coverPath ? Storage::disk('public')->url($coverPath) : null,
+            'image_url' => $coverPath ? $this->imageUrl($item, $item->image_path ? 'cover' : (string) data_get($item->explanation_images, '0.id')) : null,
             'original_content' => collect(self::FIELDS)->mapWithKeys(fn ($field) => [$field => $item->$field])->all(),
         ];
         foreach (self::FIELDS as $field) {
@@ -129,8 +149,8 @@ class TrainingExerciseContentService
                 $result['uses_original_fallback'] = true;
             }
         }
-        $result['explanation_images'] = collect($item->explanation_images ?? [])->map(function ($image) use ($locale, $original, &$result) {
-            $localized = ['id' => $image['id'], 'url' => Storage::disk('public')->url($image['path']), 'texts' => $image['texts'] ?? []];
+        $result['explanation_images'] = collect($item->explanation_images ?? [])->map(function ($image) use ($item, $locale, $original, &$result) {
+            $localized = ['id' => $image['id'], 'url' => $this->imageUrl($item, (string) $image['id']), 'texts' => $image['texts'] ?? []];
             foreach (['caption', 'alt'] as $field) {
                 $translated = data_get($image, "texts.$locale.$field");
                 $base = data_get($image, "texts.$original.$field", '');

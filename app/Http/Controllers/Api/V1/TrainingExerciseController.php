@@ -246,6 +246,13 @@ class TrainingExerciseController extends Controller
         return [$team->club, $team];
     }
 
+    public function explanationImage(Request $request, TrainingExercise $trainingExercise, string $imageId)
+    {
+        abort_unless($this->visibleTo($trainingExercise, $request->user()), 404);
+
+        return app(TrainingExerciseContentService::class)->imageResponse($trainingExercise, $imageId);
+    }
+
     private function visibleTo(TrainingExercise $exercise, $user): bool
     {
         if ((int) $exercise->created_by === (int) $user->id && ! $exercise->club_id && ! $exercise->team_id) {

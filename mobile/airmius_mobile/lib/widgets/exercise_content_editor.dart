@@ -1,3 +1,4 @@
+import 'exercise_network_image.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../core/exercise_content.dart';
@@ -170,15 +171,7 @@ class _ExerciseContentEditorState extends State<ExerciseContentEditor> {
             if (image.file?.bytes != null)
               Image.memory(image.file!.bytes!, height: 180, fit: BoxFit.contain)
             else if (image.url != null)
-              Image.network(
-                image.url!,
-                height: 180,
-                fit: BoxFit.contain,
-                errorBuilder: (_, _, _) => const SizedBox(
-                  height: 80,
-                  child: Icon(Icons.broken_image_outlined),
-                ),
-              ),
+              ExerciseNetworkImage(url: image.url!, height: 180),
             const SizedBox(height: 8),
             Text('${index + 1} · ${exerciseLanguages[_language]}'),
             for (final field in ['caption', 'alt'])

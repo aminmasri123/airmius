@@ -1,13 +1,15 @@
 <?php
 
 use App\Http\Controllers\AccountRoleApplicationController;
-use App\Http\Controllers\Api\V1\TeamPenaltyController;
 use App\Http\Controllers\Api\V1\SponsorDeliverableManagementController;
+use App\Http\Controllers\Api\V1\TeamPenaltyController;
+use App\Http\Controllers\Api\V1\TrainingExerciseController;
 use App\Http\Controllers\ChallengeController;
 use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\ClubController;
 use App\Http\Controllers\ClubDeletionController;
 use App\Http\Controllers\ClubInventoryPageController;
+use App\Http\Controllers\ClubMemberRemovalController;
 use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\ClubMemberTimelineController;
 use App\Http\Controllers\ClubStaffSchedulingPageController;
@@ -38,9 +40,11 @@ use App\Http\Controllers\ProfileGamificationController;
 use App\Http\Controllers\PublicLearningController;
 use App\Http\Controllers\RecruitingPipelineController;
 use App\Http\Controllers\RideController;
+use App\Http\Controllers\RideLocationController;
 use App\Http\Controllers\RoleHomeController;
 use App\Http\Controllers\RoleWorkspaceController;
 use App\Http\Controllers\SavedViewController;
+use App\Http\Controllers\SponsorInquiryController;
 use App\Http\Controllers\SponsorTeamController;
 use App\Http\Controllers\SponsorWorkspaceController;
 use App\Http\Controllers\SportIntegrationController;
@@ -52,7 +56,11 @@ use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupportCenterController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TrainerCockpitController;
+use App\Http\Controllers\TrainerResignationController;
+use App\Http\Controllers\TrainingAiGenerationController;
 use App\Http\Controllers\TrainingController;
+use App\Http\Controllers\TrainingExercisePageController;
+use App\Http\Controllers\TrainingPlanEvaluationController;
 use App\Http\Controllers\UserBadgeController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserDataErasureController;
@@ -91,8 +99,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
     Route::get('/support', [SupportCenterController::class, 'index'])->name('auth.support.index');
-    Route::get('/trainer-resignation', [\App\Http\Controllers\TrainerResignationController::class, 'index'])->name('auth.trainer-resignation.index');
-    Route::post('/trainer-resignation', [\App\Http\Controllers\TrainerResignationController::class, 'store'])->name('auth.trainer-resignation.store');
+    Route::get('/trainer-resignation', [TrainerResignationController::class, 'index'])->name('auth.trainer-resignation.index');
+    Route::post('/trainer-resignation', [TrainerResignationController::class, 'store'])->name('auth.trainer-resignation.store');
     Route::post('/role-applications', [AccountRoleApplicationController::class, 'store'])->name('auth.role-applications.store');
     Route::delete('/role-applications/{application}', [AccountRoleApplicationController::class, 'withdraw'])->name('auth.role-applications.withdraw');
     Route::get('/sponsor-werden', [AccountRoleApplicationController::class, 'createSponsor'])->name('auth.sponsor-applications.create');
@@ -108,14 +116,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/club-cockpit', [ClubCockpitController::class, 'index'])->middleware('rollout:club_operating_system')->name('auth.club-cockpit.index');
     Route::get('/club-work-automation', [WorkAutomationPageController::class, 'index'])->name('auth.work-automation.index');
     Route::get('/trainer-cockpit', [TrainerCockpitController::class, 'index'])->middleware('rollout:coach_daily_control')->name('auth.trainer-cockpit.index');
-    Route::get('/trainer-cockpit/plan-evaluation', [\App\Http\Controllers\TrainingPlanEvaluationController::class, 'index'])->middleware('rollout:coach_daily_control')->name('auth.trainer-cockpit.plan-evaluation');
-    Route::post('/trainer-cockpit/plan-evaluation/logs/{trainingLog}/feedback', [\App\Http\Controllers\TrainingPlanEvaluationController::class, 'feedback'])->middleware(['rollout:coach_daily_control', 'throttle:content-comments'])->name('auth.trainer-cockpit.plan-evaluation.feedback');
+    Route::get('/trainer-cockpit/plan-evaluation', [TrainingPlanEvaluationController::class, 'index'])->middleware('rollout:coach_daily_control')->name('auth.trainer-cockpit.plan-evaluation');
+    Route::post('/trainer-cockpit/plan-evaluation/logs/{trainingLog}/feedback', [TrainingPlanEvaluationController::class, 'feedback'])->middleware(['rollout:coach_daily_control', 'throttle:content-comments'])->name('auth.trainer-cockpit.plan-evaluation.feedback');
     Route::middleware('rollout:growth_workspaces')->group(function () {
         Route::get('/sponsor-cockpit', [SponsorWorkspaceController::class, 'index'])->name('auth.sponsor-workspace.index');
         Route::put('/sponsor-cockpit/profile', [SponsorWorkspaceController::class, 'updateProfile'])->name('auth.sponsor-workspace.profile.update');
         Route::post('/sponsor-cockpit/profile/logo', [SponsorWorkspaceController::class, 'uploadLogo'])->name('auth.sponsor-workspace.profile.logo');
         Route::post('/sponsor-cockpit/partnerships', [SponsorWorkspaceController::class, 'storePartnership'])->name('auth.sponsor-workspace.partnerships.store');
-        Route::post('/sponsor-cockpit/inquiries/{inquiry}/respond', [\App\Http\Controllers\SponsorInquiryController::class, 'respond'])->name('auth.sponsor-workspace.inquiries.respond');
+        Route::post('/sponsor-cockpit/inquiries/{inquiry}/respond', [SponsorInquiryController::class, 'respond'])->name('auth.sponsor-workspace.inquiries.respond');
         Route::delete('/sponsor-cockpit/partnerships/{partnership}', [SponsorWorkspaceController::class, 'withdrawPartnership'])->name('auth.sponsor-workspace.partnerships.withdraw');
         Route::post('/sponsor-cockpit/sponsors/{sponsor}/deliverables', [SponsorDeliverableManagementController::class, 'store'])->name('auth.sponsor-workspace.deliverables.store');
         Route::put('/sponsor-cockpit/sponsors/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'update'])->name('auth.sponsor-workspace.deliverables.update');
@@ -133,6 +141,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     });
     Route::get('/training', [TrainingController::class, 'index'])->name('auth.training.index');
     Route::post('/training/activities', [TrainingController::class, 'storeActivity'])->name('auth.training.activities.store');
+    Route::get('/training/exercises/{trainingExercise}/images/{imageId}', [TrainingExerciseController::class, 'explanationImage'])->name('auth.training.exercises.images.show');
+    Route::get('/training/items/{trainingPlanItem}/images/{imageId}', [App\Http\Controllers\Api\V1\TrainingController::class, 'explanationImage'])->name('auth.training.items.images.show');
     Route::get('/training/logs/create', [TrainingController::class, 'createLog'])->name('auth.training.logs.create');
     Route::post('/training/logs', [TrainingController::class, 'storeLog'])->name('auth.training.logs.store');
     Route::put('/training/logs/{log}/draft', [TrainingController::class, 'updateDraftLog'])->name('auth.training.logs.draft.update');
@@ -140,7 +150,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/training/logs/{log}', [TrainingController::class, 'showLog'])->name('auth.training.logs.show');
     Route::post('/training/logs/{log}/feedback', [TrainingController::class, 'storeLogFeedback'])->name('auth.training.logs.feedback.store');
     Route::post('/training/ai/plans/preview', [TrainingController::class, 'previewAiTrainingPlan'])->name('auth.training.ai.plans.preview');
-    Route::get('/training/ai/generations/{generation?}', [\App\Http\Controllers\TrainingAiGenerationController::class, 'show'])->name('auth.training.ai.generations.show');
+    Route::get('/training/ai/generations/{generation?}', [TrainingAiGenerationController::class, 'show'])->name('auth.training.ai.generations.show');
     Route::post('/training/ai/plans', [TrainingController::class, 'storeAiTrainingPlan'])->name('auth.training.ai.plans.store');
     Route::post('/training/plans', [TrainingController::class, 'storePlan'])->name('auth.training.plans.store');
     Route::put('/training/plans/{plan}', [TrainingController::class, 'updatePlan'])->name('auth.training.plans.update');
@@ -148,12 +158,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/training/plans/{plan}/duplicate', [TrainingController::class, 'duplicatePlan'])->name('auth.training.plans.duplicate');
     Route::delete('/training/plans/{plan}', [TrainingController::class, 'destroyPlan'])->name('auth.training.plans.destroy');
     Route::post('/training/plans/{plan}/items', [TrainingController::class, 'storePlanItem'])->name('auth.training.plans.items.store');
-    Route::get('/training/exercises', [\App\Http\Controllers\TrainingExercisePageController::class, 'index'])->name('auth.training.exercises.index');
-    Route::get('/training/exercises/create', [\App\Http\Controllers\TrainingExercisePageController::class, 'create'])->name('auth.training.exercises.create');
-    Route::post('/training/exercises', [\App\Http\Controllers\TrainingExercisePageController::class, 'store'])->name('auth.training.exercises.store');
-    Route::get('/training/exercises/{trainingExercise}/edit', [\App\Http\Controllers\TrainingExercisePageController::class, 'edit'])->name('auth.training.exercises.edit');
-    Route::put('/training/exercises/{trainingExercise}', [\App\Http\Controllers\TrainingExercisePageController::class, 'update'])->name('auth.training.exercises.update');
-    Route::post('/training/exercises/{trainingExercise}/add-to-plan', [\App\Http\Controllers\TrainingExercisePageController::class, 'addToPlan'])->name('auth.training.exercises.add-to-plan');
+    Route::get('/training/exercises', [TrainingExercisePageController::class, 'index'])->name('auth.training.exercises.index');
+    Route::get('/training/exercises/create', [TrainingExercisePageController::class, 'create'])->name('auth.training.exercises.create');
+    Route::post('/training/exercises', [TrainingExercisePageController::class, 'store'])->name('auth.training.exercises.store');
+    Route::get('/training/exercises/{trainingExercise}/edit', [TrainingExercisePageController::class, 'edit'])->name('auth.training.exercises.edit');
+    Route::put('/training/exercises/{trainingExercise}', [TrainingExercisePageController::class, 'update'])->name('auth.training.exercises.update');
+    Route::post('/training/exercises/{trainingExercise}/add-to-plan', [TrainingExercisePageController::class, 'addToPlan'])->name('auth.training.exercises.add-to-plan');
     Route::get('/training/plans/{plan}/items/create', [TrainingController::class, 'createPlanItem'])->name('auth.training.plans.items.create');
     Route::get('/training/plans/{plan}/items/{item}/edit', [TrainingController::class, 'editPlanItem'])->name('auth.training.plans.items.edit');
     Route::post('/training/plans/{plan}/items/{item}/missed', [TrainingController::class, 'markPlanItemMissed'])->name('auth.training.plans.items.missed');
@@ -379,8 +389,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/clubs/{club}/membership-change-requests', [ClubMembershipController::class, 'storeMembershipChangeRequest'])->name('auth.club-membership-change-requests.store');
     Route::post('/clubs/{club}/membership-termination-requests', [ClubMembershipController::class, 'storeTerminationRequest'])->name('auth.club-membership-termination-requests.store');
     Route::post('/clubs/{club}/membership/leave', [ClubMembershipController::class, 'leaveClub'])->name('auth.club-memberships.leave');
-    Route::get('/member-removals/{removal}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'show'])->name('auth.member-removals.show');
-    Route::post('/member-removals/{removal}', [\App\Http\Controllers\ClubMemberRemovalController::class, 'respond'])->name('auth.member-removals.respond');
+    Route::get('/member-removals/{removal}', [ClubMemberRemovalController::class, 'show'])->name('auth.member-removals.show');
+    Route::post('/member-removals/{removal}', [ClubMemberRemovalController::class, 'respond'])->name('auth.member-removals.respond');
     Route::post('/clubs/{club}/membership/removal-objection', [ClubMembershipController::class, 'objectToRemoval'])->name('auth.club-memberships.removal-objection');
     Route::post('/club-membership-requests/{membershipRequest}/approve', [ClubMembershipController::class, 'approveClubRequest'])->name('auth.club-membership-requests.approve');
     Route::post('/club-membership-requests/{membershipRequest}/decline', [ClubMembershipController::class, 'declineClubRequest'])->name('auth.club-membership-requests.decline');
@@ -542,7 +552,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->middleware('throttle:file-folder-delete')->name('auth.folders.destroy');
 
     // RIDES
-    Route::get('/rides/locations', \App\Http\Controllers\RideLocationController::class)->middleware('throttle:ride-geocoding')->name('auth.rides.locations');
+    Route::get('/rides/locations', RideLocationController::class)->middleware('throttle:ride-geocoding')->name('auth.rides.locations');
     Route::get('/rides', [RideController::class, 'index'])->name('auth.rides.index');
     Route::post('/rides', [RideController::class, 'store'])->name('auth.rides.store');
     Route::put('/rides/{ride}', [RideController::class, 'update'])->name('auth.rides.update');

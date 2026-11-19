@@ -1,0 +1,29 @@
+{
+  "scope": "Local only; no production access or deployment",
+  "version": "1.0.74+160",
+  "finding": "Explanation images previously depended on public-disk /storage URLs. The reported production failure itself was not reproduced against the live server.",
+  "fix": [
+    "Serve stored exercise and plan-item images through authenticated Laravel endpoints, independent of the web-server storage alias.",
+    "Generate image URLs on the current application request origin.",
+    "Use current app session for same-origin training image requests in editor, content view and plan thumbnails. Never send the token to external image hosts.",
+    "Check exercise/plan access on every image request; unpublished plans stay private."
+  ],
+  "server_tests": {
+    "tests": 39,
+    "assertions": 640,
+    "result": "passed"
+  },
+  "flutter_tests": {
+    "tests": 11,
+    "result": "passed"
+  },
+  "static_analysis": "No errors; four existing style notices in training_plans_logs_screen.dart.",
+  "manual_device_test": "Not performed; no connected test device used.",
+  "local_test": [
+    "Start the updated local backend.",
+    "Run a debug app against that local backend, or use a suitable local test build. The release APK defaults to airmius.com.",
+    "Create a test exercise, add a JPG/PNG/WebP image and save. Reopen editor, library and web view.",
+    "Copy exercise into a plan and check image previews. Test a foreign account and a draft recipient; image requests must be denied."
+  ],
+  "data_limit": "Missing original image files cannot be recovered by this change; existing stored files need not be uploaded again."
+}

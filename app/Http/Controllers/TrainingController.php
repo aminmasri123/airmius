@@ -263,9 +263,9 @@ class TrainingController extends Controller
             // Editing always uses the original stored texts, never a localized projection.
             'item' => $item ? [
                 ...$item->attributesToArray(),
-                'image_url' => $item->image_path ? Storage::disk('public')->url($item->image_path) : null,
+                'image_url' => $item->image_path ? app(TrainingExerciseContentService::class)->imageUrl($item, 'cover') : null,
                 'explanation_images' => collect($item->explanation_images ?? [])->map(fn ($image) => [
-                    'id' => $image['id'], 'url' => Storage::disk('public')->url($image['path']), 'texts' => $image['texts'] ?? [],
+                    'id' => $image['id'], 'url' => app(TrainingExerciseContentService::class)->imageUrl($item, (string) $image['id']), 'texts' => $image['texts'] ?? [],
                 ])->all(),
             ] : null,
             'sportRoutes' => $this->routeLinks->selectableRoutes($request->user()),

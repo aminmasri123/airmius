@@ -327,6 +327,13 @@ class TrainingController extends Controller
             ->setStatusCode(201);
     }
 
+    public function explanationImage(Request $request, TrainingPlanItem $trainingPlanItem, string $imageId)
+    {
+        abort_unless($this->visiblePlans($request)->whereKey($trainingPlanItem->training_plan_id)->exists(), 404);
+
+        return app(TrainingExerciseContentService::class)->imageResponse($trainingPlanItem, $imageId);
+    }
+
     public function storePlanItem(Request $request, TrainingPlan $trainingPlan)
     {
         abort_unless($this->resources->canWritePlan($request->user(), $trainingPlan), 403);

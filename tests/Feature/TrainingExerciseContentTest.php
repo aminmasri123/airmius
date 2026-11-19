@@ -52,7 +52,7 @@ class TrainingExerciseContentTest extends TestCase
         $response->assertRedirect(route('auth.training.plans.items.show', [$plan, $item]));
         $this->assertSame('Descendez lentement.', $item->translations['fr']['instructions']);
         $this->assertCount(2, $item->explanation_images);
-        $this->assertSame(Storage::disk('public')->url($item->explanation_images[0]['path']), app(TrainingExerciseContentService::class)->present($item)['image_url']);
+        $this->assertSame(route('auth.training.items.images.show', [$item, $item->explanation_images[0]['id']]), app(TrainingExerciseContentService::class)->present($item)['image_url']);
         foreach ($item->explanation_images as $image) {
             Storage::disk('public')->assertExists($image['path']);
         }

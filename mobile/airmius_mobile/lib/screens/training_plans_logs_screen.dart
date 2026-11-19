@@ -18,6 +18,7 @@ import '../core/exercise_content_copy.dart';
 import '../core/exercise_content_upload.dart';
 import '../widgets/exercise_content_editor.dart';
 import '../widgets/exercise_content_view.dart';
+import '../widgets/exercise_network_image.dart';
 import '../widgets/airmius_widgets.dart';
 import 'exercise_library_screen.dart';
 import 'free_run_screen.dart';
@@ -945,8 +946,8 @@ class _TrainingPlanApiDetailScreenState
                                 resolveAirmiusImageUrl(item.imageUrl) != null
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(10),
-                                    child: Image.network(
-                                      resolveAirmiusImageUrl(item.imageUrl)!,
+                                    child: ExerciseNetworkImage(
+                                      url: resolveAirmiusImageUrl(item.imageUrl)!,
                                       width: 48,
                                       height: 48,
                                       fit: BoxFit.cover,
