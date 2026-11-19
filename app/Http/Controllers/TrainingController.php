@@ -56,7 +56,7 @@ class TrainingController extends Controller
         };
 
         return Inertia::render('Auth/Dashboard/Training/Index', [
-            'plans' => fn () => TrainingPlan::query()
+            'plans' => fn () => TrainingPlan::query()->releasedTo($user)
                 ->with([
                     'creator:id,name,first_name,last_name,email',
                     'team:id,name',
@@ -772,7 +772,7 @@ class TrainingController extends Controller
             ->unique()
             ->values();
 
-        DB::transaction(function () use ($request, $data, $imagePath, $userIds) {
+        $plan = DB::transaction(function () use ($request, $data, $imagePath, $userIds) {
             $plan = TrainingPlan::create([
                 'created_by' => $request->user()->id,
                 'team_id' => $data['team_id'] ?? null,
@@ -836,7 +836,18 @@ class TrainingController extends Controller
                 'user_id' => $userId,
                 'permission' => $data['share_permission'],
             ]));
+
+            return $plan;
         });
+
+        if ($plan->status === 'published') {
+            $this->planNotifications->notifyRecipients(
+                $plan, $request->user(),
+                'server.training.notifications.plan_published_title',
+                'server.training.notifications.plan_published_body',
+                ['plan' => $plan->title], route('auth.training.index'),
+            );
+        }
 
         return back()->with(
             'success',
@@ -950,6 +961,7 @@ class TrainingController extends Controller
         abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
 
         $teamIds = $this->resources->trainingPlanTeamIds($request->user())->all();
+        $previousStatus = $plan->status;
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
             'description' => ['nullable', 'string', 'max:3000'],
@@ -1024,8 +1036,8 @@ class TrainingController extends Controller
         $this->planNotifications->notifyRecipients(
             $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
             $request->user(),
-            'server.training.notifications.plan_updated_title',
-            'server.training.notifications.plan_updated_body',
+            $previousStatus === 'published' ? 'server.training.notifications.plan_updated_title' : 'server.training.notifications.plan_published_title',
+            $previousStatus === 'published' ? 'server.training.notifications.plan_updated_body' : 'server.training.notifications.plan_published_body',
             ['plan' => $plan->title],
             route('auth.training.index'),
         );
@@ -1035,18 +1047,20 @@ class TrainingController extends Controller
 
     public function publishPlan(Request $request, TrainingPlan $plan)
     {
-        abort_unless($this->resources->canWritePlan($request->user(), $plan), 403);
-
-        $plan->update(['status' => 'published']);
-
-        $this->planNotifications->notifyRecipients(
-            $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
-            $request->user(),
-            'server.training.notifications.plan_published_title',
-            'server.training.notifications.plan_published_body',
-            ['plan' => $plan->title],
-            route('auth.training.index'),
-        );
+        DB::transaction(function () use ($request, $plan): void {
+            $locked = TrainingPlan::query()->lockForUpdate()->findOrFail($plan->id);
+            abort_unless($this->resources->canWritePlan($request->user(), $locked), 403);
+            if ($locked->status === 'published') {
+                return;
+            }
+            $locked->update(['status' => 'published']);
+            $this->planNotifications->notifyRecipients(
+                $locked, $request->user(),
+                'server.training.notifications.plan_published_title',
+                'server.training.notifications.plan_published_body',
+                ['plan' => $locked->title], route('auth.training.index'),
+            );
+        });
 
         return back()->with('success', __('server.training.plan_published'));
     }
@@ -1164,7 +1178,7 @@ class TrainingController extends Controller
         $teamIds = $this->resources->trainingPlanTeamIds($user);
         $manageableAthletes = $this->logAccess->manageableAthletes($user);
 
-        $plans = TrainingPlan::query()
+        $plans = TrainingPlan::query()->releasedTo($user)
             ->with(['team:id,name', 'items.logs', 'items.sportRoute', 'assignments.user:id,name,first_name,last_name,email', 'assignments.team:id,name'])
             ->where(function ($query) use ($user, $teamIds) {
                 $query
@@ -1222,6 +1236,10 @@ class TrainingController extends Controller
 
     private function canViewPlan(User $user, TrainingPlan $plan): bool
     {
+        if (! $plan->isReleasedTo($user)) {
+            return false;
+        }
+
         if ((int) $plan->created_by === (int) $user->id || $user->hasAnyRole(Roles::FULL_ACCESS)) {
             return true;
         }
@@ -1389,6 +1407,10 @@ class TrainingController extends Controller
 
     private function canLogPlanItemForAthlete(User $user, int $athleteId, TrainingPlanItem $item, array $manageableAthleteIds): bool
     {
+        if (! $item->plan || ! $item->plan->isReleasedTo($user)) {
+            return false;
+        }
+
         if ($athleteId === (int) $user->id) {
             $teamIds = $user->teams()->pluck('teams.id');
 
@@ -1418,7 +1440,7 @@ class TrainingController extends Controller
 
     private function validatePlanItemData(Request $request): array
     {
-        app(\App\Services\Training\TrainingExerciseContentService::class)->prepare($request);
+        app(TrainingExerciseContentService::class)->prepare($request);
 
         return $request->validate([
             ...app(TrainingExerciseContentService::class)->rules(),

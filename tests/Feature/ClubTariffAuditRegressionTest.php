@@ -77,7 +77,7 @@ class ClubTariffAuditRegressionTest extends TestCase
 
         $this->assertSame($payer->id, $monthlyInvoice->user_id);
         $this->assertSame('12.00', $monthlyInvoice->amount);
-        $this->assertSame([
+        $this->assertSame(collect([
             'membership_type_id' => $membershipType->id,
             'interval' => 'monthly',
             'full_amount' => '12.00',
@@ -89,7 +89,7 @@ class ClubTariffAuditRegressionTest extends TestCase
             'active_from' => '2026-09-01',
             'prorated' => false,
             'rounded_cents' => 1200,
-        ], collect($monthlyInvoice->contribution_snapshot)->only([
+        ])->sortKeys()->all(), collect($monthlyInvoice->contribution_snapshot)->only([
             'membership_type_id',
             'interval',
             'full_amount',
@@ -101,7 +101,7 @@ class ClubTariffAuditRegressionTest extends TestCase
             'active_from',
             'prorated',
             'rounded_cents',
-        ])->all());
+        ])->sortKeys()->all());
 
         $this->assertSame('76.30', $quarterlyInvoice->amount);
         $this->assertSame('2026-10-01', $quarterlyInvoice->billing_period_start->toDateString());

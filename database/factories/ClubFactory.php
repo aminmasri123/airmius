@@ -20,7 +20,7 @@ class ClubFactory extends Factory
     {
         return [
             'name' => fake()->company(),
-            'owner_id' => null, // wird im Seeder gesetzt
+            'owner_id' => User::factory(),
 
         ];
     }

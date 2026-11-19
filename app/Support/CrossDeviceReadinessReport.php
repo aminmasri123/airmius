@@ -75,7 +75,7 @@ final class CrossDeviceReadinessReport
     {
         $platforms = array_keys($registry['platforms'] ?? []);
         $locales = array_keys($registry['locales'] ?? []);
-        preg_match('/^version:\s*(\S+)$/m', (string) @file_get_contents(base_path('mobile/airmius_mobile/pubspec.yaml')), $mobileVersion);
+        preg_match('/^version:\s*(\S+)\s*$/m', (string) @file_get_contents(base_path('mobile/airmius_mobile/pubspec.yaml')), $mobileVersion);
         $passes = ($registry['contract'] ?? null) === CrossDeviceAcceptanceRegistry::CONTRACT
             && ($registry['release_version'] ?? null) === ReleaseReadinessReport::VERSION
             && ($registry['mobile_version'] ?? null) === CrossDeviceAcceptanceRegistry::MOBILE_VERSION

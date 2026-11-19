@@ -45,10 +45,11 @@ class MobileFullQaRoleBoundaryTest extends TestCase
             $this->getJson($path)->assertOk();
         }
 
-        $this->getJson("/api/v1/clubs/{$club->id}/members")->assertForbidden();
+        $deniedStatus = $role === 'club_owner' ? 404 : 403;
+        $this->getJson("/api/v1/clubs/{$club->id}/members")->assertStatus($deniedStatus);
         $this->putJson("/api/v1/clubs/{$club->id}/members/{$member->id}/role", ['role' => 'admin'])
-            ->assertForbidden();
-        $this->deleteJson("/api/v1/clubs/{$club->id}/members/{$member->id}")->assertForbidden();
+            ->assertStatus($deniedStatus);
+        $this->deleteJson("/api/v1/clubs/{$club->id}/members/{$member->id}")->assertStatus($deniedStatus);
         $this->assertSame('member', $club->users()->findOrFail($member->id)->pivot->role);
         $this->assertSame($initialMemberIds, $club->users()->orderBy('users.id')->pluck('users.id')->all());
 

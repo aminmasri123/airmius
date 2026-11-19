@@ -48,8 +48,8 @@ class ClubInventoryApiTest extends TestCase
         ClubExternalMember::query()->create([
             'club_id' => $club->id,
             'linked_user_id' => $member->id,
-            'first_name' => 'Web',
-            'last_name' => 'Mitglied',
+            'name' => 'Web Mitglied',
+            'email' => $member->email,
             'membership_status' => 'active',
         ]);
 

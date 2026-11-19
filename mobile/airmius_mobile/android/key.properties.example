@@ -1,0 +1,6 @@
+# Copy to key.properties locally and supply your own signing values.
+# Never commit key.properties or a keystore.
+storePassword=REPLACE_LOCALLY
+keyPassword=REPLACE_LOCALLY
+keyAlias=upload
+storeFile=/absolute/path/to/upload-keystore.jks

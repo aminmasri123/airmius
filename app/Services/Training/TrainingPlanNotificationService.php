@@ -31,6 +31,10 @@ final class TrainingPlanNotificationService
         string $url,
         ?iterable $onlyRecipientIds = null,
     ): void {
+        if ($plan->status !== 'published') {
+            return;
+        }
+
         $recipients = $this->recipients($plan, $actor);
 
         if ($onlyRecipientIds !== null) {
@@ -53,6 +57,7 @@ final class TrainingPlanNotificationService
                 'url' => $url,
                 'training_plan_id' => $plan->id,
             ],
+            ['after_commit' => true],
         ));
     }
 

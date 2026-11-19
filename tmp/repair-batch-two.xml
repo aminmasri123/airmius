@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="C:\Users\pcc\Documents\Codex\airmius\phpunit.xml" tests="66" assertions="3372" errors="0" failures="4" skipped="0" time="20.162553">
+    <testsuite name="Feature" tests="66" assertions="3372" errors="0" failures="4" skipped="0" time="20.162553">
+      <testsuite name="Tests\Feature\ClubAuditLogTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubAuditLogTest.php" tests="3" assertions="58" errors="0" failures="0" skipped="0" time="5.402097">
+        <testcase name="test_club_invoice_actions_are_written_and_visible_in_audit_log" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubAuditLogTest.php" line="20" class="Tests\Feature\ClubAuditLogTest" classname="Tests.Feature.ClubAuditLogTest" assertions="32" time="5.202828"/>
+        <testcase name="test_member_role_changes_are_written_to_the_club_audit_log" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubAuditLogTest.php" line="112" class="Tests\Feature\ClubAuditLogTest" classname="Tests.Feature.ClubAuditLogTest" assertions="6" time="0.076423"/>
+        <testcase name="test_member_removal_requires_a_reason_in_web_and_api_and_is_audited" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubAuditLogTest.php" line="144" class="Tests\Feature\ClubAuditLogTest" classname="Tests.Feature.ClubAuditLogTest" assertions="20" time="0.122846"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\ClubMemberRemovalTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMemberRemovalTest.php" tests="9" assertions="47" errors="0" failures="0" skipped="0" time="0.587096">
+        <testcase name="test_legacy_notification_allows_one_owned_objection_without_new_deadline" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMemberRemovalTest.php" line="21" class="Tests\Feature\ClubMemberRemovalTest" classname="Tests.Feature.ClubMemberRemovalTest" assertions="11" time="0.061290"/>
+        <testcase name="test_old_notification_cannot_object_to_a_new_removal" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMemberRemovalTest.php" line="37" class="Tests\Feature\ClubMemberRemovalTest" classname="Tests.Feature.ClubMemberRemovalTest" assertions="4" time="0.055708"/>
+        <testcase name="test_removal_retains_member_until_confirmed_and_rejects_foreign_answers" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMemberRemovalTest.php" line="48" class="Tests\Feature\ClubMemberRemovalTest" classname="Tests.Feature.ClubMemberRemovalTest" assertions="10" time="0.082455"/>
+        <testcase name="test_objection_stops_expiry_and_cannot_be_reset_by_another_removal" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMemberRemovalTest.php" line="64" class="Tests\Feature\ClubMemberRemovalTest" classname="Tests.Feature.ClubMemberRemovalTest" assertions="7" time="0.088232"/>
+        <testcase name="test_silence_expires_after_thirty_days_only_once" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMemberRemovalTest.php" line="81" class="Tests\Feature\ClubMemberRemovalTest" classname="Tests.Feature.ClubMemberRemovalTest" assertions="4" time="0.051736"/>
+        <testcase name="test_accepted_objection_restores_membership_and_cancels_removal" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMemberRemovalTest.php" line="95" class="Tests\Feature\ClubMemberRemovalTest" classname="Tests.Feature.ClubMemberRemovalTest" assertions="3" time="0.070503"/>
+        <testcase name="test_rejected_objection_does_not_restart_the_timer" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMemberRemovalTest.php" line="109" class="Tests\Feature\ClubMemberRemovalTest" classname="Tests.Feature.ClubMemberRemovalTest" assertions="2" time="0.055035"/>
+        <testcase name="test_external_member_without_account_is_removed_immediately" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMemberRemovalTest.php" line="122" class="Tests\Feature\ClubMemberRemovalTest" classname="Tests.Feature.ClubMemberRemovalTest" assertions="3" time="0.063408"/>
+        <testcase name="test_pending_removal_denies_active_membership_and_status_override" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMemberRemovalTest.php" line="131" class="Tests\Feature\ClubMemberRemovalTest" classname="Tests.Feature.ClubMemberRemovalTest" assertions="3" time="0.058729"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\ClubMembershipApplicationFlowTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMembershipApplicationFlowTest.php" tests="7" assertions="101" errors="0" failures="0" skipped="0" time="0.794799">
+        <testcase name="test_user_can_submit_and_withdraw_membership_application_from_club_profile" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMembershipApplicationFlowTest.php" line="20" class="Tests\Feature\ClubMembershipApplicationFlowTest" classname="Tests.Feature.ClubMembershipApplicationFlowTest" assertions="18" time="0.070730"/>
+        <testcase name="test_manager_can_approve_and_decline_only_pending_membership_applications" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMembershipApplicationFlowTest.php" line="70" class="Tests\Feature\ClubMembershipApplicationFlowTest" classname="Tests.Feature.ClubMembershipApplicationFlowTest" assertions="19" time="0.142396"/>
+        <testcase name="test_api_membership_application_validates_required_documents_and_blocks_existing_members" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMembershipApplicationFlowTest.php" line="167" class="Tests\Feature\ClubMembershipApplicationFlowTest" classname="Tests.Feature.ClubMembershipApplicationFlowTest" assertions="15" time="0.110470"/>
+        <testcase name="test_api_club_profile_exposes_only_public_application_configuration_to_applicants" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMembershipApplicationFlowTest.php" line="220" class="Tests\Feature\ClubMembershipApplicationFlowTest" classname="Tests.Feature.ClubMembershipApplicationFlowTest" assertions="10" time="0.116707"/>
+        <testcase name="test_mobile_review_rejects_foreign_request_ids_and_repeated_decisions" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMembershipApplicationFlowTest.php" line="247" class="Tests\Feature\ClubMembershipApplicationFlowTest" classname="Tests.Feature.ClubMembershipApplicationFlowTest" assertions="16" time="0.106742"/>
+        <testcase name="test_manager_can_request_information_and_applicant_can_complete_the_request" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMembershipApplicationFlowTest.php" line="286" class="Tests\Feature\ClubMembershipApplicationFlowTest" classname="Tests.Feature.ClubMembershipApplicationFlowTest" assertions="14" time="0.133592"/>
+        <testcase name="test_manager_can_waitlist_then_approve_or_decline_membership_requests" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMembershipApplicationFlowTest.php" line="350" class="Tests\Feature\ClubMembershipApplicationFlowTest" classname="Tests.Feature.ClubMembershipApplicationFlowTest" assertions="9" time="0.114162"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\ClubMetadataValuesTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMetadataValuesTest.php" tests="4" assertions="64" errors="0" failures="0" skipped="0" time="0.313731">
+        <testcase name="test_manager_saves_and_reads_every_supported_field_type_and_categories" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMetadataValuesTest.php" line="22" class="Tests\Feature\ClubMetadataValuesTest" classname="Tests.Feature.ClubMetadataValuesTest" assertions="14" time="0.057038"/>
+        <testcase name="test_validation_is_atomic_and_rejects_wrong_types_required_fields_and_foreign_configuration" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMetadataValuesTest.php" line="76" class="Tests\Feature\ClubMetadataValuesTest" classname="Tests.Feature.ClubMetadataValuesTest" assertions="12" time="0.059529"/>
+        <testcase name="test_internal_external_member_event_inventory_and_team_subjects_are_club_scoped" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMetadataValuesTest.php" line="108" class="Tests\Feature\ClubMetadataValuesTest" classname="Tests.Feature.ClubMetadataValuesTest" assertions="16" time="0.105878"/>
+        <testcase name="test_inactive_history_is_preserved_and_used_configuration_cannot_be_deleted" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubMetadataValuesTest.php" line="172" class="Tests\Feature\ClubMetadataValuesTest" classname="Tests.Feature.ClubMetadataValuesTest" assertions="22" time="0.091286"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\ClubPermissionsTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubPermissionsTest.php" tests="9" assertions="336" errors="0" failures="0" skipped="0" time="1.175025">
+        <testcase name="test_club_manager_can_manage_members_and_view_but_not_change_finance_by_default" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubPermissionsTest.php" line="20" class="Tests\Feature\ClubPermissionsTest" classname="Tests.Feature.ClubPermissionsTest" assertions="8" time="0.142551"/>
+        <testcase name="test_owner_can_grant_finance_permissions_to_one_club_member" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubPermissionsTest.php" line="52" class="Tests\Feature\ClubPermissionsTest" classname="Tests.Feature.ClubPermissionsTest" assertions="5" time="0.072144"/>
+        <testcase name="test_member_cannot_change_club_permissions" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubPermissionsTest.php" line="84" class="Tests\Feature\ClubPermissionsTest" classname="Tests.Feature.ClubPermissionsTest" assertions="1" time="0.054613"/>
+        <testcase name="test_legacy_manage_permissions_expand_to_actions_but_explicit_denials_win" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubPermissionsTest.php" line="102" class="Tests\Feature\ClubPermissionsTest" classname="Tests.Feature.ClubPermissionsTest" assertions="4" time="0.049501"/>
+        <testcase name="test_inactive_members_lose_all_permissions_while_non_member_staff_remain_compatible" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubPermissionsTest.php" line="120" class="Tests\Feature\ClubPermissionsTest" classname="Tests.Feature.ClubPermissionsTest" assertions="274" time="0.177139"/>
+        <testcase name="test_delete_only_member_permission_can_remove_a_member_but_cannot_edit_one" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubPermissionsTest.php" line="187" class="Tests\Feature\ClubPermissionsTest" classname="Tests.Feature.ClubPermissionsTest" assertions="7" time="0.082962"/>
+        <testcase name="test_legacy_profile_role_editor_uses_the_roles_permission_instead_of_generic_club_management" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubPermissionsTest.php" line="230" class="Tests\Feature\ClubPermissionsTest" classname="Tests.Feature.ClubPermissionsTest" assertions="16" time="0.152021"/>
+        <testcase name="test_web_membership_and_finance_writes_use_their_separate_permissions" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubPermissionsTest.php" line="272" class="Tests\Feature\ClubPermissionsTest" classname="Tests.Feature.ClubPermissionsTest" assertions="5" time="0.087586"/>
+        <testcase name="test_team_editor_can_create_teams_without_generic_club_management" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubPermissionsTest.php" line="324" class="Tests\Feature\ClubPermissionsTest" classname="Tests.Feature.ClubPermissionsTest" assertions="16" time="0.356510"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\ClubVolunteerProfileTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubVolunteerProfileTest.php" tests="3" assertions="41" errors="0" failures="0" skipped="0" time="0.211892">
+        <testcase name="test_member_can_model_minimal_volunteer_profile_for_one_club" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubVolunteerProfileTest.php" line="16" class="Tests\Feature\ClubVolunteerProfileTest" classname="Tests.Feature.ClubVolunteerProfileTest" assertions="22" time="0.076496"/>
+        <testcase name="test_candidate_preferences_are_validated_and_scoped_to_club" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubVolunteerProfileTest.php" line="79" class="Tests\Feature\ClubVolunteerProfileTest" classname="Tests.Feature.ClubVolunteerProfileTest" assertions="11" time="0.066738"/>
+        <testcase name="test_volunteer_profile_visibility_respects_member_role_and_club_scope" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubVolunteerProfileTest.php" line="110" class="Tests\Feature\ClubVolunteerProfileTest" classname="Tests.Feature.ClubVolunteerProfileTest" assertions="8" time="0.068658"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\ClubWorkspaceIsolationTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" tests="10" assertions="164" errors="0" failures="1" skipped="0" time="7.689349">
+        <testsuite name="Tests\Feature\ClubWorkspaceIsolationTest::test_seeded_view_permissions_never_grant_cross_club_api_access" tests="3" assertions="48" errors="0" failures="0" skipped="0" time="2.855844">
+          <testcase name="test_seeded_view_permissions_never_grant_cross_club_api_access with data set &quot;owner&quot;" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" line="64" class="Tests\Feature\ClubWorkspaceIsolationTest" classname="Tests.Feature.ClubWorkspaceIsolationTest" assertions="16" time="0.938507"/>
+          <testcase name="test_seeded_view_permissions_never_grant_cross_club_api_access with data set &quot;club admin&quot;" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" line="64" class="Tests\Feature\ClubWorkspaceIsolationTest" classname="Tests.Feature.ClubWorkspaceIsolationTest" assertions="16" time="0.949134"/>
+          <testcase name="test_seeded_view_permissions_never_grant_cross_club_api_access with data set &quot;manager&quot;" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" line="64" class="Tests\Feature\ClubWorkspaceIsolationTest" classname="Tests.Feature.ClubWorkspaceIsolationTest" assertions="16" time="0.968202"/>
+        </testsuite>
+        <testcase name="test_members_finance_and_tasks_reject_foreign_club_ids_and_records" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" line="84" class="Tests\Feature\ClubWorkspaceIsolationTest" classname="Tests.Feature.ClubWorkspaceIsolationTest" assertions="7" time="0.642519">
+          <failure type="PHPUnit\Framework\ExpectationFailedException">Tests\Feature\ClubWorkspaceIsolationTest::test_members_finance_and_tasks_reject_foreign_club_ids_and_records&#13;
+Expected response status code [404] but received 403.
+Failed asserting that 403 is identical to 404.&#13;
+&#13;
+The following errors occurred during the last request:
+
+{
+    "message": "Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket.",
+    "errors": [],
+    "code": "forbidden",
+    "error": {
+        "code": "forbidden",
+        "message": "Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket."
+    },
+    "meta": {
+        "api_version": "v1",
+        "contract_version": "2026-08-08",
+        "request_id": "ed92466d-d539-444e-994b-62b21a1b5055"
+    }
+}
+&#13;
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\TestResponseAssert.php:45
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\TestResponse.php:175
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\Concerns\AssertsStatusCodes.php:151
+C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php:97</failure>
+        </testcase>
+        <testcase name="test_calendar_and_task_metadata_only_include_own_club_events" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" line="103" class="Tests\Feature\ClubWorkspaceIsolationTest" classname="Tests.Feature.ClubWorkspaceIsolationTest" assertions="9" time="0.777460"/>
+        <testcase name="test_task_creator_cannot_delete_tasks_after_losing_access_to_the_club" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" line="117" class="Tests\Feature\ClubWorkspaceIsolationTest" classname="Tests.Feature.ClubWorkspaceIsolationTest" assertions="2" time="0.580875"/>
+        <testcase name="test_web_lists_and_direct_links_enforce_the_same_club_boundary" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" line="130" class="Tests\Feature\ClubWorkspaceIsolationTest" classname="Tests.Feature.ClubWorkspaceIsolationTest" assertions="70" time="0.952234"/>
+        <testcase name="test_club_role_without_memberships_has_empty_lists_and_platform_admin_keeps_access" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" line="150" class="Tests\Feature\ClubWorkspaceIsolationTest" classname="Tests.Feature.ClubWorkspaceIsolationTest" assertions="7" time="0.603367"/>
+        <testcase name="test_local_manager_without_global_role_is_scoped_but_athletes_can_discover_public_clubs" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" line="164" class="Tests\Feature\ClubWorkspaceIsolationTest" classname="Tests.Feature.ClubWorkspaceIsolationTest" assertions="8" time="0.643638"/>
+        <testcase name="test_club_owner_cannot_use_platform_finance_permissions_inherited_from_legacy_roles" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\ClubWorkspaceIsolationTest.php" line="179" class="Tests\Feature\ClubWorkspaceIsolationTest" classname="Tests.Feature.ClubWorkspaceIsolationTest" assertions="13" time="0.633411"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\CriticalJourneyContractTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\CriticalJourneyContractTest.php" tests="4" assertions="2111" errors="0" failures="0" skipped="0" time="0.834555">
+        <testcase name="test_five_critical_journeys_reference_live_personas_modules_and_routes" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\CriticalJourneyContractTest.php" line="23" class="Tests\Feature\CriticalJourneyContractTest" classname="Tests.Feature.CriticalJourneyContractTest" assertions="152" time="0.045797"/>
+        <testcase name="test_every_api_route_using_purpose_middleware_resolves_to_one_owned_module" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\CriticalJourneyContractTest.php" line="63" class="Tests\Feature\CriticalJourneyContractTest" classname="Tests.Feature.CriticalJourneyContractTest" assertions="1919" time="0.098814"/>
+        <testcase name="test_meta_publishes_versioned_journeys_and_complete_sponsor_persona" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\CriticalJourneyContractTest.php" line="79" class="Tests\Feature\CriticalJourneyContractTest" classname="Tests.Feature.CriticalJourneyContractTest" assertions="15" time="0.055027"/>
+        <testcase name="test_critical_public_and_authenticated_paths_publish_correct_governance_headers" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\CriticalJourneyContractTest.php" line="100" class="Tests\Feature\CriticalJourneyContractTest" classname="Tests.Feature.CriticalJourneyContractTest" assertions="25" time="0.634917"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\DatabaseBackupRestoreTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\DatabaseBackupRestoreTest.php" tests="6" assertions="26" errors="0" failures="0" skipped="0" time="0.409618">
+        <testcase name="test_sqlite_database_backup_can_be_restored_and_read" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\DatabaseBackupRestoreTest.php" line="20" class="Tests\Feature\DatabaseBackupRestoreTest" classname="Tests.Feature.DatabaseBackupRestoreTest" assertions="12" time="0.076615"/>
+        <testcase name="test_encrypted_sqlite_backup_can_be_restored" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\DatabaseBackupRestoreTest.php" line="80" class="Tests\Feature\DatabaseBackupRestoreTest" classname="Tests.Feature.DatabaseBackupRestoreTest" assertions="5" time="0.091035"/>
+        <testcase name="test_backup_pruning_removes_only_expired_database_backup_objects" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\DatabaseBackupRestoreTest.php" line="126" class="Tests\Feature\DatabaseBackupRestoreTest" classname="Tests.Feature.DatabaseBackupRestoreTest" assertions="3" time="0.060896"/>
+        <testcase name="test_restore_requires_explicit_absolute_target" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\DatabaseBackupRestoreTest.php" line="140" class="Tests\Feature\DatabaseBackupRestoreTest" classname="Tests.Feature.DatabaseBackupRestoreTest" assertions="1" time="0.051649"/>
+        <testcase name="test_restore_rejects_a_backup_without_a_verifiable_manifest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\DatabaseBackupRestoreTest.php" line="147" class="Tests\Feature\DatabaseBackupRestoreTest" classname="Tests.Feature.DatabaseBackupRestoreTest" assertions="2" time="0.049516"/>
+        <testcase name="test_restore_refuses_to_pass_when_backup_resurrects_a_deleted_account" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\DatabaseBackupRestoreTest.php" line="162" class="Tests\Feature\DatabaseBackupRestoreTest" classname="Tests.Feature.DatabaseBackupRestoreTest" assertions="3" time="0.079907"/>
+      </testsuite>
+      <testsuite name="Tests\Feature\MobileFullQaRoleBoundaryTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\MobileFullQaRoleBoundaryTest.php" tests="4" assertions="24" errors="0" failures="3" skipped="0" time="2.397072">
+        <testsuite name="Tests\Feature\MobileFullQaRoleBoundaryTest::test_personas_retain_personal_features_without_foreign_member_administration" tests="4" assertions="24" errors="0" failures="3" skipped="0" time="2.397072">
+          <testcase name="test_personas_retain_personal_features_without_foreign_member_administration with data set &quot;athlete&quot;" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\MobileFullQaRoleBoundaryTest.php" line="28" class="Tests\Feature\MobileFullQaRoleBoundaryTest" classname="Tests.Feature.MobileFullQaRoleBoundaryTest" assertions="4" time="0.584953">
+            <failure type="PHPUnit\Framework\ExpectationFailedException">Tests\Feature\MobileFullQaRoleBoundaryTest::test_personas_retain_personal_features_without_foreign_member_administration with data set "athlete"&#13;
+Expected response status code [404] but received 403.
+Failed asserting that 403 is identical to 404.&#13;
+&#13;
+The following errors occurred during the last request:
+
+{
+    "message": "Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket.",
+    "errors": [],
+    "code": "forbidden",
+    "error": {
+        "code": "forbidden",
+        "message": "Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket."
+    },
+    "meta": {
+        "api_version": "v1",
+        "contract_version": "2026-08-08",
+        "request_id": "bd6fdc67-7dc8-4f21-9173-cb381f01cb1c"
+    }
+}
+&#13;
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\TestResponseAssert.php:45
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\TestResponse.php:175
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\Concerns\AssertsStatusCodes.php:151
+C:\Users\pcc\Documents\Codex\airmius\tests\Feature\MobileFullQaRoleBoundaryTest.php:48</failure>
+          </testcase>
+          <testcase name="test_personas_retain_personal_features_without_foreign_member_administration with data set &quot;coach&quot;" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\MobileFullQaRoleBoundaryTest.php" line="28" class="Tests\Feature\MobileFullQaRoleBoundaryTest" classname="Tests.Feature.MobileFullQaRoleBoundaryTest" assertions="4" time="0.589880">
+            <failure type="PHPUnit\Framework\ExpectationFailedException">Tests\Feature\MobileFullQaRoleBoundaryTest::test_personas_retain_personal_features_without_foreign_member_administration with data set "coach"&#13;
+Expected response status code [404] but received 403.
+Failed asserting that 403 is identical to 404.&#13;
+&#13;
+The following errors occurred during the last request:
+
+{
+    "message": "Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket.",
+    "errors": [],
+    "code": "forbidden",
+    "error": {
+        "code": "forbidden",
+        "message": "Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket."
+    },
+    "meta": {
+        "api_version": "v1",
+        "contract_version": "2026-08-08",
+        "request_id": "053490dd-6b79-4a60-8cb8-bae27216f1c6"
+    }
+}
+&#13;
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\TestResponseAssert.php:45
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\TestResponse.php:175
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\Concerns\AssertsStatusCodes.php:151
+C:\Users\pcc\Documents\Codex\airmius\tests\Feature\MobileFullQaRoleBoundaryTest.php:48</failure>
+          </testcase>
+          <testcase name="test_personas_retain_personal_features_without_foreign_member_administration with data set &quot;club owner&quot;" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\MobileFullQaRoleBoundaryTest.php" line="28" class="Tests\Feature\MobileFullQaRoleBoundaryTest" classname="Tests.Feature.MobileFullQaRoleBoundaryTest" assertions="12" time="0.619636"/>
+          <testcase name="test_personas_retain_personal_features_without_foreign_member_administration with data set &quot;sponsor&quot;" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\MobileFullQaRoleBoundaryTest.php" line="28" class="Tests\Feature\MobileFullQaRoleBoundaryTest" classname="Tests.Feature.MobileFullQaRoleBoundaryTest" assertions="4" time="0.602604">
+            <failure type="PHPUnit\Framework\ExpectationFailedException">Tests\Feature\MobileFullQaRoleBoundaryTest::test_personas_retain_personal_features_without_foreign_member_administration with data set "sponsor"&#13;
+Expected response status code [404] but received 403.
+Failed asserting that 403 is identical to 404.&#13;
+&#13;
+The following errors occurred during the last request:
+
+{
+    "message": "Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket.",
+    "errors": [],
+    "code": "forbidden",
+    "error": {
+        "code": "forbidden",
+        "message": "Du hast dafür keine Berechtigung. Bitte wende dich an deinen Verein/Admin oder prüfe dein Paket."
+    },
+    "meta": {
+        "api_version": "v1",
+        "contract_version": "2026-08-08",
+        "request_id": "9cbc27e5-e40a-4c05-81a6-6e8ffb587ddf"
+    }
+}
+&#13;
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\TestResponseAssert.php:45
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\TestResponse.php:175
+C:\Users\pcc\Documents\Codex\airmius\vendor\laravel\framework\src\Illuminate\Testing\Concerns\AssertsStatusCodes.php:151
+C:\Users\pcc\Documents\Codex\airmius\tests\Feature\MobileFullQaRoleBoundaryTest.php:48</failure>
+          </testcase>
+        </testsuite>
+      </testsuite>
+      <testsuite name="Tests\Feature\StagedRolloutAcceptanceContractTest" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\StagedRolloutAcceptanceContractTest.php" tests="7" assertions="400" errors="0" failures="0" skipped="0" time="0.347321">
+        <testcase name="test_contract_and_repository_report_cover_stages_kill_switches_routes_guest_safety_and_raci" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\StagedRolloutAcceptanceContractTest.php" line="21" class="Tests\Feature\StagedRolloutAcceptanceContractTest" classname="Tests.Feature.StagedRolloutAcceptanceContractTest" assertions="17" time="0.049371"/>
+        <testcase name="test_assignment_is_stable_and_matches_the_configured_stage_without_storage" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\StagedRolloutAcceptanceContractTest.php" line="44" class="Tests\Feature\StagedRolloutAcceptanceContractTest" classname="Tests.Feature.StagedRolloutAcceptanceContractTest" assertions="360" time="0.049992"/>
+        <testcase name="test_global_and_feature_kill_switches_win_and_invalid_stages_fail_closed" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\StagedRolloutAcceptanceContractTest.php" line="66" class="Tests\Feature\StagedRolloutAcceptanceContractTest" classname="Tests.Feature.StagedRolloutAcceptanceContractTest" assertions="4" time="0.043584"/>
+        <testcase name="test_pilot_override_requires_a_real_linked_club_and_never_bypasses_a_kill_switch" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\StagedRolloutAcceptanceContractTest.php" line="91" class="Tests\Feature\StagedRolloutAcceptanceContractTest" classname="Tests.Feature.StagedRolloutAcceptanceContractTest" assertions="5" time="0.049196"/>
+        <testcase name="test_disabled_workspaces_use_localized_safe_web_and_api_fallbacks" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\StagedRolloutAcceptanceContractTest.php" line="116" class="Tests\Feature\StagedRolloutAcceptanceContractTest" classname="Tests.Feature.StagedRolloutAcceptanceContractTest" assertions="8" time="0.042238"/>
+        <testcase name="test_global_kill_switch_does_not_gate_guest_pages_or_public_apis" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\StagedRolloutAcceptanceContractTest.php" line="146" class="Tests\Feature\StagedRolloutAcceptanceContractTest" classname="Tests.Feature.StagedRolloutAcceptanceContractTest" assertions="3" time="0.057611"/>
+        <testcase name="test_audit_command_passes_technical_checks_but_strict_mode_keeps_real_rollout_open" file="C:\Users\pcc\Documents\Codex\airmius\tests\Feature\StagedRolloutAcceptanceContractTest.php" line="157" class="Tests\Feature\StagedRolloutAcceptanceContractTest" classname="Tests.Feature.StagedRolloutAcceptanceContractTest" assertions="3" time="0.055328"/>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

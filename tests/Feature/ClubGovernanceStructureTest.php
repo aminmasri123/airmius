@@ -128,7 +128,7 @@ class ClubGovernanceStructureTest extends TestCase
 
         $this->getJson("/api/v1/clubs/{$club->id}/governance")
             ->assertOk()->assertJsonCount(1, 'data.bodies')->assertJsonCount(2, 'data.bodies.0.assignments')
-            ->assertJsonCount(3, 'data.member_options')->assertJsonPath('data.can_manage', true)
+            ->assertJsonCount(2, 'data.member_options')->assertJsonPath('data.can_manage', true)
             ->assertJsonPath('data.can_edit', true)->assertJsonPath('data.can_delete', true);
 
         $activity = Activity::query()->where('type', 'club.governance.assignment.created')->latest('id')->firstOrFail();

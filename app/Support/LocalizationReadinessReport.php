@@ -761,6 +761,6 @@ class LocalizationReadinessReport
 
     protected static function relativePath(string $path): string
     {
-        return str_replace(base_path().DIRECTORY_SEPARATOR, '', $path);
+        return str_replace('\\', '/', str_replace(base_path().DIRECTORY_SEPARATOR, '', $path));
     }
 }

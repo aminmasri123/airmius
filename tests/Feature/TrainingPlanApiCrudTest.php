@@ -500,6 +500,12 @@ class TrainingPlanApiCrudTest extends TestCase
 
         Sanctum::actingAs($athlete);
 
+        // A template copy starts as a private draft, even when a team is retained.
+        $this->postJson("/api/v1/training/templates/{$templateId}/instantiate", [])->assertNotFound();
+        Sanctum::actingAs($coach);
+        $this->postJson("/api/v1/training/plans/{$templateId}/publish")->assertOk();
+        Sanctum::actingAs($athlete);
+
         $this->postJson("/api/v1/training/templates/{$templateId}/instantiate", [
             'title' => 'Neue Grundlagenwoche',
             'starts_on' => now()->addWeek()->toDateString(),

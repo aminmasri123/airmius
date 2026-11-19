@@ -1,0 +1,36 @@
+{
+    "growth_workspaces": [
+        "api.v1.sponsor-workspace.profile.logo",
+        "api.v1.sponsor-workspace.partnerships.store",
+        "api.v1.sponsor-workspace.partnerships.show",
+        "api.v1.sponsor-workspace.partnerships.withdraw",
+        "api.v1.sponsor-workspace.team.invite",
+        "api.v1.sponsor-workspace.team.accept",
+        "api.v1.sponsor-workspace.team.decline",
+        "api.v1.sponsor-workspace.team.update",
+        "api.v1.sponsor-workspace.team.transfer-ownership",
+        "api.v1.sponsor-workspace.team.destroy",
+        "auth.sponsor-workspace.profile.logo",
+        "auth.sponsor-workspace.partnerships.store",
+        "auth.sponsor-workspace.inquiries.respond",
+        "auth.sponsor-workspace.partnerships.withdraw",
+        "auth.sponsor-workspace.deliverables.store",
+        "auth.sponsor-workspace.deliverables.update",
+        "auth.sponsor-workspace.deliverables.destroy",
+        "auth.sponsor-workspace.team.invite",
+        "auth.sponsor-workspace.team.accept",
+        "auth.sponsor-workspace.team.decline",
+        "auth.sponsor-workspace.team.update",
+        "auth.sponsor-workspace.team.transfer-ownership",
+        "auth.sponsor-workspace.team.destroy"
+    ],
+    "coach_daily_control": [
+        "api.v1.trainer-cockpit.plan-evaluation",
+        "api.v1.trainer-cockpit.plan-evaluation.feedback",
+        "auth.trainer-cockpit.plan-evaluation",
+        "auth.trainer-cockpit.plan-evaluation.feedback"
+    ],
+    "admin_operations": [
+        "api.v1.admin.operations"
+    ]
+}

@@ -1551,25 +1551,6 @@ class ClubController extends Controller
             ]);
         }
 
-        $timelineAfter = [
-            'membership_status' => $externalMember->membership_status,
-            'joined_on' => $externalMember->joined_on?->toDateString(),
-            'membership_ends_on' => $externalMember->membership_ends_on?->toDateString(),
-        ];
-        $this->recordExternalTimelineChanges($club, $externalMember, $request->user(), $timelineBefore, $timelineAfter);
-
-        $auditAfter = $externalMember->fresh()->only($auditedFields);
-        $changedFields = collect($auditedFields)
-            ->filter(fn (string $field) => (string) ($auditBefore[$field] ?? '') !== (string) ($auditAfter[$field] ?? ''))
-            ->values()
-            ->all();
-        if ($changedFields !== []) {
-            ClubAuditLog::record($club, $request->user(), 'club.member.external_updated', $externalMember, [
-                'external_member_id' => $externalMember->id,
-                'changed_fields' => $changedFields,
-            ]);
-        }
-
         foreach (array_unique(array_filter([$previousFamilyGroupKey, $nextFamilyGroupKey])) as $familyGroupKey) {
             $calculator->recalculateFamilyGroupContributions($club, $familyGroupKey);
         }

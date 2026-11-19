@@ -247,7 +247,9 @@ class MaturityController extends Controller
                     ->count(),
             ],
             'training_plan' => [
-                'query' => fn () => TrainingPlan::query()
+                'query' => fn () => TrainingPlan::query()->releasedTo($user)
+                    ->where(fn ($audience) => $audience->where('created_by', $user->id)
+                        ->orWhereHas('assignments', fn ($assigned) => $assigned->where('user_id', $user->id)->orWhereIn('team_id', $teamIds)))
                     ->where(function ($planQuery) use ($like) {
                         $planQuery->where('title', 'like', $like)
                             ->orWhere('description', 'like', $like);
@@ -263,7 +265,9 @@ class MaturityController extends Controller
                         'status' => $plan->status,
                         'updated_at' => $plan->updated_at?->toIso8601String(),
                     ]),
-                'count' => fn () => TrainingPlan::query()
+                'count' => fn () => TrainingPlan::query()->releasedTo($user)
+                    ->where(fn ($audience) => $audience->where('created_by', $user->id)
+                        ->orWhereHas('assignments', fn ($assigned) => $assigned->where('user_id', $user->id)->orWhereIn('team_id', $teamIds)))
                     ->where(function ($planQuery) use ($like) {
                         $planQuery->where('title', 'like', $like)
                             ->orWhere('description', 'like', $like);

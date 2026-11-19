@@ -151,6 +151,10 @@ class ClubMetadataValuesTest extends TestCase
         $this->deleteJson("/api/v1/clubs/{$club->id}/members/{$member->id}", [
             'reason' => 'Mitgliedschaft beendet',
         ])->assertOk();
+        $removal = \App\Models\ClubMemberRemoval::query()->where('club_id', $club->id)->where('user_id', $member->id)->sole();
+        $this->assertSame('pending', $removal->status);
+        app(\App\Services\ClubMemberRemovalService::class)->respond($removal, $member, 'confirm', null);
+
         $this->assertDatabaseMissing('club_custom_field_values', [
             'club_id' => $club->id, 'subject_type' => 'member', 'subject_id' => $member->id,
         ]);

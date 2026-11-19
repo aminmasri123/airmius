@@ -68,7 +68,7 @@ class NativeEditorialRichContentTest extends TestCase
 
     public function test_inline_and_cover_uploads_return_safe_html_and_store_real_images(): void
     {
-        Storage::fake('public');
+        Storage::fake(\App\Support\UploadStorage::disk());
         $this->editor();
         foreach (['inline', 'cover'] as $kind) {
             $response = $this->post('/api/v1/editorial/images', [
@@ -79,12 +79,12 @@ class NativeEditorialRichContentTest extends TestCase
             $this->assertStringNotContainsString('<script>', $response->json('data.content_html'));
             $this->assertStringContainsString('&lt;script&gt;', $response->json('data.content_html'));
         }
-        $this->assertCount(2, Storage::disk('public')->allFiles('blog'));
+        $this->assertCount(2, Storage::disk(\App\Support\UploadStorage::disk())->allFiles('blog'));
     }
 
     public function test_image_upload_rejects_wrong_mime_oversize_files_and_invalid_fields(): void
     {
-        Storage::fake('public');
+        Storage::fake(\App\Support\UploadStorage::disk());
         $this->editor();
         foreach (['inline', 'cover'] as $kind) {
             foreach ([UploadedFile::fake()->create('image.svg', 1, 'image/svg+xml'), UploadedFile::fake()->create('fake.png', 1, 'text/html'), UploadedFile::fake()->image('large.png')->size(8193)] as $file) {
@@ -94,7 +94,7 @@ class NativeEditorialRichContentTest extends TestCase
         }
         $this->postJson('/api/v1/editorial/images', ['kind' => 'other', 'alt' => str_repeat('x', 161)])
             ->assertUnprocessable()->assertJsonValidationErrors(['image', 'kind', 'alt']);
-        $this->assertEmpty(Storage::disk('public')->allFiles());
+        $this->assertEmpty(Storage::disk(\App\Support\UploadStorage::disk())->allFiles());
     }
 
     public function test_upload_and_preview_require_authentication_and_editor_permissions(): void
@@ -111,7 +111,7 @@ class NativeEditorialRichContentTest extends TestCase
 
     public function test_update_only_editor_can_preview_and_upload_but_cannot_create_or_publish(): void
     {
-        Storage::fake('public');
+        Storage::fake(\App\Support\UploadStorage::disk());
         $this->editor(['blog.update']);
         $this->postJson('/api/v1/editorial/preview', ['content' => '<p>Draft</p>'])->assertOk();
         $this->post('/api/v1/editorial/images', ['kind' => 'inline', 'image' => UploadedFile::fake()->image('image.jpg')], ['Accept' => 'application/json'])->assertCreated();

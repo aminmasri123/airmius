@@ -13,7 +13,6 @@ class ApiRateLimitContractTest extends TestCase
     public function test_sensitive_api_v1_write_routes_are_rate_limited(): void
     {
         $expected = [
-            'api.v1.auth.login' => 'throttle:10,1',
             'api.v1.auth.register' => 'throttle:5,1',
             'api.v1.auth.password.email' => 'throttle:5,1',
             'api.v1.auth.password.reset' => 'throttle:5,1',

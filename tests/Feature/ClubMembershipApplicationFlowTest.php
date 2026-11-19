@@ -264,7 +264,7 @@ class ClubMembershipApplicationFlowTest extends TestCase
             $this->postJson("/api/v1/clubs/{$club->id}/membership-requests/{$application->id}/{$decision}")
                 ->assertNotFound();
             $this->postJson("/api/v1/clubs/{$foreignClub->id}/membership-requests/{$application->id}/{$decision}")
-                ->assertForbidden();
+                ->assertNotFound();
             $this->assertSame('pending', $application->fresh()->status);
             $this->assertNull($application->fresh()->reviewed_by);
             $this->assertDatabaseMissing('club_user', ['club_id' => $foreignClub->id, 'user_id' => $applicant->id]);

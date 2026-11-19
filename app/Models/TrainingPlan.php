@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -37,6 +38,19 @@ class TrainingPlan extends Model
             'is_template' => 'boolean',
             'settings' => 'array',
         ];
+    }
+
+    /** Draft assignments reserve recipients; they do not release the plan. */
+    public function scopeReleasedTo(Builder $query, User $user): Builder
+    {
+        return $query->where(fn (Builder $visibility) => $visibility
+            ->where('training_plans.created_by', $user->id)
+            ->orWhereIn('training_plans.status', ['published', 'active']));
+    }
+
+    public function isReleasedTo(User $user): bool
+    {
+        return (int) $this->created_by === (int) $user->id || in_array($this->status, ['published', 'active'], true);
     }
 
     public function creator()

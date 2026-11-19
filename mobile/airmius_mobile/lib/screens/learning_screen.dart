@@ -252,37 +252,83 @@ class _LearningScreenState extends State<LearningScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final entry in {
-              'catalog': 'discover',
-              'mine': 'mine',
-              'certificates': 'certificates',
-            }.entries)
-              ChoiceChip(
-                label: Text(learningText(context, entry.value)),
-                selected: _section == entry.key,
-                onSelected: (_) => setState(() => _section = entry.key),
-              ),
-          ],
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest.withValues(alpha: .4),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              for (final entry in {
+                'catalog': 'discover',
+                'mine': 'mine',
+                'certificates': 'certificates',
+              }.entries)
+                Expanded(
+                  child: SizedBox(
+                    height: MediaQuery.textScalerOf(
+                      context,
+                    ).scale(48).clamp(56, 92),
+                    child: ChoiceChip(
+                      label: Center(
+                        child: Text(
+                          learningText(context, entry.value),
+                          textAlign: TextAlign.center,
+                          maxLines: 3,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 4,
+                      ),
+                      showCheckmark: false,
+                      side: BorderSide.none,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      selected: _section == entry.key,
+                      onSelected: (_) => setState(() => _section = entry.key),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         if (_section != 'certificates') ...[
           if (_section == 'mine') ...[
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
+            DropdownButtonFormField<String>(
+              key: ValueKey('participation-view-$_participationView'),
+              initialValue: _participationView,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: learningText(context, 'mine'),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+              ),
+              items: [
                 for (final view in ['active', 'left', 'hidden', 'history'])
-                  ChoiceChip(
-                    label: Text(learningText(context, view)),
-                    selected: _participationView == view,
-                    onSelected: (_) =>
-                        setState(() => _participationView = view),
+                  DropdownMenuItem(
+                    value: view,
+                    child: Text(
+                      learningText(context, view),
+                      style: const TextStyle(fontSize: 14),
+                    ),
                   ),
               ],
+              onChanged: (value) =>
+                  setState(() => _participationView = value ?? 'active'),
             ),
             const SizedBox(height: 12),
           ],
@@ -444,103 +490,156 @@ class _CourseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final progress = _learnInt(course['progress_percent']);
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return AirmiusPanel(
+      padding: const EdgeInsets.all(16),
       onTap: onOpen,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (onAction != null)
-            Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: PopupMenuButton<String>(
-                tooltip: learningText(context, 'overview'),
-                onSelected: busy ? null : onAction,
-                itemBuilder: (context) => [
-                  if (course['participation_status'] == 'active')
-                    PopupMenuItem(
-                      value: 'leave',
-                      child: Text(learningText(context, 'leave')),
-                    ),
-                  if (course['participation_status'] == 'left')
-                    PopupMenuItem(
-                      value: 'resume',
-                      child: Text(learningText(context, 'resume')),
-                    ),
-                  PopupMenuItem(
-                    value: course['hidden_at'] != null ? 'show' : 'hide',
-                    child: Text(
-                      learningText(
-                        context,
-                        course['hidden_at'] != null ? 'show' : 'hide',
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 92,
+                child: LearningCourseCover(
+                  url: course['cover_image'] as String?,
+                  title: _learnText(course['title']),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _learnText(course['title']),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 5),
+                    Text(
+                      _learnText(_learnMap(course['tutor'])['name']),
+                      style: TextStyle(fontSize: 12, color: muted),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          LearningCourseCover(
-            url: course['cover_image'] as String?,
-            title: _learnText(course['title']),
+              if (onAction != null)
+                PopupMenuButton<String>(
+                  tooltip: learningText(context, 'overview'),
+                  padding: EdgeInsets.zero,
+                  onSelected: busy ? null : onAction,
+                  itemBuilder: (context) => [
+                    if (course['participation_status'] == 'active')
+                      PopupMenuItem(
+                        value: 'leave',
+                        child: Text(learningText(context, 'leave')),
+                      ),
+                    if (course['participation_status'] == 'left')
+                      PopupMenuItem(
+                        value: 'resume',
+                        child: Text(learningText(context, 'resume')),
+                      ),
+                    PopupMenuItem(
+                      value: course['hidden_at'] != null ? 'show' : 'hide',
+                      child: Text(
+                        learningText(
+                          context,
+                          course['hidden_at'] != null ? 'show' : 'hide',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
           ),
           const SizedBox(height: 12),
-          Text(
-            _learnText(course['title']),
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
           Text(
             _learnText(course['subtitle'] ?? course['description']),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '${learningText(context, 'instructor')}: ${_learnMap(course['tutor'])['name'] ?? ''}',
+            style: TextStyle(fontSize: 13, color: muted, height: 1.4),
           ),
           const SizedBox(height: 10),
           Wrap(
-            spacing: 10,
-            runSpacing: 8,
+            spacing: 12,
+            runSpacing: 5,
             children: [
-              Text(t('learning.level.${course['level']}')),
               Text(
-                '${course['estimated_minutes'] ?? 0} ${learningText(context, 'minutes')}',
+                t('learning.level.${course['level']}'),
+                style: TextStyle(fontSize: 12, color: muted),
               ),
               Text(
-                '${course['lessons_count'] ?? 0} ${learningText(context, _learnInt(course['lessons_count']) == 1 ? 'lesson' : 'lessons')}',
+                '${course['estimated_minutes'] ?? 0} ${learningText(context, 'minutes')}',
+                style: TextStyle(fontSize: 12, color: muted),
               ),
               Text(
                 course['is_free'] == true
                     ? learningText(context, 'free')
                     : _learningPrice(course),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               if (_learnInt(course['reviews_count']) > 0)
                 Text(
                   '★ ${course['average_rating']} (${course['reviews_count']})',
+                  style: const TextStyle(fontSize: 12),
                 ),
             ],
           ),
           if (onContinue != null) ...[
-            const SizedBox(height: 12),
-            LinearProgressIndicator(value: progress.clamp(0, 100) / 100),
-            const SizedBox(height: 6),
-            Text('$progress%'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: progress.clamp(0, 100) / 100,
+                      minHeight: 5,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '$progress%',
+                  style: TextStyle(fontSize: 12, color: muted),
+                ),
+              ],
+            ),
             if (_learnMap(course['next_lesson']).isNotEmpty)
-              Text(
-                '${learningText(context, 'next')}: ${_learnMap(course['next_lesson'])['title']}',
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  '${learningText(context, 'next')}: ${_learnMap(course['next_lesson'])['title']}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: muted),
+                ),
               ),
           ],
-          const SizedBox(height: 12),
-          AirmiusButton(
-            label: learningText(
-              context,
-              onContinue != null ? 'continue' : 'details',
-            ),
-            icon: onContinue != null ? Icons.play_arrow : Icons.arrow_forward,
+          const SizedBox(height: 14),
+          FilledButton.icon(
             onPressed: busy ? null : (onContinue ?? onOpen),
+            icon: Icon(
+              onContinue != null
+                  ? Icons.play_arrow_rounded
+                  : Icons.arrow_forward_rounded,
+              size: 20,
+            ),
+            label: Text(
+              learningText(
+                context,
+                onContinue != null ? 'continue' : 'details',
+              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),

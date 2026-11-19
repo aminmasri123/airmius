@@ -239,7 +239,7 @@ class ClubCockpitGovernanceTest extends TestCase
 
         $cockpitSource = file_get_contents(base_path('mobile/airmius_mobile/lib/screens/club_cockpit_screen.dart'));
         $clubsSource = file_get_contents(base_path('mobile/airmius_mobile/lib/screens/clubs_screen.dart'));
-        $this->assertStringContainsString('.where((club) => club.canViewCockpit)', $cockpitSource);
+        $this->assertStringContainsString('.where((club) => taskWorkspace || club.canViewCockpit)', $cockpitSource);
         $this->assertStringNotContainsString('club.canViewCockpit ||', $cockpitSource);
         $this->assertStringContainsString('canOpenCockpit: entry.$2.canViewCockpit', $clubsSource);
         $this->assertNotSame($first->id, $second->id);

@@ -80,7 +80,7 @@ class ClubVolunteerProfileTest extends TestCase
     {
         [$club, $owner, $member] = $this->clubWithOwner(true);
         $otherClub = Club::factory()->create();
-        $foreignTeam = $otherClub->teams()->create(['name' => 'Fremdes Team']);
+        $foreignTeam = $otherClub->teams()->create(['name' => 'Fremdes Team', 'sport_type' => 'football']);
         Sanctum::actingAs($member);
 
         $payload = [
@@ -95,7 +95,7 @@ class ClubVolunteerProfileTest extends TestCase
             ...$payload, 'preferred_team_ids' => [],
         ])->assertUnprocessable()->assertJsonValidationErrors('preferred_areas');
 
-        $team = $club->teams()->create(['name' => 'Jugend']);
+        $team = $club->teams()->create(['name' => 'Jugend', 'sport_type' => 'football']);
         $this->putJson("/api/v1/clubs/{$club->id}/volunteer-profile", [
             ...$payload, 'preferred_team_ids' => [$team->id],
         ])->assertOk()->assertJsonPath('data.preferred_team_ids.0', $team->id);

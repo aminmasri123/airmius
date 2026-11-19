@@ -378,6 +378,7 @@ class MobileApiContractTest extends TestCase
     public function test_mobile_upload_flow_can_create_rename_and_delete_user_file(): void
     {
         Storage::fake(UploadStorage::disk());
+        Storage::fake(UploadStorage::privateDisk());
 
         $user = User::factory()->create();
         Sanctum::actingAs($user);
@@ -392,7 +393,7 @@ class MobileApiContractTest extends TestCase
 
         $file = File::query()->firstOrFail();
 
-        Storage::disk(UploadStorage::disk())->assertExists($file->path);
+        Storage::disk(UploadStorage::disk($file->path))->assertExists($file->path);
 
         $this->patchJson("/api/v1/uploads/{$file->id}", [
             'display_name' => 'renamed-mobile-avatar.jpg',
@@ -410,6 +411,7 @@ class MobileApiContractTest extends TestCase
     public function test_mobile_story_flow_can_upload_view_react_and_delete(): void
     {
         Storage::fake(UploadStorage::disk());
+        Storage::fake(UploadStorage::privateDisk());
 
         $author = User::factory()->create(['name' => 'Mobile Story Author']);
         Sanctum::actingAs($author);

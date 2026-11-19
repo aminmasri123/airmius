@@ -179,13 +179,17 @@ class ClubAuditLogTest extends TestCase
             ])
             ->assertRedirect();
 
+        $webRemoval = \App\Models\ClubMemberRemoval::query()->where('club_id', $club->id)->where('user_id', $webMember->id)->sole();
+        $this->assertSame('pending', $webRemoval->status);
+        app(\App\Services\ClubMemberRemovalService::class)->respond($webRemoval, $webMember, 'confirm', null);
+
         $this->assertDatabaseMissing('club_user', [
             'club_id' => $club->id,
             'user_id' => $webMember->id,
         ]);
         $this->assertDatabaseHas('activities', [
             'club_id' => $club->id,
-            'user_id' => $owner->id,
+            'user_id' => $webMember->id,
             'type' => 'club.member.removed',
             'subject_type' => User::class,
             'subject_id' => $webMember->id,
@@ -202,7 +206,7 @@ class ClubAuditLogTest extends TestCase
             ->firstOrFail();
         $this->assertSame(
             'Mitgliedschaft wurde wegen wiederholter Regelverstöße beendet.',
-            $activity->data['reason'],
+            $webRemoval->reason,
         );
 
         Sanctum::actingAs($owner);
@@ -224,13 +228,17 @@ class ClubAuditLogTest extends TestCase
             'reason' => 'Mitgliedschaft auf Wunsch des Vereins beendet.',
         ])->assertOk();
 
+        $apiRemoval = \App\Models\ClubMemberRemoval::query()->where('club_id', $club->id)->where('user_id', $apiMember->id)->sole();
+        $this->assertSame('pending', $apiRemoval->status);
+        app(\App\Services\ClubMemberRemovalService::class)->respond($apiRemoval, $apiMember, 'confirm', null);
+
         $this->assertDatabaseMissing('club_user', [
             'club_id' => $club->id,
             'user_id' => $apiMember->id,
         ]);
         $this->assertDatabaseHas('activities', [
             'club_id' => $club->id,
-            'user_id' => $owner->id,
+            'user_id' => $apiMember->id,
             'type' => 'club.member.removed',
             'subject_type' => User::class,
             'subject_id' => $apiMember->id,

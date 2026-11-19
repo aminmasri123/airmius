@@ -589,7 +589,7 @@ final class ReleaseReadinessReport
             }
         }
 
-        preg_match('/^version:\s*(\S+)$/m', (string) @file_get_contents(base_path('mobile/airmius_mobile/pubspec.yaml')), $version);
+        preg_match('/^version:\s*(\S+)\s*$/m', (string) @file_get_contents(base_path('mobile/airmius_mobile/pubspec.yaml')), $version);
         if (($data['version'] ?? null) !== ($version[1] ?? null)) {
             $errors[] = 'version';
         }

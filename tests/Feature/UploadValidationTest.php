@@ -20,6 +20,7 @@ class UploadValidationTest extends TestCase
     public function test_api_upload_flow_covers_size_type_success_and_abort(): void
     {
         Storage::fake(UploadStorage::disk());
+        Storage::fake(UploadStorage::privateDisk());
 
         $user = User::factory()->create();
         $this->grantUserPermissions($user, ['file.upload', 'file.view', 'file.delete']);
@@ -64,13 +65,13 @@ class UploadValidationTest extends TestCase
             ->json('data.id');
 
         $file = File::query()->findOrFail($uploadedId);
-        Storage::disk(UploadStorage::disk())->assertExists($file->path);
+        Storage::disk(UploadStorage::disk($file->path))->assertExists($file->path);
 
         $this->deleteJson("/api/v1/uploads/{$file->id}")
             ->assertOk()
             ->assertJsonPath('data.deleted', true);
 
-        Storage::disk(UploadStorage::disk())->assertMissing($file->path);
+        Storage::disk(UploadStorage::disk($file->path))->assertMissing($file->path);
         $this->assertDatabaseMissing('files', ['id' => $file->id]);
     }
 

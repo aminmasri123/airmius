@@ -10,6 +10,8 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../core/airmius_training_draft_store.dart';
+import '../widgets/training_plan_list_toolbar.dart';
+import '../core/training_plan_catalog.dart';
 import '../core/training_count_labels.dart';
 import '../core/exercise_content.dart';
 import '../core/exercise_content_copy.dart';
@@ -140,6 +142,7 @@ class TrainingPlansLogsScreen extends StatefulWidget {
 }
 
 class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
+  String _planQuery='', _planStatus='';
   Future<_TrainingData>? _future;
   int _tab = 0;
   bool _busy = false;
@@ -172,7 +175,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
 
   Future<_TrainingData> _load() async {
     final responses = await Future.wait([
-      _client.trainingPlans(),
+      loadTrainingPlanCatalog((page)=>_client.trainingPlans(page:page,perPage:100)),
       _client.trainingLogs(),
     ]);
     final capabilities = responses[0]['capabilities'];
@@ -384,6 +387,9 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
     required bool canManagePlans,
     required bool canCreatePersonalPlans,
   }) {
+    final counts=<String,int>{'draft':0,'published':0};
+    for(final plan in plans) { counts.update(plan.status,(n)=>n+1,ifAbsent:()=>1); }
+    final filtered=plans.where((plan)=>matchesTrainingPlan(text:[plan.title,plan.description ?? '',...plan.assignedAudienceNames].join(' '),status:plan.status,query:_planQuery,selectedStatus:_planStatus)).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -395,6 +401,11 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
             onPressed: _busy ? null : _createAiPlan,
           ),
           const SizedBox(height: 12),
+        ],
+        if(plans.isNotEmpty) ...[
+          TrainingPlanListToolbar(query:_planQuery,status:_planStatus,counts:counts,onQuery:(v)=>setState(()=>_planQuery=v),onStatus:(v)=>setState(()=>_planStatus=v),onReset:()=>setState((){_planQuery='';_planStatus='';})),
+          const SizedBox(height:14),
+          if(filtered.isEmpty) Padding(padding:const EdgeInsets.symmetric(vertical:24),child:Text(planListText(context,'empty'))),
         ],
         if (plans.isEmpty)
           canCreatePersonalPlans
@@ -432,7 +443,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
             label: Text(t('trainingHub.templates')),
           ),
         ],
-        for (final plan in plans) ...[
+        for (final plan in filtered) ...[
           AirmiusPanel(
             child: ListTile(
               contentPadding: EdgeInsets.zero,
@@ -449,6 +460,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Padding(padding:const EdgeInsets.symmetric(vertical:7),child:StatusPill(_translatedStatus(t,plan.status),color:plan.status=='published'?AirmiusColors.green:AirmiusColors.amber)),
                   Text(
                     [
                       plan.targetType == 'self'

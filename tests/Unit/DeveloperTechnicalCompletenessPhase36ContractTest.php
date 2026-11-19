@@ -26,7 +26,7 @@ class DeveloperTechnicalCompletenessPhase36ContractTest extends TestCase
     {
         $console = file_get_contents(__DIR__.'/../../routes/console.php');
 
-        preg_match_all('/Schedule::command\(/', $console, $commands);
+        preg_match_all('/Schedule::(?:command|call)\(/', $console, $commands);
         preg_match_all('/->withoutOverlapping\(/', $console, $locks);
 
         self::assertNotEmpty($commands[0]);

@@ -56,7 +56,7 @@ class AdminAreaSecurityTest extends TestCase
                 'profile_visibility' => 'private',
                 'roles' => ['super_admin'],
             ])
-            ->assertForbidden();
+            ->assertRedirect()->assertSessionHasErrors('authorization');
 
         $this->assertFalse($target->fresh()->hasRole('super_admin'));
 
@@ -76,7 +76,7 @@ class AdminAreaSecurityTest extends TestCase
 
         $this->actingAs($manager)
             ->delete(route('members.destroy', $target))
-            ->assertForbidden();
+            ->assertRedirect()->assertSessionHasErrors('authorization');
 
         $this->assertDatabaseHas('users', ['id' => $target->id]);
     }

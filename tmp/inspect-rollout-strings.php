@@ -1,0 +1,8 @@
+<?php
+require 'vendor/autoload.php';$app=require 'bootstrap/app.php';$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$registry=App\Support\RolloutAcceptanceRegistry::definitions();$missing=[];
+foreach(Illuminate\Support\Facades\Route::getRoutes() as $r){foreach($r->gatherMiddleware() as $m){if(str_starts_with($m,'rollout:')){$feature=substr($m,8);if(!in_array($r->getName(),$registry['features'][$feature]['routes']??[],true))$missing[$feature][]=$r->getName();}}}
+file_put_contents('tmp/missing-rollout-routes.json',json_encode($missing,JSON_PRETTY_PRINT));foreach($missing as $key=>$names) echo $key.' '.count($names)." missing routes\n";
+$source=new ReflectionMethod(App\Support\LocalizationReadinessReport::class,'automaticUiSources');$sources=$source->invoke(null);$covers=new ReflectionMethod(App\Support\LocalizationReadinessReport::class,'automaticUiCovers');$missing=[];
+foreach(['Pages','Components','Layouts'] as $dir){$it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator(resource_path('js/'.$dir)));foreach($it as $f){if(!$f->isFile()||$f->getExtension()!=='vue')continue;$s=file_get_contents($f->getPathname());$s=preg_match('/<template\b[^>]*>(.*)<\/template>/su',$s,$m)?$m[1]:$s;preg_match_all('/>([^<>{}\n]*[A-Za-z\x{00C0}-\x{017F}][^<>{}]*)</u',$s,$a);preg_match_all('/(?<![:\w-])(?:placeholder|aria-label|title|alt)="([^"]*[A-Za-z\x{00C0}-\x{017F}][^"]*)"/u',$s,$b);foreach(array_merge($a[1],$b[1]) as $candidate){if(!$covers->invoke(null,$candidate,$sources)) $missing[trim($candidate)]=true;}}}
+file_put_contents('tmp/missing-visible-sources.json',json_encode(array_keys($missing),JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE));echo count($missing)." unique missing UI strings\n";

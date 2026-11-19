@@ -11,6 +11,12 @@ use Tests\TestCase;
 
 class DatabaseBackupRestoreTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['airmius_backup.encryption_key' => 'base64:'.base64_encode(random_bytes(32))]);
+    }
+
     public function test_sqlite_database_backup_can_be_restored_and_read(): void
     {
         Storage::fake('local');

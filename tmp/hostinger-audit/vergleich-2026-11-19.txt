@@ -1,0 +1,52 @@
+Hostinger-Vergleich – 19.11.2026
+Serverbasis: /domains/airmius.com/public_html/airmius
+Nur Downloads und Verzeichnisabfragen; kein Upload, keine Serveränderung.
+Umfang: 7 gezielt geladene Dateien, zwei Build-Verzeichnisse und neueste Migrationsdateien. Kein vollständiger Abgleich des gesamten Projekts.
+
+app/Services/AirmiusPdfDocument.php <-> tmp/hostinger-audit/AirmiusPdfDocument.php
+Lokal 16501 Bytes, Server 12697 Bytes. Identisch: false
+SHA256 lokal: b5aa94cb00a606dbb4215582d50cfb89cdd17daf05be508d6686fa0be7c37499
+SHA256 Server: 672e782d64edb9aa9aa189a7a9f5b271bb990f5dd5e20310115e62b91366027f
+
+app/Http/Controllers/PublicLearningController.php <-> tmp/hostinger-audit/PublicLearningController.php
+Lokal 55128 Bytes, Server 52969 Bytes. Identisch: false
+SHA256 lokal: 27fe5a1a321e986cbc84d6082bb7a87b2df8e38e60add1bbb1fae8c5576b0705
+SHA256 Server: 5a437ffc513d498eab463d4f4b019b0986c9aa8295440d5bb00a8990ae268420
+
+routes/api.php <-> tmp/hostinger-audit/public-build/api.php
+Lokal 162420 Bytes, Server 161662 Bytes. Identisch: false
+SHA256 lokal: 4c95be047dfa1d1c38280612e06207643081f50ecd400762d247a39e6558adab
+SHA256 Server: 192722fe4459e30b4dfcabe1fdd6579bf48e914d75790e266072270f3a597ce3
+
+routes/auth.php <-> tmp/hostinger-audit/public-build/auth.php
+Lokal 63112 Bytes, Server 62337 Bytes. Identisch: false
+SHA256 lokal: 42093540c824b8e2c9870b48553e739fe46b75b0b99e56072292bdef841ea1d6
+SHA256 Server: 5dd102e460c48e8cc87d07eed2df8cf41c728a1b68a4d56810231f336cbc2f69
+
+lang/de/learning.php <-> tmp/hostinger-audit/public-build/learning.php
+Lokal 5712 Bytes, Server 5728 Bytes. Identisch: false
+SHA256 lokal: 05a355ee6bb4a349b4c7d5424c43fe517f68307cf3f8815bb86cb52625aadb24
+SHA256 Server: 840bcf72341d7ad28077044e48a5eea570d611fa401ffd2968144e1886cdee87
+
+public/build/manifest.json <-> tmp/hostinger-audit/public-build/manifest.json
+Lokal 197551 Bytes, Server 196693 Bytes. Identisch: false
+SHA256 lokal: e648d3d79c8b70dd89d4bec2625cdcf29a1a3e881b1b23a0d2304a4f4714fa57
+SHA256 Server: 213e9c9510481377cc7d32b629df23941ef02f0a504a823378ea89306e0e7bf3
+
+public/build/manifest.json <-> tmp/hostinger-audit/manifest.json
+Lokal 197551 Bytes, Server 48109 Bytes. Identisch: false
+SHA256 lokal: e648d3d79c8b70dd89d4bec2625cdcf29a1a3e881b1b23a0d2304a4f4714fa57
+SHA256 Server: e5e83928e9fab2a67ed0727378d5d338d20968123ae23744bbbb49585b88d377
+
+Befunde:
+- Server-PDF-Klasse ohne certificateHeader/certificateFooter: neue Urkunde fehlt.
+- Server-PublicLearningController nutzt header(... Airmius Sportschule) und legalFooter.
+- Im Server-Controller fehlen u.a. strukturierte Aufgabenabgaben, expliziter Sprachfilter, Kursleitungssuche, LearningContinuation und updateParticipation.
+- Neue Quiz-/Aufgaben-Bearbeitungsrouten, Quiz-Bewertung, Zertifikatslogo-Upload und Löschrouten fehlen teilweise in Web und API.
+- Beide Build-Manifeste sind älter/abweichend; public/build: 212 statt 215 Einträge, build: 121 statt 215. Unterschiedliche Lernseiten-Bundles.
+- Deutscher Zertifikatstext completion_statement fehlt auf Server.
+- Migration 2026_11_19_000001_extend_learning_assessments.php als Datei vorhanden; Ausführungsstatus nicht geprüft.
+- Migration 2026_11_19_000002_add_learning_participation_preferences.php in der nach Dateiname sortierten Serverliste am Ende nicht vorhanden.
+- App-Oberflächenänderungen benötigen separat ein neues App-Build; Hochladen von Dart-Quellen auf Hostinger aktualisiert keine installierte App.
+
+Vor Veröffentlichung vollständiges zusammengehöriges Backend-/Build-Paket und Migrationsstatus prüfen; keine einzelnen Controller blind überschreiben.

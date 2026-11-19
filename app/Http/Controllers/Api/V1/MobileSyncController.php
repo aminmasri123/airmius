@@ -82,7 +82,7 @@ class MobileSyncController extends Controller
                         ->orWhereHas('club.users', fn ($members) => $members->whereKey($user->id));
                 })
                 ->count(),
-            'open_training_plans' => TrainingPlan::query()
+            'open_training_plans' => TrainingPlan::query()->releasedTo($user)
                 ->where(function ($query) use ($user) {
                     $query->where('created_by', $user->id)
                         ->orWhereHas('assignments', fn ($assignments) => $assignments->where('user_id', $user->id));

@@ -47,7 +47,9 @@ class RestoreDatabaseBackup extends Command
             return self::FAILURE;
         }
 
-        if (! Str::startsWith($target, DIRECTORY_SEPARATOR)) {
+        $absoluteTarget = str_starts_with($target, '/')
+            || (PHP_OS_FAMILY === 'Windows' && (str_starts_with($target, '\\') || preg_match('~^[A-Za-z]:[\\\\/]~', $target)));
+        if (! $absoluteTarget) {
             $this->components->error('The restore target must be an absolute path.');
 
             return self::FAILURE;

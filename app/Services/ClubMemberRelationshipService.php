@@ -37,7 +37,11 @@ class ClubMemberRelationshipService
             $contactMethods = $this->normalizeContactMethods($contactMethods);
             $email = $this->normalizedEmail($relatedEmail ?? $relatedUser?->email);
 
-            $this->assertRelationshipAllowed($club, $member, $relatedUser, $email, $relatedName, $purposes, $validFrom, $validUntil);
+            $guardianMirror = $relatedUser && $legacySource === 'guardian_child_relationships' && $legacySourceId
+                && GuardianChildRelationship::query()->whereKey($legacySourceId)
+                    ->where('club_id', $club->id)->where('child_user_id', $member->id)
+                    ->where('guardian_user_id', $relatedUser->id)->exists();
+            $this->assertRelationshipAllowed($club, $member, $relatedUser, $email, $relatedName, $purposes, $validFrom, $validUntil, (bool) $guardianMirror);
 
             $identity = $legacySource && $legacySourceId
                 ? ['legacy_source' => $legacySource, 'legacy_source_id' => $legacySourceId]
@@ -136,7 +140,7 @@ class ClubMemberRelationshipService
             ->update(['contribution_payer_user_id' => $relationship->related_user_id]);
     }
 
-    private function assertRelationshipAllowed(Club $club, User $member, ?User $relatedUser, ?string $email, ?string $name, array $purposes, ?string $validFrom, ?string $validUntil): void
+    private function assertRelationshipAllowed(Club $club, User $member, ?User $relatedUser, ?string $email, ?string $name, array $purposes, ?string $validFrom, ?string $validUntil, bool $guardianMirror = false): void
     {
         throw_if($purposes === [], ValidationException::withMessages([
             'purposes' => 'At least one relationship purpose is required.',
@@ -157,7 +161,7 @@ class ClubMemberRelationshipService
             'member_user_id' => 'The member does not belong to this club.',
         ]));
 
-        if ($relatedUser) {
+        if ($relatedUser && ! $guardianMirror) {
             $relatedBelongsToClub = $relatedUser->clubs()->whereKey($club->id)->exists()
                 || $relatedUser->teams()->where('club_id', $club->id)->exists();
 

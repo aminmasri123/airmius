@@ -2397,15 +2397,15 @@ const {
                 </div>
             </form>
         </Modal>
-        <div v-if="adPaymentCampaign" class="fixed inset-0 z-[90] flex items-end justify-center bg-black/65 p-0 sm:items-center sm:p-5" @click.self="adPaymentCampaign = null">
-            <section role="dialog" aria-modal="true" aria-label="Kampagne bezahlen" class="max-h-[90dvh] w-full overflow-y-auto rounded-t-lg border border-border bg-card p-5 shadow-2xl sm:max-w-md sm:rounded-lg">
-                <h2 class="text-lg font-bold text-primary">{{ adPaymentCampaign.name }} bezahlen</h2>
+        <Modal :show="Boolean(adPaymentCampaign)" max-width="lg" @close="adPaymentCampaign = null">
+            <section v-if="adPaymentCampaign" :aria-label="t('Kampagne bezahlen')" class="p-5">
+                <h2 class="text-lg font-bold text-primary">{{ t('Kampagne bezahlen') }}: {{ adPaymentCampaign.name }}</h2>
                 <p class="mt-2 text-sm text-secondary">Die Kampagne wird erst nach Zahlung und Freigabe ausgespielt.</p>
                 <label class="mt-4 block text-sm font-bold text-primary">Zahlungsart<select v-model="adProvider" class="mt-1 w-full rounded-md border-border bg-inputBg text-primary"><option value="bank_transfer">Überweisung</option><option value="paypal">PayPal</option><option value="stripe">Karte</option></select></label>
                 <label class="mt-4 flex gap-2 text-sm text-secondary"><input v-model="adAcceptedTerms" type="checkbox"> AGB und Werberichtlinien akzeptieren</label>
                 <p v-if="campaignActionError" class="mt-3 text-sm text-danger" role="alert">{{ campaignActionError }}</p>
-                <div class="mt-5 flex justify-end gap-2"><button type="button" class="min-h-10 rounded-md border border-border px-3 text-primary" @click="adPaymentCampaign = null">Abbrechen</button><button type="button" :disabled="!adAcceptedTerms" class="min-h-10 rounded-md bg-buttonPrimary px-4 font-bold text-buttonTextPrimary disabled:opacity-50" @click="payExistingCampaign">Zahlung starten</button></div>
+                <div class="mt-5 flex justify-end gap-2"><button type="button" class="min-h-10 rounded-md border border-border px-3 text-primary" @click="adPaymentCampaign = null">{{ ct('cancel') }}</button><button type="button" :disabled="!adAcceptedTerms" class="min-h-10 rounded-md bg-buttonPrimary px-4 font-bold text-buttonTextPrimary disabled:opacity-50" @click="payExistingCampaign">{{ ct('continue_paid') }}</button></div>
             </section>
-        </div>
+        </Modal>
     </div>
 </template>

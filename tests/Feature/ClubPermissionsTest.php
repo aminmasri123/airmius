@@ -217,6 +217,10 @@ class ClubPermissionsTest extends TestCase
         $this->deleteJson("/api/v1/clubs/{$club->id}/members/{$victim->id}", [
             'reason' => 'Auf ausdrücklichen Wunsch beendet',
         ])->assertOk();
+        $removal = \App\Models\ClubMemberRemoval::query()->where('club_id', $club->id)->where('user_id', $victim->id)->sole();
+        $this->assertSame('pending', $removal->status);
+        app(\App\Services\ClubMemberRemovalService::class)->respond($removal, $victim, 'confirm', null);
+
         $this->assertDatabaseMissing('club_user', ['club_id' => $club->id, 'user_id' => $victim->id]);
         $this->assertDatabaseMissing('club_role_assignments', ['club_id' => $club->id, 'user_id' => $victim->id]);
         $this->assertNotNull($delegation->fresh()->revoked_at);

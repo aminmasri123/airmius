@@ -31,7 +31,10 @@ class ClubProfileRulesTest extends TestCase
         ];
 
         foreach ($profileFields as $field) {
-            $this->assertSame($storeRules[$field], $updateRules[$field], "Rule mismatch for {$field}.");
+            $expected = in_array($field, ['name', 'country'], true)
+                ? ['sometimes', ...$storeRules[$field]]
+                : $storeRules[$field];
+            $this->assertSame($expected, $updateRules[$field], "Rule mismatch for {$field}.");
         }
 
         $this->assertArrayHasKey('is_official', $storeRules);

@@ -429,6 +429,7 @@ class MobileClubMembershipParityApiTest extends TestCase
     public function test_mobile_receipt_upload_requires_clean_file_and_manual_booking_confirmation(): void
     {
         Storage::fake(\App\Support\UploadStorage::disk());
+        Storage::fake(\App\Support\UploadStorage::privateDisk());
         [$owner, $club] = $this->managedClub();
         Sanctum::actingAs($owner);
 
@@ -463,7 +464,7 @@ class MobileClubMembershipParityApiTest extends TestCase
         $this->assertNotNull($entry->receipt_file_id);
 
         $receipt = ClubReceiptUpload::query()->firstOrFail();
-        Storage::disk(\App\Support\UploadStorage::disk())->assertExists($receipt->file->path);
+        Storage::disk(\App\Support\UploadStorage::disk($receipt->file->path))->assertExists($receipt->file->path);
 
         $this->assertDatabaseHas('activities', [
             'club_id' => $club->id,
@@ -478,6 +479,7 @@ class MobileClubMembershipParityApiTest extends TestCase
     public function test_receipt_upload_blocks_malware_signature_and_cross_club_assignment(): void
     {
         Storage::fake(\App\Support\UploadStorage::disk());
+        Storage::fake(\App\Support\UploadStorage::privateDisk());
         [$owner, $club] = $this->managedClub();
         $otherClub = Club::factory()->create(['owner_id' => $owner->id]);
         Sanctum::actingAs($owner);
@@ -517,6 +519,7 @@ class MobileClubMembershipParityApiTest extends TestCase
     public function test_mobile_finance_entry_accepts_only_receipts_from_same_club(): void
     {
         Storage::fake(\App\Support\UploadStorage::disk());
+        Storage::fake(\App\Support\UploadStorage::privateDisk());
         [$owner, $club] = $this->managedClub();
         $otherClub = Club::factory()->create(['owner_id' => $owner->id]);
         Sanctum::actingAs($owner);

@@ -338,6 +338,7 @@ class ClubStaffSchedulingTest extends TestCase
             'club_id' => $club->id,
             'created_by' => $manager->id,
             'name' => 'Externe Helferin',
+            'email' => 'helferin@example.test',
             'role' => 'member',
             'membership_status' => 'active',
         ]);

@@ -101,7 +101,7 @@ class TrainingPlanEvaluationService
 
     private function plans(User $coach, Collection $teamIds): Builder
     {
-        return TrainingPlan::query()->when(! $coach->hasAnyRole(Roles::FULL_ACCESS), fn (Builder $q) => $q->where(function (Builder $q) use ($coach, $teamIds) {
+        return TrainingPlan::query()->releasedTo($coach)->when(! $coach->hasAnyRole(Roles::FULL_ACCESS), fn (Builder $q) => $q->where(function (Builder $q) use ($coach, $teamIds) {
             $q->whereIn('team_id', $teamIds)
                 ->orWhereHas('assignments', fn ($a) => $a->whereIn('team_id', $teamIds))
                 ->orWhereHas('trainingGroup.teams', fn ($t) => $t->whereIn('teams.id', $teamIds))

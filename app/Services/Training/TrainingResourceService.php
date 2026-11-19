@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Support\ClubPermissions;
 use App\Support\Roles;
 use App\Support\TeamRoles;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class TrainingResourceService
@@ -197,6 +196,10 @@ class TrainingResourceService
 
     public function canWritePlan(User $user, TrainingPlan $plan): bool
     {
+        if (! $plan->isReleasedTo($user)) {
+            return false;
+        }
+
         if (
             (int) $plan->created_by === (int) $user->id
             && $this->planTargetType($plan) === 'self'

@@ -339,7 +339,7 @@ class TrainerCockpitController extends Controller
 
     private function plans($teamIds, User $user)
     {
-        $query = TrainingPlan::query()
+        $query = TrainingPlan::query()->releasedTo($user)
             ->with(['team:id,name'])
             ->withCount('items')
             ->latest('updated_at')

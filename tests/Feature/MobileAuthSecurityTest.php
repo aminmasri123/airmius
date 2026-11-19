@@ -46,7 +46,7 @@ class MobileAuthSecurityTest extends TestCase
 
         $response
             ->assertUnprocessable()
-            ->assertJsonPath('errors.email.0', 'auth.failed')
+            ->assertJsonPath('errors.email.0', __('auth.failed'))
             ->assertHeader('Access-Control-Allow-Origin', 'https://airmius.com');
     }
 

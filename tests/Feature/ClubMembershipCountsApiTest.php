@@ -40,7 +40,7 @@ class ClubMembershipCountsApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.management.can_manage', false)
             ->assertJsonPath('data.management.summary.active_members_count', 3)
-            ->assertJsonPath('data.management.summary.linked_people_count', 5)
+            ->assertJsonPath('data.management.summary.linked_people_count', 6)
             ->assertJsonMissingPath('data.management.members')
             ->assertJsonMissingPath('data.management.external_members');
 
@@ -48,6 +48,6 @@ class ClubMembershipCountsApiTest extends TestCase
         $this->getJson('/api/v1/clubs/'.$club->id)
             ->assertOk()
             ->assertJsonPath('data.management.summary.active_members_count', 3)
-            ->assertJsonPath('data.management.summary.linked_people_count', 5);
+            ->assertJsonPath('data.management.summary.linked_people_count', 6);
     }
 }

@@ -262,6 +262,7 @@ class ClubMembershipChangeRequestTest extends TestCase
 
     public function test_future_type_change_is_applied_once_on_its_effective_date(): void
     {
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-10-20 12:00:00'));
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $club = Club::factory()->create(['owner_id' => $owner->id]);

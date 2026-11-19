@@ -142,7 +142,7 @@ class RoleApplicationTest extends TestCase
         $admin->assignRole('admin');
         $application = UserRoleApplication::query()->where('type', UserRoleApplication::TYPE_SPONSOR)->firstOrFail();
 
-        $this->actingAs($admin)
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => now()->timestamp])
             ->put(route('admin.sponsor-applications.approve', $application), [
                 'review_notes' => 'Unternehmensangaben geprüft.',
             ])
@@ -322,7 +322,7 @@ class RoleApplicationTest extends TestCase
         ]);
         $application = UserRoleApplication::query()->firstOrFail();
 
-        $this->actingAs($admin)
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => now()->timestamp])
             ->put(route('admin.trainer-applications.reject', $application), [
                 'review_notes' => 'Bitte reiche noch einen Nachweis ein.',
             ])
@@ -345,12 +345,12 @@ class RoleApplicationTest extends TestCase
         ]);
         $admin->assignRole('admin');
 
-        $this->actingAs($admin)->post(route('auth.role-applications.store'), [
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => now()->timestamp])->post(route('auth.role-applications.store'), [
             'type' => 'trainer',
         ])->assertRedirect();
         $application = UserRoleApplication::query()->where('user_id', $admin->id)->firstOrFail();
 
-        $this->actingAs($admin)
+        $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => now()->timestamp])
             ->put(route('admin.trainer-applications.approve', $application))
             ->assertStatus(422);
         $this->assertDatabaseHas('user_role_applications', [

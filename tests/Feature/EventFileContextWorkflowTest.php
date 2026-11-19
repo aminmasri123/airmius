@@ -109,7 +109,7 @@ class EventFileContextWorkflowTest extends TestCase
         $preview = $this->getJson("/api/v1/files/{$file->id}/preview")
             ->assertOk();
         $this->assertStringContainsString('private', (string) $preview->headers->get('cache-control'));
-        $this->assertStringContainsString('max-age=86400', (string) $preview->headers->get('cache-control'));
+        $this->assertStringContainsString('no-store', (string) $preview->headers->get('cache-control'));
 
         Sanctum::actingAs($outsider);
         $this->getJson("/api/v1/files/{$file->id}/preview")->assertForbidden();

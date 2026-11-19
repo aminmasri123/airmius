@@ -47,17 +47,23 @@ void main() {
       await confirm();
       expect(transport.hidden, isTrue);
       expect(transport.enrolled, isTrue);
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Hidden courses'));
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hidden courses').last);
       await tester.pumpAndSettle();
       await menu('Unhide course');
       await confirm();
       expect(transport.hidden, isFalse);
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Active courses'));
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Active courses').last);
       await tester.pumpAndSettle();
       await menu('Leave course');
       await confirm();
       expect(transport.enrolled, isFalse);
-      await tester.tap(find.widgetWithText(ChoiceChip, 'Left courses'));
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Left courses').last);
       await tester.pumpAndSettle();
       await menu('Rejoin course');
       await confirm();
@@ -105,7 +111,8 @@ void main() {
       for (final chip in tester.widgetList<ChoiceChip>(
         find.byType(ChoiceChip),
       )) {
-        expect(chip.label, isA<Text>());
+        expect(chip.label, isA<Center>());
+        expect((chip.label as Center).child, isA<Text>());
       }
       final search = find.byType(TextField).first;
       await tester.enterText(search, 'no match');

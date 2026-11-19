@@ -18,7 +18,7 @@ class TrainingExercisePageController extends Controller
     {
         $request->merge(['limit' => 100]);
         $teamIds = $this->resources->trainingPlanTeamIds($request->user());
-        $plans = TrainingPlan::query()->where(function ($query) use ($request, $teamIds) {
+        $plans = TrainingPlan::query()->releasedTo($request->user())->where(function ($query) use ($request, $teamIds) {
             $query->where('created_by', $request->user()->id)->orWhereHas('assignments', fn ($assigned) => $assigned->where('user_id', $request->user()->id)->orWhereIn('team_id', $teamIds));
         })->with('assignments')->latest()->limit(100)->get()->filter(fn ($plan) => $this->resources->canWritePlan($request->user(), $plan))->map(fn ($plan) => ['id' => $plan->id, 'title' => $plan->title])->values();
 

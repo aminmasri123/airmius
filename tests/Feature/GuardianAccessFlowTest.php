@@ -38,7 +38,7 @@ class GuardianAccessFlowTest extends TestCase
         $this->assertNotNull($child->fresh()->guardian_consent_rejected_at);
         $this->assertNull($child->fresh()->guardian_consent_token);
         $this->assertTrue($child->fresh()->hasRole('minor_pending_consent'));
-        $this->actingAs($child)->get(route('guardian-consent.pending'))
+        $this->actingAs($child->fresh())->get(route('guardian-consent.pending'))
             ->assertOk()->assertInertia(fn (Assert $page) => $page
                 ->where('rejectedAt', fn ($value) => $value !== null)
                 ->where('revokedAt', null));
@@ -161,6 +161,8 @@ class GuardianAccessFlowTest extends TestCase
             ->assertRedirect();
 
         $this->assertNotSame($oldToken, $minor->fresh()->guardian_consent_token);
+        auth('web')->logout();
+        $this->app['auth']->forgetGuards();
         $this->get(route('guardian-consent.show', $oldToken))->assertNotFound();
     }
 

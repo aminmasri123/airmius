@@ -262,7 +262,7 @@ class DashboardController extends Controller
 
     private function visibleTrainingPlansQuery(User $user, Collection $teamIds): Builder
     {
-        return TrainingPlan::query()
+        return TrainingPlan::query()->releasedTo($user)
             ->where(function (Builder $query) use ($user, $teamIds) {
                 $query
                     ->where('created_by', $user->id)

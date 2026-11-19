@@ -1,0 +1,46 @@
+{
+    "source_locale": "de",
+    "source_key_count": 1192,
+    "source_key_parity": false,
+    "automatic_ui_source_count": 3573,
+    "automatic_ui_key_parity": true,
+    "corrupt_target_values": 0,
+    "placeholder_parity": true,
+    "locales": {
+        "en": {
+            "missing_source_keys": [],
+            "extra_keys": [],
+            "corrupt_values": 0,
+            "placeholder_mismatches": 0,
+            "missing_automatic_ui_keys": [],
+            "extra_automatic_ui_keys": []
+        },
+        "fr": {
+            "missing_source_keys": [
+                "Austritt beantragen",
+                "Austritt ist beantragt",
+                "Austritt zurückziehen",
+                "Möchtest du deinen Austrittsantrag wirklich zurückziehen?"
+            ],
+            "extra_keys": [],
+            "corrupt_values": 0,
+            "placeholder_mismatches": 0,
+            "missing_automatic_ui_keys": [],
+            "extra_automatic_ui_keys": []
+        },
+        "ar": {
+            "missing_source_keys": [
+                "Austritt beantragen",
+                "Austritt ist beantragt",
+                "Austritt zurückziehen",
+                "Möchtest du deinen Austrittsantrag wirklich zurückziehen?"
+            ],
+            "extra_keys": [],
+            "corrupt_values": 0,
+            "placeholder_mismatches": 0,
+            "missing_automatic_ui_keys": [],
+            "extra_automatic_ui_keys": []
+        }
+    },
+    "back_translation_note": "German is authoritative; generated UI translations are checked against it by a separate semantic back-translation audit."
+}
