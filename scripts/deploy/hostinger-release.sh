@@ -50,7 +50,10 @@ for asset in "$release/public/build/assets/"*; do
     test -f "$asset" || continue
     target="$base/shared/assets/$(basename "$asset")"
     if test -e "$target"; then cmp -s "$asset" "$target"; else cp "$asset" "$target"; fi
+    # The restrictive deployment umask must not prevent Apache reading public files.
+    chmod 644 "$target"
 done
+chmod 755 "$base/shared/assets"
 rm -rf -- "$release/public/build/assets"
 ln -s "$base/shared/assets" "$release/public/build/assets"
 ln -s "$base/shared/storage/app/public" "$release/public/storage"
@@ -90,6 +93,11 @@ curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 \
     | php -r '$v=json_decode(stream_get_contents(STDIN),true); exit(($v["commit"]??null)===$argv[1]?0:1);' "$sha"
 curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 "$site_url/up" >/dev/null
 curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 "$site_url/" >/dev/null
+# A healthy HTML response alone cannot detect unreadable shared build files.
+php -r '$m=json_decode(file_get_contents("public/build/manifest.json"),true,512,JSON_THROW_ON_ERROR); $files=[]; foreach($m as $e){foreach(array_merge([$e["file"]],$e["css"]??[],$e["assets"]??[]) as $f){$files[$f]=true;}} foreach(array_keys($files) as $f){echo $f,PHP_EOL;}' > "$base/incoming/$sha-assets.txt"
+while IFS= read -r asset; do
+    curl --head --fail --silent --show-error --retry 2 --max-time 30 "$site_url/build/$asset" >/dev/null
+done < "$base/incoming/$sha-assets.txt"
 php artisan queue:restart
 maintenance=false
 trap - ERR
