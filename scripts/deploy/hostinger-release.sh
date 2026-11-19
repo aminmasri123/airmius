@@ -82,6 +82,7 @@ curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 \
     -H 'Cache-Control: no-cache' "$site_url/deployment.json?release=$sha" \
     | php -r '$v=json_decode(stream_get_contents(STDIN),true); exit(($v["commit"]??null)===$argv[1]?0:1);' "$sha"
 curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 "$site_url/up" >/dev/null
+curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 "$site_url/" >/dev/null
 php artisan queue:restart
 maintenance=false
 trap - ERR
