@@ -16,6 +16,8 @@ class LearningQuizQuestion extends Model
         'correct_options',
         'explanation',
         'position',
+        'question_type',
+        'image_url',
     ];
 
     protected function casts(): array

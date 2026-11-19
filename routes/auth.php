@@ -236,12 +236,16 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/learning/studio', [LearningStudioController::class, 'index'])->name('auth.learning.studio.index');
     Route::post('/learning/studio/courses', [LearningStudioController::class, 'storeCourse'])->name('auth.learning.studio.courses.store');
     Route::put('/learning/studio/courses/{course}', [LearningStudioController::class, 'updateCourse'])->name('auth.learning.studio.courses.update');
+    Route::delete('/learning/studio/courses/{course}', [LearningStudioController::class, 'destroyCourse'])->name('auth.learning.studio.courses.destroy');
+    Route::delete('/learning/studio/courses/{course}/sections/{section}', [LearningStudioController::class, 'destroySection'])->name('auth.learning.studio.sections.destroy');
     Route::post('/learning/studio/courses/{course}/uploads', [LearningStudioController::class, 'uploadAsset'])->name('auth.learning.studio.uploads.store');
+    Route::post('/learning/studio/certificate-logo', [LearningStudioController::class, 'uploadCertificateLogo'])->name('auth.learning.studio.certificate-logo.store');
     Route::get('/learning/studio/courses/{course}/report.csv', [LearningStudioController::class, 'exportReport'])->name('auth.learning.studio.courses.report');
     Route::get('/learning/studio/courses/{course}/offer-evaluation', [LearningStudioController::class, 'offerEvaluation'])->name('auth.learning.studio.courses.offer-evaluation');
     Route::get('/learning/studio/courses/{course}/offer-evaluation.csv', [LearningStudioController::class, 'exportOfferEvaluation'])->name('auth.learning.studio.courses.offer-evaluation.export');
     Route::post('/learning/studio/courses/{course}/coupons', [LearningStudioController::class, 'storeCoupon'])->name('auth.learning.studio.coupons.store');
     Route::post('/learning/studio/courses/{course}/assignments', [LearningStudioController::class, 'storeAssignment'])->name('auth.learning.studio.assignments.store');
+    Route::put('/learning/studio/courses/{course}/assignments/{assignment}', [LearningStudioController::class, 'updateAssignment'])->name('auth.learning.studio.assignments.update');
     Route::put('/learning/studio/courses/{course}/assignment-submissions/{submission}', [LearningStudioController::class, 'gradeAssignment'])->name('auth.learning.studio.assignment-submissions.update');
     Route::post('/learning/studio/courses/{course}/enrollments', [LearningStudioController::class, 'grantEnrollment'])->name('auth.learning.studio.enrollments.store');
     Route::get('/learning/studio/courses/{course}/enrollments/{enrollment}/participation-confirmation', [LearningStudioController::class, 'participationConfirmation'])->name('auth.learning.studio.enrollments.participation-confirmation');
@@ -252,6 +256,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/learning/studio/courses/{course}/lessons/{lesson}', [LearningStudioController::class, 'updateLesson'])->name('auth.learning.studio.lessons.update');
     Route::delete('/learning/studio/courses/{course}/lessons/{lesson}', [LearningStudioController::class, 'destroyLesson'])->name('auth.learning.studio.lessons.destroy');
     Route::post('/learning/studio/courses/{course}/quizzes', [LearningStudioController::class, 'storeQuiz'])->name('auth.learning.studio.quizzes.store');
+    Route::put('/learning/studio/courses/{course}/quizzes/{quiz}', [LearningStudioController::class, 'updateQuiz'])->name('auth.learning.studio.quizzes.update');
+    Route::put('/learning/studio/courses/{course}/quizzes/{quiz}/attempts/{attempt}', [LearningStudioController::class, 'gradeQuizAttempt'])->name('auth.learning.studio.quiz-attempts.update');
     Route::delete('/learning/studio/courses/{course}/quizzes/{quiz}', [LearningStudioController::class, 'destroyQuiz'])->name('auth.learning.studio.quizzes.destroy');
     Route::put('/learning/studio/courses/{course}/comments/{comment}', [LearningStudioController::class, 'resolveComment'])->name('auth.learning.studio.comments.update');
     Route::post('/learning/studio/courses/{course}/comments/{comment}/replies', [LearningStudioController::class, 'replyComment'])->name('auth.learning.studio.comments.replies.store');

@@ -1,0 +1,46 @@
+{
+  "de": {
+    "remove_course": "Kurs dauerhaft löschen",
+    "remove_section": "Abschnitt löschen",
+    "warn_course": "Dieser Kurs mit allen Abschnitten, Lektionen, Quizzen, Aufgaben, Kommentaren, Notizen, Einschreibungen, Lernfortschritten, Bewertungen, Gutscheinen und Zertifikatsdatensätzen wird dauerhaft gelöscht. Zertifikatslinks funktionieren danach nicht mehr. Verkaufsangebote werden deaktiviert. Bestellungen und Zahlungsbelege, andere Sprachversionen und hochgeladene Dateien bleiben erhalten. Es erfolgt keine automatische Erstattung. Bereits heruntergeladene Dateien können nicht zurückgerufen werden. Nutze stattdessen Archivieren, wenn du Daten und bestehende Zugänge erhalten möchtest. Diese Löschung kann nicht rückgängig gemacht werden.",
+    "warn_section": "Dieser Abschnitt und alle enthaltenen Lektionen samt zugehörigen Quizzen, Aufgaben, Einreichungen, Kommentaren, Notizen und Lektionsfortschritten werden dauerhaft gelöscht. Andere Abschnitte, kurseigene Tests ohne Lektionszuordnung, Einschreibungen und ausgestellte Zertifikate bleiben erhalten. Hochgeladene Dateien werden nicht entfernt. Diese Löschung kann nicht rückgängig gemacht werden.",
+    "confirm_hint": "Gib DELETE ein, um endgültig zu löschen.",
+    "delete": "Endgültig löschen",
+    "cancel": "Abbrechen",
+    "course_deleted": "Der Kurs wurde gelöscht.",
+    "section_deleted": "Der Abschnitt wurde gelöscht."
+  },
+  "en": {
+    "remove_course": "Permanently delete course",
+    "remove_section": "Delete section",
+    "warn_course": "This course and all sections, lessons, quizzes, assignments, comments, notes, enrollments, learning progress, reviews, coupons and certificate records will be permanently deleted. Certificate links will stop working. Sales listings will be disabled. Orders, payment records, other language versions and uploaded files are retained. No automatic refunds are issued. Downloaded files cannot be recalled. Use Archive instead to retain data and existing access. This deletion cannot be undone.",
+    "warn_section": "This section and all its lessons, linked quizzes, assignments, submissions, comments, notes and lesson progress will be permanently deleted. Other sections, course-level tests without a linked lesson, enrollments and issued certificates are retained. Uploaded files are retained. This deletion cannot be undone.",
+    "confirm_hint": "Type DELETE to permanently delete.",
+    "delete": "Permanently delete",
+    "cancel": "Cancel",
+    "course_deleted": "The course was deleted.",
+    "section_deleted": "The section was deleted."
+  },
+  "fr": {
+    "remove_course": "Supprimer définitivement le cours",
+    "remove_section": "Supprimer la section",
+    "warn_course": "Ce cours et ses sections, leçons, quiz, devoirs, commentaires, notes, inscriptions, progressions, avis, coupons et certificats seront définitivement supprimés. Les liens des certificats ne fonctionneront plus. Les offres de vente seront désactivées. Les commandes, justificatifs de paiement, autres versions linguistiques et fichiers importés sont conservés. Aucun remboursement automatique. Les fichiers téléchargés ne peuvent pas être rappelés. Utilisez Archiver pour conserver les données et les accès existants. Cette suppression est irréversible.",
+    "warn_section": "Cette section et ses leçons, quiz et devoirs associés, remises, commentaires, notes et progressions seront définitivement supprimés. Les autres sections, tests sans leçon associée, inscriptions et certificats délivrés sont conservés. Les fichiers importés sont conservés. Cette suppression est irréversible.",
+    "confirm_hint": "Saisissez DELETE pour supprimer définitivement.",
+    "delete": "Supprimer définitivement",
+    "cancel": "Annuler",
+    "course_deleted": "Le cours a été supprimé.",
+    "section_deleted": "La section a été supprimée."
+  },
+  "ar": {
+    "remove_course": "حذف الدورة نهائيًا",
+    "remove_section": "حذف القسم",
+    "warn_course": "ستُحذف هذه الدورة وجميع أقسامها ودروسها واختباراتها وواجباتها وتعليقاتها وملاحظاتها وتسجيلاتها وتقدم التعلم والتقييمات والقسائم وسجلات الشهادات نهائيًا. لن تعمل روابط الشهادات. ستُعطّل عروض البيع. تبقى الطلبات وإيصالات الدفع والنسخ بلغات أخرى والملفات المرفوعة محفوظة. لا يتم رد الأموال تلقائيًا ولا يمكن استرجاع الملفات التي نُزّلت سابقًا. استخدم الأرشفة للحفاظ على البيانات والوصول الحالي. لا يمكن التراجع عن الحذف.",
+    "warn_section": "سيُحذف هذا القسم ودروسه واختباراته وواجباته المرتبطة والتسليمات والتعليقات والملاحظات وتقدم الدروس نهائيًا. تبقى الأقسام الأخرى واختبارات الدورة غير المرتبطة بدروس والتسجيلات والشهادات الصادرة والملفات المرفوعة محفوظة. لا يمكن التراجع عن الحذف.",
+    "confirm_hint": "اكتب DELETE لتأكيد الحذف النهائي.",
+    "delete": "حذف نهائي",
+    "cancel": "إلغاء",
+    "course_deleted": "تم حذف الدورة.",
+    "section_deleted": "تم حذف القسم."
+  }
+}

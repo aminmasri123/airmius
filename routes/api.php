@@ -529,10 +529,13 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/learning/certificates/{certificate}', [MobileLearningController::class, 'certificate'])->name('learning.certificates.show');
         Route::get('/learning/certificates/{certificate}/download', [MobilePublicLearningController::class, 'downloadCertificate'])->name('learning.certificates.download');
         Route::get('/learning-studio', [MobileLearningStudioController::class, 'index'])->name('learning-studio.index');
+        Route::post('/learning-studio/certificate-logo', [MobileLearningStudioController::class, 'uploadCertificateLogo'])->name('learning-studio.certificate-logo.store');
         Route::get('/admin/learning/courses', [MobileLearningStudioController::class, 'qualityIndex'])->middleware([EnsurePlatformAdminTwoFactor::class, 'verified', 'can:subscriptions.manage'])->name('admin.learning.courses.index');
         Route::put('/admin/learning/courses/{course}/quality', [MobileLearningStudioController::class, 'updateQuality'])->middleware([EnsurePlatformAdminTwoFactor::class, 'verified', 'can:subscriptions.manage'])->name('admin.learning.courses.quality.update');
         Route::post('/learning-studio/courses', [MobileLearningStudioController::class, 'storeCourse'])->name('learning-studio.courses.store');
         Route::put('/learning-studio/courses/{course}', [MobileLearningStudioController::class, 'updateCourse'])->name('learning-studio.courses.update');
+        Route::delete('/learning-studio/courses/{course}', [MobileLearningStudioController::class, 'destroyCourse'])->name('learning-studio.courses.destroy');
+        Route::delete('/learning-studio/courses/{course}/sections/{section}', [MobileLearningStudioController::class, 'destroySection'])->name('learning-studio.sections.destroy');
         Route::post('/learning-studio/courses/{course}/sections', [MobileLearningStudioController::class, 'storeSection'])->name('learning-studio.sections.store');
         Route::post('/learning-studio/courses/{course}/lessons', [MobileLearningStudioController::class, 'storeLesson'])->name('learning-studio.lessons.store');
         Route::put('/learning-studio/courses/{course}/lessons/reorder', [MobileLearningStudioController::class, 'reorderLessons'])->name('learning-studio.lessons.reorder');
@@ -548,8 +551,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/learning-studio/courses/{course}/enrollments/{enrollment}/participation-confirmation', [MobileLearningStudioController::class, 'participationConfirmation'])->name('learning-studio.enrollments.participation-confirmation');
         Route::put('/learning-studio/courses/{course}/enrollments/{enrollment}/revoke', [MobileLearningStudioController::class, 'revokeEnrollment'])->name('learning-studio.enrollments.revoke');
         Route::post('/learning-studio/courses/{course}/quizzes', [MobileLearningStudioController::class, 'storeQuiz'])->name('learning-studio.quizzes.store');
+        Route::put('/learning-studio/courses/{course}/quizzes/{quiz}', [MobileLearningStudioController::class, 'updateQuiz'])->name('learning-studio.quizzes.update');
+        Route::put('/learning-studio/courses/{course}/quizzes/{quiz}/attempts/{attempt}', [MobileLearningStudioController::class, 'gradeQuizAttempt'])->name('learning-studio.quiz-attempts.update');
         Route::delete('/learning-studio/courses/{course}/quizzes/{quiz}', [MobileLearningStudioController::class, 'destroyQuiz'])->name('learning-studio.quizzes.destroy');
         Route::post('/learning-studio/courses/{course}/assignments', [MobileLearningStudioController::class, 'storeAssignment'])->name('learning-studio.assignments.store');
+        Route::put('/learning-studio/courses/{course}/assignments/{assignment}', [MobileLearningStudioController::class, 'updateAssignment'])->name('learning-studio.assignments.update');
         Route::put('/learning-studio/courses/{course}/assignment-submissions/{submission}', [MobileLearningStudioController::class, 'gradeAssignment'])->name('learning-studio.assignment-submissions.update');
         Route::post('/learning-studio/courses/{course}/coupons', [MobileLearningStudioController::class, 'storeCoupon'])->name('learning-studio.coupons.store');
         Route::get('/editorial/posts', [EditorialController::class, 'index'])->name('editorial.posts.index');

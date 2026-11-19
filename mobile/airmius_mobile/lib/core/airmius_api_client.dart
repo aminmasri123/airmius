@@ -3354,10 +3354,11 @@ class AirmiusApiClient {
     int courseId,
     int quizId,
     AirmiusJson answers,
+    {int? revision}
   ) => _json(
     'POST',
     '/api/v1/learning/courses/$courseId/quizzes/$quizId/attempts',
-    body: {'answers': answers},
+    body: {'answers': answers, if (revision != null) 'quiz_revision': revision},
   );
 
   Future<AirmiusJson> submitLearningAssignment(
@@ -3365,10 +3366,14 @@ class AirmiusApiClient {
     int assignmentId, {
     String? body,
     String? attachmentUrl,
+    AirmiusJson? answers,
+    int? revision,
   }) => _json(
     'POST',
     '/api/v1/learning/courses/$courseId/assignments/$assignmentId/submissions',
     body: {
+      if (answers != null) 'answers': answers,
+      if (revision != null) 'assignment_revision': revision,
       if (body != null && body.trim().isNotEmpty) 'body': body.trim(),
       if (attachmentUrl != null && attachmentUrl.trim().isNotEmpty)
         'attachment_url': attachmentUrl.trim(),
@@ -3432,6 +3437,10 @@ class AirmiusApiClient {
     body: body,
   );
 
+  Future<AirmiusJson> deleteLearningStudioCourse(int courseId) => _json('DELETE', '/api/v1/learning-studio/courses/$courseId', body: {'confirmation': 'DELETE'});
+
+  Future<AirmiusJson> deleteLearningStudioSection(int courseId, int sectionId) => _json('DELETE', '/api/v1/learning-studio/courses/$courseId/sections/$sectionId', body: {'confirmation': 'DELETE'});
+
   Future<AirmiusJson> createLearningStudioLesson(
     int courseId,
     AirmiusJson body,
@@ -3485,6 +3494,10 @@ class AirmiusApiClient {
     '/api/v1/learning-studio/courses/$courseId/comments/$commentId/replies',
     body: {'body': body.trim()},
   );
+
+  Future<AirmiusJson> updateLearningStudioQuiz(int courseId, int quizId, AirmiusJson body) => _json('PUT', '/api/v1/learning-studio/courses/$courseId/quizzes/$quizId', body: body);
+  Future<AirmiusJson> gradeLearningStudioQuiz(int courseId, int quizId, int attemptId, AirmiusJson body) => _json('PUT', '/api/v1/learning-studio/courses/$courseId/quizzes/$quizId/attempts/$attemptId', body: body);
+  Future<AirmiusJson> updateLearningStudioAssignment(int courseId, int assignmentId, AirmiusJson body) => _json('PUT', '/api/v1/learning-studio/courses/$courseId/assignments/$assignmentId', body: body);
 
   Future<AirmiusJson> createLearningStudioQuiz(
     int courseId,

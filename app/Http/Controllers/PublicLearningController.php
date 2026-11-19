@@ -17,6 +17,8 @@ use App\Models\LearningQuizAttempt;
 use App\Models\LearningSecurityEvent;
 use App\Models\UserBadge;
 use App\Services\AirmiusPdfDocument;
+use App\Services\Learning\AssessmentSchema;
+use App\Services\Learning\CertificateLogo;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningProgressService;
 use App\Services\LearningCourseTranslationService;
@@ -456,7 +458,8 @@ class PublicLearningController extends Controller
             'body' => ['nullable', 'string', 'max:10000'],
             'attachment_url' => ['nullable', 'url', 'max:500'],
         ]);
-        abort_if(blank($data['body'] ?? null) && blank($data['attachment_url'] ?? null), 422, __('learning.errors.submission_required'));
+        $structured = app(AssessmentSchema::class)->assignmentSubmission($request, $assignment);
+        abort_if(empty($structured) && blank($data['body'] ?? null) && blank($data['attachment_url'] ?? null), 422, __('learning.errors.submission_required'));
 
         $submission = LearningAssignmentSubmission::query()->updateOrCreate(
             [
@@ -466,6 +469,7 @@ class PublicLearningController extends Controller
             [
                 'user_id' => $request->user()->id,
                 'body' => $data['body'] ?? null,
+                ...$structured,
                 'attachment_url' => $data['attachment_url'] ?? null,
                 'status' => 'submitted',
                 'submitted_at' => now(),
@@ -525,6 +529,7 @@ class PublicLearningController extends Controller
 
         $data = $request->validate([
             'answers' => ['required', 'array'],
+            'quiz_revision' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $attempt = $this->learningProgress->submitQuiz(
@@ -533,11 +538,12 @@ class PublicLearningController extends Controller
             $quiz,
             $request->user(),
             $data['answers'],
+            $data['quiz_revision'] ?? null,
         );
 
         return back()->with(
             'success',
-            $attempt->passed ? __('learning.responses.quiz_passed') : __('learning.responses.quiz_failed'),
+            $attempt->review_status === 'pending' ? __('learning_assessment.pending_review') : ($attempt->passed ? __('learning.responses.quiz_passed') : __('learning.responses.quiz_failed')),
         );
     }
 
@@ -708,6 +714,10 @@ class PublicLearningController extends Controller
         $label = fn (string $key, array $replace = []): string => __("learning.certificate.{$key}", $replace, $locale);
         $pdf = new AirmiusPdfDocument;
         $pdf->header($label('title'), $certificate->code, 'Airmius Sportschule');
+        $logo = $certificate->course ? app(CertificateLogo::class)->bytes($certificate->course) : null;
+        if ($logo !== null) {
+            $pdf->image($logo, 48, 748, 46, 50);
+        }
         $pdf->card(48, 632, 150, 54, $label('issued'), $certificate->issued_at->format('d.m.Y'));
         $pdf->card(222, 632, 150, 54, $label('progress'), (string) ($certificate->enrollment?->progress_percent ?: 100).'%');
         $pdf->card(396, 632, 150, 54, $label('status'), $label('completed'), true);
@@ -904,16 +914,12 @@ class PublicLearningController extends Controller
                         'title' => $quiz->title,
                         'description' => $quiz->description,
                         'pass_percent' => $quiz->pass_percent,
+                        'revision' => $quiz->revision,
                         'locked' => (bool) $dripLocked,
                         'available_at' => $lesson ? optional($this->learningProgress->dripAvailableAt($lesson, $enrollment))->toIso8601String() : null,
                         'attempt' => $this->quizAttemptResource($quizAttempts->get($quiz->id)),
                         'questions' => $canUseLearningRoom && ! $dripLocked
-                            ? $quiz->questions->map(fn ($question) => [
-                                'id' => $question->id,
-                                'question' => $question->question,
-                                'options' => $question->options ?: [],
-                                'position' => $question->position,
-                            ])->values()
+                            ? $quiz->questions->map(fn ($question) => app(AssessmentSchema::class)->publicQuestion($question->toArray()))->values()
                             : [],
                     ];
                 })
@@ -1006,12 +1012,16 @@ class PublicLearningController extends Controller
         $dueAt = $enrollment?->started_at && $assignment->due_after_days !== null
             ? $enrollment->started_at->copy()->addDays((int) $assignment->due_after_days)
             : null;
+        $locked = ! $includeSubmission || ($enrollment && $assignment->lesson && $this->learningProgress->dripLocked($assignment->lesson, $enrollment));
 
         return [
             'id' => $assignment->id,
             'learning_lesson_id' => $assignment->learning_lesson_id,
             'title' => $assignment->title,
-            'instructions' => $assignment->instructions,
+            'instructions' => $locked ? null : $assignment->instructions,
+            'locked' => (bool) $locked,
+            'revision' => $assignment->revision,
+            'questions' => $locked ? [] : collect($assignment->questions ?: [])->map(fn ($q) => app(AssessmentSchema::class)->publicQuestion($q))->values(),
             'points' => $assignment->points,
             'due_after_days' => $assignment->due_after_days,
             'due_at' => optional($dueAt)->toIso8601String(),
@@ -1022,6 +1032,8 @@ class PublicLearningController extends Controller
                 'score' => $submission->score,
                 'feedback' => $submission->feedback,
                 'attachment_url' => $submission->attachment_url,
+                'body' => $submission->body,
+                'answers' => $submission->answers,
                 'submitted_at' => optional($submission->submitted_at)->toIso8601String(),
                 'graded_at' => optional($submission->graded_at)->toIso8601String(),
             ] : null,
@@ -1055,6 +1067,8 @@ class PublicLearningController extends Controller
             'id' => $attempt->id,
             'score_percent' => $attempt->score_percent,
             'passed' => $attempt->passed,
+            'review_status' => $attempt->review_status,
+            'feedback' => $attempt->feedback,
             'submitted_at' => optional($attempt->submitted_at)->toIso8601String(),
         ];
     }

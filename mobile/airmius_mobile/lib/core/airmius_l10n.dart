@@ -14614,6 +14614,8 @@ const _studioDe = {
   'studio.certificateDesignHint':
       'Optionales Logo, Unterschrift und ein kurzer Fußtext.',
   'studio.certificateLogo': 'Logo-URL für das Zertifikat',
+  'studio.certificateLogoUpload': 'Zertifikatslogo hochladen',
+  'studio.certificateLogoHint': 'PNG, JPEG oder WebP, maximal 5 MB und 4096 × 4096 Pixel. Danach speichern.',
   'studio.certificateSignature': 'Name der unterzeichnenden Person',
   'studio.certificateFooter': 'Fußtext des Zertifikats',
   'studio.lessonAvailability': 'Freigabe und Anhänge',
@@ -14799,6 +14801,8 @@ final _studioEn = {
   'studio.certificateDesignHint':
       'Optional logo, signature and a short footer.',
   'studio.certificateLogo': 'Certificate logo URL',
+  'studio.certificateLogoUpload': 'Upload certificate logo',
+  'studio.certificateLogoHint': 'PNG, JPEG or WebP, up to 5 MB and 4096 × 4096 pixels. Save afterwards.',
   'studio.certificateSignature': 'Name of the signing person',
   'studio.certificateFooter': 'Certificate footer',
   'studio.lessonAvailability': 'Availability and attachments',
@@ -14983,6 +14987,8 @@ final _studioFr = {
   'studio.certificateDesignHint':
       'Logo, signature et court pied de page facultatifs.',
   'studio.certificateLogo': 'URL du logo du certificat',
+  'studio.certificateLogoUpload': 'Importer le logo du certificat',
+  'studio.certificateLogoHint': 'PNG, JPEG ou WebP, 5 Mo et 4096 × 4096 pixels maximum. Enregistrez ensuite.',
   'studio.certificateSignature': 'Nom de la personne signataire',
   'studio.certificateFooter': 'Pied de page du certificat',
   'studio.lessonAvailability': 'Disponibilité et pièces jointes',
@@ -15161,6 +15167,8 @@ final _studioAr = {
   'studio.certificateDesign': 'تصميم الشهادة',
   'studio.certificateDesignHint': 'شعار وتوقيع ونص تذييل اختياري.',
   'studio.certificateLogo': 'رابط شعار الشهادة',
+  'studio.certificateLogoUpload': 'رفع شعار الشهادة',
+  'studio.certificateLogoHint': 'PNG أو JPEG أو WebP، حتى 5 ميغابايت و4096 × 4096 بكسل. احفظ بعد الرفع.',
   'studio.certificateSignature': 'اسم الشخص الموقّع',
   'studio.certificateFooter': 'تذييل الشهادة',
   'studio.lessonAvailability': 'الإتاحة والمرفقات',

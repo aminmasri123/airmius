@@ -14,7 +14,7 @@ void main() {
       final scope = AirmiusScope.of(
         tester.element(find.byType(ClubTasksScreen)),
       );
-      await tester.tap(find.byType(FloatingActionButton));
+      await tester.tap(find.byKey(const ValueKey('calendar-add-task')));
       await tester.pumpAndSettle();
 
       expect(find.byType(AlertDialog), findsNothing);
@@ -42,18 +42,18 @@ void main() {
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
       expect(find.byType(Form), findsNothing);
-      expect(find.byType(FloatingActionButton), findsOneWidget);
+      expect(find.byKey(const ValueKey('calendar-add-task')), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
 
-  testWidgets('task editor searches assignees and accepts checklist lines', (
+  testWidgets('task editor searches assignees and retains checklist entries', (
     tester,
   ) async {
     await openCalendar(tester, AirmiusLanguage.de);
     final scope = AirmiusScope.of(tester.element(find.byType(ClubTasksScreen)));
 
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.byKey(const ValueKey('calendar-add-task')));
     await tester.pumpAndSettle();
     await tester.tap(find.text(scope.t('clubTasks.editor.planning')));
     await tester.pumpAndSettle();
@@ -69,23 +69,32 @@ void main() {
     expect(find.text('Alex Trainer'), findsNothing);
     await tester.tap(find.text('Mira Member'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text(scope.t('clubTasks.applySelection')));
+    await tester.pumpAndSettle();
     expect(find.text('Mira Member'), findsOneWidget);
 
     await tester.tap(find.text(scope.t('clubTasks.editor.checklist')));
     await tester.pumpAndSettle();
+    final add = find.widgetWithText(
+      OutlinedButton,
+      scope.t('clubTasks.checklistHint'),
+    );
+    await tester.tap(add);
+    await tester.pumpAndSettle();
     final checklistField = find.widgetWithText(
       TextFormField,
-      scope.t('clubTasks.checklist'),
+      scope.t('clubTasks.checklistHint'),
     );
-    await tester.enterText(
-      checklistField,
-      'Bälle bestellen\nTrikots abholen\n[x] Halle reserviert',
-    );
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Teilaufgabe'));
+    await tester.enterText(checklistField, 'Bälle bestellen');
+    await tester.ensureVisible(add);
     await tester.pumpAndSettle();
-
-    final field = tester.widget<TextFormField>(checklistField);
-    expect(field.controller?.text, endsWith('\n'));
+    await tester.tap(add);
+    await tester.pumpAndSettle();
+    expect(
+      find.widgetWithText(TextFormField, scope.t('clubTasks.checklistHint')),
+      findsNWidgets(2),
+    );
+    expect(find.text('Bälle bestellen'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

@@ -6,10 +6,38 @@ import { useI18n } from 'vue-i18n'
 import { majorToCents } from '@/utils/currency'
 import { confirmDialog } from '@/services/dialogService'
 import learningContentLocalization from '@/i18n/learningContentLocalization.json'
+import LearningCertificateLogoField from '@/Components/Learning/LearningCertificateLogoField.vue'
+import LearningDeleteDialog from '@/Components/Learning/LearningDeleteDialog.vue'
+import deletionCopy from '../../../../../data/learning-deletion-copy.json'
+import LearningAssessmentEditor from '@/Components/Learning/LearningAssessmentEditor.vue'
+import LearningQuizReview from '@/Components/Learning/LearningQuizReview.vue'
+import LearningAnswersSummary from '@/Components/Learning/LearningAnswersSummary.vue'
+import { assessmentText, newAssessmentQuestion, editableAssessmentQuestions, assessmentEditorError } from '@/support/learningAssessment'
 
 defineOptions({ layout: AppLayout })
 
 const { t, locale } = useI18n()
+const ax = key => assessmentText(locale.value,key)
+const quizEditing = ref(null), assignmentEditing = ref(null)
+const quizImageBusy = ref(false), assignmentImageBusy = ref(false)
+const deletionLabels = computed(() => deletionCopy[locale.value] || deletionCopy.en)
+const deleteTarget = ref(null)
+const deleting = ref(false)
+const deleteLearningContent = target => {
+    if (deleting.value) return
+    deleting.value = true
+    const name = target.kind === 'course' ? 'auth.learning.studio.courses.destroy' : 'auth.learning.studio.sections.destroy'
+    const params = target.kind === 'course' ? target.id : [target.courseId, target.id]
+    router.delete(route(name, params), {
+        data: { confirmation: 'DELETE' },
+        preserveScroll: target.kind !== 'course',
+        onSuccess: () => { deleteTarget.value = null },
+        onFinish: () => { deleting.value = false },
+    })
+}
+const newCertificateUploading = ref(false)
+const courseCertificateUploading = ref(false)
+const certificateUploading = computed(() => newCertificateUploading.value || courseCertificateUploading.value)
 const localizationCopy = computed(() => learningContentLocalization[locale.value] || learningContentLocalization.de)
 const lx = (key, values = {}) => Object.entries(values).reduce(
     (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
@@ -44,6 +72,7 @@ const activePanel = ref('structure')
 const editingLesson = ref(null)
 const replyForms = ref({})
 const uploadState = ref({ key: '', error: '' })
+const assetUploading = ref(false)
 const newCoursePanel = ref(null)
 const newCourseTitleInput = ref(null)
 const languageName = (value) => lx(value)
@@ -108,7 +137,11 @@ const formatPercent = (part, total) => {
 }
 
 const uploadLearningAsset = async (purpose, file, onUploaded) => {
-    if (!props.selectedCourse || !file) return
+    if (!props.selectedCourse || !file || assetUploading.value || (purpose !== 'cover' && lessonForm.processing)) return false
+
+    const courseId = props.selectedCourse.id
+    const lessonId = editingLesson.value?.id
+    assetUploading.value = true
 
     uploadState.value = { key: purpose, error: '' }
     const payload = new FormData()
@@ -119,16 +152,19 @@ const uploadLearningAsset = async (purpose, file, onUploaded) => {
         const response = await window.axios.post(route('auth.learning.studio.uploads.store', props.selectedCourse.id), payload, {
             headers: { 'Content-Type': 'multipart/form-data' },
         })
-        onUploaded(response.data)
+        if (props.selectedCourse?.id === courseId && (purpose === 'cover' || editingLesson.value?.id === lessonId)) onUploaded(response.data)
     } catch (error) {
         uploadState.value = {
             key: purpose,
             error: error?.response?.data?.message || tx('learning_studio.upload_failed', 'Upload fehlgeschlagen.'),
         }
-        return
+        return false
+    } finally {
+        assetUploading.value = false
     }
 
     uploadState.value = { key: '', error: '' }
+    return true
 }
 
 const uploadCourseCover = (event) => {
@@ -145,10 +181,16 @@ const uploadLessonVideo = (event) => {
     event.target.value = ''
 }
 
-const uploadLessonAttachment = (event) => {
-    uploadLearningAsset('lesson_attachment', event.target.files?.[0], (asset) => {
-        lessonForm.attachments_text = [lessonForm.attachments_text, asset.url].filter(Boolean).join('\n')
-    })
+const uploadLessonAttachment = async (event) => {
+    const files = Array.from(event.target.files || [])
+    const courseId = props.selectedCourse?.id, lessonId = editingLesson.value?.id
+    for (const file of files) {
+        if (props.selectedCourse?.id !== courseId || editingLesson.value?.id !== lessonId) break
+        const uploaded = await uploadLearningAsset('lesson_attachment', file, (asset) => {
+            lessonForm.attachments_text = [lessonForm.attachments_text, asset.url].filter(Boolean).join('\n')
+        })
+        if (!uploaded) break
+    }
     event.target.value = ''
 }
 
@@ -258,6 +300,7 @@ const lessonForm = useForm({
 })
 
 const quizForm = useForm({
+    questions: [newAssessmentQuestion()],
     learning_lesson_id: '',
     title: '',
     description: '',
@@ -278,6 +321,7 @@ const couponForm = useForm({
 })
 
 const assignmentForm = useForm({
+    questions: [newAssessmentQuestion('long_text')],
     learning_lesson_id: '',
     title: '',
     instructions: '',
@@ -327,6 +371,12 @@ const fillCourseForm = () => {
 watch(() => props.selectedCourse?.id, () => {
     fillCourseForm()
     editingLesson.value = null
+    quizEditing.value = null
+    assignmentEditing.value = null
+    quizForm.reset()
+    quizForm.questions = [newAssessmentQuestion()]
+    assignmentForm.reset()
+    assignmentForm.questions = [newAssessmentQuestion('long_text')]
     const forms = {}
     ;(props.selectedCourse?.assignments || []).forEach((assignment) => {
         ;(assignment.submissions || []).forEach((submission) => {
@@ -428,6 +478,7 @@ const startTranslation = (course, targetLocale) => {
 }
 
 const createCourse = () => {
+    if (certificateUploading.value) return
     newCourseForm
         .transform(() => payloadWithPrice(newCourseForm))
         .post(route('auth.learning.studio.courses.store'), {
@@ -437,7 +488,7 @@ const createCourse = () => {
 }
 
 const updateCourse = () => {
-    if (!props.selectedCourse) return
+    if (!props.selectedCourse || certificateUploading.value) return
     courseForm
         .transform(() => payloadWithPrice(courseForm))
         .put(route('auth.learning.studio.courses.update', props.selectedCourse.id), { preserveScroll: true })
@@ -452,6 +503,7 @@ const createSection = () => {
 }
 
 const resetLessonForm = () => {
+    if (assetUploading.value) return
     editingLesson.value = null
     lessonForm.defaults({
         learning_course_section_id: props.selectedCourse?.sections?.[0]?.id || '',
@@ -472,6 +524,7 @@ const resetLessonForm = () => {
 watch(() => props.selectedCourse?.sections?.[0]?.id, resetLessonForm, { immediate: true })
 
 const editLesson = (lesson) => {
+    if (assetUploading.value) return
     editingLesson.value = lesson
     lessonForm.defaults({
         learning_course_section_id: lesson.learning_course_section_id || '',
@@ -490,6 +543,7 @@ const editLesson = (lesson) => {
 }
 
 const submitLesson = () => {
+    if (assetUploading.value) return
     if (!props.selectedCourse) return
 
     const url = editingLesson.value
@@ -539,11 +593,22 @@ const deleteLesson = async (lesson) => {
 
 const createQuiz = () => {
     if (!props.selectedCourse) return
-    quizForm.post(route('auth.learning.studio.quizzes.store', props.selectedCourse.id), {
+    if (quizImageBusy.value || quizForm.processing) return
+    const problem = assessmentEditorError(quizForm.questions,true)
+    if (problem) { quizForm.setError('questions',ax(problem)); return }
+    const name = quizEditing.value ? 'auth.learning.studio.quizzes.update' : 'auth.learning.studio.quizzes.store'
+    quizForm[quizEditing.value ? 'put' : 'post'](route(name,quizEditing.value ? [props.selectedCourse.id,quizEditing.value.id] : props.selectedCourse.id), {
         preserveScroll: true,
-        onSuccess: () => quizForm.reset('title', 'description', 'question', 'options_text', 'correct_options_text', 'explanation'),
+        onSuccess: () => { quizForm.reset(); quizForm.questions=[newAssessmentQuestion()];quizEditing.value=null },
     })
 }
+const editQuiz = quiz => {
+    if (quizImageBusy.value || quizForm.processing) return
+    quizEditing.value=quiz
+    Object.assign(quizForm,{title:quiz.title,description:quiz.description||'',pass_percent:quiz.pass_percent,learning_lesson_id:quiz.learning_lesson_id||'',questions:editableAssessmentQuestions(quiz.questions)})
+    quizForm.clearErrors()
+}
+const gradeQuiz = (quiz,attempt,payload) => router.put(route('auth.learning.studio.quiz-attempts.update',[props.selectedCourse.id,quiz.id,attempt.id]),payload,{preserveScroll:true})
 
 const deleteQuiz = async (quiz) => {
     if (!props.selectedCourse) return
@@ -570,10 +635,20 @@ const createCoupon = () => {
 
 const createAssignment = () => {
     if (!props.selectedCourse) return
-    assignmentForm.post(route('auth.learning.studio.assignments.store', props.selectedCourse.id), {
+    if (assignmentImageBusy.value || assignmentForm.processing) return
+    const problem=assessmentEditorError(assignmentForm.questions,false)
+    if(problem){assignmentForm.setError('questions',ax(problem));return}
+    const name=assignmentEditing.value?'auth.learning.studio.assignments.update':'auth.learning.studio.assignments.store'
+    assignmentForm[assignmentEditing.value?'put':'post'](route(name,assignmentEditing.value?[props.selectedCourse.id,assignmentEditing.value.id]:props.selectedCourse.id), {
         preserveScroll: true,
-        onSuccess: () => assignmentForm.reset('title', 'instructions', 'due_after_days'),
+        onSuccess: () => {assignmentForm.reset();assignmentForm.questions=[newAssessmentQuestion('long_text')];assignmentEditing.value=null},
     })
+}
+const editAssignment = assignment => {
+    if(assignmentImageBusy.value||assignmentForm.processing)return
+    assignmentEditing.value=assignment
+    Object.assign(assignmentForm,{title:assignment.title,instructions:assignment.instructions||'',points:assignment.points,due_after_days:assignment.due_after_days??'',is_required:assignment.is_required,learning_lesson_id:assignment.learning_lesson_id||'',questions:editableAssessmentQuestions(assignment.questions)})
+    assignmentForm.clearErrors()
 }
 
 const grantEnrollment = () => {
@@ -632,6 +707,7 @@ const submitQuestionReply = (question) => {
 
 <template>
     <Head :title="tx('learning_studio.page_title', 'Airmius Sportschule')" />
+    <LearningDeleteDialog :target="deleteTarget" :busy="deleting" :error="page.props.errors?.confirmation" @close="deleteTarget = null" @confirm="deleteLearningContent" />
 
     <div class="space-y-6">
         <section class="surface-card overflow-hidden">
@@ -685,7 +761,8 @@ const submitQuestionReply = (question) => {
                         <input v-model="newCourseForm.sport_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.sport', 'Sportart, z. B. Fußball')">
                         <textarea v-model="newCourseForm.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_description', 'Worum geht es in diesem Kurs?')"></textarea>
                         <textarea v-model="newCourseForm.learning_goals_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.learning_goals', 'Lernziele, je Zeile eins')"></textarea>
-                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="newCourseForm.processing">
+                        <LearningCertificateLogoField v-model="newCourseForm.certificate_logo_url" @busy="newCertificateUploading = $event" />
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="newCourseForm.processing || certificateUploading">
                             {{ tx('learning_studio.create_course', 'Kurs anlegen') }}
                         </button>
                     </form>
@@ -873,6 +950,7 @@ const submitQuestionReply = (question) => {
                                         <p v-if="section.description" class="mt-1 text-sm text-secondary">{{ section.description }}</p>
                                     </div>
                                     <span class="rounded-full bg-bg px-3 py-1 text-xs font-semibold text-secondary">{{ section.lessons?.length || 0 }} {{ tx('learning_studio_ui.lessons', 'Lektionen') }}</span>
+                                    <button type="button" :disabled="deleting" class="rounded-lg border border-error px-3 py-2 text-sm text-error" @click="deleteTarget = { kind: 'section', id: section.id, courseId: selectedCourse.id, title: section.title }">{{ deletionLabels.remove_section }}</button>
                                 </div>
                                 <div class="mt-4 grid gap-3">
                                     <div
@@ -931,9 +1009,9 @@ const submitQuestionReply = (question) => {
                                     <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-bg px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
                                         <i class="las la-video"></i>
                                         {{ tx('learning_studio_form.upload_video', 'Video hochladen') }}
-                                        <input type="file" accept="video/*" class="sr-only" @change="uploadLessonVideo">
+                                        <input type="file" accept=".mp4,.webm,.mov,.m4v,.mkv,.avi" :disabled="assetUploading || lessonForm.processing" class="sr-only" @change="uploadLessonVideo">
                                     </label>
-                                    <p v-if="uploadState.key === 'lesson_video'" class="text-xs text-secondary">{{ tx('learning_studio_form.video_uploading', 'Video wird hochgeladen...') }}</p>
+                                    <p v-if="assetUploading && uploadState.key === 'lesson_video'" class="text-xs text-secondary">{{ tx('learning_studio_form.video_uploading', 'Video wird hochgeladen...') }}</p>
                                     <p v-if="uploadState.error && uploadState.key === 'lesson_video'" class="text-xs text-error">{{ uploadState.error }}</p>
                                 </div>
                                 <div class="grid gap-2">
@@ -941,9 +1019,9 @@ const submitQuestionReply = (question) => {
                                     <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-bg px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
                                         <i class="las la-paperclip"></i>
                                         {{ tx('learning_studio_form.upload_material', 'Material hochladen') }}
-                                        <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,image/*,video/*" class="sr-only" @change="uploadLessonAttachment">
+                                        <input type="file" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.csv,.txt,.mp4,.webm,.mov,.m4v,.mkv,.avi,.mp3,.wav,.ogg,.m4a" :disabled="assetUploading || lessonForm.processing" class="sr-only" @change="uploadLessonAttachment">
                                     </label>
-                                    <p v-if="uploadState.key === 'lesson_attachment'" class="text-xs text-secondary">{{ tx('learning_studio_form.material_uploading', 'Material wird hochgeladen...') }}</p>
+                                    <p v-if="assetUploading && uploadState.key === 'lesson_attachment'" class="text-xs text-secondary">{{ tx('learning_studio_form.material_uploading', 'Material wird hochgeladen...') }}</p>
                                     <p v-if="uploadState.error && uploadState.key === 'lesson_attachment'" class="text-xs text-error">{{ uploadState.error }}</p>
                                 </div>
                                 <div class="grid gap-3 sm:grid-cols-2">
@@ -959,7 +1037,7 @@ const submitQuestionReply = (question) => {
                                 </div>
                                 <div class="flex flex-col-reverse gap-2 sm:flex-row">
                                     <button v-if="editingLesson" type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="resetLessonForm">{{ tx('learning_studio_form.new_lesson', 'Neu anlegen') }}</button>
-                                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="lessonForm.processing">
+                                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="lessonForm.processing || assetUploading">
                                         {{ editingLesson ? tx('learning_studio_form.save_lesson', 'Lektion speichern') : tx('learning_studio_form.create_lesson', 'Lektion erstellen') }}
                                     </button>
                                 </div>
@@ -970,6 +1048,7 @@ const submitQuestionReply = (question) => {
 
                 <article id="learning-studio-panel-details" v-show="activePanel === 'details'" role="tabpanel" aria-labelledby="learning-studio-tab-details" class="surface-card p-5">
                     <h2 class="text-lg font-semibold text-primary">{{ tx('learning_studio_form.course_data_title', 'Kursdaten und Veröffentlichung') }}</h2>
+                    <button type="button" :disabled="deleting || certificateUploading" class="mt-4 rounded-lg border border-error px-4 py-2 text-sm text-error" @click="deleteTarget = { kind: 'course', id: selectedCourse.id, title: selectedCourse.title }">{{ deletionLabels.remove_course }}</button>
                     <form class="mt-5 grid gap-4" @submit.prevent="updateCourse">
                         <div class="grid gap-3 lg:grid-cols-2">
                             <input v-model="courseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.course_title', 'Kurstitel')">
@@ -1017,7 +1096,7 @@ const submitQuestionReply = (question) => {
                             <textarea v-model="courseForm.guarantee_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.guarantee', 'Garantie / Betreuung / Rückfragen')"></textarea>
                         </div>
                         <div class="grid gap-3 lg:grid-cols-3">
-                            <input v-model="courseForm.certificate_logo_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.certificate_logo', 'Zertifikat Logo URL')">
+                            <LearningCertificateLogoField v-model="courseForm.certificate_logo_url" @busy="courseCertificateUploading = $event" />
                             <input v-model="courseForm.certificate_signature_name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.certificate_signature', 'Signatur auf Zertifikat')">
                             <input v-model="courseForm.certificate_footer_text" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_form.certificate_footer', 'Zertifikat Fußzeile')">
                         </div>
@@ -1039,7 +1118,7 @@ const submitQuestionReply = (question) => {
                             </label>
                             <input v-if="!courseForm.is_free" v-model="courseForm.price" inputmode="decimal" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.price_euro', 'Preis in Euro')">
                         </div>
-                        <button class="justify-self-start rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="courseForm.processing">
+                        <button class="justify-self-start rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="courseForm.processing || certificateUploading">
                             {{ tx('learning_studio_form.save_course', 'Kursdaten speichern') }}
                         </button>
                     </form>
@@ -1104,6 +1183,8 @@ const submitQuestionReply = (question) => {
                                     <span class="rounded-full bg-card px-2 py-1 text-xs font-semibold text-secondary">{{ quiz.pass_percent }}% {{ tx('learning_studio_ui.passing', 'Bestehen') }}</span>
                                 </div>
                                 <p class="mt-3 text-xs text-secondary">{{ quiz.questions?.length || 0 }} {{ tx('learning_studio_ui.questions', 'Fragen') }}</p>
+                                <button type="button" class="mt-3 rounded-lg border border-border px-3 py-2 text-sm" @click="editQuiz(quiz)">{{ ax('edit') }}</button>
+                                <LearningQuizReview v-for="attempt in (quiz.attempts||[]).filter(a=>a.review_status==='pending')" :key="attempt.id" class="mt-4" :attempt="attempt" @grade="gradeQuiz(quiz,attempt,$event)" />
                                 <button type="button" class="mt-3 rounded-lg border border-error/40 px-3 py-2 text-xs font-semibold text-error" @click="deleteQuiz(quiz)">
                                     {{ tx('learning_studio_ui.delete_quiz', 'Quiz löschen') }}
                                 </button>
@@ -1119,11 +1200,10 @@ const submitQuestionReply = (question) => {
                             <input v-model="quizForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.quiz_title', 'Quiztitel')" :aria-label="tx('learning_studio_ui.quiz_title', 'Quiztitel')">
                             <textarea v-model="quizForm.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.description', 'Beschreibung')" :aria-label="tx('learning_studio_ui.description', 'Beschreibung')"></textarea>
                             <input v-model="quizForm.pass_percent" type="number" min="1" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.pass_percent', 'Bestehensgrenze in %')" :aria-label="tx('learning_studio_ui.pass_percent', 'Bestehensgrenze in %')">
-                            <textarea v-model="quizForm.question" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.first_question_optional', 'Erste Frage optional')" :aria-label="tx('learning_studio_ui.first_question_optional', 'Erste Frage optional')"></textarea>
-                            <textarea v-model="quizForm.options_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.answer_options', 'Antwortoptionen, je Zeile eine')" :aria-label="tx('learning_studio_ui.answer_options', 'Antwortoptionen, je Zeile eine')"></textarea>
-                            <textarea v-model="quizForm.correct_options_text" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.correct_answers', 'Korrekte Antwort(en), je Zeile eine')" :aria-label="tx('learning_studio_ui.correct_answers', 'Korrekte Antwort(en), je Zeile eine')"></textarea>
-                            <textarea v-model="quizForm.explanation" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="tx('learning_studio_ui.answer_explanation', 'Erklärung nach Antwort')" :aria-label="tx('learning_studio_ui.answer_explanation', 'Erklärung nach Antwort')"></textarea>
-                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ tx('learning_studio_ui.save_quiz', 'Quiz speichern') }}</button>
+                            <LearningAssessmentEditor v-model="quizForm.questions" :solutions="true" :course-id="selectedCourse.id" @busy="quizImageBusy=$event" />
+                            <p v-for="(error,key) in quizForm.errors" :key="key" role="alert" class="text-sm text-error">{{ error }}</p>
+                            <button v-if="quizEditing" type="button" :disabled="quizImageBusy" class="rounded-lg border border-border p-2" @click="quizEditing=null;quizForm.reset();quizForm.questions=[newAssessmentQuestion()]">{{ ax('cancel') }}</button>
+                            <button :disabled="quizImageBusy || quizForm.processing" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">{{ tx('learning_studio_ui.save_quiz', 'Quiz speichern') }}</button>
                         </form>
                     </div>
                 </article>
@@ -1139,6 +1219,7 @@ const submitQuestionReply = (question) => {
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <p class="font-semibold text-primary">{{ assignment.title }}</p>
+                                        <button type="button" class="mt-2 rounded-lg border border-border px-3 py-2 text-sm" @click="editAssignment(assignment)">{{ ax('edit') }}</button>
                                         <p class="mt-1 text-sm text-secondary">{{ assignment.instructions || tx('learning_studio_ui.no_description', 'Keine Beschreibung') }}</p>
                                     </div>
                                     <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">{{ assignment.points }} {{ tx('learning_studio_ui.points', 'Punkte') }}</span>
@@ -1147,6 +1228,7 @@ const submitQuestionReply = (question) => {
                                     <div v-for="submission in assignment.submissions" :key="submission.id" class="rounded-lg border border-border bg-card p-3">
                                         <p class="text-sm font-semibold text-primary">{{ submission.user?.name || tx('learning_studio_ui.participant', 'Teilnehmer') }}</p>
                                         <p class="mt-1 text-sm text-secondary whitespace-pre-line">{{ submission.body }}</p>
+                                        <LearningAnswersSummary :questions="submission.question_snapshot||[]" :answers="submission.answers||{}" />
                                         <a v-if="submission.attachment_url" :href="submission.attachment_url" target="_blank" rel="noopener noreferrer" class="mt-2 inline-flex text-xs font-semibold text-air-blue">{{ tx('learning_studio_ui.open_attachment', 'Anhang öffnen') }}</a>
                                         <div class="mt-3 grid gap-2 md:grid-cols-[8rem_7rem_minmax(0,1fr)_auto]">
                                             <select v-model="gradingForms[String(submission.id)].status" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="tx('learning_studio_ui.status', 'Status')">
@@ -1179,7 +1261,10 @@ const submitQuestionReply = (question) => {
                                 <input v-model="assignmentForm.is_required" type="checkbox" class="rounded border-border bg-inputBg" :aria-label="tx('learning_studio_ui.required_assignment', 'Pflichtaufgabe')">
                                 {{ tx('learning_studio_ui.required_assignment', 'Pflichtaufgabe') }}
                             </label>
-                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ tx('learning_studio_ui.save_assignment', 'Aufgabe speichern') }}</button>
+                            <LearningAssessmentEditor v-model="assignmentForm.questions" :solutions="false" :course-id="selectedCourse.id" @busy="assignmentImageBusy=$event" />
+                            <p v-for="(error,key) in assignmentForm.errors" :key="key" role="alert" class="text-sm text-error">{{ error }}</p>
+                            <button v-if="assignmentEditing" type="button" :disabled="assignmentImageBusy" class="rounded-lg border border-border p-2" @click="assignmentEditing=null;assignmentForm.reset();assignmentForm.questions=[newAssessmentQuestion('long_text')]">{{ ax('cancel') }}</button>
+                            <button :disabled="assignmentImageBusy || assignmentForm.processing" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">{{ tx('learning_studio_ui.save_assignment', 'Aufgabe speichern') }}</button>
                         </form>
                     </div>
                 </article>

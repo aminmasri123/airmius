@@ -7,6 +7,9 @@ import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import { useI18n } from 'vue-i18n'
 import learningContentLocalization from '@/i18n/learningContentLocalization.json'
+import LearningAssessmentAnswers from '@/Components/Learning/LearningAssessmentAnswers.vue'
+import LearningAssignmentResponse from '@/Components/Learning/LearningAssignmentResponse.vue'
+import {assessmentText} from '@/support/learningAssessment'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -21,6 +24,7 @@ const props = defineProps({
 
 const page = usePage()
 const { t, locale } = useI18n()
+const ax=key=>assessmentText(locale.value,key)
 const enrolling = ref(false)
 const localizationCopy = computed(() => learningContentLocalization[locale.value] || learningContentLocalization.de)
 const lx = (key, values = {}) => Object.entries(values).reduce(
@@ -64,17 +68,6 @@ watch(allLessons, (lessons) => {
     if (freshLesson) selectedLesson.value = freshLesson
 })
 
-watch(allLessons, (lessons) => {
-    const forms = {}
-    lessons.flatMap((lesson) => lesson.assignments || []).forEach((assignment) => {
-        forms[String(assignment.id)] = {
-            body: assignment.submission?.body || '',
-            attachment_url: assignment.submission?.attachment_url || '',
-        }
-    })
-    assignmentForms.value = forms
-}, { immediate: true })
-
 const noteForm = useForm({ body: '' })
 const commentForm = useForm({ body: '' })
 const lessonCompleting = ref(false)
@@ -82,7 +75,6 @@ const completionNotice = ref(null)
 const completionBadges = ref([])
 const quizAnswers = ref({})
 const lastProgressSync = ref({})
-const assignmentForms = ref({})
 const reviewForm = useForm({
     rating: props.myReview?.rating || 5,
     body: props.myReview?.body || '',
@@ -218,28 +210,10 @@ const finishVideoProgress = (event) => {
     }).catch(() => {})
 }
 
-const toggleQuizAnswer = (quiz, question, option) => {
-    const quizId = String(quiz.id)
-    const questionId = String(question.id)
-    const current = quizAnswers.value[quizId]?.[questionId] || []
-    const next = current.includes(option)
-        ? current.filter((item) => item !== option)
-        : [...current, option]
-
-    quizAnswers.value = {
-        ...quizAnswers.value,
-        [quizId]: {
-            ...(quizAnswers.value[quizId] || {}),
-            [questionId]: next,
-        },
-    }
-}
-
-const quizAnswerChecked = (quiz, question, option) => (quizAnswers.value[String(quiz.id)]?.[String(question.id)] || []).includes(option)
-
 const submitQuiz = (quiz) => {
     router.post(route('auth.learning.quizzes.attempts.store', [props.course.id, quiz.id]), {
         answers: quizAnswers.value[String(quiz.id)] || {},
+        quiz_revision: quiz.revision,
     }, { preserveScroll: true })
 }
 
@@ -247,8 +221,8 @@ const submitReview = () => {
     reviewForm.post(route('auth.learning.reviews.store', props.course.id), { preserveScroll: true })
 }
 
-const submitAssignment = (assignment) => {
-    router.post(route('auth.learning.assignments.submissions.store', [props.course.id, assignment.id]), assignmentForms.value[String(assignment.id)] || {}, {
+const submitAssignment = (assignment,payload) => {
+    router.post(route('auth.learning.assignments.submissions.store', [props.course.id, assignment.id]), payload, {
         preserveScroll: true,
     })
 }
@@ -540,28 +514,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                         {{ attachment.name || t('Material öffnen') }}
                                     </a>
                                 </div>
-                                <div v-if="selectedLesson.assignments?.length" class="grid gap-3">
-                                    <article v-for="assignment in selectedLesson.assignments" :key="assignment.id" class="rounded-lg border border-border bg-bg p-4">
-                                        <div class="flex flex-wrap items-center justify-between gap-3">
-                                            <h3 class="font-semibold text-primary">{{ assignment.title }}</h3>
-                                            <div class="flex flex-wrap gap-2">
-                                                <span v-if="assignment.is_required" class="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">{{ t('Pflicht') }}</span>
-                                                <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">{{ assignment.points }} Punkte</span>
-                                            </div>
-                                        </div>
-                                        <p class="mt-2 text-sm text-secondary whitespace-pre-line">{{ assignment.instructions }}</p>
-                                        <p v-if="assignment.due_at" class="mt-2 text-xs font-semibold text-secondary">{{ t('Fällig bis') }} {{ formatDateTime(assignment.due_at) }}</p>
-                                        <p v-if="assignment.submission" class="mt-3 text-xs font-semibold" :class="assignment.submission.status === 'passed' ? 'text-success' : 'text-warning'">
-                                            {{ t('Status:') }} {{ assignment.submission.status }}<span v-if="assignment.submission.score !== null"> - {{ assignment.submission.score }} {{ t('Punkte') }}</span>
-                                        </p>
-                                        <p v-if="assignment.submission?.feedback" class="mt-2 rounded-lg bg-card p-3 text-sm text-secondary">{{ assignment.submission.feedback }}</p>
-                                        <form v-if="canUseLearningRoom" class="mt-3 grid gap-2" @submit.prevent="submitAssignment(assignment)">
-                                            <textarea v-model="assignmentForms[String(assignment.id)].body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('Deine Antwort')" :placeholder="t('Deine Antwort')"></textarea>
-                                            <input v-model="assignmentForms[String(assignment.id)].attachment_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('Optionaler Link zum Anhang')" :placeholder="t('Optionaler Link zum Anhang')">
-                                            <button type="submit" class="justify-self-start rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">{{ t('Aufgabe einreichen') }}</button>
-                                        </form>
-                                    </article>
-                                </div>
+                                <LearningAssignmentResponse v-for="assignment in selectedLesson.assignments || []" :key="assignment.id" :assignment="assignment" :can-submit="Boolean(enrollment)" @submit="submitAssignment(assignment,$event)" />
                                 <button
                                     v-if="canTrackSelectedLesson"
                                     type="button"
@@ -620,6 +573,8 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                         </div>
                     </article>
 
+                    <LearningAssignmentResponse v-for="assignment in (course.assignments||[]).filter(item=>!item.learning_lesson_id)" v-show="canUseLearningRoom" :key="assignment.id" :assignment="assignment" :can-submit="Boolean(enrollment)" @submit="submitAssignment(assignment,$event)" />
+
                     <article v-if="canUseLearningRoom && course.quizzes?.length" class="surface-card overflow-hidden">
                         <div class="border-b border-border p-5">
                             <p class="text-xs font-semibold uppercase text-secondary">{{ t('Wissenscheck') }}</p>
@@ -643,13 +598,9 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                                     {{ t('Dieser Wissenscheck wird zusammen mit der Lektion freigeschaltet.') }}
                                 </div>
                                 <div v-else class="mt-4 grid gap-4">
-                                    <fieldset v-for="question in quiz.questions" :key="question.id" class="grid gap-2">
-                                        <legend class="text-sm font-semibold text-primary">{{ question.question }}</legend>
-                                        <label v-for="option in question.options" :key="option" class="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-secondary">
-                                            <input type="checkbox" class="rounded border-border bg-inputBg" :checked="quizAnswerChecked(quiz, question, option)" @change="toggleQuizAnswer(quiz, question, option)">
-                                            <span>{{ option }}</span>
-                                        </label>
-                                    </fieldset>
+                                    <LearningAssessmentAnswers :model-value="quizAnswers[String(quiz.id)]||{}" :questions="quiz.questions" @update:model-value="quizAnswers[String(quiz.id)]=$event" />
+                                    <p v-if="quiz.attempt?.review_status==='pending'" role="status" class="text-warning">{{ ax('pending_review') }}</p>
+                                    <p v-if="quiz.attempt?.feedback" class="text-sm">{{ quiz.attempt.feedback }}</p>
                                 </div>
                                 <button type="submit" :disabled="quiz.locked" class="mt-4 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60">
                                     {{ t('Quiz abgeben') }}

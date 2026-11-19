@@ -82,28 +82,9 @@ final class LearningProgressService
         LearningQuiz $quiz,
         User $user,
         array $answers,
+        ?int $revision = null,
     ): LearningQuizAttempt {
-        $quiz->loadMissing('questions');
-        $normalizedAnswers = collect($answers)
-            ->mapWithKeys(fn ($value, $key) => [(string) $key => $this->normalizeAnswer($value)])
-            ->all();
-        $correctIds = $quiz->questions
-            ->filter(fn ($question) => $this->normalizeAnswer($question->correct_options ?: [])
-                === ($normalizedAnswers[(string) $question->id] ?? []))
-            ->pluck('id')
-            ->all();
-        $score = (int) round((count($correctIds) / max(1, $quiz->questions->count())) * 100);
-
-        $attempt = LearningQuizAttempt::query()->create([
-            'learning_quiz_id' => $quiz->id,
-            'learning_enrollment_id' => $enrollment->id,
-            'user_id' => $user->id,
-            'answers' => $normalizedAnswers,
-            'correct_question_ids' => $correctIds,
-            'score_percent' => $score,
-            'passed' => $score >= (int) $quiz->pass_percent,
-            'submitted_at' => now(),
-        ]);
+        $attempt = app(QuizAssessmentService::class)->attempt($quiz, $enrollment, $user, $answers, $revision);
 
         $this->refreshCompletion($course, $enrollment);
 
@@ -283,13 +264,4 @@ final class LearningProgressService
     }
 
     /** @return list<string> */
-    private function normalizeAnswer(mixed $value): array
-    {
-        return collect(is_array($value) ? $value : [$value])
-            ->map(fn ($item) => Str::lower(trim((string) $item)))
-            ->filter()
-            ->sort()
-            ->values()
-            ->all();
-    }
 }

@@ -21,12 +21,15 @@ class LearningAssignmentSubmission extends Model
         'graded_by',
         'submitted_at',
         'graded_at',
+        'answers', 'question_snapshot',
     ];
 
     protected function casts(): array
     {
         return [
             'score' => 'integer',
+            'answers' => 'array',
+            'question_snapshot' => 'array',
             'submitted_at' => 'datetime',
             'graded_at' => 'datetime',
         ];

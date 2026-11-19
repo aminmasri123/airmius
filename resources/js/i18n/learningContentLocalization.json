@@ -1,5 +1,9 @@
 {
     "de": {
+        "certificate_logo_upload": "Zertifikatslogo hochladen",
+        "certificate_logo_url": "Logo-URL für das Zertifikat (alternativ)",
+        "certificate_logo_hint": "PNG, JPEG oder WebP, maximal 5 MB und 4096 × 4096 Pixel. Danach den Kurs speichern.",
+        "certificate_logo_failed": "Das Logo konnte nicht hochgeladen werden. Bitte versuche es erneut.",
         "all_languages": "Alle Sprachen",
         "content_language": "Kurssprache",
         "available_languages": "Verfügbare Kurssprachen",
@@ -13,6 +17,10 @@
         "ar": "Arabisch"
     },
     "en": {
+        "certificate_logo_upload": "Upload certificate logo",
+        "certificate_logo_url": "Certificate logo URL (alternative)",
+        "certificate_logo_hint": "PNG, JPEG or WebP, up to 5 MB and 4096 × 4096 pixels. Save the course afterwards.",
+        "certificate_logo_failed": "The logo could not be uploaded. Please try again.",
         "all_languages": "All languages",
         "content_language": "Course language",
         "available_languages": "Available course languages",
@@ -26,6 +34,10 @@
         "ar": "Arabic"
     },
     "fr": {
+        "certificate_logo_upload": "Importer le logo du certificat",
+        "certificate_logo_url": "URL du logo du certificat (alternative)",
+        "certificate_logo_hint": "PNG, JPEG ou WebP, 5 Mo et 4096 × 4096 pixels maximum. Enregistrez ensuite le cours.",
+        "certificate_logo_failed": "Le logo n’a pas pu être importé. Veuillez réessayer.",
         "all_languages": "Toutes les langues",
         "content_language": "Langue du cours",
         "available_languages": "Langues disponibles",
@@ -39,6 +51,10 @@
         "ar": "arabe"
     },
     "ar": {
+        "certificate_logo_upload": "رفع شعار الشهادة",
+        "certificate_logo_url": "رابط شعار الشهادة (بديل)",
+        "certificate_logo_hint": "PNG أو JPEG أو WebP، حتى 5 ميغابايت و4096 × 4096 بكسل. احفظ الدورة بعد الرفع.",
+        "certificate_logo_failed": "تعذر رفع الشعار. يرجى المحاولة مجددًا.",
         "all_languages": "كل اللغات",
         "content_language": "لغة الدورة",
         "available_languages": "لغات الدورة المتاحة",

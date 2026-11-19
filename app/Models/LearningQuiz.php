@@ -15,12 +15,16 @@ class LearningQuiz extends Model
         'title',
         'description',
         'pass_percent',
+        'revision',
+        'schema_version',
     ];
 
     protected function casts(): array
     {
         return [
             'pass_percent' => 'integer',
+            'revision' => 'integer',
+            'schema_version' => 'integer',
         ];
     }
 

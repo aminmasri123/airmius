@@ -9,7 +9,11 @@ import 'package:airmius/core/airmius_service_container.dart';
 import 'package:airmius/core/airmius_services_scope.dart';
 import 'package:airmius/screens/club_tasks_screen.dart';
 
-Future<void> openCalendar(WidgetTester tester, AirmiusLanguage language) async {
+Future<void> openCalendar(
+  WidgetTester tester,
+  AirmiusLanguage language, {
+  double textScale = 1,
+}) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
@@ -31,6 +35,12 @@ Future<void> openCalendar(WidgetTester tester, AirmiusLanguage language) async {
           locale: language.locale,
           supportedLocales: AirmiusLanguage.values.map((value) => value.locale),
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
           home: const ClubTasksScreen(clubId: 7, initialCalendar: true),
         ),
       ),
@@ -40,6 +50,121 @@ Future<void> openCalendar(WidgetTester tester, AirmiusLanguage language) async {
 }
 
 void main() {
+  testWidgets(
+    'month grid selects days, preserves all entries and keeps add button outside content',
+    (tester) async {
+      await openCalendar(tester, AirmiusLanguage.en);
+      final now = DateTime.now();
+      final loc = MaterialLocalizations.of(
+        tester.element(find.byType(ClubTasksScreen)),
+      );
+      await tester.tap(find.text('Month'));
+      await tester.pumpAndSettle();
+      final grid = tester.widget<GridView>(
+        find.byKey(const ValueKey('calendar-month-grid')),
+      );
+      expect(
+        (grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount)
+            .crossAxisCount,
+        7,
+      );
+      final length = DateUtils.getDaysInMonth(now.year, now.month);
+      for (var day = 1; day <= length; day++) {
+        expect(
+          find.byKey(ValueKey('calendar-day-${now.year}-${now.month}-$day')),
+          findsOneWidget,
+        );
+      }
+      final other = DateTime(now.year, now.month, now.day == 1 ? 2 : 1);
+      final day = find.byKey(
+        ValueKey('calendar-day-${other.year}-${other.month}-${other.day}'),
+      );
+      await tester.ensureVisible(day);
+      await tester.tap(day);
+      await tester.pumpAndSettle();
+      expect(find.text(loc.formatFullDate(other)), findsOneWidget);
+      expect(find.text('Deadline 8'), findsNothing);
+      final today = find.byKey(const ValueKey('calendar-today'));
+      await tester.ensureVisible(today);
+      await tester.tap(today);
+      await tester.pumpAndSettle();
+      expect(find.text('Deadline 8'), findsOneWidget);
+      expect(find.text('Calendar event'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Calendar event'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      final lastEntry = tester.getRect(find.text('Calendar event'));
+      final footer = tester.getRect(
+        find.byKey(const ValueKey('calendar-add-task')),
+      );
+      expect(lastEntry.bottom, lessThan(footer.top));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'week strip shows seven days and year tiles open the selected month',
+    (tester) async {
+      await openCalendar(tester, AirmiusLanguage.en);
+      final now = DateTime.now();
+      final strip = find.byKey(const ValueKey('calendar-week-strip'));
+      expect(
+        find.descendant(
+          of: strip,
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w.key is ValueKey<String> &&
+                (w.key as ValueKey<String>).value.startsWith('calendar-day-'),
+          ),
+        ),
+        findsNWidgets(7),
+      );
+      expect(find.text('Deadline 8'), findsOneWidget);
+      expect(find.text('No events or deadlines.'), findsNothing);
+      await tester.tap(find.text('Year'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('calendar-year-grid')), findsOneWidget);
+      for (var month = 1; month <= 12; month++) {
+        expect(find.byKey(ValueKey('calendar-month-$month')), findsOneWidget);
+      }
+      final tile = find.byKey(ValueKey('calendar-month-${now.month}'));
+      expect(
+        find.descendant(of: tile, matching: find.text('10')),
+        findsOneWidget,
+      );
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('calendar-month-grid')), findsOneWidget);
+      expect(
+        find.text(
+          MaterialLocalizations.of(
+            tester.element(find.byType(ClubTasksScreen)),
+          ).formatMonthYear(now),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('calendar grids support large text on a narrow phone', (
+    tester,
+  ) async {
+    await openCalendar(tester, AirmiusLanguage.de, textScale: 2);
+    for (final label in ['Tag', 'Woche', 'Monat', 'Jahr']) {
+      final chip = find.widgetWithText(ChoiceChip, label);
+      await tester.ensureVisible(chip);
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: label);
+    }
+  });
+
   for (final language in AirmiusLanguage.values) {
     testWidgets('all calendar modes fit a phone in ${language.name}', (
       tester,

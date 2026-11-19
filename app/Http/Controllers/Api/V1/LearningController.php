@@ -16,6 +16,7 @@ use App\Models\LearningLessonProgress;
 use App\Models\LearningQuiz;
 use App\Models\LearningQuizAttempt;
 use App\Models\UserBadge;
+use App\Services\Learning\AssessmentSchema;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningProgressService;
 use App\Services\LearningCourseTranslationService;
@@ -209,14 +210,10 @@ class LearningController extends Controller
                         'title' => $quiz->title,
                         'description' => $quiz->description,
                         'pass_percent' => $quiz->pass_percent,
+                        'revision' => $quiz->revision,
                         'locked' => $locked,
                         'attempt' => $this->attemptData($quizAttempts->get($quiz->id)),
-                        'questions' => $locked ? [] : $quiz->questions->map(fn ($question) => [
-                            'id' => $question->id,
-                            'question' => $question->question,
-                            'options' => $question->options ?: [],
-                            'position' => $question->position,
-                        ])->values(),
+                        'questions' => $locked ? [] : $quiz->questions->map(fn ($question) => app(AssessmentSchema::class)->publicQuestion($question->toArray()))->values(),
                     ];
                 })->values(),
                 'assignments' => $course->assignments->map(function (LearningAssignment $assignment) use ($enrollment, $isTutor, $submissions) {
@@ -232,6 +229,8 @@ class LearningController extends Controller
                         'learning_lesson_id' => $assignment->learning_lesson_id,
                         'title' => $assignment->title,
                         'instructions' => $locked ? null : $assignment->instructions,
+                        'revision' => $assignment->revision,
+                        'questions' => $locked ? [] : collect($assignment->questions ?: [])->map(fn ($q) => app(AssessmentSchema::class)->publicQuestion($q))->values(),
                         'points' => $assignment->points,
                         'is_required' => $assignment->is_required,
                         'locked' => $locked,
@@ -240,6 +239,9 @@ class LearningController extends Controller
                             'status' => $submission->status,
                             'score' => $submission->score,
                             'feedback' => $submission->feedback,
+                            'body' => $submission->body,
+                            'attachment_url' => $submission->attachment_url,
+                            'answers' => $submission->answers,
                             'submitted_at' => optional($submission->submitted_at)->toIso8601String(),
                         ] : null,
                     ];
@@ -366,20 +368,21 @@ class LearningController extends Controller
             $lesson = LearningLesson::query()->findOrFail($quiz->learning_lesson_id);
             abort_if($this->learningProgress->dripLocked($lesson, $enrollment), 403, __('learning.errors.quiz_locked'));
         }
-        $data = $request->validate(['answers' => ['required', 'array']]);
+        $data = $request->validate(['answers' => ['required', 'array'], 'quiz_revision' => ['nullable', 'integer', 'min:1']]);
         $attempt = $this->learningProgress->submitQuiz(
             $course,
             $enrollment,
             $quiz,
             $request->user(),
             $data['answers'],
+            $data['quiz_revision'] ?? null,
         );
 
         return response()->json([
             'data' => $this->attemptData($attempt),
-            'message' => $attempt->passed
+            'message' => $attempt->review_status === 'pending' ? __('learning_assessment.pending_review') : ($attempt->passed
                 ? __('learning.responses.quiz_passed')
-                : __('learning.responses.quiz_failed'),
+                : __('learning.responses.quiz_failed')),
         ], 201);
     }
 
@@ -399,8 +402,9 @@ class LearningController extends Controller
             'body' => ['nullable', 'string', 'max:10000'],
             'attachment_url' => ['nullable', 'url', 'max:500'],
         ]);
+        $structured = app(AssessmentSchema::class)->assignmentSubmission($request, $assignment);
         abort_if(
-            blank($data['body'] ?? null) && blank($data['attachment_url'] ?? null),
+            empty($structured) && blank($data['body'] ?? null) && blank($data['attachment_url'] ?? null),
             422,
             __('learning.errors.submission_required'),
         );
@@ -410,6 +414,7 @@ class LearningController extends Controller
         ], [
             'user_id' => $request->user()->id,
             'body' => $data['body'] ?? null,
+            ...$structured,
             'attachment_url' => $data['attachment_url'] ?? null,
             'status' => 'submitted',
             'submitted_at' => now(),
@@ -598,6 +603,8 @@ class LearningController extends Controller
             'id' => $attempt->id,
             'score_percent' => $attempt->score_percent,
             'passed' => $attempt->passed,
+            'review_status' => $attempt->review_status,
+            'feedback' => $attempt->feedback,
             'submitted_at' => optional($attempt->submitted_at)->toIso8601String(),
         ] : null;
     }

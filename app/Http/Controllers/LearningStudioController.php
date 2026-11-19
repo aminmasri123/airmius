@@ -11,13 +11,17 @@ use App\Models\LearningEnrollment;
 use App\Models\LearningLesson;
 use App\Models\LearningLessonComment;
 use App\Models\LearningQuiz;
+use App\Models\LearningQuizAttempt;
 use App\Models\LearningQuizQuestion;
 use App\Models\LearningSecurityEvent;
 use App\Models\MarketplaceProduct;
 use App\Models\User;
+use App\Services\Learning\AssessmentSchema;
+use App\Services\Learning\LearningDeletionService;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningOfferEvaluationService;
 use App\Services\Learning\LearningProgressService;
+use App\Services\Learning\QuizAssessmentService;
 use App\Services\LearningCourseTranslationService;
 use App\Services\MediaOptimizer;
 use App\Support\AppNotification;
@@ -72,6 +76,7 @@ class LearningStudioController extends Controller
                             'sections.lessons.comments.replies.user:id,name,email,profile_photo_path',
                             'sections.lessons.assignments.submissions.user:id,name,email,profile_photo_path',
                             'quizzes.questions',
+                            'quizzes.attempts.user:id,name,email',
                             'enrollments.user:id,name,email,profile_photo_path',
                             'enrollments.lessonProgress',
                             'enrollments.quizAttempts',
@@ -167,6 +172,29 @@ class LearningStudioController extends Controller
         }
 
         return back()->with('success', __('learning.responses.course_saved'));
+    }
+
+    public function destroyCourse(Request $request, LearningCourse $course, LearningDeletionService $deletion)
+    {
+        $this->authorizeCourse($request, $course);
+        $request->validate(['confirmation' => ['required', Rule::in(['DELETE'])]]);
+        $deletion->course($course, $request->user());
+
+        return $request->expectsJson()
+            ? response()->json(['message' => __('learning_deletion.course_deleted')])
+            : redirect()->route('auth.learning.studio.index')->with('success', __('learning_deletion.course_deleted'));
+    }
+
+    public function destroySection(Request $request, LearningCourse $course, LearningCourseSection $section, LearningDeletionService $deletion)
+    {
+        $this->authorizeCourse($request, $course);
+        abort_unless($section->learning_course_id === $course->id, 404);
+        $request->validate(['confirmation' => ['required', Rule::in(['DELETE'])]]);
+        $deletion->section($course, $section, $request->user());
+
+        return $request->expectsJson()
+            ? response()->json(['message' => __('learning_deletion.section_deleted')])
+            : back()->with('success', __('learning_deletion.section_deleted'));
     }
 
     public function storeSection(Request $request, LearningCourse $course)
@@ -283,6 +311,9 @@ class LearningStudioController extends Controller
     public function storeQuiz(Request $request, LearningCourse $course)
     {
         $this->authorizeCourse($request, $course);
+        if ($request->exists('questions')) {
+            return $this->saveStructuredQuiz($request, $course);
+        }
 
         $data = $request->validate([
             'learning_lesson_id' => ['nullable', Rule::exists('learning_lessons', 'id')->where('learning_course_id', $course->id)],
@@ -324,6 +355,33 @@ class LearningStudioController extends Controller
         return back()->with('success', __('learning.responses.quiz_created'));
     }
 
+    private function saveStructuredQuiz(Request $request, LearningCourse $course, ?LearningQuiz $quiz = null)
+    {
+        $result = app(QuizAssessmentService::class)->save($request, $course, $quiz);
+
+        return $request->expectsJson()
+            ? response()->json(['data' => $result, 'message' => __('learning_assessment.saved')], $quiz ? 200 : 201)
+            : back()->with('success', __('learning_assessment.saved'));
+    }
+
+    public function updateQuiz(Request $request, LearningCourse $course, LearningQuiz $quiz)
+    {
+        $this->authorizeCourse($request, $course);
+        abort_unless($quiz->learning_course_id === $course->id, 404);
+
+        return $this->saveStructuredQuiz($request, $course, $quiz);
+    }
+
+    public function gradeQuizAttempt(Request $request, LearningCourse $course, LearningQuiz $quiz, LearningQuizAttempt $attempt)
+    {
+        $this->authorizeCourse($request, $course);
+        abort_unless($quiz->learning_course_id === $course->id && $attempt->learning_quiz_id === $quiz->id, 404);
+        app(QuizAssessmentService::class)->grade($request, $attempt);
+        $this->learningProgress->refreshCompletion($course, $attempt->enrollment);
+
+        return $request->expectsJson() ? response()->json(['data' => $attempt->fresh(), 'message' => __('learning_assessment.saved')]) : back()->with('success', __('learning_assessment.saved'));
+    }
+
     public function destroyQuiz(Request $request, LearningCourse $course, LearningQuiz $quiz)
     {
         $this->authorizeCourse($request, $course);
@@ -338,14 +396,31 @@ class LearningStudioController extends Controller
         return back()->with('success', __('learning.responses.quiz_deleted'));
     }
 
+    public function uploadCertificateLogo(Request $request, MediaOptimizer $mediaOptimizer)
+    {
+        $data = $request->validate([
+            'file' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:5120', 'dimensions:max_width=4096,max_height=4096'],
+        ]);
+        $stored = $mediaOptimizer->store($data['file'], 'learning/certificate-logos/'.$request->user()->id);
+
+        return response()->json(['url' => UploadStorage::url($stored['path'])], 201);
+    }
+
     public function uploadAsset(Request $request, LearningCourse $course, MediaOptimizer $mediaOptimizer)
     {
         $this->authorizeCourse($request, $course);
 
         $data = $request->validate([
             'file' => ['required', 'file', 'max:512000'],
-            'purpose' => ['required', Rule::in(['cover', 'lesson_video', 'lesson_attachment'])],
+            'purpose' => ['required', Rule::in(['cover', 'lesson_video', 'lesson_attachment', 'assessment_image'])],
         ]);
+        if ($data['purpose'] === 'assessment_image') {
+            $request->validate(['file' => ['image', 'mimes:png,jpg,jpeg,webp,gif', 'max:10240', 'dimensions:max_width=4096,max_height=4096']]);
+        }
+        $types = $data['purpose'] === 'lesson_video'
+            ? 'mp4,webm,mov,m4v,mkv,avi'
+            : ($data['purpose'] === 'cover' ? 'png,jpg,jpeg,webp,gif' : 'png,jpg,jpeg,webp,gif,pdf,doc,docx,ppt,pptx,xls,xlsx,csv,txt,mp4,webm,mov,m4v,mkv,avi,mp3,wav,ogg,m4a');
+        $request->validate(['file' => ['mimes:'.$types]]);
 
         $stored = $mediaOptimizer->store(
             $data['file'],
@@ -486,6 +561,7 @@ class LearningStudioController extends Controller
 
         $assignment = $course->assignments()->create([
             ...$data,
+            'questions' => $request->exists('questions') ? app(AssessmentSchema::class)->questions($request, false) : null,
             'points' => (int) ($data['points'] ?? 100),
             'is_required' => (bool) ($data['is_required'] ?? true),
         ]);
@@ -498,6 +574,23 @@ class LearningStudioController extends Controller
         }
 
         return back()->with('success', __('learning.responses.assignment_created'));
+    }
+
+    public function updateAssignment(Request $request, LearningCourse $course, LearningAssignment $assignment)
+    {
+        $this->authorizeCourse($request, $course);
+        abort_unless($assignment->learning_course_id === $course->id, 404);
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'], 'instructions' => ['nullable', 'string', 'max:5000'],
+            'points' => ['required', 'integer', 'min:1', 'max:10000'], 'due_after_days' => ['nullable', 'integer', 'min:0', 'max:3650'],
+            'is_required' => ['boolean'], 'learning_lesson_id' => ['nullable', Rule::exists('learning_lessons', 'id')->where('learning_course_id', $course->id)],
+        ]);
+        if ($request->exists('questions')) {
+            $data['questions'] = app(AssessmentSchema::class)->questions($request, false);
+        }
+        $assignment->update([...$data, 'revision' => $assignment->revision + 1]);
+
+        return $request->expectsJson() ? response()->json(['data' => $assignment->fresh(), 'message' => __('learning_assessment.saved')]) : back()->with('success', __('learning_assessment.saved'));
     }
 
     public function gradeAssignment(Request $request, LearningCourse $course, LearningAssignmentSubmission $submission)
@@ -967,6 +1060,7 @@ class LearningStudioController extends Controller
                 'sections.lessons.comments.replies.user:id,name,email,profile_photo_path',
                 'sections.lessons.assignments.submissions.user:id,name,email,profile_photo_path',
                 'quizzes.questions',
+                'quizzes.attempts.user:id,name,email',
                 'enrollments.user:id,name,email,profile_photo_path',
                 'enrollments.lessonProgress',
                 'enrollments.quizAttempts',

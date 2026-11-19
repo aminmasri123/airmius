@@ -18,12 +18,15 @@ class LearningQuizAttempt extends Model
         'score_percent',
         'passed',
         'submitted_at',
+        'question_snapshot', 'manual_grades', 'review_status', 'feedback', 'quiz_revision', 'pass_percent_snapshot',
     ];
 
     protected function casts(): array
     {
         return [
             'answers' => 'array',
+            'question_snapshot' => 'array',
+            'manual_grades' => 'array',
             'correct_question_ids' => 'array',
             'score_percent' => 'integer',
             'passed' => 'boolean',

@@ -10,6 +10,14 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/learning_certificate_logo_field.dart';
+import '../widgets/learning_delete_dialog.dart';
+import '../widgets/learning_lesson_upload_field.dart';
+import '../core/learning_lesson_asset_upload.dart';
+import '../core/learning_assessment.dart';
+import '../widgets/learning_assessment_fields.dart';
+import 'learning_assessment_editor_screen.dart';
+import '../core/learning_certificate_logo_upload.dart';
 
 class LearningStudioCourseSuiteScreen extends StatefulWidget {
   const LearningStudioCourseSuiteScreen({super.key});
@@ -403,6 +411,7 @@ class _LearningStudioCourseSuiteScreenState
               padding: const EdgeInsets.only(bottom: 12),
               child: _SectionCard(
                 section: section,
+                onDeleteSection: () => _deleteContent(course, section: section),
                 onEditLesson: (lesson) => _showLesson(course, sections, lesson),
                 onDeleteLesson: (lesson) =>
                     _confirmDeleteLesson(course, lesson),
@@ -428,18 +437,23 @@ class _LearningStudioCourseSuiteScreenState
                       subtitle: Text(
                         '${_int(quiz['pass_percent'])}% · ${_maps(quiz['questions']).length} ${t('studio.questions')}',
                       ),
-                      trailing: IconButton(
+                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [IconButton(tooltip: assessmentText(context,'edit'), onPressed: () => _showQuiz(course, quiz), icon: const Icon(Icons.edit_outlined)), IconButton(
                         tooltip: t('common.delete'),
                         color: AirmiusColors.red,
                         onPressed: () => _deleteQuiz(course, quiz),
                         icon: const Icon(Icons.delete_outline),
-                      ),
+                      )]),
                     ),
                   )
                   .toList(),
             ),
           ),
         ],
+        for (final quiz in quizzes) for (final attempt in _maps(quiz['attempts']).where((attempt) => attempt['review_status'] == 'pending')) ListTile(
+          title: Text('${_text(_map(attempt['user'])['name'])} · ${_text(quiz['title'])}'),
+          subtitle: Text(assessmentText(context,'pending_review')),
+          trailing: TextButton(onPressed: _busy ? null : () => _gradeQuiz(course,quiz,attempt), child: Text(assessmentText(context,'review'))),
+        ),
         if (assignments.isNotEmpty) ...[
           const SizedBox(height: 12),
           AirmiusPanel(
@@ -450,6 +464,7 @@ class _LearningStudioCourseSuiteScreenState
                   .map(
                     (assignment) => _AssignmentStudioCard(
                       assignment: assignment,
+                      onEdit: () => _showAssignment(course, assignment),
                       onGrade: (submission) =>
                           _gradeAssignment(course, submission),
                     ),
@@ -589,6 +604,13 @@ class _LearningStudioCourseSuiteScreenState
               icon: Icons.edit_outlined,
               onPressed: () => _showCourseEdit(course),
             ),
+            OutlinedButton.icon(
+              key: const ValueKey('learning-delete-course'),
+              style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+              onPressed: _busy ? null : () => _deleteContent(course),
+              icon: const Icon(Icons.delete_forever_outlined),
+              label: Text(learningDeletionText(context, 'remove_course')),
+            ),
             AirmiusButton(
               label: t('studio.uploadCover'),
               icon: Icons.add_photo_alternate_outlined,
@@ -648,7 +670,7 @@ class _LearningStudioCourseSuiteScreenState
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => const _CourseSheet(),
+      builder: (_) => _CourseSheet(uploadLogo: _uploadCertificateLogo),
     );
     if (payload == null || !mounted) return;
     await _run(() async {
@@ -662,7 +684,7 @@ class _LearningStudioCourseSuiteScreenState
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _CourseSheet(course: course),
+      builder: (_) => _CourseSheet(course: course, uploadLogo: _uploadCertificateLogo),
     );
     if (payload == null || !mounted) return;
     final preserved = _preserveCourseFields(course, payload);
@@ -671,6 +693,20 @@ class _LearningStudioCourseSuiteScreenState
           _client.updateLearningStudioCourse(_int(course['id']), preserved),
       success: AirmiusScope.of(context).t('studio.courseSaved'),
     );
+  }
+
+  Future<void> _deleteContent(Map<String, dynamic> course, {Map<String, dynamic>? section}) async {
+    if (_busy) return;
+    final confirmed = await confirmLearningDeletion(context, title: _text((section ?? course)['title']), course: section == null);
+    if (!confirmed || !mounted) return;
+    await _run(() async {
+      if (section == null) {
+        await _client.deleteLearningStudioCourse(_int(course['id']));
+        _selectedCourseId = null;
+      } else {
+        await _client.deleteLearningStudioSection(_int(course['id']), _int(section['id']));
+      }
+    }, success: learningDeletionText(context, section == null ? 'course_deleted' : 'section_deleted'));
   }
 
   Map<String, dynamic> _preserveCourseFields(
@@ -732,7 +768,9 @@ class _LearningStudioCourseSuiteScreenState
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _LessonSheet(sections: sections, lesson: lesson),
+      builder: (_) => _LessonSheet(sections: sections, lesson: lesson,
+        upload: (file, purpose, progress) => uploadLearningLessonAsset(api: _client, courseId: _int(course['id']), file: file, purpose: purpose, onProgress: progress),
+      ),
     );
     if (payload == null || !mounted) return;
     await _run(
@@ -785,18 +823,19 @@ class _LearningStudioCourseSuiteScreenState
     );
   }
 
-  Future<void> _showQuiz(Map<String, dynamic> course) async {
-    final payload = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => const _QuizSheet(),
-    );
-    if (payload == null || !mounted) return;
-    await _run(
-      () async => _client.createLearningStudioQuiz(_int(course['id']), payload),
-      success: AirmiusScope.of(context).t('studio.quizCreated'),
-    );
+  Future<String> _assessmentImage(Map<String,dynamic> course, PlatformFile file) async => (await uploadLearningLessonAsset(api: _client, courseId: _int(course['id']), file: file, purpose: 'assessment_image'))['url'] as String;
+
+  Future<void> _showQuiz(Map<String, dynamic> course, [Map<String,dynamic>? quiz]) async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => LearningAssessmentEditorScreen(assignment: false, initial: quiz, uploadImage: (file) => _assessmentImage(course,file), onSave: (payload) async {
+      if (quiz == null) { await _client.createLearningStudioQuiz(_int(course['id']), payload); }
+      else { await _client.updateLearningStudioQuiz(_int(course['id']),_int(quiz['id']),payload); }
+    })));
+    if (saved == true && mounted) { _toast(assessmentText(context,'saved')); _reload(); }
+  }
+
+  Future<void> _gradeQuiz(Map<String,dynamic> course, Map<String,dynamic> quiz, Map<String,dynamic> attempt) async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => LearningQuizReviewScreen(attempt: attempt, onSave: (payload) async { await _client.gradeLearningStudioQuiz(_int(course['id']),_int(quiz['id']),_int(attempt['id']),payload); })));
+    if (saved == true && mounted) { _toast(assessmentText(context,'saved')); _reload(); }
   }
 
   Future<void> _deleteQuiz(
@@ -831,19 +870,12 @@ class _LearningStudioCourseSuiteScreenState
     );
   }
 
-  Future<void> _showAssignment(Map<String, dynamic> course) async {
-    final payload = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => const _AssignmentSheet(),
-    );
-    if (payload == null || !mounted) return;
-    await _run(
-      () async =>
-          _client.createLearningStudioAssignment(_int(course['id']), payload),
-      success: AirmiusScope.of(context).t('studio.assignmentCreated'),
-    );
+  Future<void> _showAssignment(Map<String, dynamic> course, [Map<String,dynamic>? assignment]) async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => LearningAssessmentEditorScreen(assignment: true, initial: assignment, uploadImage: (file) => _assessmentImage(course,file), onSave: (payload) async {
+      if (assignment == null) { await _client.createLearningStudioAssignment(_int(course['id']),payload); }
+      else { await _client.updateLearningStudioAssignment(_int(course['id']),_int(assignment['id']),payload); }
+    })));
+    if (saved == true && mounted) { _toast(assessmentText(context,'saved')); _reload(); }
   }
 
   Future<void> _gradeAssignment(
@@ -986,6 +1018,12 @@ class _LearningStudioCourseSuiteScreenState
         'Authorization': 'Bearer ${services.authState.session!.token}',
     };
   }
+
+  Future<String> _uploadCertificateLogo(PlatformFile file) => uploadLearningCertificateLogo(
+    api: _client,
+    bytes: file.bytes!,
+    filename: file.name,
+  );
 
   Future<void> _uploadCover(Map<String, dynamic> course) async {
     final t = AirmiusScope.of(context).t;
@@ -1153,11 +1191,13 @@ class _StudioMetric extends StatelessWidget {
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.section,
+    required this.onDeleteSection,
     required this.onEditLesson,
     required this.onDeleteLesson,
     required this.onMoveLesson,
   });
   final Map<String, dynamic> section;
+  final VoidCallback onDeleteSection;
   final ValueChanged<Map<String, dynamic>> onEditLesson;
   final ValueChanged<Map<String, dynamic>> onDeleteLesson;
   final void Function(Map<String, dynamic> lesson, int direction) onMoveLesson;
@@ -1200,6 +1240,16 @@ class _SectionCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 10),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton.icon(
+              key: ValueKey('learning-delete-section-${section['id']}'),
+              style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+              onPressed: onDeleteSection,
+              icon: const Icon(Icons.delete_outline),
+              label: Text(learningDeletionText(context, 'remove_section')),
+            ),
+          ),
           if (lessons.isEmpty)
             Text(
               t('studio.emptySection'),
@@ -1387,10 +1437,12 @@ class _AssignmentStudioCard extends StatelessWidget {
   const _AssignmentStudioCard({
     required this.assignment,
     required this.onGrade,
+    required this.onEdit,
   });
 
   final Map<String, dynamic> assignment;
   final ValueChanged<Map<String, dynamic>> onGrade;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -1403,10 +1455,7 @@ class _AssignmentStudioCard extends StatelessWidget {
         Icons.assignment_outlined,
         color: airmiusAccentColor(context),
       ),
-      title: Text(
-        _text(assignment['title']),
-        style: const TextStyle(fontWeight: FontWeight.w900),
-      ),
+      title: Row(children: [Expanded(child: Text(_text(assignment['title']), style: const TextStyle(fontWeight: FontWeight.w900))), IconButton(tooltip: assessmentText(context,'edit'), onPressed: onEdit, icon: const Icon(Icons.edit_outlined))]),
       subtitle: Text(
         '${_int(assignment['points'])} ${t('studio.points')} · ${submissions.length} ${t('studio.submissions')}',
       ),
@@ -1490,188 +1539,6 @@ class _EnrollmentCard extends StatelessWidget {
   }
 }
 
-class _QuizSheet extends StatefulWidget {
-  const _QuizSheet();
-
-  @override
-  State<_QuizSheet> createState() => _QuizSheetState();
-}
-
-class _QuizSheetState extends State<_QuizSheet> {
-  final _title = TextEditingController();
-  final _description = TextEditingController();
-  final _pass = TextEditingController(text: '70');
-  final _question = TextEditingController();
-  final _options = TextEditingController();
-  final _correct = TextEditingController();
-  final _explanation = TextEditingController();
-
-  @override
-  void dispose() {
-    for (final controller in [
-      _title,
-      _description,
-      _pass,
-      _question,
-      _options,
-      _correct,
-      _explanation,
-    ]) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AirmiusScope.of(context).t;
-    return _Sheet(
-      title: t('studio.addQuiz'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _title,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(labelText: t('studio.quizTitle')),
-          ),
-          TextField(
-            controller: _description,
-            maxLines: 2,
-            decoration: InputDecoration(labelText: t('studio.description')),
-          ),
-          TextField(
-            controller: _pass,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: t('studio.passPercent')),
-          ),
-          const Divider(height: 28),
-          TextField(
-            controller: _question,
-            maxLines: 2,
-            decoration: InputDecoration(labelText: t('studio.question')),
-          ),
-          TextField(
-            controller: _options,
-            maxLines: 4,
-            decoration: InputDecoration(
-              labelText: t('studio.options'),
-              helperText: t('studio.onePerLine'),
-            ),
-          ),
-          TextField(
-            controller: _correct,
-            maxLines: 2,
-            decoration: InputDecoration(
-              labelText: t('studio.correctAnswers'),
-              helperText: t('studio.onePerLine'),
-            ),
-          ),
-          TextField(
-            controller: _explanation,
-            maxLines: 2,
-            decoration: InputDecoration(labelText: t('studio.explanation')),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: _title.text.trim().isEmpty
-                ? null
-                : () => Navigator.pop(context, {
-                    'title': _title.text.trim(),
-                    'description': _nullable(_description.text),
-                    'pass_percent': int.tryParse(_pass.text) ?? 70,
-                    'question': _nullable(_question.text),
-                    'options_text': _nullable(_options.text),
-                    'correct_options_text': _nullable(_correct.text),
-                    'explanation': _nullable(_explanation.text),
-                  }),
-            icon: const Icon(Icons.quiz_outlined),
-            label: Text(t('common.save')),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AssignmentSheet extends StatefulWidget {
-  const _AssignmentSheet();
-
-  @override
-  State<_AssignmentSheet> createState() => _AssignmentSheetState();
-}
-
-class _AssignmentSheetState extends State<_AssignmentSheet> {
-  final _title = TextEditingController();
-  final _instructions = TextEditingController();
-  final _points = TextEditingController(text: '100');
-  final _dueDays = TextEditingController();
-  bool _required = true;
-
-  @override
-  void dispose() {
-    _title.dispose();
-    _instructions.dispose();
-    _points.dispose();
-    _dueDays.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AirmiusScope.of(context).t;
-    return _Sheet(
-      title: t('studio.addAssignment'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _title,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(labelText: t('studio.assignmentTitle')),
-          ),
-          TextField(
-            controller: _instructions,
-            minLines: 3,
-            maxLines: 7,
-            decoration: InputDecoration(labelText: t('studio.instructions')),
-          ),
-          TextField(
-            controller: _points,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: t('studio.points')),
-          ),
-          TextField(
-            controller: _dueDays,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: t('studio.dueDays')),
-          ),
-          SwitchListTile(
-            value: _required,
-            contentPadding: EdgeInsets.zero,
-            title: Text(t('studio.requiredAssignment')),
-            onChanged: (value) => setState(() => _required = value),
-          ),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: _title.text.trim().isEmpty
-                ? null
-                : () => Navigator.pop(context, {
-                    'title': _title.text.trim(),
-                    'instructions': _nullable(_instructions.text),
-                    'points': int.tryParse(_points.text) ?? 100,
-                    'due_after_days': int.tryParse(_dueDays.text),
-                    'is_required': _required,
-                  }),
-            icon: const Icon(Icons.assignment_add),
-            label: Text(t('common.save')),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _GradeSheet extends StatefulWidget {
   const _GradeSheet({required this.submission});
   final Map<String, dynamic> submission;
@@ -1715,6 +1582,8 @@ class _GradeSheetState extends State<_GradeSheet> {
         children: [
           if (_text(widget.submission['body']).isNotEmpty)
             AirmiusPanel(child: Text(_text(widget.submission['body']))),
+          LearningAssessmentAnswersSummary(questions: assessmentMaps(widget.submission['question_snapshot']), answers: Map<String,dynamic>.from(widget.submission['answers'] as Map? ?? {})),
+          const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             initialValue: _status,
             decoration: InputDecoration(labelText: t('studio.status')),
@@ -1733,6 +1602,7 @@ class _GradeSheetState extends State<_GradeSheet> {
             keyboardType: TextInputType.number,
             decoration: InputDecoration(labelText: t('studio.points')),
           ),
+          const SizedBox(height: 16),
           TextField(
             controller: _feedback,
             minLines: 3,
@@ -1843,14 +1713,16 @@ class _CouponSheetState extends State<_CouponSheet> {
 }
 
 class _CourseSheet extends StatefulWidget {
-  const _CourseSheet({this.course});
+  const _CourseSheet({this.course, required this.uploadLogo});
   final Map<String, dynamic>? course;
+  final Future<String> Function(PlatformFile) uploadLogo;
 
   @override
   State<_CourseSheet> createState() => _CourseSheetState();
 }
 
 class _CourseSheetState extends State<_CourseSheet> {
+  bool _uploadingLogo = false;
   final _form = GlobalKey<FormState>();
   late final TextEditingController _title;
   late final TextEditingController _subtitle;
@@ -2164,12 +2036,10 @@ class _CourseSheetState extends State<_CourseSheet> {
               ),
               subtitle: Text(t('studio.certificateDesignHint')),
               children: [
-                TextField(
+                LearningCertificateLogoField(
                   controller: _certificateLogo,
-                  keyboardType: TextInputType.url,
-                  decoration: InputDecoration(
-                    labelText: t('studio.certificateLogo'),
-                  ),
+                  upload: widget.uploadLogo,
+                  onBusy: (value) => setState(() => _uploadingLogo = value),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -2191,7 +2061,7 @@ class _CourseSheetState extends State<_CourseSheet> {
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: () {
+              onPressed: _uploadingLogo ? null : () {
                 if (!(_form.currentState?.validate() ?? false)) return;
                 Navigator.pop(context, {
                   'title': _title.text.trim(),
@@ -2289,7 +2159,8 @@ class _SectionSheetState extends State<_SectionSheet> {
 }
 
 class _LessonSheet extends StatefulWidget {
-  const _LessonSheet({required this.sections, this.lesson});
+  const _LessonSheet({required this.sections, required this.upload, this.lesson});
+  final Future<AirmiusJson> Function(PlatformFile, String, ValueChanged<double>) upload;
   final List<Map<String, dynamic>> sections;
   final Map<String, dynamic>? lesson;
 
@@ -2309,6 +2180,8 @@ class _LessonSheetState extends State<_LessonSheet> {
   late int _sectionId;
   String _type = 'lesson';
   bool _preview = false;
+  bool _uploadingVideo = false, _uploadingAttachments = false;
+  bool get _uploading => _uploadingVideo || _uploadingAttachments;
 
   @override
   void initState() {
@@ -2395,7 +2268,7 @@ class _LessonSheetState extends State<_LessonSheet> {
                         ),
                       )
                       .toList(),
-              onChanged: (value) => setState(() => _type = value ?? 'lesson'),
+              onChanged: _uploading ? null : (value) => setState(() => _type = value ?? 'lesson'),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -2416,7 +2289,10 @@ class _LessonSheetState extends State<_LessonSheet> {
                 decoration: InputDecoration(labelText: t('studio.videoUrl')),
                 keyboardType: TextInputType.url,
               ),
+              LearningLessonUploadField(controller: _video, video: true, upload: widget.upload, enabled: !_uploading, onBusy: (value) => setState(() => _uploadingVideo = value)),
             ],
+            const SizedBox(height: 12),
+            LearningLessonUploadField(controller: _attachments, video: false, upload: widget.upload, enabled: !_uploading, onBusy: (value) => setState(() => _uploadingAttachments = value)),
             const SizedBox(height: 12),
             TextField(
               controller: _duration,
@@ -2462,7 +2338,7 @@ class _LessonSheetState extends State<_LessonSheet> {
             ),
             const SizedBox(height: 14),
             FilledButton.icon(
-              onPressed: () {
+              onPressed: _uploading ? null : () {
                 if (!(_form.currentState?.validate() ?? false)) return;
                 Navigator.pop(context, {
                   'learning_course_section_id': _sectionId,

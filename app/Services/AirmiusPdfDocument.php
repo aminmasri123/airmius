@@ -5,19 +5,58 @@ namespace App\Services;
 class AirmiusPdfDocument
 {
     public const PAGE_WIDTH = 595;
+
     public const PAGE_HEIGHT = 842;
 
     public const NAVY = [15, 23, 42];
+
     public const BLUE = [37, 99, 235];
+
     public const ORANGE = [249, 115, 22];
+
     public const SKY = [239, 246, 255];
+
     public const SLATE = [71, 85, 105];
+
     public const MUTED = [100, 116, 139];
+
     public const BORDER = [226, 232, 240];
+
     public const SURFACE = [248, 250, 252];
+
     public const SURFACE_MUTED = [242, 247, 253];
 
     private string $content = '';
+
+    private array $images = [];
+
+    public function image(string $bytes, float $x, float $y, float $width, float $height): self
+    {
+        if (! function_exists('imagecreatefromstring')) {
+            return $this;
+        }
+        $source = @imagecreatefromstring($bytes);
+        if (! $source) {
+            return $this;
+        }
+        $scale = min($width / imagesx($source), $height / imagesy($source));
+        $w = max(1, (int) round(imagesx($source) * $scale * 4));
+        $h = max(1, (int) round(imagesy($source) * $scale * 4));
+        $target = imagecreatetruecolor($w, $h);
+        imagefill($target, 0, 0, imagecolorallocate($target, 255, 255, 255));
+        imagecopyresampled($target, $source, 0, 0, 0, 0, $w, $h, imagesx($source), imagesy($source));
+        ob_start();
+        imagejpeg($target, null, 92);
+        $jpeg = ob_get_clean();
+        imagedestroy($target);
+        imagedestroy($source);
+        $name = 'Im'.(count($this->images) + 1);
+        $this->images[] = ['name' => $name, 'bytes' => $jpeg, 'width' => $w, 'height' => $h];
+        $this->fillColor(255, 255, 255)->rect($x, $y, $width, $height, true);
+        $this->content .= 'q '.$this->num($w / 4).' 0 0 '.$this->num($h / 4).' '.$this->num($x + ($width - $w / 4) / 2).' '.$this->num($y + ($height - $h / 4) / 2).' cm /'.$name." Do Q\n";
+
+        return $this;
+    }
 
     public function header(
         string $title,
@@ -26,8 +65,7 @@ class AirmiusPdfDocument
         ?string $brandName = null,
         string $documentLabel = 'Rechnungsnummer',
         string $documentType = 'invoice'
-    ): self
-    {
+    ): self {
         $brand = trim((string) ($brandName ?: 'Airmius'));
         $brandBadge = $this->brandBadge($brand);
         $subtitleText = trim($subtitle) === '' ? ' ' : $subtitle;
@@ -273,14 +311,22 @@ class AirmiusPdfDocument
 
     public function render(): string
     {
+        $imageResources = '';
+        foreach ($this->images as $index => $image) {
+            $imageResources .= '/'.$image['name'].' '.($index + 7).' 0 R ';
+        }
         $objects = [
             "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
             "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
-            "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ".self::PAGE_WIDTH.' '.self::PAGE_HEIGHT."] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>\nendobj\n",
+            "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ".self::PAGE_WIDTH.' '.self::PAGE_HEIGHT.'] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> /XObject << '.$imageResources.">> >> /Contents 6 0 R >>\nendobj\n",
             "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n",
             "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj\n",
             "6 0 obj\n<< /Length ".strlen($this->content)." >>\nstream\n".$this->content."\nendstream\nendobj\n",
         ];
+
+        foreach ($this->images as $index => $image) {
+            $objects[] = ($index + 7)." 0 obj\n<< /Type /XObject /Subtype /Image /Width ".$image['width'].' /Height '.$image['height'].' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '.strlen($image['bytes'])." >>\nstream\n".$image['bytes']."\nendstream\nendobj\n";
+        }
 
         $pdf = "%PDF-1.4\n";
         $offsets = [0];

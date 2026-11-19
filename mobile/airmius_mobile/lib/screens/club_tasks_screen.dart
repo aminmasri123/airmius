@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_club_task_attachment_service.dart';
@@ -444,16 +445,27 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(_t('clubTasks.title'))),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _saving || _loading || _error != null ? null : () => _edit(),
-        icon: const Icon(Icons.add_task_outlined),
-        label: Text(_t('clubTasks.add')),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: FilledButton.icon(
+            key: const ValueKey('calendar-add-task'),
+            onPressed: _saving || _loading || _error != null
+                ? null
+                : () => _edit(),
+            icon: const Icon(Icons.add_task_outlined),
+            label: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(_t('clubTasks.add')),
+            ),
+          ),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           children: [
             if (_loading) const LinearProgressIndicator(),
             Wrap(
@@ -476,7 +488,9 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
                   leading: const Icon(Icons.domain_outlined),
                   title: Text(club.name),
                   subtitle: Text(
-                    '${_t('clubTasks.activeClub')}\n${_t('clubTasks.context.hint')}',
+                    _t('clubTasks.activeClub'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   trailing: const Icon(Icons.expand_more),
                 ),
@@ -485,12 +499,17 @@ class _ClubTasksScreenState extends State<ClubTasksScreen> {
             ],
             if (_view == _ClubTaskView.calendar) ...[
               _ClubTaskCalendar(
-                tasks: _tasks,
+                tasks: scopedTasks.toList(),
                 events: _events,
                 view: _calendarView,
                 cursor: _calendarCursor,
                 t: _t,
                 onViewChanged: (value) => setState(() => _calendarView = value),
+                onSelect: (date, view) => setState(() {
+                  _calendarCursor = date;
+                  _calendarView = view;
+                }),
+                onOpenTask: _showDetails,
                 onMove: (delta) => setState(() {
                   _calendarCursor = switch (_calendarView) {
                     _ClubCalendarView.day => DateTime(
@@ -1231,6 +1250,8 @@ class _ClubTaskCalendar extends StatelessWidget {
     required this.t,
     required this.onViewChanged,
     required this.onMove,
+    required this.onSelect,
+    required this.onOpenTask,
   });
 
   final List<AirmiusJson> tasks;
@@ -1240,24 +1261,15 @@ class _ClubTaskCalendar extends StatelessWidget {
   final String Function(String key) t;
   final ValueChanged<_ClubCalendarView> onViewChanged;
   final ValueChanged<int> onMove;
+  final void Function(DateTime, _ClubCalendarView) onSelect;
+  final ValueChanged<AirmiusJson> onOpenTask;
 
   @override
   Widget build(BuildContext context) {
     final items = _calendarItems();
-    final days = switch (view) {
-      _ClubCalendarView.day => [_dateOnly(cursor)],
-      _ClubCalendarView.week => _weekDays(cursor),
-      _ClubCalendarView.month => List.generate(
-        DateUtils.getDaysInMonth(cursor.year, cursor.month),
-        (index) => DateTime(cursor.year, cursor.month, index + 1),
-      ),
-      _ClubCalendarView.year => List.generate(
-        12,
-        (index) => DateTime(cursor.year, index + 1),
-      ),
-    };
+    final localizations = MaterialLocalizations.of(context);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Wrap(
           spacing: 8,
@@ -1272,17 +1284,26 @@ class _ClubTaskCalendar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
+        Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: TextButton(
+            key: const ValueKey('calendar-today'),
+            onPressed: () => onSelect(_dateOnly(DateTime.now()), view),
+            child: Text(localizations.currentDateLabel),
+          ),
+        ),
         Row(
           children: [
             IconButton.filledTonal(
               tooltip: MaterialLocalizations.of(context).previousPageTooltip,
               onPressed: () => onMove(-1),
-              icon: const Icon(Icons.chevron_left),
+              icon: const BackButtonIcon(),
             ),
             Expanded(
               child: Center(
                 child: Text(
                   _rangeLabel(context),
+                  textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -1290,29 +1311,234 @@ class _ClubTaskCalendar extends StatelessWidget {
             IconButton.filledTonal(
               tooltip: MaterialLocalizations.of(context).nextPageTooltip,
               onPressed: () => onMove(1),
-              icon: const Icon(Icons.chevron_right),
+              icon: Transform.flip(flipX: true, child: const BackButtonIcon()),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        for (final day in days)
+        if (view == _ClubCalendarView.week) _weekStrip(context, items),
+        if (view == _ClubCalendarView.month) _monthGrid(context, items),
+        if (view == _ClubCalendarView.year)
+          _yearGrid(context, items)
+        else ...[
+          const SizedBox(height: 12),
           _CalendarBucket(
-            title: view == _ClubCalendarView.year
-                ? MaterialLocalizations.of(context).formatMonthYear(day)
-                : MaterialLocalizations.of(context).formatFullDate(day),
-            items: items
-                .where(
-                  (item) => view == _ClubCalendarView.year
-                      ? item.date.year == day.year &&
-                            item.date.month == day.month
-                      : _sameDay(item.date, day),
-                )
-                .toList(),
+            title: localizations.formatFullDate(cursor),
+            items: items.where((item) => _sameDay(item.date, cursor)).toList(),
             t: t,
           ),
+        ],
       ],
     );
   }
+
+  List<DateTime> _localizedWeek(BuildContext context) {
+    final first = MaterialLocalizations.of(context).firstDayOfWeekIndex;
+    final offset = (cursor.weekday % 7 - first + 7) % 7;
+    final start = DateTime(cursor.year, cursor.month, cursor.day - offset);
+    return List.generate(
+      7,
+      (i) => DateTime(start.year, start.month, start.day + i),
+    );
+  }
+
+  Widget _dayCell(
+    BuildContext context,
+    DateTime date,
+    List<_CalendarItem> items, {
+    bool weekday = false,
+  }) {
+    final localizations = MaterialLocalizations.of(context);
+    final selected = _sameDay(date, cursor);
+    final today = _sameDay(date, DateTime.now());
+    final count = items.where((item) => _sameDay(item.date, date)).length;
+    final colors = Theme.of(context).colorScheme;
+    return Semantics(
+      label: '${localizations.formatFullDate(date)}, $count',
+      selected: selected,
+      child: Material(
+        color: selected ? colors.primaryContainer : colors.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: today ? colors.primary : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        child: InkWell(
+          key: ValueKey('calendar-day-${date.year}-${date.month}-${date.day}'),
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => onSelect(date, view),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (weekday)
+                  FittedBox(
+                    child: Text(
+                      DateFormat.E(
+                        Localizations.localeOf(context).toString(),
+                      ).format(date),
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ),
+                FittedBox(
+                  child: Text(
+                    localizations.formatDecimal(date.day),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: selected ? colors.onPrimaryContainer : null,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: 16,
+                  child: count == 0
+                      ? null
+                      : FittedBox(
+                          child: Text(
+                            localizations.formatDecimal(count),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: selected
+                                  ? colors.onPrimaryContainer
+                                  : colors.primary,
+                            ),
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _weekStrip(BuildContext context, List<_CalendarItem> items) => Row(
+    key: const ValueKey('calendar-week-strip'),
+    children: [
+      for (final day in _localizedWeek(context))
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: _dayCell(context, day, items, weekday: true),
+          ),
+        ),
+    ],
+  );
+
+  Widget _monthGrid(BuildContext context, List<_CalendarItem> items) {
+    final localizations = MaterialLocalizations.of(context);
+    final first = DateTime(cursor.year, cursor.month);
+    final offset =
+        (first.weekday % 7 - localizations.firstDayOfWeekIndex + 7) % 7;
+    final length = DateUtils.getDaysInMonth(cursor.year, cursor.month);
+    final cells = ((offset + length) / 7).ceil() * 7;
+    return Column(
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < 7; i++)
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      localizations.narrowWeekdays[(localizations
+                                  .firstDayOfWeekIndex +
+                              i) %
+                          7],
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        GridView.builder(
+          key: const ValueKey('calendar-month-grid'),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            mainAxisExtent: MediaQuery.textScalerOf(context).scale(24) + 32,
+            crossAxisSpacing: 3,
+            mainAxisSpacing: 4,
+          ),
+          itemCount: cells,
+          itemBuilder: (context, index) =>
+              index < offset || index >= offset + length
+              ? const SizedBox.shrink()
+              : _dayCell(
+                  context,
+                  DateTime(cursor.year, cursor.month, index - offset + 1),
+                  items,
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _yearGrid(BuildContext context, List<_CalendarItem> items) =>
+      LayoutBuilder(
+        builder: (context, constraints) => Wrap(
+          key: const ValueKey('calendar-year-grid'),
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (var month = 1; month <= 12; month++)
+              SizedBox(
+                width: (constraints.maxWidth - 10) / 2,
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  child: InkWell(
+                    key: ValueKey('calendar-month-$month'),
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => onSelect(
+                      DateTime(cursor.year, month),
+                      _ClubCalendarView.month,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            MaterialLocalizations.of(
+                              context,
+                            ).formatMonthYear(DateTime(cursor.year, month)),
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Icon(Icons.event_note_outlined, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                MaterialLocalizations.of(context).formatDecimal(
+                                  items
+                                      .where(
+                                        (item) =>
+                                            item.date.year == cursor.year &&
+                                            item.date.month == month,
+                                      )
+                                      .length,
+                                ),
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
 
   List<_CalendarItem> _calendarItems() {
     final result = <_CalendarItem>[];
@@ -1325,6 +1551,7 @@ class _ClubTaskCalendar extends StatelessWidget {
           date: _dateOnly(date),
           type: t('clubTasks.calendar.task'),
           icon: Icons.check_circle_outline,
+          onTap: () => onOpenTask(task),
         ),
       );
     }
@@ -1349,7 +1576,7 @@ class _ClubTaskCalendar extends StatelessWidget {
     return switch (view) {
       _ClubCalendarView.day => localizations.formatFullDate(cursor),
       _ClubCalendarView.week =>
-        '${localizations.formatShortDate(_weekDays(cursor).first)} - ${localizations.formatShortDate(_weekDays(cursor).last)}',
+        '${localizations.formatShortDate(_localizedWeek(context).first)} – ${localizations.formatShortDate(_localizedWeek(context).last)}',
       _ClubCalendarView.month => localizations.formatMonthYear(cursor),
       _ClubCalendarView.year => localizations.formatYear(cursor),
     };
@@ -1381,8 +1608,9 @@ class _CalendarBucket extends StatelessWidget {
             if (items.isEmpty)
               Text(t('clubTasks.calendar.empty'))
             else
-              for (final item in items.take(8))
+              for (final item in items)
                 ListTile(
+                  onTap: item.onTap,
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(item.icon),
@@ -1391,12 +1619,6 @@ class _CalendarBucket extends StatelessWidget {
                     '${item.type} · ${MaterialLocalizations.of(context).formatShortDate(item.date)}',
                   ),
                 ),
-            if (items.length > 8)
-              Text(
-                t(
-                  'clubTasks.calendar.more',
-                ).replaceFirst('{count}', '${items.length - 8}'),
-              ),
           ],
         ),
       ),
@@ -1410,12 +1632,14 @@ class _CalendarItem {
     required this.date,
     required this.type,
     required this.icon,
+    this.onTap,
   });
 
   final String title;
   final DateTime date;
   final String type;
   final IconData icon;
+  final VoidCallback? onTap;
 }
 
 class _ClubTaskEditor extends StatefulWidget {
@@ -1720,6 +1944,7 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                             ),
                             DropdownButtonFormField<String>(
                               initialValue: _assignmentMode,
+                              isExpanded: true,
                               decoration: InputDecoration(
                                 labelText: widget.t('clubTasks.assignmentMode'),
                                 prefixIcon: const Icon(
@@ -1737,6 +1962,7 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
                                         widget.t(
                                           'clubTasks.assignmentMode.$value',
                                         ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   )
@@ -2069,6 +2295,7 @@ class _ChecklistEditorItem extends StatelessWidget {
             const SizedBox(height: 10),
             DropdownButtonFormField<int?>(
               initialValue: item.assignedTo,
+              isExpanded: true,
               decoration: InputDecoration(
                 labelText: t('clubTasks.assignedTo'),
                 prefixIcon: const Icon(Icons.person_outline),
@@ -2076,12 +2303,18 @@ class _ChecklistEditorItem extends StatelessWidget {
               items: [
                 DropdownMenuItem<int?>(
                   value: null,
-                  child: Text(t('clubTasks.unassigned')),
+                  child: Text(
+                    t('clubTasks.unassigned'),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 ...members.map(
                   (member) => DropdownMenuItem<int?>(
                     value: member['id'] as int,
-                    child: Text(_text(member, 'name')),
+                    child: Text(
+                      _text(member, 'name'),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ],
@@ -2462,18 +2695,6 @@ DateTime _dateOnly(DateTime value) =>
 
 bool _sameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
-
-List<DateTime> _weekDays(DateTime cursor) {
-  final start = DateTime(
-    cursor.year,
-    cursor.month,
-    cursor.day - cursor.weekday + 1,
-  );
-  return List.generate(
-    7,
-    (index) => DateTime(start.year, start.month, start.day + index),
-  );
-}
 
 DateTime _shiftCalendarMonths(DateTime cursor, int months) {
   final target = DateTime(cursor.year, cursor.month + months);

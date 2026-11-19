@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/airmius_api_client.dart';
+import '../core/learning_assessment.dart';
+import '../widgets/learning_assessment_fields.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
@@ -265,11 +267,12 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         widget.courseId,
         _lessonInt(quiz['id']),
         answers,
+        revision: (quiz['revision'] as num?)?.toInt(),
       );
       if (!mounted) return;
       final attempt = _lessonMap(response['data']);
       _toast(
-        _lessonBool(attempt['passed'])
+        attempt['review_status'] == 'pending' ? assessmentText(context,'pending_review') : _lessonBool(attempt['passed'])
             ? t('learning.quizPassed')
             : t('learning.quizRetry'),
       );
@@ -299,6 +302,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         _lessonInt(assignment['id']),
         body: _lessonText(payload['body']),
         attachmentUrl: _lessonText(payload['attachment_url']),
+        answers: payload['answers'] is Map ? Map<String,dynamic>.from(payload['answers'] as Map) : null,
+        revision: (assignment['revision'] as num?)?.toInt(),
       );
       if (!mounted) return;
       _toast(t('learning.assignmentSubmitted'));
@@ -941,7 +946,7 @@ class _QuizCard extends StatelessWidget {
                 if (attempt.isNotEmpty) ...[
                   const SizedBox(height: 6),
                   StatusPill(
-                    t('learning.quizScore').replaceFirst(
+                    attempt['review_status'] == 'pending' ? assessmentText(context,'pending_review') : t('learning.quizScore').replaceFirst(
                       '{score}',
                       '${_lessonInt(attempt['score_percent'])}',
                     ),
@@ -949,6 +954,7 @@ class _QuizCard extends StatelessWidget {
                         ? AirmiusColors.green
                         : AirmiusColors.amber,
                   ),
+                  if ('${attempt['feedback'] ?? ''}'.isNotEmpty) Text('${attempt['feedback']}'),
                 ],
               ],
             ),
@@ -1036,7 +1042,8 @@ class _QuizDialog extends StatefulWidget {
 }
 
 class _QuizDialogState extends State<_QuizDialog> {
-  final Map<String, String> _answers = {};
+  final JsonMap _answers = {};
+  String? _error;
 
   @override
   Widget build(BuildContext context) {
@@ -1052,33 +1059,8 @@ class _QuizDialogState extends State<_QuizDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final question in questions) ...[
-                Text(
-                  _lessonText(question['question']),
-                  style: TextStyle(
-                    color: airmiusTextColor(context),
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                RadioGroup<String>(
-                  groupValue: _answers['${_lessonInt(question['id'])}'],
-                  onChanged: (value) => setState(
-                    () => _answers['${_lessonInt(question['id'])}'] = value!,
-                  ),
-                  child: Column(
-                    children: [
-                      for (final option in _lessonStrings(question['options']))
-                        RadioListTile<String>(
-                          value: option,
-                          title: Text(option),
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                    ],
-                  ),
-                ),
-                Divider(height: 24),
-              ],
+              LearningAssessmentAnswerFields(questions: questions, answers: _answers),
+              if (_error != null) Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
           ),
         ),
@@ -1089,8 +1071,11 @@ class _QuizDialogState extends State<_QuizDialog> {
           child: Text(t('cancel')),
         ),
         FilledButton(
-          onPressed: questions.isNotEmpty && _answers.length == questions.length
-              ? () => Navigator.pop(context, JsonMap.from(_answers))
+          onPressed: questions.isNotEmpty
+              ? () {
+                  if (!assessmentAnswersComplete(questions,_answers)) { setState(() => _error = assessmentText(context,'answer_required')); return; }
+                  Navigator.pop(context, JsonMap.from(_answers));
+                }
               : null,
           child: Text(t('learning.submitQuiz')),
         ),
@@ -1109,6 +1094,8 @@ class _AssignmentDialog extends StatefulWidget {
 }
 
 class _AssignmentDialogState extends State<_AssignmentDialog> {
+  final JsonMap _answers = {};
+  String? _error;
   final _body = TextEditingController();
   final _url = TextEditingController();
 
@@ -1146,6 +1133,8 @@ class _AssignmentDialogState extends State<_AssignmentDialog> {
                 ),
               ),
               const SizedBox(height: 14),
+              LearningAssessmentAnswerFields(questions: assessmentMaps(widget.assignment['questions']), answers: _answers),
+              if (_error != null) Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
               TextField(
                 controller: _body,
                 minLines: 4,
@@ -1175,10 +1164,13 @@ class _AssignmentDialogState extends State<_AssignmentDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_body.text.trim().isEmpty && _url.text.trim().isEmpty) return;
+            final questions = assessmentMaps(widget.assignment['questions']);
+            if (questions.isNotEmpty && !assessmentAnswersComplete(questions,_answers)) { setState(() => _error = assessmentText(context,'answer_required')); return; }
+            if (questions.isEmpty && _body.text.trim().isEmpty && _url.text.trim().isEmpty) return;
             Navigator.pop(context, {
               'body': _body.text.trim(),
               'attachment_url': _url.text.trim(),
+              if (questions.isNotEmpty) 'answers': _answers,
             });
           },
           child: Text(t('learning.submitAssignment')),
@@ -1365,10 +1357,6 @@ JsonMap _lessonMap(Object? value) {
 
 List<JsonMap> _lessonMaps(Object? value) => value is List
     ? value.map(_lessonMap).where((item) => item.isNotEmpty).toList()
-    : const [];
-
-List<String> _lessonStrings(Object? value) => value is List
-    ? value.map((item) => '$item').where((item) => item.isNotEmpty).toList()
     : const [];
 
 String _lessonText(Object? value, {String fallback = ''}) {

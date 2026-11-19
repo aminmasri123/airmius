@@ -17,12 +17,15 @@ class LearningAssignment extends Model
         'points',
         'due_after_days',
         'is_required',
+        'questions', 'revision',
     ];
 
     protected function casts(): array
     {
         return [
             'points' => 'integer',
+            'questions' => 'array',
+            'revision' => 'integer',
             'due_after_days' => 'integer',
             'is_required' => 'boolean',
         ];

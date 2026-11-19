@@ -1,4 +1,7 @@
 ﻿<script setup>
+import LearningCertificateLogoField from './LearningCertificateLogoField.vue'
+import { ref } from 'vue'
+const certificateUploading = ref(false)
 defineProps({
     courseForm: { type: Object, required: true },
     courseCategories: { type: Array, default: () => [] },
@@ -12,7 +15,7 @@ defineEmits(['updateCourse', 'uploadCourseCover'])
 <template>
     <article class="surface-card p-5">
         <h2 class="text-lg font-semibold text-primary">Kursdaten und Veröffentlichung</h2>
-        <form class="mt-5 grid gap-4" @submit.prevent="$emit('updateCourse')">
+        <form class="mt-5 grid gap-4" @submit.prevent="!certificateUploading && $emit('updateCourse')">
             <div class="grid gap-3 lg:grid-cols-2">
                 <input v-model="courseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurstitel">
                 <input v-model="courseForm.subtitle" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurzversprechen">
@@ -47,7 +50,7 @@ defineEmits(['updateCourse', 'uploadCourseCover'])
                 <textarea v-model="courseForm.guarantee_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Garantie / Betreuung / Rückfragen"></textarea>
             </div>
             <div class="grid gap-3 lg:grid-cols-3">
-                <input v-model="courseForm.certificate_logo_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zertifikat Logo URL">
+                <LearningCertificateLogoField v-model="courseForm.certificate_logo_url" @busy="certificateUploading = $event" />
                 <input v-model="courseForm.certificate_signature_name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Signatur auf Zertifikat">
                 <input v-model="courseForm.certificate_footer_text" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zertifikat Fusszeile">
             </div>
@@ -69,7 +72,7 @@ defineEmits(['updateCourse', 'uploadCourseCover'])
                 </label>
                 <input v-if="!courseForm.is_free" v-model="courseForm.price" inputmode="decimal" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in Euro">
             </div>
-            <button class="justify-self-start rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="courseForm.processing">
+            <button class="justify-self-start rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="courseForm.processing || certificateUploading">
                 Kursdaten speichern
             </button>
         </form>
