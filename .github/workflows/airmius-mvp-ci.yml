@@ -41,6 +41,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Setup PHP for Ziggy build dependency
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, intl, gd, zip
+          coverage: none
+      - name: Install Composer build dependencies
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts
       - name: Setup Node
         uses: actions/setup-node@v4
         with:

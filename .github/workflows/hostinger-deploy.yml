@@ -17,6 +17,7 @@ jobs:
     # Enable only after the production paths and SSH access have been verified.
     if: vars.HOSTINGER_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -28,18 +29,25 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Install dependencies and test backend
+      - name: Install backend dependencies
         run: |
           composer install --prefer-dist --no-interaction --no-progress
           cp .env.example .env
           php artisan key:generate
-          php artisan test
       - name: Build web assets from this commit
         run: |
           npm ci
           npm run build
           node --test tests/Deployment/buildManifest.test.mjs
           php scripts/deploy/verify-build.php public/build/manifest.json
+      - name: Test backend against the complete build
+        run: php artisan test --log-junit backend-results.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-results-${{ github.sha }}
+          path: backend-results.xml
+          if-no-files-found: ignore
       - name: Package complete application
         env:
           RELEASE_SHA: ${{ github.sha }}
