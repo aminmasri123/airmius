@@ -1,0 +1,35 @@
+HTTP/1.1 405 Method Not Allowed
+Connection: Keep-Alive
+Keep-Alive: timeout=5, max=100
+X-Powered-By: PHP/8.2.36
+Allow: DELETE, OPTIONS
+X-Airmius-Api-Version: v1
+X-Airmius-Contract: 2026-08-08
+X-Airmius-Min-Client-Version: 1.0.0
+X-Request-Id: cf09b42e-d6fe-491c-9049-60556563ba11
+Cache-Control: max-age=0, must-revalidate, no-cache, no-store, private
+Content-Type: application/json
+Content-Language: fr
+X-Airmius-Text-Direction: ltr
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Referrer-Policy: strict-origin-when-cross-origin
+X-Permitted-Cross-Domain-Policies: none
+Permissions-Policy: accelerometer=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(), payment=(self), usb=()
+Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.bunny.net; font-src 'self' data: https://fonts.bunny.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' http: https: ws: wss:; worker-src 'self' blob:; manifest-src 'self'
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+Vary: Origin
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, X-Requested-With, X-Locale, X-Airmius-Locale, X-App-Locale, X-CSRF-TOKEN, X-XSRF-TOKEN
+Access-Control-Expose-Headers: Authorization, Content-Type, Content-Language, ETag, X-Airmius-Api-Version, X-Airmius-Contract, X-Airmius-Min-Client-Version, X-Airmius-Text-Direction, X-Request-Id
+Access-Control-Max-Age: 86400
+Pragma: no-cache
+Expires: 0
+Content-Length: 471
+Date: Thu, 19 Nov 2026 18:36:35 GMT
+Server: LiteSpeed
+platform: hostinger
+panel: hpanel
+Content-Security-Policy: upgrade-insecure-requests
+alt-svc: h3=":443"; ma=2592000, h3-29=":443"; ma=2592000
+
