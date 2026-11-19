@@ -168,7 +168,11 @@ class ClubReceiptUploadService
             throw ValidationException::withMessages(['file' => 'Nur PDF-, JPG-, PNG- und WebP-Belege sind erlaubt.']);
         }
 
-        $sample = file_get_contents($file->getRealPath(), false, null, 0, 8192) ?: '';
+        $path = $file->getRealPath();
+        $sample = $path === false ? false : @file_get_contents($path, false, null, 0, 8192);
+        if ($sample === false) {
+            throw ValidationException::withMessages(['file' => 'Die Sicherheitsprüfung hat die Datei abgelehnt.']);
+        }
         if (str_contains($sample, 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE') || preg_match('/<script\b/i', $sample)) {
             throw ValidationException::withMessages(['file' => 'Die Sicherheitsprüfung hat die Datei abgelehnt.']);
         }

@@ -89,8 +89,22 @@ und verteilt; ein Backend-Deployment aktualisiert keine installierte App.
 
 Der dedizierte Deployment-Schlüssel ist auf Hostinger mit `restrict` autorisiert.
 Die fünf Repository-Secrets wurden verschlüsselt hinterlegt; private Schlüssel und
-Produktionskonfiguration bleiben außerhalb des Repositories. Die Freigabe erfolgt
-nach Einrichtung über `HOSTINGER_DEPLOY_ENABLED=true`.
+Produktionskonfiguration bleiben außerhalb des Repositories. Die Automatik ist
+mit `HOSTINGER_DEPLOY_ENABLED=true` freigegeben. Fehlgeschlagene Tests verhindern
+die Veröffentlichung weiterhin.
 
-Lokale Vorprüfung: Workflow-YAML, Bash-Syntax, Vite-Manifest und vier Tests für
-vollständige/fehlende Assets sowie ungültige Imports/Pfade.
+Die öffentlichen Browserwerte `VITE_APP_NAME`, `VITE_ECHO_ENABLED` und die
+öffentlichen Reverb-/Pusher-Verbindungswerte werden als `HOSTINGER_VITE_*`-Variablen
+im Build verwendet. Anbieter-Geheimnisse und der private Laravel-Anwendungsschlüssel
+werden nicht kopiert. Der aktuell konfigurierte Broadcast-Treiber auf Hostinger
+ist `log`; die Einrichtung eines laufenden WebSocket-Dienstes ist ein eigener Schritt.
+
+Auch die reguläre Backend-CI baut Vite vor den Build-Vertragstests. Temporäre
+Prüfberichte und lokale Hilfsabhängigkeiten unter `tmp/` gehören nicht ins Repository.
+Ein erneuter Lauf für einen bereits aktiven Commit prüft dessen Kennung und `/up`,
+ohne das aktive Release zu überschreiben.
+
+Prüfungen: Workflow-YAML, Bash-Syntax, Vite-Manifest und vier Tests für
+vollständige/fehlende Assets sowie ungültige Imports/Pfade; vollständige Backend-
+Testsuite vor jeder Veröffentlichung. Ein JUnit-Bericht wird auch bei Testfehlern
+als GitHub-Artefakt abgelegt.

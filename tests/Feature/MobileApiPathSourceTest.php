@@ -29,13 +29,17 @@ class MobileApiPathSourceTest extends TestCase
     {
         $client = file_get_contents(base_path('mobile/airmius_mobile/lib/core/airmius_api_client.dart'));
         // Interpolations can contain quoted alternatives inside a Dart string.
+        // Prefix predicates describe response handling, not HTTP requests.
+        $client = preg_replace('~\.startsWith\(([\'"])/api/v1[^\'"]*\1\)~', '.startsWith(ignoredPrefix)', $client);
         preg_match_all('~(?<quote>[\'\"])(?<path>/api/v1(?:(?:\\\\.)|\$\{[^}]*\}|(?!\k<quote>)[^\\\\])*?)\k<quote>~s', $client, $matches);
 
         $normalize = static function (string $path): string {
             $path = str_replace('{slash}', '', $path);
+            $path = preg_replace('/\$\{[^}]*[\'"]\?[^}]*\}/', '', $path);
             $path = preg_replace('/\$\{[^}]+\}/', '{}', $path);
             $path = preg_replace('/\$[A-Za-z_][A-Za-z0-9_]*/', '{}', (string) $path);
             $path = preg_replace('/\{[^}]+\}/', '{}', (string) $path);
+            $path = explode('?', (string) $path, 2)[0];
 
             return preg_replace('#/+#', '/', (string) $path);
         };
@@ -57,6 +61,7 @@ class MobileApiPathSourceTest extends TestCase
     public function test_source_checker_expands_choices_and_accepts_literal_route_parameters_without_accepting_missing_routes(): void
     {
         $this->assertSame(['/api/v1/admin/1/approve', '/api/v1/admin/1/reject'], $this->expandAlternatives('/api/v1/admin/1/${approve ? \'approve\' : \'reject\'}'));
+        $this->assertSame(['/api/v1/tasks', '/api/v1/tasks/$id'], $this->expandAlternatives('/api/v1/tasks${id == null ? \'\' : \'/$id\'}'));
         $routes = ['/api/v1/billing/invoices/{}/{}/question'];
         $this->assertTrue($this->matchesRoute('/api/v1/billing/invoices/club_invoice/{}/question', $routes));
         $this->assertFalse($this->matchesRoute('/api/v1/billing/invoices/club_invoice/{}/missing', $routes));
@@ -64,7 +69,7 @@ class MobileApiPathSourceTest extends TestCase
 
     private function expandAlternatives(string $path): array
     {
-        if (preg_match('/\$\{[^{}]*\?\s*[\'\"]([^\'\"]+)[\'\"]\s*:\s*[\'\"]([^\'\"]+)[\'\"]\}/', $path, $choice)) {
+        if (preg_match('/\$\{[^{}]*\?\s*[\'\"]([^\'\"]*)[\'\"]\s*:\s*[\'\"]([^\'\"]*)[\'\"]\}/', $path, $choice)) {
             return array_merge($this->expandAlternatives(str_replace($choice[0], $choice[1], $path)), $this->expandAlternatives(str_replace($choice[0], $choice[2], $path)));
         }
 

@@ -7,8 +7,13 @@
   "guardianGate.revokedBody": "Tes parents ont retiré leur accord. Parles-en avec eux. Les fonctionnalités protégées restent bloquées.",
   "guardianGate.parentEmail": "E-mail des parents :",
   "guardianGate.refresh": "Actualiser le statut",
-  "clubDeletion": { "title": "Supprimer le club" },
-  "deletionGuide": { "aboutClub": "Informations sur la suppression d'un club", "aboutAccount": "Informations sur la suppression du compte" },
+  "clubDeletion": {
+    "title": "Supprimer le club"
+  },
+  "deletionGuide": {
+    "aboutClub": "Informations sur la suppression d'un club",
+    "aboutAccount": "Informations sur la suppression du compte"
+  },
   "challenges": {
     "title": "Défis",
     "eyebrow": "Restez motivés ensemble",
@@ -6612,5 +6617,10 @@
     "more_information": "En savoir plus",
     "open": "Ouvrir les paramètres des cookies",
     "close": "Fermer les paramètres des cookies"
-  }
+  },
+  "Austritt beantragen": "Demander à quitter le club",
+  "Austritt ist beantragt": "Départ demandé",
+  "Austritt zurückziehen": "Retirer la demande de départ",
+  "Möchtest du deinen Austrittsantrag wirklich zurückziehen?": "Voulez-vous vraiment retirer votre demande de départ ?",
+  "Kampagne bezahlen": "Payer la campagne"
 }

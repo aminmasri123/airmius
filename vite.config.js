@@ -9,6 +9,8 @@ export default defineConfig(({ mode }) => {
     const devServerUrl = env.VITE_DEV_SERVER_URL;
 
     return {
+        // Locale loaders consume the default catalog, never per-key exports.
+        json: { namedExports: false },
         server: {
             host: devServerHost,
             port: devServerPort,

@@ -62,7 +62,8 @@ class SponsorWorkspaceService
         $global = $user->hasAnyRole(array_merge(Roles::FULL_ACCESS, ['sponsor_manager']))
             || $user->can('system.manage');
         $availableOrganizations = $this->organizations->organizations($user);
-        $currentOrganization = $this->organizations->resolve($user, $requestedSponsorId);
+        $currentOrganization = $this->organizations->resolve($user, $requestedSponsorId, $availableOrganizations)
+            ?? $this->organizations->resolve($user, null, $availableOrganizations);
         $organizationRole = $currentOrganization
             ? $this->organizations->role($user, $currentOrganization)
             : null;
@@ -96,7 +97,7 @@ class SponsorWorkspaceService
         $partnerships = (clone $partnershipQuery)
             ->with([
                 'club:id,name,logo,website_url',
-                'sponsor:id,name,logo,logo_light,website',
+                'sponsor:id,name,owner_user_id,logo,logo_light,website',
                 'sponsor.deliverables.responsible:id,name',
             ])
             ->latest('id')

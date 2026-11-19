@@ -17,6 +17,7 @@ __pycache__/
 /.zed
 /auth.json
 /node_modules
+/tmp/
 /public/hot
 /public/storage
 /storage/*.key

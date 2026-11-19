@@ -75,6 +75,7 @@ class MailCenterControllerTest extends TestCase
 
         $this
             ->actingAs($admin)
+            ->withSession(['auth.password_confirmed_at' => now()->timestamp])
             ->put(route('admin.mail-center.senders.update', 'system'), [
                 'from_address' => 'system@example.test',
                 'from_name' => 'Airmius System',
@@ -102,6 +103,7 @@ class MailCenterControllerTest extends TestCase
         ]);
         $this->grantPermissions($admin, ['system.manage']);
         $admin->assignRole(Role::findOrCreate('super_admin', 'web'));
+        $this->withSession(['auth.password_confirmed_at' => now()->timestamp]);
 
         $this
             ->actingAs($admin)

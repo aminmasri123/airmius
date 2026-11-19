@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\AdCampaign;
 use App\Models\AdCreative;
 use App\Models\AdEvent;
+use App\Models\Club;
 use App\Models\Sponsor;
+use App\Models\SponsorPartnership;
 use App\Models\User;
 use App\Models\WebsiteRequest;
 use App\Services\SponsorWorkspaceService;
@@ -97,13 +99,33 @@ class SponsorAgencyWorkspaceContractTest extends TestCase
         $queries = collect(DB::getQueryLog());
         DB::disableQueryLog();
 
-        $this->assertLessThanOrEqual(16, $queries->count());
+        $this->assertLessThanOrEqual(36, $queries->count(), $queries->pluck('query')->implode("\n"));
         $this->assertSame(1, $queries->filter(fn (array $query) => str_contains(strtolower($query['query']), 'ad_creatives'))->count());
         $this->assertSame(2, $queries->filter(fn (array $query) => str_contains(strtolower($query['query']), 'website_requests'))->count());
         $this->assertCount(2, $payload['assets']);
         $this->assertCount(1, $payload['agency_briefs']);
         $this->assertSame(8, $payload['limits']['agency_briefs']);
         $this->assertSame(24, $payload['limits']['assets']);
+
+        // The complete organization dashboard now includes team, activity and inquiry data.
+        // Keep its query count bounded as the campaign set grows, not only for one fixture.
+        $sponsorId = $payload['current_organization']['id'];
+        foreach (range(1, 20) as $number) {
+            AdCampaign::query()->create([
+                'user_id' => $owner->id, 'sponsor_id' => $sponsorId,
+                'name' => 'Scale campaign '.$number, 'status' => 'draft',
+            ]);
+        }
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        try {
+            app(SponsorWorkspaceService::class)->payload($owner);
+            $scaledQueries = DB::getQueryLog();
+        } finally {
+            DB::disableQueryLog();
+        }
+        $this->assertLessThanOrEqual($queries->count() + 1, count($scaledQueries));
+
     }
 
     public function test_sponsor_workspace_ui_exposes_connected_flow_and_partial_refresh_contract(): void
@@ -161,6 +183,12 @@ class SponsorAgencyWorkspaceContractTest extends TestCase
             'verification_status' => 'verified',
             'starts_at' => now()->subDay(),
             'ends_at' => now()->addMonth(),
+        ]);
+        $partnerClub = Club::factory()->create(['name' => 'Partnerverein']);
+        SponsorPartnership::query()->create([
+            'sponsor_id' => $sponsor->id, 'club_id' => $partnerClub->id,
+            'created_by' => $owner->id, 'status' => SponsorPartnership::STATUS_ACTIVE,
+            'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(),
         ]);
         Sponsor::query()->create([
             'owner_user_id' => $foreign->id,

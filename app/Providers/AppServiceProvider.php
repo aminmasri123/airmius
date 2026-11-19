@@ -47,6 +47,7 @@ use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Events\ConnectionEstablished;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -91,6 +92,27 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        EventFacade::listen(ConnectionEstablished::class, static function (ConnectionEstablished $event): void {
+            if ($event->connection->getDriverName() !== 'sqlite') {
+                return;
+            }
+            $pdo = $event->connection->getPdo();
+            $functions = [
+                'acos' => static fn ($value) => $value === null ? null : acos(max(-1.0, min(1.0, (float) $value))),
+                'cos' => static fn ($value) => $value === null ? null : cos((float) $value),
+                'sin' => static fn ($value) => $value === null ? null : sin((float) $value),
+                'radians' => static fn ($value) => $value === null ? null : deg2rad((float) $value),
+            ];
+            foreach ($functions as $name => $function) {
+                try {
+                    $pdo->query('SELECT '.$name.'(1)');
+                } catch (\PDOException) {
+                    $register = method_exists($pdo, 'createFunction') ? 'createFunction' : 'sqliteCreateFunction';
+                    $pdo->{$register}($name, $function, 1);
+                }
+            }
+        });
+
         if ((bool) config('airmius_monitoring.performance.enabled', false)) {
             EventFacade::listen(QueryExecuted::class, function (QueryExecuted $query): void {
                 app(RequestPerformanceTracker::class)->record($query);

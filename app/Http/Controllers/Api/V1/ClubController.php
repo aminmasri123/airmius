@@ -37,7 +37,9 @@ use App\Services\ClubDonationDonorService;
 use App\Services\ClubFinanceBalanceService;
 use App\Services\ClubFinanceScopeService;
 use App\Services\ClubInvoicePaymentService;
+use App\Services\ClubMemberRemovalService;
 use App\Services\ClubMembershipBankReconciliationService;
+use App\Services\ClubMembershipInvoicePdf;
 use App\Services\ClubMembershipLifecycleService;
 use App\Services\ClubMoneyAccountService;
 use App\Services\ClubOnboardingService;
@@ -1025,7 +1027,7 @@ class ClubController extends Controller
         $receipt = $receipts->store($club, $request->user(), $data['file']);
 
         return response()->json([
-            'message' => 'Beleg geprüft. Bitte OCR-Vorschlag prüfen und die Buchungszuordnung bestätigen.',
+            'message' => __('organization.runtime_copy.receipt_reviewed'),
             'data' => [
                 'receipt_upload' => $this->receiptUploadPayload($receipt),
                 'management' => $this->managementPayload($request, $club->fresh(), true),
@@ -1073,7 +1075,7 @@ class ClubController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'Beleg bestätigt und der Buchung zugeordnet.',
+            'message' => __('organization.runtime_copy.receipt_confirmed'),
             'data' => [
                 'receipt_upload' => $this->receiptUploadPayload($confirmed),
                 'management' => $this->managementPayload($request, $club->fresh(), true),
@@ -1630,7 +1632,8 @@ class ClubController extends Controller
         $memberEmail = $externalMember->email;
         $externalMemberId = $externalMember->id;
         if ($externalMember->linked_user_id) {
-            app(\App\Services\ClubMemberRemovalService::class)->request($club, User::findOrFail($externalMember->linked_user_id), $request->user(), $reason);
+            app(ClubMemberRemovalService::class)->request($club, User::findOrFail($externalMember->linked_user_id), $request->user(), $reason);
+
             return $this->membershipManagementResponse($request, $club, __('member_removal.title'));
         }
         $externalMember->delete();
@@ -1818,7 +1821,7 @@ class ClubController extends Controller
             $invoice,
         );
 
-        return response(app(\App\Services\ClubMembershipInvoicePdf::class)->render($invoice), 200, [
+        return response(app(ClubMembershipInvoicePdf::class)->render($invoice), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="membership-invoice-'.$invoice->id.'.pdf"',
             'Cache-Control' => 'private, no-store',

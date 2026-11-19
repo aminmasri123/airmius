@@ -8,6 +8,7 @@ use App\Models\ClubRoleAssignment;
 use App\Models\ClubRoleDefinition;
 use App\Models\MarketplaceSellerApplication;
 use App\Models\Sponsor;
+use App\Models\SponsorPartnership;
 use App\Models\SubscriptionAddon;
 use App\Models\User;
 use App\Models\WebsiteRequest;
@@ -165,6 +166,11 @@ class CommerceClubPermissionTest extends TestCase
             'club_id' => $club->id,
             'scope' => 'club',
             'name' => 'Club Partner',
+        ]);
+        SponsorPartnership::query()->create([
+            'sponsor_id' => $sponsor->id, 'club_id' => $club->id,
+            'created_by' => $owner->id, 'status' => SponsorPartnership::STATUS_ACTIVE,
+            'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(),
         ]);
         AdCampaign::query()->create([
             'user_id' => $owner->id,

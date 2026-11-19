@@ -107,7 +107,7 @@ class CoreWorkspaceAjaxContractTest extends TestCase
         $this->assertStringNotContainsString("invoiceForm.post(route('auth.club-memberships.invoices.store'", $web);
         $this->assertStringNotContainsString("router.post(route('auth.club-memberships.invoices.payments.store'", $web);
 
-        $this->assertStringContainsString("'billing_period_start': _dateInputForApi(periodStart.text)", $mobile);
+        $this->assertMatchesRegularExpression("/'billing_period_start':\\s*_dateInputForApi\\(\\s*periodStart\\.text\\s*,?\\s*\\)/", $mobile);
         $this->assertStringContainsString('initialInvoiceId: invoice.id', $mobile);
         $this->assertStringContainsString('recordMembershipPayment(club.id, invoiceId, payload)', $mobile);
     }

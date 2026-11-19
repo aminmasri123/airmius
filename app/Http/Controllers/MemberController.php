@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\AccountSuspendedNotification;
 use App\Notifications\InactiveAccountNotice;
 use App\Services\AdminCreatedUserProvisioner;
+use App\Services\UserRoleAssignmentService;
 use App\Support\Roles;
 use App\Support\TransactionalMail;
 use Carbon\Carbon;
@@ -137,7 +138,7 @@ class MemberController extends Controller
 
         if (! $sent) {
             if ($request->expectsJson()) {
-                return response()->json(['message' => 'Inaktivitäts-Mail konnte nicht gesendet werden.'], 422);
+                return response()->json(['message' => __('organization.runtime_copy.inactivity_mail_failed')], 422);
             }
 
             return back()->with('error', 'Inaktivitäts-Mail konnte nicht gesendet werden. Details stehen in der Mail-Zentrale.');
@@ -323,7 +324,7 @@ class MemberController extends Controller
                 403,
                 'Geschützte Plattformrollen dürfen nur von Super-Admins vergeben werden.',
             );
-            app(\App\Services\UserRoleAssignmentService::class)->assign($request->user(), $user, $data['roles']);
+            app(UserRoleAssignmentService::class)->assign($request->user(), $user, $data['roles']);
         }
 
         if ($request->expectsJson()) {

@@ -45,6 +45,7 @@ class MobileOutfitSubscriptionApiTest extends TestCase
             'accepted_terms' => true,
             'accepted_contract' => true,
             'payment_provider' => 'bank_transfer',
+            'selected_size' => 'M',
             'shipping_name' => 'Amina Beispiel',
             'shipping_country' => 'DE',
             'shipping_street' => 'Sportallee',
@@ -131,6 +132,7 @@ class MobileOutfitSubscriptionApiTest extends TestCase
             'accepted_terms' => true,
             'accepted_contract' => true,
             'payment_provider' => 'bank_transfer',
+            'selected_size' => 'M',
         ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('plan');
@@ -167,6 +169,7 @@ class MobileOutfitSubscriptionApiTest extends TestCase
             'outfit_subscription_plan_id' => $plan->id,
             'status' => 'active',
             'payment_provider' => 'bank_transfer',
+            'selected_size' => 'M',
             'payment_status' => 'paid',
             'monthly_price_cents' => $plan->effectiveMonthlyPriceCents(),
             'sponsor_discount_cents' => $plan->sponsor_discount_cents,

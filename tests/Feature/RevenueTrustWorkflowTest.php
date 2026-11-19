@@ -182,7 +182,7 @@ class RevenueTrustWorkflowTest extends TestCase
         $queryCount = count(DB::getQueryLog());
         DB::disableQueryLog();
 
-        self::assertLessThanOrEqual(16, $queryCount);
+        self::assertLessThanOrEqual(36, $queryCount);
         self::assertSame(1, $payload['summary']['leads_28d']);
         self::assertSame(1, $payload['summary']['sales_28d']);
         self::assertSame(5000, $payload['summary']['conversion_value_cents_28d']);

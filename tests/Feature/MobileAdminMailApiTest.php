@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\MailDelivery;
 use App\Models\Club;
+use App\Models\MailDelivery;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
+use App\Notifications\ScheduledCommunicationMail;
+use App\Support\AdminTwoFactor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Notification;
@@ -192,7 +194,7 @@ class MobileAdminMailApiTest extends TestCase
         $delivery->refresh();
         $this->assertSame('sent', $delivery->status);
         $this->assertNotNull($delivery->sent_at);
-        Notification::assertSentTo($recipient, \App\Notifications\ScheduledCommunicationMail::class);
+        Notification::assertSentTo($recipient, ScheduledCommunicationMail::class);
 
         $this->putJson("/api/v1/admin/mail/scheduled/{$delivery->id}/cancel")
             ->assertStatus(409);
@@ -218,7 +220,7 @@ class MobileAdminMailApiTest extends TestCase
             'two_factor_secret' => 'encrypted-test-secret',
             'two_factor_confirmed_at' => now(),
         ])->save();
-        Sanctum::actingAs($admin);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
 
         $this->putJson('/api/v1/admin/mail/senders/system', [
             'from_address' => 'system@example.test',

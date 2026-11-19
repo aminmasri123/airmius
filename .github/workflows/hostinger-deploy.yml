@@ -35,6 +35,18 @@ jobs:
           cp .env.example .env
           php artisan key:generate
       - name: Build web assets from this commit
+        env:
+          VITE_APP_NAME: ${{ vars.HOSTINGER_VITE_APP_NAME }}
+          VITE_ECHO_ENABLED: ${{ vars.HOSTINGER_VITE_ECHO_ENABLED }}
+          VITE_REVERB_APP_KEY: ${{ vars.HOSTINGER_VITE_REVERB_APP_KEY }}
+          VITE_REVERB_HOST: ${{ vars.HOSTINGER_VITE_REVERB_HOST }}
+          VITE_REVERB_PORT: ${{ vars.HOSTINGER_VITE_REVERB_PORT }}
+          VITE_REVERB_SCHEME: ${{ vars.HOSTINGER_VITE_REVERB_SCHEME }}
+          VITE_PUSHER_APP_KEY: ${{ vars.HOSTINGER_VITE_PUSHER_APP_KEY }}
+          VITE_PUSHER_APP_CLUSTER: ${{ vars.HOSTINGER_VITE_PUSHER_APP_CLUSTER }}
+          VITE_PUSHER_HOST: ${{ vars.HOSTINGER_VITE_PUSHER_HOST }}
+          VITE_PUSHER_PORT: ${{ vars.HOSTINGER_VITE_PUSHER_PORT }}
+          VITE_PUSHER_SCHEME: ${{ vars.HOSTINGER_VITE_PUSHER_SCHEME }}
         run: |
           npm ci
           npm run build
@@ -48,6 +60,7 @@ jobs:
           name: backend-results-${{ github.sha }}
           path: backend-results.xml
           if-no-files-found: ignore
+          overwrite: true
       - name: Package complete application
         env:
           RELEASE_SHA: ${{ github.sha }}
@@ -67,6 +80,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: hostinger-${{ github.sha }}
+          overwrite: true
           path: |
             release.tar.gz
             release.tar.gz.sha256

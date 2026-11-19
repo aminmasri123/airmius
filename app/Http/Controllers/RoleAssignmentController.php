@@ -53,6 +53,6 @@ class RoleAssignmentController extends Controller
         ]);
         $service->assign($request->user(), $user, $data['roles'], $data['expected_roles']);
 
-        return response()->json(['data' => $service->snapshot($user->fresh()), 'message' => 'Rollen gespeichert. Die Person wird über Änderungen benachrichtigt.']);
+        return response()->json(['data' => $service->snapshot($user->fresh()), 'message' => __('organization.runtime_copy.roles_saved')]);
     }
 }

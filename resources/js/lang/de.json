@@ -7,8 +7,13 @@
   "guardianGate.revokedBody": "Deine Eltern haben ihre Zustimmung zurückgenommen. Bitte sprich mit ihnen darüber. Die geschützten Funktionen bleiben gesperrt.",
   "guardianGate.parentEmail": "E-Mail der Eltern:",
   "guardianGate.refresh": "Status aktualisieren",
-  "clubDeletion": { "title": "Verein löschen" },
-  "deletionGuide": { "aboutClub": "Informationen zur Vereinslöschung", "aboutAccount": "Informationen zur Kontolöschung" },
+  "clubDeletion": {
+    "title": "Verein löschen"
+  },
+  "deletionGuide": {
+    "aboutClub": "Informationen zur Vereinslöschung",
+    "aboutAccount": "Informationen zur Kontolöschung"
+  },
   "challenges": {
     "title": "Challenges",
     "eyebrow": "Gemeinsam dranbleiben",
@@ -6643,5 +6648,6 @@
     "more_information": "Mehr erfahren",
     "open": "Cookie-Einstellungen öffnen",
     "close": "Cookie-Einstellungen schließen"
-  }
+  },
+  "Kampagne bezahlen": "Kampagne bezahlen"
 }

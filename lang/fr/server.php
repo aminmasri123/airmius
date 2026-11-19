@@ -11,6 +11,7 @@ return [
         'processing' => 'Une demande utilisant cette clé Idempotency-Key est encore en cours de traitement.',
     ],
     'training' => [
+        'session_deleted' => 'La séance d’entraînement a été archivée.',
         'manage_plans_forbidden' => 'Seuls les entraîneurs, propriétaires et présidents de club peuvent créer des plans d’entraînement.',
         'feedback_draft_forbidden' => 'Le feedback est disponible après l’enregistrement de la séance.',
         'feedback_sent' => 'Feedback envoyé.',
@@ -71,6 +72,13 @@ return [
         ],
     ],
     'events' => [
+        'response_deadline_expired' => 'Le délai de réponse pour cet événement est dépassé.',
+        'camp_group_required' => 'Veuillez sélectionner un groupe de stage valide.',
+        'camp_group_full' => 'Ce groupe de stage est déjà complet.',
+        'camp_privacy_notice_required' => 'Veuillez accepter la notice de confidentialité actuelle du stage.',
+        'camp_travel_consent_required' => 'Veuillez confirmer l’autorisation de déplacement requise pour le stage.',
+        'camp_guardian_consent_required' => 'L’autorisation d’un responsable légal est requise pour ce stage.',
+        'camp_emergency_contact_required' => 'Veuillez indiquer un contact d’urgence pour ce stage.',
         'route_not_visible' => 'Cet itinéraire ne vous est pas accessible et ne peut pas être partagé avec l’événement.',
         'notifications' => [
             'club_published_title' => 'Nouvel événement du club',

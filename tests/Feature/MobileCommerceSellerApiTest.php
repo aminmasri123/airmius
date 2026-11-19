@@ -323,6 +323,8 @@ class MobileCommerceSellerApiTest extends TestCase
             ->assertJsonPath('data.status', 'draft');
 
         $campaignId = (int) $campaign->json('data.id');
+        $this->patchJson("/api/v1/commerce/seller/campaigns/{$campaignId}/status", ['status' => 'paused'])->assertUnprocessable();
+        AdCampaign::query()->findOrFail($campaignId)->update(['status' => 'active']);
 
         $this->patchJson("/api/v1/commerce/seller/campaigns/{$campaignId}/status", [
             'status' => 'paused',

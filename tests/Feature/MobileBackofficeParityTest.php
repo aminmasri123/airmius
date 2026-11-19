@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Models\Club;
 use App\Models\CommerceOrder;
 use App\Models\Invoice;
@@ -17,6 +18,7 @@ use App\Models\User;
 use App\Models\UserSubscription;
 use App\Support\AdminTwoFactor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -129,7 +131,8 @@ class MobileBackofficeParityTest extends TestCase
         $ids = [];
         foreach ([1, 2] as $page) {
             $mobile = $this->getJson('/api/v1/admin/backoffice?page='.$page)->assertOk()->json('data');
-            $web = $this->actingAs($user)->get('/admin/invoices?page='.$page, ['X-Inertia' => 'true', 'X-Inertia-Version' => \Inertia\Inertia::getVersion()])->assertOk()->json('props');
+            $version = app(HandleInertiaRequests::class)->version(Request::create('/admin/invoices'));
+            $web = $this->actingAs($user)->get('/admin/invoices?page='.$page, ['X-Inertia' => 'true', 'X-Inertia-Version' => $version])->assertOk()->json('props');
             $this->assertSame(array_column($web['invoices']['data'], 'id'), array_column($mobile['invoices'], 'id'));
             $this->assertSame($web['summary'], $mobile['billing_summary']);
             $this->assertSame($web['invoices']['total'], $mobile['pagination']['invoices']['total']);

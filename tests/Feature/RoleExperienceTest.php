@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\AdCampaign;
+use App\Models\Club;
 use App\Models\Sponsor;
+use App\Models\SponsorPartnership;
 use App\Models\User;
 use Database\Seeders\RolesPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,6 +62,12 @@ class RoleExperienceTest extends TestCase
             'starts_at' => now()->subDay(),
             'ends_at' => now()->addMonth(),
         ]);
+        $partnerClub = Club::factory()->create(['name' => 'Partnerverein']);
+        SponsorPartnership::query()->create([
+            'sponsor_id' => $ownSponsor->id, 'club_id' => $partnerClub->id,
+            'created_by' => $sponsorUser->id, 'status' => SponsorPartnership::STATUS_ACTIVE,
+            'starts_at' => now()->subDay(), 'ends_at' => now()->addMonth(),
+        ]);
         Sponsor::query()->create([
             'owner_user_id' => $foreignUser->id,
             'scope' => 'platform',
@@ -88,7 +96,8 @@ class RoleExperienceTest extends TestCase
             ->assertJsonPath('data.summary.partners', 1)
             ->assertJsonPath('data.summary.campaigns', 1)
             ->assertJsonPath('data.summary.ctr', 5)
-            ->assertJsonPath('data.partners.0.name', 'Eigene Marke')
+            ->assertJsonPath('data.partners.0.name', 'Partnerverein')
+            ->assertJsonPath('data.own_profile.name', 'Eigene Marke')
             ->assertJsonPath('data.campaigns.0.name', 'Eigene Kampagne');
 
         $this->actingAs($sponsorUser)
@@ -125,7 +134,7 @@ class RoleExperienceTest extends TestCase
 
         $this->assertSame(
             3,
-            substr_count($source, "route('auth.commerce.index', { tab: 'ads' })")
+            substr_count($source, "route('auth.commerce.index', { tab: 'ads', sponsor_id: currentOrganization?.id })")
         );
     }
 }

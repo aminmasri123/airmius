@@ -7,8 +7,13 @@
   "guardianGate.revokedBody": "سحب والداك موافقتهما. تحدث معهما بشأن ذلك. تبقى الميزات المحمية محظورة.",
   "guardianGate.parentEmail": "بريد الوالدين:",
   "guardianGate.refresh": "تحديث الحالة",
-  "clubDeletion": { "title": "حذف النادي" },
-  "deletionGuide": { "aboutClub": "معلومات عن حذف النادي", "aboutAccount": "معلومات عن حذف الحساب" },
+  "clubDeletion": {
+    "title": "حذف النادي"
+  },
+  "deletionGuide": {
+    "aboutClub": "معلومات عن حذف النادي",
+    "aboutAccount": "معلومات عن حذف الحساب"
+  },
   "challenges": {},
   "Wie möchtest du Airmius nutzen?": "كيف تريد استخدام Airmius؟",
   "Du erhältst den passenden Startbereich. Weitere Rollen können später durch Vereine oder Administratoren ergänzt werden.": "ستحصل على مساحة البداية المناسبة، ويمكن للأندية أو المسؤولين إضافة أدوار أخرى لاحقًا.",
@@ -6514,5 +6519,10 @@
     "more_information": "معرفة المزيد",
     "open": "فتح إعدادات ملفات تعريف الارتباط",
     "close": "إغلاق إعدادات ملفات تعريف الارتباط"
-  }
+  },
+  "Austritt beantragen": "طلب مغادرة النادي",
+  "Austritt ist beantragt": "تم تقديم طلب المغادرة",
+  "Austritt zurückziehen": "سحب طلب المغادرة",
+  "Möchtest du deinen Austrittsantrag wirklich zurückziehen?": "هل تريد حقًا سحب طلب مغادرتك؟",
+  "Kampagne bezahlen": "دفع الحملة"
 }

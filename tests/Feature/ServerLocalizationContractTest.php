@@ -114,6 +114,7 @@ class ServerLocalizationContractTest extends TestCase
         $event = Event::query()->create([
             'user_id' => $eventOwner->id,
             'title' => 'Full event',
+            'participant_response_deadline_at' => now()->subMinute(),
             'type' => 'training',
             'visibility' => 'public',
             'status' => 'scheduled',
@@ -133,7 +134,7 @@ class ServerLocalizationContractTest extends TestCase
             ->assertUnprocessable()
             ->assertHeader('Content-Language', 'ar')
             ->assertHeader('X-Airmius-Text-Direction', 'rtl')
-            ->assertJsonPath('message', $this->translation('ar', 'events.full'));
+            ->assertJsonPath('message', $this->translation('ar', 'events.response_deadline_expired'));
 
         $groupOwner = User::factory()->create();
         $member = User::factory()->create();

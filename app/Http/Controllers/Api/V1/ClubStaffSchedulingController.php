@@ -98,7 +98,7 @@ class ClubStaffSchedulingController extends Controller
                     'user_id' => $member['id'],
                     'kind' => 'account',
                     'selectable' => true,
-                    'subtitle' => 'Mit Airmius-Konto',
+                    'subtitle' => __('organization.runtime_copy.account_subtitle'),
                 ])
                 ->concat($externalMembers
                     ->whereNull('linked_user_id')
@@ -108,7 +108,7 @@ class ClubStaffSchedulingController extends Controller
                         'name' => $member->name ?: $member->email,
                         'kind' => 'external',
                         'selectable' => false,
-                        'subtitle' => 'Externes Mitglied ohne Airmius-Konto',
+                        'subtitle' => __('organization.runtime_copy.external_subtitle'),
                     ]))
                 ->values(),
             'teams' => Team::query()->where('club_id', $club->id)->orderBy('name')->get(['id', 'name']),
@@ -169,9 +169,9 @@ class ClubStaffSchedulingController extends Controller
 
         if ($this->hasBlockingConflicts($conflicts) && ! $request->boolean('force')) {
             return response()->json([
-                'message' => 'Assignment has blocking calendar, availability, or qualification conflicts.',
+                'message' => __('organization.runtime_copy.staff_conflicts'),
                 'errors' => [
-                    'conflicts' => ['Assignment has blocking calendar, availability, or qualification conflicts.'],
+                    'conflicts' => [__('organization.runtime_copy.staff_conflicts')],
                 ],
                 'data' => [
                     'conflicts' => $conflicts,
@@ -253,7 +253,7 @@ class ClubStaffSchedulingController extends Controller
             $this->shiftSlots($club, $assignment)->delete();
         });
 
-        return response()->json(['message' => 'Einsatz wurde gelöscht.']);
+        return response()->json(['message' => __('organization.runtime_copy.shift_deleted')]);
     }
 
     public function commentAssignment(Request $request, Club $club, ClubStaffAssignment $assignment)
@@ -327,15 +327,15 @@ class ClubStaffSchedulingController extends Controller
             'requested_by' => $request->user()->id,
             'note' => $data['note'] ?? null,
         ]);
-        AppNotification::send($data['target_user_id'], 'club.staff.alternative_offered', [
-            'title' => 'Alternativer Einsatz vorgeschlagen',
-            'body' => "Der Verein schlägt dir den Einsatz {$assignment->role} vor.",
-            'club_id' => $club->id,
-            'change_request_id' => $changeRequest->id,
-            'url' => "/club-staff-scheduling?club_id={$club->id}",
-            'mobile_url' => "airmius://clubs/{$club->id}/staff-scheduling",
-            'deep_link' => "airmius://clubs/{$club->id}/staff-scheduling",
-        ]);
+        AppNotification::sendLocalized($data['target_user_id'], 'club.staff.alternative_offered',
+            'organization.runtime_copy.alternative_title', 'organization.runtime_copy.alternative_body',
+            ['role' => $assignment->role], [
+                'club_id' => $club->id,
+                'change_request_id' => $changeRequest->id,
+                'url' => "/club-staff-scheduling?club_id={$club->id}",
+                'mobile_url' => "airmius://clubs/{$club->id}/staff-scheduling",
+                'deep_link' => "airmius://clubs/{$club->id}/staff-scheduling",
+            ]);
 
         return response()->json(['data' => $this->changeRequestPayload($changeRequest->load(['requester:id,name', 'target:id,name']))], 201);
     }
@@ -895,15 +895,15 @@ class ClubStaffSchedulingController extends Controller
             return;
         }
         User::query()->whereIn('id', $this->audienceRecipientIds($club, $assignment))->whereKeyNot($actorId)->get()->each(
-            fn (User $recipient) => AppNotification::send($recipient, 'club.staff.shift_published', [
-                'title' => 'Neuer Einsatz verfügbar',
-                'body' => "{$assignment->role} sucht Unterstützung.",
-                'club_id' => $club->id,
-                'assignment_id' => $assignment->id,
-                'url' => "/club-staff-scheduling?club_id={$club->id}",
-                'mobile_url' => "airmius://clubs/{$club->id}/staff-scheduling",
-                'deep_link' => "airmius://clubs/{$club->id}/staff-scheduling",
-            ]),
+            fn (User $recipient) => AppNotification::sendLocalized($recipient, 'club.staff.shift_published',
+                'organization.runtime_copy.published_title', 'organization.runtime_copy.published_body',
+                ['role' => $assignment->role], [
+                    'club_id' => $club->id,
+                    'assignment_id' => $assignment->id,
+                    'url' => "/club-staff-scheduling?club_id={$club->id}",
+                    'mobile_url' => "airmius://clubs/{$club->id}/staff-scheduling",
+                    'deep_link' => "airmius://clubs/{$club->id}/staff-scheduling",
+                ]),
         );
     }
 
@@ -1037,9 +1037,9 @@ class ClubStaffSchedulingController extends Controller
     private function conflictResponse(array $conflicts)
     {
         return response()->json([
-            'message' => 'Assignment has blocking calendar, availability, or qualification conflicts.',
+            'message' => __('organization.runtime_copy.staff_conflicts'),
             'errors' => [
-                'conflicts' => ['Assignment has blocking calendar, availability, or qualification conflicts.'],
+                'conflicts' => [__('organization.runtime_copy.staff_conflicts')],
             ],
             'data' => [
                 'conflicts' => $conflicts,

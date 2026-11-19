@@ -165,9 +165,9 @@ class ClubProcurementController extends Controller
                     'team_id' => $procurement->team_id,
                     'type' => 'expense', 'account' => 'bank',
                     'category' => $procurement->finance_account ?: 'procurement',
-                    'title' => 'Procurement '.$procurement->id, 'amount' => $totalCents / 100,
+                    'title' => __('organization.runtime_copy.procurement_label').' '.$procurement->id, 'amount' => $totalCents / 100,
                     'booked_on' => $data['received_on'], 'reference' => $data['reference'] ?? $procurement->reference,
-                    'description' => 'Generated from approved procurement receipt.',
+                    'description' => __('organization.runtime_copy.procurement_description'),
                 ]);
             }
             $receipt = $procurement->receipts()->create([

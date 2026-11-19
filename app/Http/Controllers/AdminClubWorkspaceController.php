@@ -9,6 +9,7 @@ use App\Services\ClubService;
 use App\Support\AppNotification;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
+use App\Support\SupportedLocale;
 use App\Support\Validation\ClubProfileRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -72,11 +73,12 @@ class AdminClubWorkspaceController extends Controller
             }
             ClubAuditLog::record($club, $request->user(), 'club.platform.updated', $club, ['changed_fields' => $changed]);
             if ($club->owner) {
-                AppNotification::send($club->owner, 'club.platform.updated', [
-                    'title' => 'Vereinsdaten geändert',
-                    'body' => 'Die Plattformverwaltung hat die Daten von '.$club->name.' geändert: '.implode(', ', array_map(fn ($key) => self::FIELDS[$key], $changed)).'.',
-                    'club_id' => $club->id, 'url' => route('auth.clubs.show', $club),
-                ], ['after_commit' => true]);
+                $locale = SupportedLocale::normalize($club->owner->language) ?? 'de';
+                AppNotification::sendLocalized($club->owner, 'club.platform.updated',
+                    'organization.runtime_copy.club_changed_title', 'organization.runtime_copy.club_changed_body',
+                    ['club' => $club->name, 'fields' => implode(', ', array_map(fn ($key) => __('organization.runtime_copy.fields.'.$key, [], $locale), $changed))], [
+                        'club_id' => $club->id, 'url' => route('auth.clubs.show', $club),
+                    ], ['after_commit' => true]);
             }
         });
 

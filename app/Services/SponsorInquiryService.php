@@ -53,23 +53,24 @@ class SponsorInquiryService
                 'sponsor_id' => $sponsor->id,
                 'club_id' => $club->id,
                 'created_by' => $user->id,
+                'status' => 'pending',
                 'subject' => trim($data['subject']),
                 'message' => trim($data['message']),
             ]);
         });
 
         $recipients->each(fn (User $recipient) => AppNotification::sendLocalized(
-                $recipient, 'sponsor.inquiry_requested',
-                'sponsor.notifications.inquiry_title', 'sponsor.notifications.inquiry_body',
-                ['club' => $club->name],
-                [
-                    'url' => route('auth.sponsor-workspace.index', ['sponsor_id' => $sponsor->id, 'section' => 'partnerships']),
-                    'mobile_url' => 'airmius://sponsors?sponsor_id='.$sponsor->id.'&section=partnerships',
-                    'sponsor_id' => $sponsor->id,
-                    'inquiry_id' => $inquiry->id,
-                ],
-                ['category' => 'system', 'dedupe_key' => 'sponsor-inquiry:'.$inquiry->id],
-            ));
+            $recipient, 'sponsor.inquiry_requested',
+            'sponsor.notifications.inquiry_title', 'sponsor.notifications.inquiry_body',
+            ['club' => $club->name],
+            [
+                'url' => route('auth.sponsor-workspace.index', ['sponsor_id' => $sponsor->id, 'section' => 'partnerships']),
+                'mobile_url' => 'airmius://sponsors?sponsor_id='.$sponsor->id.'&section=partnerships',
+                'sponsor_id' => $sponsor->id,
+                'inquiry_id' => $inquiry->id,
+            ],
+            ['category' => 'system', 'dedupe_key' => 'sponsor-inquiry:'.$inquiry->id],
+        ));
 
         return $inquiry;
     }

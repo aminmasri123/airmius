@@ -317,7 +317,8 @@ class LocalizationReadinessReport
     {
         return collect($messages)->filter(
             fn (mixed $value): bool => is_string($value)
-                && preg_match('/[äöüß]|\b(?:und|oder|wenn|werden|kann|nicht|deine|dein|einen|einer|eines|soweit|grundsätzlich)\b/iu', $value) === 1,
+                && preg_match('/[äöüß]|\b(?:und|oder|wenn|werden|kann|nicht|deine|dein|einen|einer|eines|soweit|grundsätzlich)\b/iu',
+                    preg_replace('~https?://\S+|(?<![\p{L}\p{N}])/(?:[a-z0-9-]+/?)+~iu', '', $value)) === 1,
         )->count();
     }
 
@@ -543,16 +544,26 @@ class LocalizationReadinessReport
         foreach ($files as $file) {
             $contents = (string) file_get_contents($file->getPathname());
             $translationCalls += preg_match_all('/(?:__|trans|Lang::get)\s*\(/', $contents);
-            $sourceCandidates = (int) preg_match_all(
-                '/(?:message|title|body|label|description)\'?\s*=>\s*[\'"]([^\'"]*[A-Za-z\x{00C0}-\x{017F}][^\'"]*)[\'"]/u',
+            preg_match_all(
+                '/(?<field>message|title|body|label|description)\'?\s*=>\s*[\'"](?<text>[^\'"]*[A-Za-z\x{00C0}-\x{017F}][^\'"]*)[\'"]/u',
                 $contents,
                 $candidateMatches,
             );
-            $autoCovered = self::automaticUiCoverageCount($candidateMatches[1] ?? [], $automaticUiSources);
+            $literalSources = [];
+            foreach ($candidateMatches['text'] ?? [] as $index => $candidate) {
+                // Stable API message codes are consumed by clients, not displayed prose.
+                if ($candidateMatches['field'][$index] === 'message'
+                    && preg_match('/^[a-z][a-z0-9]*(?:_[a-z0-9]+)+$/D', $candidate)) {
+                    continue;
+                }
+                $literalSources[] = $candidate;
+            }
+            $sourceCandidates = count($literalSources);
+            $autoCovered = self::automaticUiCoverageCount($literalSources, $automaticUiSources);
             $legalCovered = self::relativePath($file->getPathname()) === 'app/Http/Controllers/LegalPageController.php'
                 ? self::automaticUiCoverageCount(
                     array_values(array_filter(
-                        $candidateMatches[1] ?? [],
+                        $literalSources,
                         fn (string $candidate): bool => ! self::automaticUiCovers($candidate, $automaticUiSources),
                     )),
                     self::legalContentSources(),
@@ -633,7 +644,7 @@ class LocalizationReadinessReport
     /** @param array<string, true> $sources */
     protected static function automaticUiCovers(string $candidate, array $sources): bool
     {
-        $source = trim($candidate);
+        $source = trim(html_entity_decode($candidate, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 
         if ($source === '' || isset($sources[$source])) {
             return $source !== '';

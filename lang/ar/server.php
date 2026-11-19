@@ -11,6 +11,7 @@ return [
         'processing' => 'لا يزال طلب يستخدم مفتاح Idempotency-Key هذا قيد المعالجة.',
     ],
     'training' => [
+        'session_deleted' => 'تمت أرشفة الحصة التدريبية.',
         'manage_plans_forbidden' => 'يمكن للمدربين ومالكي الأندية ورؤساء الأندية فقط إنشاء خطط التدريب.',
         'feedback_draft_forbidden' => 'يمكن إرسال الملاحظات بعد حفظ جلسة التدريب.',
         'feedback_sent' => 'تم إرسال الملاحظات.',
@@ -71,6 +72,13 @@ return [
         ],
     ],
     'events' => [
+        'response_deadline_expired' => 'انتهت مهلة الرد على هذا الموعد.',
+        'camp_group_required' => 'يرجى اختيار مجموعة صالحة للمخيم.',
+        'camp_group_full' => 'هذه المجموعة في المخيم مكتملة بالفعل.',
+        'camp_privacy_notice_required' => 'يرجى قبول إشعار الخصوصية الحالي للمخيم.',
+        'camp_travel_consent_required' => 'يرجى تأكيد الموافقة المطلوبة على السفر للمخيم.',
+        'camp_guardian_consent_required' => 'يتطلب هذا المخيم موافقة ولي الأمر.',
+        'camp_emergency_contact_required' => 'يرجى إضافة جهة اتصال للطوارئ لهذا المخيم.',
         'route_not_visible' => 'هذا المسار غير متاح لك ولا يمكن مشاركته مع الفعالية.',
         'notifications' => [
             'club_published_title' => 'فعالية جديدة للنادي',

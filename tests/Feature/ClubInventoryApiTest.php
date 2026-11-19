@@ -76,7 +76,8 @@ class ClubInventoryApiTest extends TestCase
             'size' => 'Universal',
             'dimensions' => '45 × 30 × 20 cm',
             'location' => 'Materialraum A',
-            'quantity_total' => 1,
+            'quantity_total' => 2,
+            'is_loanable' => true,
             'condition' => 'good',
             'status' => 'active',
             'requires_approval' => false,
@@ -944,6 +945,7 @@ class ClubInventoryApiTest extends TestCase
         ])->assertCreated()->json('data.id');
         $this->assertDatabaseHas('club_inventory_items', ['id' => $item->id, 'quantity_available' => 0]);
 
+        Sanctum::actingAs($owner);
         $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$returnedLoan}/return", [
             'return_condition' => 'damaged',
             'damage_description' => 'Display gerissen',
@@ -1296,6 +1298,7 @@ class ClubInventoryApiTest extends TestCase
 
         $fieldId = $this->postJson("/api/v1/clubs/{$club->id}/inventory", [
             'name' => 'Court A',
+            'is_loanable' => true,
             'resource_type' => 'field',
             'parent_id' => $facilityId,
             'opening_hours' => [

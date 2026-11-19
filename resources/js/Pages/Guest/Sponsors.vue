@@ -102,7 +102,7 @@ const scopeDescription = (sponsor) => ({
 
         <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1">
             <section v-if="!clubOptions.length" class="relative mx-auto min-h-[32rem] max-w-6xl overflow-hidden rounded-xl border border-border bg-card sm:min-h-[36rem]">
-                <img src="/images/sponsors/community-impact-hero.png" alt="Jugendliche Sportler, Trainer und eine Unternehmensvertreterin bei einem lokalen Vereinsprojekt" class="absolute inset-0 h-full w-full object-cover object-center" fetchpriority="high">
+                <img src="/images/sponsors/community-impact-hero.png" alt="Jugendliche Sportler, Trainer und eine Unternehmensvertreterin bei einem lokalen Vereinsprojekt" class="absolute inset-0 h-full w-full object-cover object-center" fetchpriority="high" decoding="async">
                 <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/65 to-black/10"></div>
                 <div class="relative flex min-h-[32rem] max-w-3xl flex-col justify-end p-6 sm:min-h-[36rem] sm:p-10 lg:p-14">
                     <p class="text-sm font-semibold uppercase tracking-[0.18em] text-sky-300">Partnerschaften mit Wirkung</p>
@@ -322,7 +322,7 @@ const scopeDescription = (sponsor) => ({
                     <div><h2 class="text-xl font-bold text-primary">{{ selectedSponsor.name }}</h2><p class="text-sm text-secondary">{{ [selectedSponsor.city, selectedSponsor.region, selectedSponsor.country_code].filter(Boolean).join(' · ') || 'Keine Region angegeben' }}</p></div>
                     <button type="button" class="rounded-md border border-border p-2" aria-label="Schließen" @click="selectedSponsor = null"><i class="las la-times" /></button>
                 </div>
-                <img v-if="sponsorLogoUrl(selectedSponsor)" :src="sponsorLogoUrl(selectedSponsor)" :alt="selectedSponsor.name" class="mt-5 h-28 w-full bg-inputBg object-contain p-3">
+                <img v-if="sponsorLogoUrl(selectedSponsor)" :src="sponsorLogoUrl(selectedSponsor)" :alt="selectedSponsor.name" class="mt-5 h-28 w-full bg-inputBg object-contain p-3" loading="lazy" decoding="async">
                 <a v-if="selectedSponsor.website" :href="selectedSponsor.website" target="_blank" rel="noopener noreferrer" class="mt-4 block text-sm font-bold text-buttonPrimary">Website öffnen <i class="las la-external-link-alt" /></a>
                 <label v-if="clubOptions.length && selectedSponsor.scope === 'platform'" class="mt-5 block text-sm text-primary">Verein
                     <select v-model="inquiryForm.club_id" required class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><option v-for="club in clubOptions" :key="club.id" :value="club.id">{{ club.name }}</option></select>

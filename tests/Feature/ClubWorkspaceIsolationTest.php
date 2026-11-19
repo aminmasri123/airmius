@@ -96,7 +96,7 @@ class ClubWorkspaceIsolationTest extends TestCase
         ]);
         $this->putJson('/api/v1/clubs/'.$this->own->id.'/tasks/'.$task->id, ['completed' => true])->assertForbidden();
         $this->postJson('/api/v1/clubs/'.$this->foreign->id.'/tasks', ['title' => 'Forbidden'])->assertForbidden();
-        $this->postJson('/api/v1/clubs/'.$this->foreign->id.'/finance-entries', [])->assertForbidden();
+        $this->postJson('/api/v1/clubs/'.$this->foreign->id.'/finance-entries', [])->assertNotFound();
         $this->assertDatabaseHas('club_tasks', ['id' => $task->id, 'completed_at' => null]);
     }
 

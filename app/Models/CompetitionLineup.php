@@ -23,6 +23,6 @@ class CompetitionLineup extends Model
 
     public function entries()
     {
-        return $this->hasMany(CompetitionLineupEntry::class);
+        return $this->hasMany(CompetitionLineupEntry::class)->orderBy('sort_order')->orderBy('id');
     }
 }

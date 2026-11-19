@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\UserRoleApplication;
 use App\Support\AppNotification;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class SponsorOrganizationService
@@ -52,9 +53,9 @@ class SponsorOrganizationService
             ->get();
     }
 
-    public function resolve(User $user, ?int $requestedId = null): ?Sponsor
+    public function resolve(User $user, ?int $requestedId = null, ?Collection $organizations = null): ?Sponsor
     {
-        $organizations = $this->organizations($user);
+        $organizations ??= $this->organizations($user);
         if ($requestedId) {
             return $organizations->firstWhere('id', $requestedId);
         }

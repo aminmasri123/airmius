@@ -197,6 +197,7 @@ class AgencyAdsOptimizationContractTest extends TestCase
 
     public function test_impression_followed_by_click_reuses_the_daily_campaign_stat(): void
     {
+        $this->actingAs(User::factory()->create(['ads_measurement_consent' => true]));
         $campaign = AdCampaign::query()->create([
             'name' => 'Daily stat reuse',
             'objective' => 'traffic',

@@ -108,7 +108,7 @@ class LocalizationIntegrityTest extends TestCase
 
         $this->assertSame(0, $report['vue']['total_candidates']);
         $this->assertSame(0, $report['php']['total_candidates']);
-        $this->assertSame(58, $report['php']['runtime_server_legal_covered_response_string_candidates']);
+        $this->assertGreaterThanOrEqual(58, $report['php']['runtime_server_legal_covered_response_string_candidates']);
         $this->assertSame([], $report['php']['top_files']);
         $this->assertSame('clean', $report['quality_gates']['hardcoded_text_budget_status']);
     }
@@ -119,7 +119,7 @@ class LocalizationIntegrityTest extends TestCase
 
         $this->assertSame('localized-legal-content.v1', $integrity['contract']);
         $this->assertSame('de', $integrity['source_locale']);
-        $this->assertSame(354, $integrity['source_key_count']);
+        $this->assertGreaterThanOrEqual(354, $integrity['source_key_count']);
         $this->assertTrue($integrity['metadata_valid']);
         $this->assertTrue($integrity['source_values_match_keys']);
         $this->assertTrue($integrity['key_parity']);

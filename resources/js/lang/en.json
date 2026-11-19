@@ -7,8 +7,13 @@
   "guardianGate.revokedBody": "Your parents withdrew their approval. Please talk to them about it. Protected features remain blocked.",
   "guardianGate.parentEmail": "Parent email:",
   "guardianGate.refresh": "Refresh status",
-  "clubDeletion": { "title": "Delete club" },
-  "deletionGuide": { "aboutClub": "About deleting a club", "aboutAccount": "About deleting an account" },
+  "clubDeletion": {
+    "title": "Delete club"
+  },
+  "deletionGuide": {
+    "aboutClub": "About deleting a club",
+    "aboutAccount": "About deleting an account"
+  },
   "challenges": {
     "title": "Challenges",
     "eyebrow": "Stay motivated together",
@@ -6643,5 +6648,6 @@
     "more_information": "Learn more",
     "open": "Open cookie settings",
     "close": "Close cookie settings"
-  }
+  },
+  "Kampagne bezahlen": "Pay for campaign"
 }

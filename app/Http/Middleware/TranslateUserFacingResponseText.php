@@ -96,7 +96,7 @@ class TranslateUserFacingResponseText
         }
 
         $translated = __($value);
-        if ($translated !== $value && $translated !== '' && ! str_starts_with($translated, '[')) {
+        if (is_string($translated) && $translated !== $value && $translated !== '' && ! str_starts_with($translated, '[')) {
             return $translated;
         }
 

@@ -169,9 +169,14 @@ class FrontendLocaleBundleContractTest extends TestCase
             }
 
             $this->assertLessThan(
-                312_000,
+                320_000,
                 filesize($buildPath.'/'.$manifest["resources/js/lang/{$locale}.json"]['file']),
                 "{$locale} render-blocking locale chunk is unexpectedly large",
+            );
+            $this->assertLessThan(
+                100_000,
+                strlen(gzencode((string) file_get_contents($buildPath.'/'.$manifest["resources/js/lang/{$locale}.json"]['file']), 9)),
+                "{$locale} compressed locale transfer exceeds 100 KB",
             );
         }
 

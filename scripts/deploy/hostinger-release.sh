@@ -23,6 +23,13 @@ test -L "$base/current"
 previous=$(readlink -f "$base/current")
 [[ "$previous" == "$base/releases/"* && -f "$previous/artisan" ]]
 test "$(readlink -f "$web_root")" = "$previous"
+if test "$previous" = "$base/releases/$sha"; then
+    curl --fail --silent --show-error --max-time 30 "$site_url/deployment.json?release=$sha" \
+        | php -r '$v=json_decode(stream_get_contents(STDIN),true); exit(($v["commit"]??null)===$argv[1]?0:1);' "$sha"
+    curl --fail --silent --show-error --max-time 30 "$site_url/up" >/dev/null
+    echo "Commit $sha is already active and healthy."
+    exit 0
+fi
 
 archive="$base/incoming/$sha.tar.gz"
 test -f "$archive"

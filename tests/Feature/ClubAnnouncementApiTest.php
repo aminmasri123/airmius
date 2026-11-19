@@ -280,7 +280,7 @@ class ClubAnnouncementApiTest extends TestCase
         ])->assertCreated()
             ->assertJsonPath('data.can_edit', true)
             ->assertJsonPath('data.can_publish', false)
-            ->assertJsonPath('data.can_delete', false);
+            ->assertJsonPath('data.can_delete', true);
         $draftId = $draft->json('data.id');
         $this->postJson('/api/v1/clubs/'.$club->id.'/announcements', [
             'title' => 'Sofort',

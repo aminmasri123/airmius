@@ -20,6 +20,7 @@ class TrainerResignationController extends Controller
     {
         $data = ['has_role' => $request->user()->hasRole('coach'),
             'teams' => $this->teams($request->user())->get(['teams.id', 'teams.name'])];
+
         return $request->expectsJson() ? response()->json($data) : Inertia::render('Auth/Dashboard/TrainerCockpit/Resignation', $data);
     }
 
@@ -37,13 +38,17 @@ class TrainerResignationController extends Controller
                 $recipients = $team->users()->wherePivotIn('role', ['Coach', 'ClubPresident'])->get();
                 if ($team->club?->owner_id) {
                     $owner = User::find($team->club->owner_id);
-                    if ($owner) $recipients->push($owner);
+                    if ($owner) {
+                        $recipients->push($owner);
+                    }
                 }
             } else {
                 if ($this->teams($user)->exists()) {
                     throw ValidationException::withMessages(['team_id' => 'Bitte tritt zuerst bei deinen Teams als Trainer zurück. Deine Mitgliedschaft bleibt dabei bestehen.']);
                 }
-                if (! $user->hasRole('coach')) return;
+                if (! $user->hasRole('coach')) {
+                    return;
+                }
                 $user->removeRole('coach');
                 $user->roleApplications()->where('type', 'trainer')->whereIn('status', ['pending', 'approved'])
                     ->update(['status' => 'withdrawn', 'role_activated' => false]);
@@ -59,6 +64,7 @@ class TrainerResignationController extends Controller
                 ]);
             }
         });
-        return $request->expectsJson() ? response()->json(['message' => 'Der Rücktritt wurde gespeichert.']) : back()->with('success', 'Der Rücktritt wurde gespeichert.');
+
+        return $request->expectsJson() ? response()->json(['message' => __('organization.runtime_copy.resignation_saved')]) : back()->with('success', __('organization.runtime_copy.resignation_saved'));
     }
 }

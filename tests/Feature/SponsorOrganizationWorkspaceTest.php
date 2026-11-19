@@ -145,6 +145,8 @@ class SponsorOrganizationWorkspaceTest extends TestCase
         $own = Sponsor::query()->create(['name' => 'Own company', 'scope' => 'platform', 'owner_user_id' => $owner->id]);
         $foreign = Sponsor::query()->create(['name' => 'Foreign company', 'scope' => 'platform', 'owner_user_id' => $foreignOwner->id]);
 
+        $this->assertNull(app(SponsorOrganizationService::class)->resolve($owner, $foreign->id));
+
         $payload = app(SponsorWorkspaceService::class)->payload($owner, $foreign->id);
 
         $this->assertSame($own->id, $payload['current_organization']['id']);

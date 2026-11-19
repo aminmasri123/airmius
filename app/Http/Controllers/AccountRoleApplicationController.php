@@ -133,21 +133,21 @@ class AccountRoleApplicationController extends Controller
         ]);
 
         User::permission('system.manage')->get()->each(function (User $reviewer) use ($application, $request) {
-            AppNotification::send($reviewer, 'role.application_withdrawn', [
-                'title' => 'Sponsor-Antrag zurückgezogen',
-                'body' => $request->user()->name.' hat den Sponsor-Antrag zurückgezogen.',
-                'url' => route('admin.sponsor-applications.index'),
-                'action_url' => route('admin.sponsor-applications.index'),
-                'mobile_url' => 'airmius://admin/sponsor-applications',
-                'deep_link' => 'airmius://admin/sponsor-applications',
-                'application_id' => $application->id,
-                'application_type' => $application->type,
-                'application_status' => $application->status,
-            ]);
+            AppNotification::sendLocalized($reviewer, 'role.application_withdrawn',
+                'organization.runtime_copy.sponsor_withdrawn_title', 'organization.runtime_copy.sponsor_withdrawn_body',
+                ['user' => $request->user()->name], [
+                    'url' => route('admin.sponsor-applications.index'),
+                    'action_url' => route('admin.sponsor-applications.index'),
+                    'mobile_url' => 'airmius://admin/sponsor-applications',
+                    'deep_link' => 'airmius://admin/sponsor-applications',
+                    'application_id' => $application->id,
+                    'application_type' => $application->type,
+                    'application_status' => $application->status,
+                ]);
         });
 
         return $this->response($request, [
-            'message' => 'Dein Sponsor-Antrag wurde zurückgezogen.',
+            'message' => __('organization.runtime_copy.sponsor_withdrawn'),
             'application' => $this->applicationPayload($application),
         ]);
     }

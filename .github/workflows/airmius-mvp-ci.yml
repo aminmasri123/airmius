@@ -20,6 +20,11 @@ jobs:
           coverage: none
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Setup Node for backend build contract tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
       - name: Prepare env
         run: |
           cp .env.example .env
@@ -34,7 +39,10 @@ jobs:
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
           BROADCAST_CONNECTION: log
-        run: php artisan test
+        run: |
+          npm ci
+          npm run build
+          php artisan test
 
   web:
     name: Inertia/Vite build
