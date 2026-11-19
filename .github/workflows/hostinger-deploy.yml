@@ -46,9 +46,10 @@ jobs:
         run: |
           composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts
           mkdir -p release
-          for item in app bootstrap config database lang resources routes public vendor artisan composer.json composer.lock; do
+          for item in app bootstrap config database lang resources routes public vendor artisan cron-schedule.php composer.json composer.lock; do
             cp -a "$item" release/
           done
+          cp scripts/deploy/hostinger-root.htaccess release/.htaccess
           rm -f release/public/hot
           rm -rf release/public/storage
           find release/bootstrap/cache -maxdepth 1 -type f ! -name '.gitignore' -delete

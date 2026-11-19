@@ -12,7 +12,7 @@ Actions nicht; der Runner benötigt einen eigenen SSH-Zugang.
 1. Derselbe Commit wird getestet, Composer-Abhängigkeiten werden installiert und
    Vite wird frisch gebaut. Alle Manifestdateien und referenzierten Assets werden geprüft.
 2. Ein Archiv enthält gemeinsam `app`, `bootstrap`, `config`, `database`, `lang`,
-   `resources`, `routes`, `public`, `vendor`, `artisan` und Composer-Metadaten.
+   `resources`, `routes`, `public`, `vendor`, `artisan`, `cron-schedule.php` und Composer-Metadaten.
    Lokale Arbeitskopien, `.env`, Nutzerdaten, Git-Verzeichnis und App-Builds sind ausgeschlossen.
 3. Hostinger prüft die Archiv-Prüfsumme, bereitet ein neues Release außerhalb des
    öffentlichen Verzeichnisses vor und bindet bestehende Konfiguration und Storage ein.
@@ -41,12 +41,15 @@ Die Release-Struktur soll außerhalb von `public_html` liegen:
   shared/assets/          bestehende und neue Assets mit Inhalts-Hash
 ```
 
-Vor dem ersten Lauf: Datenbank und Dateien sichern; ein Ausgangsrelease aus dem
-tatsächlich laufenden Stand erstellen; Storage und `.env` erhalten; Schreibrechte
-prüfen; DocumentRoot auf `current/public` umstellen (oder einen bestätigten
-öffentlichen Symlink dorthin einrichten). Die Website und Cron-/Queue-Pfade müssen
-anschließend verifiziert werden. Der Deployment-Runner verweigert den ersten Lauf,
-wenn der öffentliche Pfad nicht auf das bisherige `current/public` zeigt.
+Die bestehende Domain bleibt auf dem bisherigen Anwendungsverzeichnis. Dieses
+ist ein Symlink auf `current`; `.htaccess` leitet HTTP ausschließlich in `public/`.
+Dadurch bleiben bestehende Cron-Pfade zu `artisan` und `cron-schedule.php` gültig.
+Der Runner prüft vor jedem Wechsel, dass der Domain-Pfad auf das aktuelle Release zeigt.
+
+Am 19.11.2026 wurden die Produktionsdatenbank und das bisherige Verzeichnis privat
+unter `.airmius-deploy/backups` gesichert und ein unverändertes Ausgangsrelease
+angelegt. Die Symlink-Erreichbarkeit, Startseite und `/up` wurden danach geprüft.
+Der alte Hostinger-GitHub-Webhook ist deaktiviert, damit nur dieser Workflow deployt.
 
 SSH-Port laut gezeigter hPanel-Sitzung: `65002`; Benutzer `u270834523`; Host
 `46.202.158.65`. Diese Angaben sind vor Einrichtung des neuen Zugangs zu verifizieren.
@@ -67,7 +70,7 @@ Repository-Secrets (niemals in Git speichern):
 Repository-Variablen:
 
 - `HOSTINGER_DEPLOY_BASE`: absoluter privater Release-Pfad
-- `HOSTINGER_WEB_ROOT`: bestätigter öffentlicher Pfad, der auf `current/public` zeigt
+- `HOSTINGER_WEB_ROOT`: bestehender Domain-Pfad, der auf `current` zeigt
 - `HOSTINGER_SITE_URL`: `https://airmius.com`
 - `HOSTINGER_DEPLOY_ENABLED`: erst nach erfolgreicher Einrichtung `true`
 
@@ -84,17 +87,10 @@ vergleichen, eine vorhandene Kursurkunde herunterladen und die Bezeichnung
 API mit einem berechtigten Testkonto prüfen. App-Oberflächen werden separat gebaut
 und verteilt; ein Backend-Deployment aktualisiert keine installierte App.
 
-Die Workflow-Datei allein aktiviert noch keinen Zugang und veröffentlicht noch nichts.
+Der dedizierte Deployment-Schlüssel ist auf Hostinger mit `restrict` autorisiert.
+Die fünf Repository-Secrets wurden verschlüsselt hinterlegt; private Schlüssel und
+Produktionskonfiguration bleiben außerhalb des Repositories. Die Freigabe erfolgt
+nach Einrichtung über `HOSTINGER_DEPLOY_ENABLED=true`.
 
-Lesende SSH-Prüfung am 19.11.2026: PHP CLI 8.2.36; tatsächliches Projektverzeichnis
-`/home/u270834523/domains/airmius.com/public_html/airmius`. Der vorhandene Root-
-`index.php` lädt `storage`, `vendor` und `bootstrap` direkt aus diesem Verzeichnis.
-Eine `index.php` im übergeordneten `public_html` war nicht vorhanden. Damit ist
-die Umstellung auf einen öffentlichen `current/public`-Pfad ein notwendiger,
-separat zu prüfender Einrichtungsschritt; die aktuellen Dateien dürfen nicht
-ungeprüft durch einen Standard-Laravel-Frontcontroller ersetzt werden.
-
-Lokale Vorprüfung: Workflow-YAML geparst, Bash-Syntax geprüft, aktueller Vite-Build
-vollständig gegen sein Manifest geprüft, vier Tests für vollständige/fehlende Assets
-und ungültige Imports/Pfade bestanden. Noch kein Produktionslauf und noch keine
-Abnahme des serverseitigen Release-Wechsels.
+Lokale Vorprüfung: Workflow-YAML, Bash-Syntax, Vite-Manifest und vier Tests für
+vollständige/fehlende Assets sowie ungültige Imports/Pfade.

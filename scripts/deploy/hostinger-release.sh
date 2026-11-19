@@ -4,7 +4,7 @@ set -Eeuo pipefail
 umask 027
 
 base=${1:?deployment base required}
-web_root=${2:?public document root required}
+web_root=${2:?application document root required}
 site_url=${3:?HTTPS site URL required}
 sha=${4:?commit required}
 expected_hash=${5:?archive checksum required}
@@ -17,12 +17,12 @@ php -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);'
 test -d "$base/incoming" && test -d "$base/releases"
 test -f "$base/shared/.env" && test -d "$base/shared/storage"
 # Provisioning is a separate operation: never replace an existing production directory.
+exec 9>"$base/deploy.lock"
+flock -n 9 || { echo 'Another deployment is running.'; exit 1; }
 test -L "$base/current"
 previous=$(readlink -f "$base/current")
 [[ "$previous" == "$base/releases/"* && -f "$previous/artisan" ]]
-test "$(readlink -f "$web_root")" = "$previous/public"
-exec 9>"$base/deploy.lock"
-flock -n 9 || { echo 'Another deployment is running.'; exit 1; }
+test "$(readlink -f "$web_root")" = "$previous"
 
 archive="$base/incoming/$sha.tar.gz"
 test -f "$archive"
@@ -31,6 +31,7 @@ release="$base/releases/$sha"
 test ! -e "$release" || { echo 'Release already exists; refusing to modify it.'; exit 1; }
 mkdir "$release"
 tar -xzf "$archive" -C "$release"
+chmod -R u+rwX,go+rX "$release"
 test -f "$release/vendor/autoload.php"
 test -f "$release/public/build/manifest.json"
 test ! -e "$release/.env" && test ! -e "$release/storage"
