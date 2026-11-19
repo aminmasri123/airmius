@@ -1,0 +1,96 @@
+name: Hostinger production deployment
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hostinger-production
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # Enable only after the production paths and SSH access have been verified.
+    if: vars.HOSTINGER_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_sqlite, sqlite3, intl, gd, zip
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies and test backend
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress
+          cp .env.example .env
+          php artisan key:generate
+          php artisan test
+      - name: Build web assets from this commit
+        run: |
+          npm ci
+          npm run build
+          node --test tests/Deployment/buildManifest.test.mjs
+          php scripts/deploy/verify-build.php public/build/manifest.json
+      - name: Package complete application
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts
+          mkdir -p release
+          for item in app bootstrap config database lang resources routes public vendor artisan composer.json composer.lock; do
+            cp -a "$item" release/
+          done
+          rm -f release/public/hot
+          rm -rf release/public/storage
+          find release/bootstrap/cache -maxdepth 1 -type f ! -name '.gitignore' -delete
+          printf '{"commit":"%s"}\n' "$RELEASE_SHA" > release/public/deployment.json
+          tar -czf release.tar.gz -C release .
+          sha256sum release.tar.gz > release.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hostinger-${{ github.sha }}
+          path: |
+            release.tar.gz
+            release.tar.gz.sha256
+          retention-days: 14
+      - name: Connect and publish release
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          SSH_PORT: ${{ secrets.HOSTINGER_SSH_PORT }}
+          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER }}
+          SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.HOSTINGER_SSH_KNOWN_HOSTS }}
+          DEPLOY_BASE: ${{ vars.HOSTINGER_DEPLOY_BASE }}
+          WEB_ROOT: ${{ vars.HOSTINGER_WEB_ROOT }}
+          SITE_URL: ${{ vars.HOSTINGER_SITE_URL }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for key in SSH_HOST SSH_PORT SSH_USER SSH_KEY KNOWN_HOSTS DEPLOY_BASE WEB_ROOT SITE_URL; do
+            test -n "${!key}" || { echo "Missing deployment setting: $key"; exit 1; }
+          done
+          [[ "$SSH_PORT" =~ ^[0-9]+$ ]]
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          [[ "$DEPLOY_BASE" =~ ^/home/[a-zA-Z0-9_./-]+$ ]]
+          [[ "$WEB_ROOT" =~ ^/home/[a-zA-Z0-9_./-]+$ ]]
+          [[ "$SITE_URL" =~ ^https://[a-zA-Z0-9.-]+$ ]]
+          mkdir -m 700 -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          trap 'rm -f ~/.ssh/deploy_key' EXIT
+          SSH=(ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          SCP=(scp -i ~/.ssh/deploy_key -P "$SSH_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          "${SSH[@]}" "$SSH_USER@$SSH_HOST" "test -d '$DEPLOY_BASE/incoming'"
+          "${SCP[@]}" release.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_BASE/incoming/$RELEASE_SHA.tar.gz"
+          "${SSH[@]}" "$SSH_USER@$SSH_HOST" "bash -s -- '$DEPLOY_BASE' '$WEB_ROOT' '$SITE_URL' '$RELEASE_SHA' '$(cut -d ' ' -f1 release.tar.gz.sha256)'" < scripts/deploy/hostinger-release.sh
