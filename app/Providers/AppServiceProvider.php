@@ -96,20 +96,30 @@ class AppServiceProvider extends ServiceProvider
             if ($event->connection->getDriverName() !== 'sqlite') {
                 return;
             }
-            $pdo = $event->connection->getPdo();
-            $functions = [
-                'acos' => static fn ($value) => $value === null ? null : acos(max(-1.0, min(1.0, (float) $value))),
-                'cos' => static fn ($value) => $value === null ? null : cos((float) $value),
-                'sin' => static fn ($value) => $value === null ? null : sin((float) $value),
-                'radians' => static fn ($value) => $value === null ? null : deg2rad((float) $value),
-            ];
-            foreach ($functions as $name => $function) {
-                try {
-                    $pdo->query('SELECT '.$name.'(1)');
-                } catch (\PDOException) {
-                    $register = method_exists($pdo, 'createFunction') ? 'createFunction' : 'sqliteCreateFunction';
-                    $pdo->{$register}($name, $function, 1);
+            $configure = static function (\PDO $pdo): \PDO {
+                $functions = [
+                    'acos' => static fn ($value) => $value === null ? null : acos(max(-1.0, min(1.0, (float) $value))),
+                    'cos' => static fn ($value) => $value === null ? null : cos((float) $value),
+                    'sin' => static fn ($value) => $value === null ? null : sin((float) $value),
+                    'radians' => static fn ($value) => $value === null ? null : deg2rad((float) $value),
+                ];
+                foreach ($functions as $name => $function) {
+                    try {
+                        $pdo->query('SELECT '.$name.'(1)');
+                    } catch (\PDOException) {
+                        $register = method_exists($pdo, 'createFunction') ? 'createFunction' : 'sqliteCreateFunction';
+                        $pdo->{$register}($name, $function, 1);
+                    }
                 }
+
+                return $pdo;
+            };
+            // Package discovery may resolve a connection before a database exists.
+            $pdo = $event->connection->getRawPdo();
+            if ($pdo instanceof \Closure) {
+                $event->connection->setPdo(static fn (): \PDO => $configure($pdo()));
+            } elseif ($pdo instanceof \PDO) {
+                $configure($pdo);
             }
         });
 
