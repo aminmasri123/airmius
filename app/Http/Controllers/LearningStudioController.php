@@ -61,6 +61,7 @@ class LearningStudioController extends Controller
             $course->translationVariants->where('user_id', $course->user_id)->values(),
         ));
 
+        abort_if($request->filled('course') && ! $courses->contains('id', $request->integer('course')), 404);
         $selectedCourse = $courses->firstWhere('id', (int) $request->integer('course')) ?: $courses->first();
 
         $payload = [
@@ -551,6 +552,8 @@ class LearningStudioController extends Controller
         $this->authorizeCourse($request, $course);
 
         $data = $request->validate([
+            'grading_mode' => ['sometimes', Rule::in(['manual', 'automatic'])],
+            'pass_percent' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'learning_lesson_id' => ['nullable', Rule::exists('learning_lessons', 'id')->where('learning_course_id', $course->id)],
             'title' => ['required', 'string', 'max:255'],
             'instructions' => ['nullable', 'string', 'max:5000'],
@@ -561,7 +564,9 @@ class LearningStudioController extends Controller
 
         $assignment = $course->assignments()->create([
             ...$data,
-            'questions' => $request->exists('questions') ? app(AssessmentSchema::class)->questions($request, false) : null,
+            'grading_mode' => $data['grading_mode'] ?? 'manual',
+            'pass_percent' => $data['pass_percent'] ?? 70,
+            'questions' => ($request->exists('questions') || ($data['grading_mode'] ?? 'manual') === 'automatic') ? app(AssessmentSchema::class)->assignmentQuestions($request, ($data['grading_mode'] ?? 'manual') === 'automatic') : null,
             'points' => (int) ($data['points'] ?? 100),
             'is_required' => (bool) ($data['is_required'] ?? true),
         ]);
@@ -581,12 +586,17 @@ class LearningStudioController extends Controller
         $this->authorizeCourse($request, $course);
         abort_unless($assignment->learning_course_id === $course->id, 404);
         $data = $request->validate([
+            'grading_mode' => ['sometimes', Rule::in(['manual', 'automatic'])],
+            'pass_percent' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'title' => ['required', 'string', 'max:255'], 'instructions' => ['nullable', 'string', 'max:5000'],
             'points' => ['required', 'integer', 'min:1', 'max:10000'], 'due_after_days' => ['nullable', 'integer', 'min:0', 'max:3650'],
             'is_required' => ['boolean'], 'learning_lesson_id' => ['nullable', Rule::exists('learning_lessons', 'id')->where('learning_course_id', $course->id)],
         ]);
-        if ($request->exists('questions')) {
-            $data['questions'] = app(AssessmentSchema::class)->questions($request, false);
+        if ($request->exists('questions') || ($data['grading_mode'] ?? $assignment->grading_mode) === 'automatic') {
+            if (! $request->exists('questions')) {
+                $request->merge(['questions' => $assignment->questions ?? []]);
+            }
+            $data['questions'] = app(AssessmentSchema::class)->assignmentQuestions($request, ($data['grading_mode'] ?? $assignment->grading_mode) === 'automatic');
         }
         $assignment->update([...$data, 'revision' => $assignment->revision + 1]);
 
@@ -623,6 +633,8 @@ class LearningStudioController extends Controller
             [
                 'course_id' => $course->id,
                 'assignment_id' => $submission->assignment->id,
+                'submission_id' => $submission->id,
+                'lesson_id' => $submission->assignment->learning_lesson_id,
                 'status' => $submission->status,
                 'url' => route('guest.learning.courses.show', $course),
             ],

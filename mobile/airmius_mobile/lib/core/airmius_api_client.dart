@@ -1955,6 +1955,9 @@ class AirmiusApiClient {
     '/api/v1/team-invitations/token/${Uri.encodeComponent(token)}/decline',
   );
 
+  Future<AirmiusJson> respondToTeamRoleOffer(int offerId, String decision) =>
+      _json('POST', '/api/v1/team-role-offers/$offerId/$decision');
+
   Future<AirmiusJson> updateTeamMemberRole(
     int teamId,
     int userId,

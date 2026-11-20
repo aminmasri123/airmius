@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Services\PlanFeatureService;
+use App\Services\TeamRoleOfferService;
 use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
 use App\Support\UploadStorage;
@@ -84,6 +85,7 @@ class TeamResource extends JsonResource
             'can_manage' => $canManageTeam,
             'can_manage_members' => $canManageMembers,
             'can_update_member_roles' => $canUpdateMemberRoles,
+            'role_offers' => $viewer ? app(TeamRoleOfferService::class)->visible($this->resource, $viewer) : [],
             'can_manage_metadata' => (bool) ($viewer && $this->club
                 && ClubPermissions::allows($this->club, $viewer, ClubPermissions::METADATA_EDIT)),
             'can_create_training_exercises' => $canEditTrainingExercises

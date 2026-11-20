@@ -29,6 +29,7 @@ return [
         'quiz_failed' => 'Quiz non réussi. Tu peux réessayer.',
     ],
     'errors' => [
+        'access_revoked' => 'Votre accès à ce cours a été retiré. Veuillez contacter le responsable du cours.',
         'paid_course' => 'Ce cours est payant et ne peut pas être rejoint gratuitement.',
         'tutor_self_enroll' => 'Les responsables du cours n’ont pas besoin de s’inscrire.',
         'lesson_locked' => 'Cette leçon sera débloquée plus tard.',
@@ -46,6 +47,10 @@ return [
         'assignments' => 'Devoirs obligatoires',
     ],
     'certificate' => [
+        'invalid_title' => 'Certificat non confirmé',
+        'invalid_body' => 'La réussite du cours ne peut pas être confirmée. Vérifiez le code ou contactez la personne responsable du cours.',
+        'verify_online' => 'Scannez le code QR pour vérifier la réussite.',
+        'scan_to_verify' => 'Vérifier le certificat',
         'completion_statement' => 'a terminé avec succès le cours suivant.',
         'title' => 'CERTIFICAT',
         'issued' => 'Délivré',

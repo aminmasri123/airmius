@@ -1,4 +1,5 @@
 ﻿<script setup>
+import TeamRoleOffers from '@/Components/Teams/TeamRoleOffers.vue'
 import { Link } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -172,6 +173,7 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                 </div>
             </div>
 
+            <TeamRoleOffers :offers="team.role_offers || []" :show-hint="team.can_update_member_roles" />
             <div class="space-y-2">
                 <div
                     v-for="member in team.users"
@@ -193,10 +195,10 @@ const actionLabel = (key) => labels.value.actionLabels[key] || key
                     </div>
 
                     <select
-                        v-if="team.can_manage"
-                        v-model="member.pivot.role"
+                        v-if="team.can_update_member_roles"
+                        :value="member.pivot.role"
                         class="rounded border border-border bg-card px-2 py-1 text-xs text-primary"
-                        @change="updateTeamMemberRole(team, member)"
+                        @change="updateTeamMemberRole(team, member, $event.target.value); $event.target.value = member.pivot.role"
                     >
                         <option
                             v-for="role in teamRoles"

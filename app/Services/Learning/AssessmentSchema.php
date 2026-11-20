@@ -12,7 +12,7 @@ class AssessmentSchema
 {
     public const TYPES = ['short_text', 'long_text', 'multiple_choice', 'single_choice', 'ordering'];
 
-    public function questions(Request $request, bool $solutions = true): array
+    public function questions(Request $request, bool $solutions = true, bool $preserveIds = false): array
     {
         $data = $request->validate([
             'questions' => [$solutions ? 'required' : 'present', 'array', 'min:'.($solutions ? 1 : 0), 'max:50'],
@@ -68,12 +68,14 @@ class AssessmentSchema
                     $q['correct_options'] = [];
                 }
             }
-            if (! $solutions) {
+            if (! $solutions || $preserveIds) {
                 $q['id'] = is_scalar($q['id'] ?? null) ? (string) $q['id'] : (string) Str::uuid();
                 if (! preg_match('/^[a-zA-Z0-9_-]{1,64}$/', $q['id'])) {
                     $this->invalid("questions.$i.id", 'unique_options');
                 }
-                $q['correct_options'] = [];
+                if (! $solutions) {
+                    $q['correct_options'] = [];
+                }
             }
         }
         unset($q);
@@ -83,6 +85,16 @@ class AssessmentSchema
         }
 
         return $data;
+    }
+
+    public function assignmentQuestions(Request $request, bool $automatic): array
+    {
+        $questions = $this->questions($request, $automatic, true);
+        if ($automatic && collect($questions)->contains(fn ($q) => $q['question_type'] === 'long_text')) {
+            $this->invalid('questions', 'automatic_fixed_only');
+        }
+
+        return $questions;
     }
 
     public function publicQuestion(array $q): array

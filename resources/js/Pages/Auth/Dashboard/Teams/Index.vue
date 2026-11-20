@@ -1,4 +1,5 @@
 <script setup>
+import TeamRoleOffers from '@/Components/Teams/TeamRoleOffers.vue'
 import CountrySelect from "@/Components/CountrySelect.vue"
 import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
 import ClubWorkspaceNav from "@/Components/Auth/ClubWorkspaceNav.vue"
@@ -853,6 +854,7 @@ onMounted(() => {
                         </div>
                     </form>
 
+                    <TeamRoleOffers :offers="team.role_offers || []" :show-hint="team.can_update_member_roles" />
                     <div
                         class="flex gap-1 overflow-x-auto border-b border-border pb-2"
                         role="tablist"
@@ -903,11 +905,11 @@ onMounted(() => {
                             </div>
 
                             <select
-                                v-if="team.can_manage"
-                                v-model="member.pivot.role"
+                                v-if="team.can_update_member_roles"
+                                :value="member.pivot.role"
                                 :aria-label="`${member.name}: ${tAuto('Teamrolle')}`"
                                 class="rounded border border-border bg-card px-2 py-1 text-xs text-primary"
-                                @change="updateTeamMemberRole(team, member)"
+                                @change="updateTeamMemberRole(team, member, $event.target.value); $event.target.value = member.pivot.role"
                             >
                                 <option
                                     v-for="role in teamRoles"

@@ -33,6 +33,9 @@ class LearningCertificateLogoTest extends TestCase
         $this->assertNotNull(app(CertificateLogo::class)->bytes($course));
         $student = User::factory()->create();
         $enrollment = LearningEnrollment::create(['learning_course_id' => $id, 'user_id' => $student->id, 'status' => 'active', 'completed_at' => now(), 'progress_percent' => 100]);
+        $section = $course->sections()->create(['title' => 'Basics', 'position' => 1]);
+        $lesson = $course->lessons()->create(['learning_course_section_id' => $section->id, 'title' => 'Completed lesson', 'type' => 'lesson']);
+        $enrollment->lessonProgress()->create(['learning_lesson_id' => $lesson->id, 'completed' => true, 'completed_at' => now()]);
         $certificate = LearningCertificate::create(['learning_course_id' => $id, 'learning_enrollment_id' => $enrollment->id, 'user_id' => $student->id, 'code' => 'LOGO-TEST-001', 'issued_at' => now()]);
         $pdf = $this->actingAs($student)->get(route('auth.learning.certificates.show', $certificate))->assertOk()->assertHeader('Content-Type', 'application/pdf')->getContent();
         $this->assertStringContainsString('/Subtype /Image', $pdf);

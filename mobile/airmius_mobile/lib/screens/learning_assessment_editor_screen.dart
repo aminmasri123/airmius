@@ -47,11 +47,15 @@ class _LearningAssessmentEditorScreenState
         ]
       : editableAssessmentQuestions(widget.initial?['questions']);
   late bool _required = widget.initial?['is_required'] != false;
+  late bool _automatic = widget.initial?['grading_mode'] == 'automatic';
+  late final _passPercent = TextEditingController(
+    text: '${widget.initial?['pass_percent'] ?? 70}',
+  );
   bool _saving = false, _uploading = false;
   String? _error;
   @override
   void dispose() {
-    for (final c in [_title, _description, _number, _days]) {
+    for (final c in [_title, _description, _number, _days, _passPercent]) {
       c.dispose();
     }
     super.dispose();
@@ -61,7 +65,15 @@ class _LearningAssessmentEditorScreenState
     if (_saving || _uploading || !(_form.currentState?.validate() ?? false)) {
       return;
     }
-    final problem = assessmentEditorError(_questions, !widget.assignment);
+    final problem = assessmentEditorError(
+      _questions,
+      !widget.assignment || _automatic,
+    );
+    if (_automatic &&
+        _questions.any((q) => q['question_type'] == 'long_text')) {
+      setState(() => _error = assessmentText(context, 'automatic_fixed_only'));
+      return;
+    }
     if (problem != null) {
       setState(() => _error = assessmentText(context, problem));
       return;
@@ -79,6 +91,8 @@ class _LearningAssessmentEditorScreenState
           'points': int.parse(_number.text),
           'due_after_days': int.tryParse(_days.text),
           'is_required': _required,
+          'grading_mode': _automatic ? 'automatic' : 'manual',
+          'pass_percent': int.tryParse(_passPercent.text) ?? 70,
         } else ...{
           'description': _description.text.trim(),
           'pass_percent': int.parse(_number.text),
@@ -178,10 +192,32 @@ class _LearningAssessmentEditorScreenState
                       onChanged: (v) => setState(() => _required = v),
                     ),
                   ],
+                  if (widget.assignment) ...[
+                    SwitchListTile(
+                      title: Text(t('automatic')),
+                      subtitle: Text(t('automatic_help')),
+                      value: _automatic,
+                      onChanged: (value) => setState(() => _automatic = value),
+                    ),
+                    if (_automatic)
+                      TextFormField(
+                        controller: _passPercent,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: t('pass_percent'),
+                        ),
+                        validator: (value) {
+                          final percent = int.tryParse(value ?? '');
+                          return percent == null || percent < 1 || percent > 100
+                              ? t('invalid_answer')
+                              : null;
+                        },
+                      ),
+                  ],
                   const SizedBox(height: 24),
                   LearningAssessmentEditorFields(
                     questions: _questions,
-                    solutions: !widget.assignment,
+                    solutions: !widget.assignment || _automatic,
                     uploadImage: widget.uploadImage,
                     onChanged: () => setState(() {}),
                     onBusy: (v) => setState(() => _uploading = v),

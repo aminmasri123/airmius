@@ -20,7 +20,15 @@ import 'learning_assessment_editor_screen.dart';
 import '../core/learning_certificate_logo_upload.dart';
 
 class LearningStudioCourseSuiteScreen extends StatefulWidget {
-  const LearningStudioCourseSuiteScreen({super.key});
+  const LearningStudioCourseSuiteScreen({
+    super.key,
+    this.initialCourseId,
+    this.initialAssignmentId,
+    this.initialSubmissionId,
+  });
+  final int? initialCourseId;
+  final int? initialAssignmentId;
+  final int? initialSubmissionId;
 
   @override
   State<LearningStudioCourseSuiteScreen> createState() =>
@@ -33,6 +41,7 @@ class _LearningStudioCourseSuiteScreenState
   int? _selectedCourseId;
   String _section = 'content';
   bool _busy = false;
+  bool _initialSubmissionOpened = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -42,11 +51,36 @@ class _LearningStudioCourseSuiteScreenState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _selectedCourseId ??= widget.initialCourseId;
     _future ??= _load();
   }
 
-  Future<Map<String, dynamic>> _load() async =>
-      _map((await _client.learningStudio(courseId: _selectedCourseId))['data']);
+  Future<Map<String, dynamic>> _load() async {
+    final data = _map(
+      (await _client.learningStudio(courseId: _selectedCourseId))['data'],
+    );
+    final course = _map(data['selectedCourse']);
+    if (!_initialSubmissionOpened &&
+        widget.initialSubmissionId != null &&
+        _int(course['id']) == widget.initialCourseId) {
+      _initialSubmissionOpened = true;
+      final assignments = _maps(course['assignments']);
+      for (final assignment in assignments) {
+        if (widget.initialAssignmentId != null &&
+            _int(assignment['id']) != widget.initialAssignmentId) {
+          continue;
+        }
+        for (final submission in _maps(assignment['submissions'])) {
+          if (_int(submission['id']) == widget.initialSubmissionId) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _gradeAssignment(course, submission);
+            });
+          }
+        }
+      }
+    }
+    return data;
+  }
 
   void _reload() {
     setState(() {
@@ -437,23 +471,44 @@ class _LearningStudioCourseSuiteScreenState
                       subtitle: Text(
                         '${_int(quiz['pass_percent'])}% · ${_maps(quiz['questions']).length} ${t('studio.questions')}',
                       ),
-                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [IconButton(tooltip: assessmentText(context,'edit'), onPressed: () => _showQuiz(course, quiz), icon: const Icon(Icons.edit_outlined)), IconButton(
-                        tooltip: t('common.delete'),
-                        color: AirmiusColors.red,
-                        onPressed: () => _deleteQuiz(course, quiz),
-                        icon: const Icon(Icons.delete_outline),
-                      )]),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: assessmentText(context, 'edit'),
+                            onPressed: () => _showQuiz(course, quiz),
+                            icon: const Icon(Icons.edit_outlined),
+                          ),
+                          IconButton(
+                            tooltip: t('common.delete'),
+                            color: AirmiusColors.red,
+                            onPressed: () => _deleteQuiz(course, quiz),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ],
+                      ),
                     ),
                   )
                   .toList(),
             ),
           ),
         ],
-        for (final quiz in quizzes) for (final attempt in _maps(quiz['attempts']).where((attempt) => attempt['review_status'] == 'pending')) ListTile(
-          title: Text('${_text(_map(attempt['user'])['name'])} · ${_text(quiz['title'])}'),
-          subtitle: Text(assessmentText(context,'pending_review')),
-          trailing: TextButton(onPressed: _busy ? null : () => _gradeQuiz(course,quiz,attempt), child: Text(assessmentText(context,'review'))),
-        ),
+        for (final quiz in quizzes)
+          for (final attempt in _maps(
+            quiz['attempts'],
+          ).where((attempt) => attempt['review_status'] == 'pending'))
+            ListTile(
+              title: Text(
+                '${_text(_map(attempt['user'])['name'])} · ${_text(quiz['title'])}',
+              ),
+              subtitle: Text(assessmentText(context, 'pending_review')),
+              trailing: TextButton(
+                onPressed: _busy
+                    ? null
+                    : () => _gradeQuiz(course, quiz, attempt),
+                child: Text(assessmentText(context, 'review')),
+              ),
+            ),
         if (assignments.isNotEmpty) ...[
           const SizedBox(height: 12),
           AirmiusPanel(
@@ -464,6 +519,8 @@ class _LearningStudioCourseSuiteScreenState
                   .map(
                     (assignment) => _AssignmentStudioCard(
                       assignment: assignment,
+                      initiallyExpanded:
+                          widget.initialAssignmentId == _int(assignment['id']),
                       onEdit: () => _showAssignment(course, assignment),
                       onGrade: (submission) =>
                           _gradeAssignment(course, submission),
@@ -606,7 +663,9 @@ class _LearningStudioCourseSuiteScreenState
             ),
             OutlinedButton.icon(
               key: const ValueKey('learning-delete-course'),
-              style: OutlinedButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
               onPressed: _busy ? null : () => _deleteContent(course),
               icon: const Icon(Icons.delete_forever_outlined),
               label: Text(learningDeletionText(context, 'remove_course')),
@@ -684,7 +743,8 @@ class _LearningStudioCourseSuiteScreenState
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _CourseSheet(course: course, uploadLogo: _uploadCertificateLogo),
+      builder: (_) =>
+          _CourseSheet(course: course, uploadLogo: _uploadCertificateLogo),
     );
     if (payload == null || !mounted) return;
     final preserved = _preserveCourseFields(course, payload);
@@ -695,18 +755,34 @@ class _LearningStudioCourseSuiteScreenState
     );
   }
 
-  Future<void> _deleteContent(Map<String, dynamic> course, {Map<String, dynamic>? section}) async {
+  Future<void> _deleteContent(
+    Map<String, dynamic> course, {
+    Map<String, dynamic>? section,
+  }) async {
     if (_busy) return;
-    final confirmed = await confirmLearningDeletion(context, title: _text((section ?? course)['title']), course: section == null);
+    final confirmed = await confirmLearningDeletion(
+      context,
+      title: _text((section ?? course)['title']),
+      course: section == null,
+    );
     if (!confirmed || !mounted) return;
-    await _run(() async {
-      if (section == null) {
-        await _client.deleteLearningStudioCourse(_int(course['id']));
-        _selectedCourseId = null;
-      } else {
-        await _client.deleteLearningStudioSection(_int(course['id']), _int(section['id']));
-      }
-    }, success: learningDeletionText(context, section == null ? 'course_deleted' : 'section_deleted'));
+    await _run(
+      () async {
+        if (section == null) {
+          await _client.deleteLearningStudioCourse(_int(course['id']));
+          _selectedCourseId = null;
+        } else {
+          await _client.deleteLearningStudioSection(
+            _int(course['id']),
+            _int(section['id']),
+          );
+        }
+      },
+      success: learningDeletionText(
+        context,
+        section == null ? 'course_deleted' : 'section_deleted',
+      ),
+    );
   }
 
   Map<String, dynamic> _preserveCourseFields(
@@ -768,8 +844,16 @@ class _LearningStudioCourseSuiteScreenState
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _LessonSheet(sections: sections, lesson: lesson,
-        upload: (file, purpose, progress) => uploadLearningLessonAsset(api: _client, courseId: _int(course['id']), file: file, purpose: purpose, onProgress: progress),
+      builder: (_) => _LessonSheet(
+        sections: sections,
+        lesson: lesson,
+        upload: (file, purpose, progress) => uploadLearningLessonAsset(
+          api: _client,
+          courseId: _int(course['id']),
+          file: file,
+          purpose: purpose,
+          onProgress: progress,
+        ),
       ),
     );
     if (payload == null || !mounted) return;
@@ -823,19 +907,75 @@ class _LearningStudioCourseSuiteScreenState
     );
   }
 
-  Future<String> _assessmentImage(Map<String,dynamic> course, PlatformFile file) async => (await uploadLearningLessonAsset(api: _client, courseId: _int(course['id']), file: file, purpose: 'assessment_image'))['url'] as String;
+  Future<String> _assessmentImage(
+    Map<String, dynamic> course,
+    PlatformFile file,
+  ) async =>
+      (await uploadLearningLessonAsset(
+            api: _client,
+            courseId: _int(course['id']),
+            file: file,
+            purpose: 'assessment_image',
+          ))['url']
+          as String;
 
-  Future<void> _showQuiz(Map<String, dynamic> course, [Map<String,dynamic>? quiz]) async {
-    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => LearningAssessmentEditorScreen(assignment: false, initial: quiz, uploadImage: (file) => _assessmentImage(course,file), onSave: (payload) async {
-      if (quiz == null) { await _client.createLearningStudioQuiz(_int(course['id']), payload); }
-      else { await _client.updateLearningStudioQuiz(_int(course['id']),_int(quiz['id']),payload); }
-    })));
-    if (saved == true && mounted) { _toast(assessmentText(context,'saved')); _reload(); }
+  Future<void> _showQuiz(
+    Map<String, dynamic> course, [
+    Map<String, dynamic>? quiz,
+  ]) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => LearningAssessmentEditorScreen(
+          assignment: false,
+          initial: quiz,
+          uploadImage: (file) => _assessmentImage(course, file),
+          onSave: (payload) async {
+            if (quiz == null) {
+              await _client.createLearningStudioQuiz(
+                _int(course['id']),
+                payload,
+              );
+            } else {
+              await _client.updateLearningStudioQuiz(
+                _int(course['id']),
+                _int(quiz['id']),
+                payload,
+              );
+            }
+          },
+        ),
+      ),
+    );
+    if (saved == true && mounted) {
+      _toast(assessmentText(context, 'saved'));
+      _reload();
+    }
   }
 
-  Future<void> _gradeQuiz(Map<String,dynamic> course, Map<String,dynamic> quiz, Map<String,dynamic> attempt) async {
-    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => LearningQuizReviewScreen(attempt: attempt, onSave: (payload) async { await _client.gradeLearningStudioQuiz(_int(course['id']),_int(quiz['id']),_int(attempt['id']),payload); })));
-    if (saved == true && mounted) { _toast(assessmentText(context,'saved')); _reload(); }
+  Future<void> _gradeQuiz(
+    Map<String, dynamic> course,
+    Map<String, dynamic> quiz,
+    Map<String, dynamic> attempt,
+  ) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => LearningQuizReviewScreen(
+          attempt: attempt,
+          onSave: (payload) async {
+            await _client.gradeLearningStudioQuiz(
+              _int(course['id']),
+              _int(quiz['id']),
+              _int(attempt['id']),
+              payload,
+            );
+          },
+        ),
+      ),
+    );
+    if (saved == true && mounted) {
+      _toast(assessmentText(context, 'saved'));
+      _reload();
+    }
   }
 
   Future<void> _deleteQuiz(
@@ -870,12 +1010,37 @@ class _LearningStudioCourseSuiteScreenState
     );
   }
 
-  Future<void> _showAssignment(Map<String, dynamic> course, [Map<String,dynamic>? assignment]) async {
-    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(builder: (_) => LearningAssessmentEditorScreen(assignment: true, initial: assignment, uploadImage: (file) => _assessmentImage(course,file), onSave: (payload) async {
-      if (assignment == null) { await _client.createLearningStudioAssignment(_int(course['id']),payload); }
-      else { await _client.updateLearningStudioAssignment(_int(course['id']),_int(assignment['id']),payload); }
-    })));
-    if (saved == true && mounted) { _toast(assessmentText(context,'saved')); _reload(); }
+  Future<void> _showAssignment(
+    Map<String, dynamic> course, [
+    Map<String, dynamic>? assignment,
+  ]) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => LearningAssessmentEditorScreen(
+          assignment: true,
+          initial: assignment,
+          uploadImage: (file) => _assessmentImage(course, file),
+          onSave: (payload) async {
+            if (assignment == null) {
+              await _client.createLearningStudioAssignment(
+                _int(course['id']),
+                payload,
+              );
+            } else {
+              await _client.updateLearningStudioAssignment(
+                _int(course['id']),
+                _int(assignment['id']),
+                payload,
+              );
+            }
+          },
+        ),
+      ),
+    );
+    if (saved == true && mounted) {
+      _toast(assessmentText(context, 'saved'));
+      _reload();
+    }
   }
 
   Future<void> _gradeAssignment(
@@ -1019,11 +1184,12 @@ class _LearningStudioCourseSuiteScreenState
     };
   }
 
-  Future<String> _uploadCertificateLogo(PlatformFile file) => uploadLearningCertificateLogo(
-    api: _client,
-    bytes: file.bytes!,
-    filename: file.name,
-  );
+  Future<String> _uploadCertificateLogo(PlatformFile file) =>
+      uploadLearningCertificateLogo(
+        api: _client,
+        bytes: file.bytes!,
+        filename: file.name,
+      );
 
   Future<void> _uploadCover(Map<String, dynamic> course) async {
     final t = AirmiusScope.of(context).t;
@@ -1147,12 +1313,41 @@ class _LearningStudioCourseSuiteScreenState
     Map<String, dynamic> course,
     Map<String, dynamic> enrollment,
   ) async {
+    if (_busy) return;
+    final t = AirmiusScope.of(context).t;
+    final participant = _text(
+      _map(enrollment['user'])['name'],
+      fallback: t('studio.student'),
+    );
+    final courseName = _text(course['title'], fallback: t('studio.courseTitle'));
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('studio.confirmRevokeTitle')),
+        content: Text(
+          t('studio.confirmRevokeBody')
+              .replaceAll('{participant}', participant)
+              .replaceAll('{course}', courseName),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('common.cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(t('studio.confirmRevokeAction')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     await _run(
       () async => _client.revokeLearningStudioEnrollment(
         _int(course['id']),
         _int(enrollment['id']),
       ),
-      success: AirmiusScope.of(context).t('studio.accessRevoked'),
+      success: t('studio.accessRevoked'),
     );
   }
 }
@@ -1244,7 +1439,9 @@ class _SectionCard extends StatelessWidget {
             alignment: AlignmentDirectional.centerEnd,
             child: TextButton.icon(
               key: ValueKey('learning-delete-section-${section['id']}'),
-              style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
               onPressed: onDeleteSection,
               icon: const Icon(Icons.delete_outline),
               label: Text(learningDeletionText(context, 'remove_section')),
@@ -1436,11 +1633,13 @@ class _QuestionCard extends StatelessWidget {
 class _AssignmentStudioCard extends StatelessWidget {
   const _AssignmentStudioCard({
     required this.assignment,
+    this.initiallyExpanded = false,
     required this.onGrade,
     required this.onEdit,
   });
 
   final Map<String, dynamic> assignment;
+  final bool initiallyExpanded;
   final ValueChanged<Map<String, dynamic>> onGrade;
   final VoidCallback onEdit;
 
@@ -1449,13 +1648,28 @@ class _AssignmentStudioCard extends StatelessWidget {
     final t = AirmiusScope.of(context).t;
     final submissions = _maps(assignment['submissions']);
     return ExpansionTile(
+      initiallyExpanded: initiallyExpanded,
       tilePadding: EdgeInsets.zero,
       childrenPadding: EdgeInsets.zero,
       leading: Icon(
         Icons.assignment_outlined,
         color: airmiusAccentColor(context),
       ),
-      title: Row(children: [Expanded(child: Text(_text(assignment['title']), style: const TextStyle(fontWeight: FontWeight.w900))), IconButton(tooltip: assessmentText(context,'edit'), onPressed: onEdit, icon: const Icon(Icons.edit_outlined))]),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              _text(assignment['title']),
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+          IconButton(
+            tooltip: assessmentText(context, 'edit'),
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit_outlined),
+          ),
+        ],
+      ),
       subtitle: Text(
         '${_int(assignment['points'])} ${t('studio.points')} · ${submissions.length} ${t('studio.submissions')}',
       ),
@@ -1476,7 +1690,7 @@ class _AssignmentStudioCard extends StatelessWidget {
                 title: Text(_text(user['name'], fallback: t('studio.student'))),
                 subtitle: Text(
                   '${_status(submission['status'])}'
-                  '${submission['score'] == null ? '' : ' · ${_int(submission['score'])}/${_int(assignment['points'])}'}',
+                  '${submission['score'] == null ? '' : ' · ${_int(submission['score'])}/${_int(_map(submission['grading_snapshot'])['points'] ?? assignment['points'])}'}',
                 ),
                 trailing: TextButton.icon(
                   onPressed: () => onGrade(submission),
@@ -1582,7 +1796,12 @@ class _GradeSheetState extends State<_GradeSheet> {
         children: [
           if (_text(widget.submission['body']).isNotEmpty)
             AirmiusPanel(child: Text(_text(widget.submission['body']))),
-          LearningAssessmentAnswersSummary(questions: assessmentMaps(widget.submission['question_snapshot']), answers: Map<String,dynamic>.from(widget.submission['answers'] as Map? ?? {})),
+          LearningAssessmentAnswersSummary(
+            questions: assessmentMaps(widget.submission['question_snapshot']),
+            answers: Map<String, dynamic>.from(
+              widget.submission['answers'] as Map? ?? {},
+            ),
+          ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             initialValue: _status,
@@ -2061,34 +2280,40 @@ class _CourseSheetState extends State<_CourseSheet> {
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: _uploadingLogo ? null : () {
-                if (!(_form.currentState?.validate() ?? false)) return;
-                Navigator.pop(context, {
-                  'title': _title.text.trim(),
-                  'subtitle': _nullable(_subtitle.text),
-                  'description': _nullable(_description.text),
-                  'category': _category,
-                  'sport_type': _nullable(_sport.text),
-                  'level': _level,
-                  'language': _language,
-                  'status': _status,
-                  'is_public': _public,
-                  'is_free': _free,
-                  'price_cents': _free ? 0 : _euro(_price.text),
-                  'learning_goals_text': _learningGoals.text.trim(),
-                  'requirements_text': _requirements.text.trim(),
-                  'target_groups_text': _targetGroups.text.trim(),
-                  'sales_points_text': _salesPoints.text.trim(),
-                  'faq_items_text': _faqItems.text.trim(),
-                  'guarantee_text': _nullable(_guarantee.text),
-                  'tags_text': _tags.text.trim(),
-                  'certificate_logo_url': _nullable(_certificateLogo.text),
-                  'certificate_signature_name': _nullable(
-                    _certificateSignature.text,
-                  ),
-                  'certificate_footer_text': _nullable(_certificateFooter.text),
-                });
-              },
+              onPressed: _uploadingLogo
+                  ? null
+                  : () {
+                      if (!(_form.currentState?.validate() ?? false)) return;
+                      Navigator.pop(context, {
+                        'title': _title.text.trim(),
+                        'subtitle': _nullable(_subtitle.text),
+                        'description': _nullable(_description.text),
+                        'category': _category,
+                        'sport_type': _nullable(_sport.text),
+                        'level': _level,
+                        'language': _language,
+                        'status': _status,
+                        'is_public': _public,
+                        'is_free': _free,
+                        'price_cents': _free ? 0 : _euro(_price.text),
+                        'learning_goals_text': _learningGoals.text.trim(),
+                        'requirements_text': _requirements.text.trim(),
+                        'target_groups_text': _targetGroups.text.trim(),
+                        'sales_points_text': _salesPoints.text.trim(),
+                        'faq_items_text': _faqItems.text.trim(),
+                        'guarantee_text': _nullable(_guarantee.text),
+                        'tags_text': _tags.text.trim(),
+                        'certificate_logo_url': _nullable(
+                          _certificateLogo.text,
+                        ),
+                        'certificate_signature_name': _nullable(
+                          _certificateSignature.text,
+                        ),
+                        'certificate_footer_text': _nullable(
+                          _certificateFooter.text,
+                        ),
+                      });
+                    },
               icon: const Icon(Icons.save_outlined),
               label: Text(t('common.save')),
             ),
@@ -2159,8 +2384,13 @@ class _SectionSheetState extends State<_SectionSheet> {
 }
 
 class _LessonSheet extends StatefulWidget {
-  const _LessonSheet({required this.sections, required this.upload, this.lesson});
-  final Future<AirmiusJson> Function(PlatformFile, String, ValueChanged<double>) upload;
+  const _LessonSheet({
+    required this.sections,
+    required this.upload,
+    this.lesson,
+  });
+  final Future<AirmiusJson> Function(PlatformFile, String, ValueChanged<double>)
+  upload;
   final List<Map<String, dynamic>> sections;
   final Map<String, dynamic>? lesson;
 
@@ -2268,7 +2498,9 @@ class _LessonSheetState extends State<_LessonSheet> {
                         ),
                       )
                       .toList(),
-              onChanged: _uploading ? null : (value) => setState(() => _type = value ?? 'lesson'),
+              onChanged: _uploading
+                  ? null
+                  : (value) => setState(() => _type = value ?? 'lesson'),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -2289,10 +2521,22 @@ class _LessonSheetState extends State<_LessonSheet> {
                 decoration: InputDecoration(labelText: t('studio.videoUrl')),
                 keyboardType: TextInputType.url,
               ),
-              LearningLessonUploadField(controller: _video, video: true, upload: widget.upload, enabled: !_uploading, onBusy: (value) => setState(() => _uploadingVideo = value)),
+              LearningLessonUploadField(
+                controller: _video,
+                video: true,
+                upload: widget.upload,
+                enabled: !_uploading,
+                onBusy: (value) => setState(() => _uploadingVideo = value),
+              ),
             ],
             const SizedBox(height: 12),
-            LearningLessonUploadField(controller: _attachments, video: false, upload: widget.upload, enabled: !_uploading, onBusy: (value) => setState(() => _uploadingAttachments = value)),
+            LearningLessonUploadField(
+              controller: _attachments,
+              video: false,
+              upload: widget.upload,
+              enabled: !_uploading,
+              onBusy: (value) => setState(() => _uploadingAttachments = value),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _duration,
@@ -2338,21 +2582,24 @@ class _LessonSheetState extends State<_LessonSheet> {
             ),
             const SizedBox(height: 14),
             FilledButton.icon(
-              onPressed: _uploading ? null : () {
-                if (!(_form.currentState?.validate() ?? false)) return;
-                Navigator.pop(context, {
-                  'learning_course_section_id': _sectionId,
-                  'title': _title.text.trim(),
-                  'type': _type,
-                  'summary': _nullable(_summary.text),
-                  'content': _nullable(_content.text),
-                  'video_url': _nullable(_video.text),
-                  'duration_minutes': int.tryParse(_duration.text) ?? 0,
-                  'is_preview': _preview,
-                  'unlock_after_days': int.tryParse(_unlockAfterDays.text) ?? 0,
-                  'attachments_text': _attachments.text.trim(),
-                });
-              },
+              onPressed: _uploading
+                  ? null
+                  : () {
+                      if (!(_form.currentState?.validate() ?? false)) return;
+                      Navigator.pop(context, {
+                        'learning_course_section_id': _sectionId,
+                        'title': _title.text.trim(),
+                        'type': _type,
+                        'summary': _nullable(_summary.text),
+                        'content': _nullable(_content.text),
+                        'video_url': _nullable(_video.text),
+                        'duration_minutes': int.tryParse(_duration.text) ?? 0,
+                        'is_preview': _preview,
+                        'unlock_after_days':
+                            int.tryParse(_unlockAfterDays.text) ?? 0,
+                        'attachments_text': _attachments.text.trim(),
+                      });
+                    },
               icon: const Icon(Icons.save_outlined),
               label: Text(t('common.save')),
             ),

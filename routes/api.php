@@ -129,6 +129,7 @@ use App\Http\Controllers\RoleAssignmentController;
 use App\Http\Controllers\SavedViewController;
 use App\Http\Controllers\SponsorInquiryController;
 use App\Http\Controllers\SponsorTeamController;
+use App\Http\Controllers\TeamRoleOfferController;
 use App\Http\Controllers\TrainerCockpitController as MobileTrainerCockpitController;
 use App\Http\Controllers\TrainerResignationController;
 use App\Http\Controllers\TrainingAiGenerationController;
@@ -1035,6 +1036,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/teams/{team}/join-requests/{joinRequest}/approve', [TeamController::class, 'approveJoinRequest'])->name('teams.join-requests.approve');
         Route::post('/teams/{team}/join-requests/{joinRequest}/decline', [TeamController::class, 'declineJoinRequest'])->name('teams.join-requests.decline');
         Route::post('/teams/{team}/members', [TeamController::class, 'storeMember'])->name('teams.members.store');
+        Route::post('/team-role-offers/{offer}/{decision}', [TeamRoleOfferController::class, 'respond'])->whereIn('decision', ['accept', 'decline', 'cancel'])->name('team-role-offers.respond');
         Route::put('/teams/{team}/members/{user}', [TeamController::class, 'updateMember'])->name('teams.members.update');
         Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('teams.members.destroy');
         Route::get('/teams/{team}/attendance-stats', [TeamController::class, 'attendanceStats'])->name('teams.attendance-stats');

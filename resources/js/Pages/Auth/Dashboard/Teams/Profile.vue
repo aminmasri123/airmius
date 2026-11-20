@@ -1,4 +1,5 @@
 ﻿<script setup>
+import TeamRoleOffers from '@/Components/Teams/TeamRoleOffers.vue'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { confirmDialog } from '@/services/dialogService'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
@@ -328,6 +329,7 @@ const uploadImage = (field, event) => {
         <Head :title="teamProfile.name" />
 
         <div class="mx-auto max-w-5xl space-y-6">
+            <TeamRoleOffers :offers="teamProfile.role_offers || []" />
             <ClubWorkspaceNav
                 active="structure"
                 :description="tAuto('Teamprofil, Zugehörigkeit, Mitglieder und sichtbare Teambeiträge.')"

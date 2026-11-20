@@ -1986,6 +1986,8 @@ class AirmiusTeam {
     this.canRequestJoin = false,
     this.viewerPendingJoinRequestId,
     this.pendingJoinRequests = const [],
+    this.roleOffers = const [],
+    this.canUpdateMemberRoles = false,
     this.usersCount,
     this.eventsCount,
     this.memberInvitationRemainingToday,
@@ -2016,6 +2018,8 @@ class AirmiusTeam {
   final bool canRequestJoin;
   final int? viewerPendingJoinRequestId;
   final List<AirmiusTeamJoinRequest> pendingJoinRequests;
+  final List<AirmiusTeamRoleOffer> roleOffers;
+  final bool canUpdateMemberRoles;
   final int? usersCount;
   final int? eventsCount;
   final int? memberInvitationRemainingToday;
@@ -2060,6 +2064,8 @@ class AirmiusTeam {
           : null,
       users: _jsonList(json['users']).map(AirmiusUser.fromJson).toList(),
       canManage: _bool(json['can_manage']) || _bool(json['can_update']),
+      canUpdateMemberRoles: _bool(json['can_update_member_roles']),
+      roleOffers: _jsonList(json['role_offers']).map(AirmiusTeamRoleOffer.fromJson).toList(),
       canManageMetadata: _bool(json['can_manage_metadata']),
       canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
       viewerIsMember: _bool(json['viewer_is_member']),
@@ -2093,6 +2099,23 @@ int? _nullableIntFromJson(Object? value) {
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value);
   return null;
+}
+
+class AirmiusTeamRoleOffer {
+  const AirmiusTeamRoleOffer({required this.id, required this.recipientId, required this.recipientName, required this.role, required this.previousRole, required this.expiresAt, this.canRespond = false, this.canCancel = false});
+  final int id;
+  final int recipientId;
+  final String recipientName;
+  final String role;
+  final String previousRole;
+  final String expiresAt;
+  final bool canRespond;
+  final bool canCancel;
+  factory AirmiusTeamRoleOffer.fromJson(JsonMap json) => AirmiusTeamRoleOffer(
+    id: _int(json['id']), recipientId: _int(json['recipient_id']), recipientName: _string(json['recipient_name']),
+    role: _string(json['role']), previousRole: _string(json['previous_role']), expiresAt: _string(json['expires_at']),
+    canRespond: _bool(json['can_respond']), canCancel: _bool(json['can_cancel']),
+  );
 }
 
 class AirmiusTeamJoinRequest {
@@ -3172,6 +3195,29 @@ String? _mobileNotificationActionUrl(String type, JsonMap data) {
   final rideId = int.tryParse('${data['ride_id'] ?? ''}');
   if (type.startsWith('ride.') && rideId != null && rideId > 0) {
     return 'airmius://rides/$rideId';
+  }
+  if (type.startsWith('learning.assignment.')) {
+    final course = int.tryParse('${data['course_id'] ?? ''}');
+    if (course != null && course > 0) {
+      final query = <String, String>{
+        'course': '$course',
+        for (final entry in {
+          'assignment': data['assignment_id'],
+          'submission': data['submission_id'],
+          'lesson': data['lesson_id'],
+        }.entries)
+          if (int.tryParse('${entry.value}') != null)
+            entry.key: '${entry.value}',
+      };
+      return Uri(
+        scheme: 'airmius',
+        host: 'learning',
+        path: type == 'learning.assignment.submitted'
+            ? '/studio'
+            : '/courses/$course',
+        queryParameters: query,
+      ).toString();
+    }
   }
   final explicit = data['mobile_url']?.toString().trim();
   if (explicit != null && explicit.isNotEmpty) return explicit;
@@ -4298,6 +4344,7 @@ abstract class AirmiusClubRepository {
   Future<AirmiusTeamInvitation> declineTeamInvitation(int invitationId);
   Future<AirmiusTeamInvitation> declineTeamInvitationByToken(String token);
   Future<AirmiusTeam> updateTeamMemberRole(int teamId, int userId, String role);
+  Future<AirmiusTeam> respondToTeamRoleOffer(int offerId, String decision);
 }
 
 abstract class AirmiusSportRepository {

@@ -1,3 +1,5 @@
+import '../screens/learning_studio_course_suite_screen.dart';
+import '../screens/lesson_detail_screen.dart';
 import 'package:flutter/material.dart';
 import '../screens/carpool_ride_screen.dart';
 import '../screens/carpool_center_screen.dart';
@@ -72,6 +74,18 @@ class AirmiusDeepLinkNavigator {
 
   static Widget screenFor(AirmiusDeepLinkTarget target) {
     return switch (target.type) {
+      AirmiusDeepLinkTargetType.learningStudio =>
+        LearningStudioCourseSuiteScreen(
+          initialCourseId: target.id,
+          initialAssignmentId: int.tryParse(target.query['assignment'] ?? ''),
+          initialSubmissionId: int.tryParse(target.query['submission'] ?? ''),
+        ),
+      AirmiusDeepLinkTargetType.learningCourse => LessonDetailScreen(
+        courseId: target.id!,
+        initialTitle: '',
+        initialLessonId: int.tryParse(target.query['lesson'] ?? ''),
+        initialAssignmentId: int.tryParse(target.query['assignment'] ?? ''),
+      ),
       AirmiusDeepLinkTargetType.ride =>
         target.query['cancelled'] == '1'
             ? const CarpoolCancelledScreen()
@@ -222,6 +236,9 @@ class AirmiusDeepLinkNavigator {
 
   static String destinationLabel(AirmiusDeepLinkTarget target) {
     return switch (target.type) {
+      AirmiusDeepLinkTargetType.learningStudio =>
+        'Kursabgabe im Learning Studio',
+      AirmiusDeepLinkTargetType.learningCourse => 'Kursaufgabe und Ergebnis',
       AirmiusDeepLinkTargetType.club => 'Vereinsprofil / Vereine',
       AirmiusDeepLinkTargetType.team => 'Team',
       AirmiusDeepLinkTargetType.membershipApplication =>

@@ -12,10 +12,12 @@ use App\Models\Invoice;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\TeamJoinRequest;
+use App\Models\TeamRoleOffer;
 use App\Models\TeamTransferRequest;
 use App\Models\User;
 use App\Notifications\ExternalTeamInvitation;
 use App\Services\PlanFeatureService;
+use App\Services\TeamRoleOfferService;
 use App\Support\AppNotification;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
@@ -845,46 +847,7 @@ class TeamController extends Controller
             'role' => ['required', Rule::in(Team::ROLES)],
         ]);
 
-        $previousRole = $team->users()
-            ->where('users.id', $user->id)
-            ->first()?->pivot?->role;
-
-        $team->users()->updateExistingPivot($user->id, [
-            'role' => $data['role'],
-        ]);
-
-        if ($previousRole !== $data['role']) {
-            $previousRoleLabel = filled($previousRole)
-                ? TeamRoles::definition($previousRole)['label']
-                : 'Unbekannt';
-            $newRoleLabel = TeamRoles::definition($data['role'])['label'] ?? $data['role'];
-
-            AppNotification::sendLocalized(
-                $user,
-                'team.role_updated',
-                'organization.notifications.team_role_title',
-                'organization.notifications.team_role_body',
-                [
-                    'team' => $team->name,
-                    'previous' => AppNotification::translatedReplacement(
-                        $previousRole ? 'organization.roles.team.'.strtolower($previousRole) : 'organization.roles.unknown',
-                        $previousRoleLabel,
-                    ),
-                    'next' => AppNotification::translatedReplacement(
-                        'organization.roles.team.'.strtolower($data['role']),
-                        $newRoleLabel,
-                    ),
-                ],
-                [
-                    'url' => '/notifications',
-                    'mobile_url' => 'airmius://teams/'.$team->id,
-                    'team_id' => $team->id,
-                    'club_id' => $team->club_id,
-                    'previous_role' => $previousRole,
-                    'role' => $data['role'],
-                ],
-            );
-        }
+        app(TeamRoleOfferService::class)->change($team, $request->user(), $user, $data['role']);
 
         return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
     }
@@ -898,6 +861,9 @@ class TeamController extends Controller
             'role' => ['required', Rule::in(Team::ROLES)],
         ]);
 
+        if ($data['role'] !== TeamRoles::PLAYER) {
+            $this->authorize('updateMemberRole', $team);
+        }
         $member = User::findOrFail($data['user_id']);
 
         if (! $team->club->users()->where('users.id', $member->id)->exists()) {
@@ -914,10 +880,13 @@ class TeamController extends Controller
 
         DB::transaction(function () use ($team, $member, $data) {
             $team->users()->syncWithoutDetaching([
-                $member->id => ['role' => $data['role']],
+                $member->id => ['role' => TeamRoles::PLAYER],
             ]);
 
             $this->syncTeamChatMembers($team, [$member->id]);
+            if ($data['role'] !== TeamRoles::PLAYER) {
+                app(TeamRoleOfferService::class)->change($team, request()->user(), $member, $data['role']);
+            }
         });
 
         AppNotification::sendLocalized(
@@ -969,6 +938,8 @@ class TeamController extends Controller
             }
         }
 
+        app(TeamRoleOfferService::class)->cancelMembershipInvitations($team, $user);
+        TeamRoleOffer::where('team_id', $team->id)->where('recipient_id', $user->id)->where('status', 'pending')->update(['status' => 'cancelled', 'responded_at' => now()]);
         $team->users()->detach($user->id);
         $this->removeTeamChatMember($team, $user->id);
 

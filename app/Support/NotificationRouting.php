@@ -50,7 +50,7 @@ final class NotificationRouting
             Str::startsWith($type, ['commerce.', 'marketplace.', 'outfit.', 'invoice.', 'subscription.', 'payment.'])
                 || Str::contains($type, ['billing', 'payout', 'refund']) => 'billing',
             Str::startsWith($type, ['ads.', 'marketing.', 'sponsor.', 'agency.']) => 'marketing',
-            Str::startsWith($type, 'training.') => 'training',
+            Str::startsWith($type, ['training.', 'learning.']) => 'training',
             Str::startsWith($type, 'event.') || Str::contains($type, 'participation') => 'events',
             Str::startsWith($type, ['club.', 'team.', 'member.', 'guardian.']) => 'club',
             Str::startsWith($type, ['friend.', 'social.', 'feed.', 'post.', 'user.follow']) => 'social',
@@ -124,6 +124,14 @@ final class NotificationRouting
     /** @return array<string, mixed> */
     public static function normalizeActionData(string $type, array $data): array
     {
+        if (Str::startsWith($type, 'learning.assignment.') && ($courseId = self::positiveIdentifier($data['course_id'] ?? null)) !== null) {
+            $query = array_filter(['course' => $courseId, 'assignment' => self::positiveIdentifier($data['assignment_id'] ?? null), 'submission' => self::positiveIdentifier($data['submission_id'] ?? null), 'lesson' => self::positiveIdentifier($data['lesson_id'] ?? null)]);
+            $studio = $type === 'learning.assignment.submitted';
+            $web = $studio ? '/learning/studio?'.http_build_query([...$query, 'panel' => 'assignments']) : '/e-learning/courses/'.$courseId.'?'.http_build_query($query);
+
+            return self::withAction($data, $web, 'airmius://learning/'.($studio ? 'studio' : 'courses/'.$courseId).'?'.http_build_query($query), false);
+        }
+
         if (Str::startsWith($type, 'support.') && ($ticketId = self::positiveIdentifier($data['support_ticket_id'] ?? null)) !== null) {
             return self::withAction($data, self::existingWebAction($data) ?? '/support?ticket='.$ticketId,
                 'airmius://support?ticket='.$ticketId, false);

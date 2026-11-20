@@ -29,6 +29,7 @@ return [
         'quiz_failed' => 'Quiz not passed. You can try again.',
     ],
     'errors' => [
+        'access_revoked' => 'Your access to this course was removed. Please contact the course instructor.',
         'paid_course' => 'This is a paid course and cannot be joined for free.',
         'tutor_self_enroll' => 'Course tutors do not need to enroll themselves.',
         'lesson_locked' => 'This lesson will be unlocked later.',
@@ -46,6 +47,10 @@ return [
         'assignments' => 'Required assignments',
     ],
     'certificate' => [
+        'invalid_title' => 'Certificate not verified',
+        'invalid_body' => 'Successful course completion could not be verified. Check the code or contact the course instructor.',
+        'verify_online' => 'Scan the QR code to verify successful completion.',
+        'scan_to_verify' => 'Verify certificate',
         'completion_statement' => 'has successfully completed the following course.',
         'title' => 'CERTIFICATE',
         'issued' => 'Issued',

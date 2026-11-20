@@ -172,6 +172,11 @@ class MobileLearningApiTest extends TestCase
             ->assertForbidden();
         $this->getJson("/api/v1/learning/certificates/{$certificateId}")->assertForbidden();
         $this->getJson("/api/v1/learning/certificates/{$certificateId}/download")->assertForbidden();
+        $this->postJson("/api/v1/learning/courses/{$course->id}/enroll")->assertForbidden();
+        $this->assertSame('cancelled', LearningEnrollment::findOrFail($enrollmentId)->status);
+        Sanctum::actingAs($tutor);
+        $this->postJson("/api/v1/learning-studio/courses/{$course->id}/enrollments", ['email' => $student->email])->assertSuccessful();
+        $this->assertSame('active', LearningEnrollment::findOrFail($enrollmentId)->status);
     }
 
     public function test_paid_courses_cannot_be_enrolled_for_free_and_private_courses_are_hidden(): void

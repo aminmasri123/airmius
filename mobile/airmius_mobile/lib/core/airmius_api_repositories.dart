@@ -197,7 +197,11 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
-  Future<void> deleteClub(int id, {required String confirmation, required String code}) async {
+  Future<void> deleteClub(
+    int id, {
+    required String confirmation,
+    required String code,
+  }) async {
     await client.deleteClub(id, confirmation: confirmation, code: code);
   }
 
@@ -868,6 +872,16 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
     final json = await client.declineTeamInvitationByToken(token);
     final data = json['data'];
     return AirmiusTeamInvitation.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusTeam> respondToTeamRoleOffer(
+    int offerId,
+    String decision,
+  ) async {
+    final json = await client.respondToTeamRoleOffer(offerId, decision);
+    final data = json['data'];
+    return AirmiusTeam.fromJson(data is JsonMap ? data : json);
   }
 
   @override

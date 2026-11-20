@@ -17,8 +17,7 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "correct": "Richtige Antwort",
     "accepted_answers": "Akzeptierte Antworten (eine pro Zeile)",
     "explanation": "Erklärung (optional)",
-    "ordering_hint":
-        "Hier die richtige Reihenfolge festlegen. Teilnehmer erhalten eine gemischte Reihenfolge.",
+    "ordering_hint": "Hier die richtige Reihenfolge festlegen. Teilnehmer erhalten eine gemischte Reihenfolge.",
     "short_text": "Kurzer Text",
     "long_text": "Langer Text",
     "multiple_choice": "Mehrere richtige Antworten",
@@ -31,8 +30,7 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "new": "Erstellen",
     "saved": "Gespeichert.",
     "pending_review": "Bewertung ausstehend",
-    "manual_hint":
-        "Freitext wird vom Trainer bewertet. Bis dahin gilt das Quiz noch nicht als bestanden.",
+    "manual_hint": "Freitext wird vom Trainer bewertet. Bis dahin gilt das Quiz noch nicht als bestanden.",
     "review": "Bewerten",
     "grade": "Bewertung speichern",
     "incorrect": "Nicht richtig",
@@ -46,15 +44,11 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "text_or_image": "Bitte mindestens Text oder ein Bild angeben.",
     "two_options": "Bitte mindestens zwei Antworten anlegen.",
     "unique_options": "Antworten und Fragen benötigen eindeutige Kennungen.",
-    "correct_required":
-        "Bitte mindestens eine richtige beziehungsweise akzeptierte Antwort festlegen.",
+    "correct_required": "Bitte mindestens eine richtige beziehungsweise akzeptierte Antwort festlegen.",
     "one_correct": "Bitte genau eine richtige Antwort festlegen.",
-    "invalid_answer":
-        "Bitte gültige Antworten auswählen beziehungsweise alle Elemente sortieren.",
-    "answer_required":
-        "Bitte alle Fragen beantworten beziehungsweise bewerten.",
-    "changed":
-        "Der Inhalt wurde inzwischen bearbeitet. Bitte neu laden und erneut prüfen.",
+    "invalid_answer": "Bitte gültige Antworten auswählen beziehungsweise alle Elemente sortieren.",
+    "answer_required": "Bitte alle Fragen beantworten beziehungsweise bewerten.",
+    "changed": "Der Inhalt wurde inzwischen bearbeitet. Bitte neu laden und erneut prüfen.",
     "cancel": "Abbrechen",
     "uploading": "Bild wird hochgeladen …",
     "submit": "Abgeben",
@@ -62,6 +56,11 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "instructions": "Aufgabenstellung",
     "answer_placeholder": "Deine Antwort",
     "assignment_manual": "Der Trainer prüft die Aufgabe und gibt Rückmeldung.",
+    "automatic": "Automatisch korrigieren",
+    "manual": "Manuell bewerten",
+    "automatic_help": "Feste Lösungen hinterlegen. Die Gesamtpunkte werden gleichmäßig auf alle Fragen verteilt. Freitext und Anhänge bleiben manuell.",
+    "automatic_fixed_only": "Automatische Korrektur benötigt Fragen mit festen Lösungen; lange Freitexte und Anhänge sind nicht zulässig.",
+    "automatic_result": "Automatisch bewertet: :score von :points Punkten."
   },
   "en": {
     "title": "Title",
@@ -80,8 +79,7 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "correct": "Correct answer",
     "accepted_answers": "Accepted answers (one per line)",
     "explanation": "Explanation (optional)",
-    "ordering_hint":
-        "Set the correct order here. Participants receive a shuffled order.",
+    "ordering_hint": "Set the correct order here. Participants receive a shuffled order.",
     "short_text": "Short text",
     "long_text": "Long text",
     "multiple_choice": "Multiple correct answers",
@@ -94,8 +92,7 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "new": "Create",
     "saved": "Saved.",
     "pending_review": "Awaiting review",
-    "manual_hint":
-        "Long text is assessed by the trainer. The quiz cannot pass until it has been reviewed.",
+    "manual_hint": "Long text is assessed by the trainer. The quiz cannot pass until it has been reviewed.",
     "review": "Review",
     "grade": "Save review",
     "incorrect": "Incorrect",
@@ -120,8 +117,12 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "image_only": "Image",
     "instructions": "Instructions",
     "answer_placeholder": "Your answer",
-    "assignment_manual":
-        "The trainer reviews the assignment and provides feedback.",
+    "assignment_manual": "The trainer reviews the assignment and provides feedback.",
+    "automatic": "Grade automatically",
+    "manual": "Grade manually",
+    "automatic_help": "Set fixed answers. Total points are shared equally across questions. Long text and attachments require manual grading.",
+    "automatic_fixed_only": "Automatic grading requires fixed-answer questions; long text and attachments are not supported.",
+    "automatic_result": "Automatically graded: :score of :points points."
   },
   "fr": {
     "title": "Titre",
@@ -140,8 +141,7 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "correct": "Bonne réponse",
     "accepted_answers": "Réponses acceptées (une par ligne)",
     "explanation": "Explication (facultative)",
-    "ordering_hint":
-        "Définissez le bon ordre ici. Les participants recevront un ordre mélangé.",
+    "ordering_hint": "Définissez le bon ordre ici. Les participants recevront un ordre mélangé.",
     "short_text": "Texte court",
     "long_text": "Texte long",
     "multiple_choice": "Plusieurs bonnes réponses",
@@ -154,8 +154,7 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "new": "Créer",
     "saved": "Enregistré.",
     "pending_review": "En attente de correction",
-    "manual_hint":
-        "Le texte long est évalué par le formateur. Le quiz ne sera réussi qu’après correction.",
+    "manual_hint": "Le texte long est évalué par le formateur. Le quiz ne sera réussi qu’après correction.",
     "review": "Évaluer",
     "grade": "Enregistrer l’évaluation",
     "incorrect": "Incorrect",
@@ -168,12 +167,10 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "required_task": "Devoir obligatoire",
     "text_or_image": "Saisissez un texte ou ajoutez une image.",
     "two_options": "Ajoutez au moins deux réponses.",
-    "unique_options":
-        "Chaque réponse et question doit avoir un identifiant unique.",
+    "unique_options": "Chaque réponse et question doit avoir un identifiant unique.",
     "correct_required": "Indiquez au moins une réponse correcte ou acceptée.",
     "one_correct": "Indiquez une seule bonne réponse.",
-    "invalid_answer":
-        "Choisissez des réponses valides ou classez tous les éléments.",
+    "invalid_answer": "Choisissez des réponses valides ou classez tous les éléments.",
     "answer_required": "Répondez à toutes les questions ou évaluez-les.",
     "changed": "Le contenu a été modifié. Rechargez-le avant de continuer.",
     "cancel": "Annuler",
@@ -183,6 +180,11 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "instructions": "Consignes",
     "answer_placeholder": "Votre réponse",
     "assignment_manual": "Le formateur corrige le devoir et donne un retour.",
+    "automatic": "Corriger automatiquement",
+    "manual": "Évaluer manuellement",
+    "automatic_help": "Définissez des réponses fixes. Les points sont répartis également. Les textes longs et pièces jointes nécessitent une correction manuelle.",
+    "automatic_fixed_only": "La correction automatique nécessite des réponses fixes, sans texte long ni pièce jointe.",
+    "automatic_result": "Correction automatique : :score sur :points points."
   },
   "ar": {
     "title": "العنوان",
@@ -214,8 +216,7 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "new": "إنشاء",
     "saved": "تم الحفظ.",
     "pending_review": "بانتظار التقييم",
-    "manual_hint":
-        "يقيّم المدرب النص الطويل. لا يُعد الاختبار ناجحًا حتى يتم التقييم.",
+    "manual_hint": "يقيّم المدرب النص الطويل. لا يُعد الاختبار ناجحًا حتى يتم التقييم.",
     "review": "تقييم",
     "grade": "حفظ التقييم",
     "incorrect": "غير صحيح",
@@ -241,5 +242,10 @@ const Map<String, Map<String, String>> learningAssessmentCopy = {
     "instructions": "تعليمات الواجب",
     "answer_placeholder": "إجابتك",
     "assignment_manual": "يراجع المدرب الواجب ويقدم ملاحظاته.",
-  },
+    "automatic": "تصحيح تلقائي",
+    "manual": "تقييم يدوي",
+    "automatic_help": "حدد الإجابات الصحيحة. توزع النقاط بالتساوي. النصوص الطويلة والمرفقات تتطلب تقييما يدويا.",
+    "automatic_fixed_only": "يتطلب التصحيح التلقائي أسئلة بإجابات محددة ولا يدعم النصوص الطويلة والمرفقات.",
+    "automatic_result": "تم التقييم تلقائيا: :score من :points نقطة."
+  }
 };

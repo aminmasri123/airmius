@@ -27,6 +27,8 @@ enum AirmiusDeepLinkTargetType {
   adminSponsorManagement,
   passwordReset,
   support,
+  learningStudio,
+  learningCourse,
   emailVerification,
   unknown,
 }
@@ -58,6 +60,8 @@ class AirmiusDeepLinkTarget {
   };
 
   String get analyticsName => switch (type) {
+    AirmiusDeepLinkTargetType.learningStudio => 'learning_studio',
+    AirmiusDeepLinkTargetType.learningCourse => 'learning_course',
     AirmiusDeepLinkTargetType.ride => 'ride',
     AirmiusDeepLinkTargetType.sportMatching => 'sport_matching',
     AirmiusDeepLinkTargetType.sponsorApplication => 'sponsor_application',
@@ -119,6 +123,32 @@ class AirmiusDeepLinkResolver {
     }
 
     final root = pathSegments.first.toLowerCase();
+    if (root == 'learning' &&
+        pathSegments.length > 1 &&
+        pathSegments[1] == 'studio') {
+      final course = int.tryParse(query['course'] ?? '');
+      return AirmiusDeepLinkTarget(
+        type: course != null && course > 0
+            ? AirmiusDeepLinkTargetType.learningStudio
+            : AirmiusDeepLinkTargetType.unknown,
+        path: path,
+        id: course,
+        query: query,
+      );
+    }
+    if (['learning', 'e-learning'].contains(root) &&
+        pathSegments.length == 3 &&
+        pathSegments[1] == 'courses') {
+      final course = int.tryParse(pathSegments[2]);
+      return AirmiusDeepLinkTarget(
+        type: course != null && course > 0
+            ? AirmiusDeepLinkTargetType.learningCourse
+            : AirmiusDeepLinkTargetType.unknown,
+        path: path,
+        id: course,
+        query: query,
+      );
+    }
     if (root == 'rides') {
       final rawId = pathSegments.length > 1 ? pathSegments[1] : query['ride'];
       final rideId = int.tryParse(rawId ?? '');

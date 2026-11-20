@@ -20,6 +20,8 @@ import 'club_finance_workspace_screen.dart';
 import 'training_event_detail_screen.dart';
 import 'planning_workspace_screen.dart';
 import '../core/planning_labels.dart';
+import '../core/team_role_offers_copy.dart';
+import '../widgets/team_role_offers_panel.dart';
 
 String _safeTeamError(BuildContext context, Object error) {
   return error is AirmiusApiException
@@ -55,6 +57,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   bool _requestingJoin = false;
   bool _reviewingJoinRequest = false;
   int? _updatingRoleUserId;
+  bool _respondingToRoleOffer = false;
   bool _uploadingLogo = false;
 
   String _tr(String key) => AirmiusScope.of(context).t(key);
@@ -236,9 +239,16 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
         _section = 'Kader';
         _updatingRoleUserId = null;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_tr('teamDetail.roleUpdated'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            teamRoleOfferCopy(
+              AirmiusScope.of(context).language,
+              role == 'Player' ? 'done' : 'sent',
+            ),
+          ),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       setState(() => _updatingRoleUserId = null);
@@ -249,6 +259,36 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
           ),
         ),
       );
+    }
+  }
+
+  Future<void> _respondToRoleOffer(
+    AirmiusTeamRoleOffer offer,
+    String decision,
+  ) async {
+    if (_respondingToRoleOffer) return;
+    setState(() => _respondingToRoleOffer = true);
+    try {
+      final updated = await AirmiusServicesScope.of(
+        context,
+      ).repositories.clubs.respondToTeamRoleOffer(offer.id, decision);
+      if (!mounted) return;
+      setState(() => _teamFuture = Future.value(updated));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            teamRoleOfferCopy(AirmiusScope.of(context).language, 'done'),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_errorMessage(error))));
+      _reloadTeam();
+    } finally {
+      if (mounted) setState(() => _respondingToRoleOffer = false);
     }
   }
 
@@ -317,15 +357,35 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
         actions: [
           if (widget.teamId != null)
             PopupMenuButton<String>(
-              tooltip: planningLabel(AirmiusScope.of(context).language, 'seasons'),
+              tooltip: planningLabel(
+                AirmiusScope.of(context).language,
+                'seasons',
+              ),
               icon: const Icon(Icons.event_note_outlined),
-              onSelected: (value) => Navigator.push(context, MaterialPageRoute(builder: (_) =>
-                value == 'season'
-                    ? SeasonPlanningScreen(initialTeamId: widget.teamId)
-                    : CompetitionPlanningScreen(initialTeamId: widget.teamId))),
+              onSelected: (value) => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => value == 'season'
+                      ? SeasonPlanningScreen(initialTeamId: widget.teamId)
+                      : CompetitionPlanningScreen(initialTeamId: widget.teamId),
+                ),
+              ),
               itemBuilder: (_) => [
-                PopupMenuItem(value: 'season', child: Text(planningLabel(AirmiusScope.of(context).language, 'seasons'))),
-                PopupMenuItem(value: 'competition', child: Text(planningLabel(AirmiusScope.of(context).language, 'competitions'))),
+                PopupMenuItem(
+                  value: 'season',
+                  child: Text(
+                    planningLabel(AirmiusScope.of(context).language, 'seasons'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'competition',
+                  child: Text(
+                    planningLabel(
+                      AirmiusScope.of(context).language,
+                      'competitions',
+                    ),
+                  ),
+                ),
               ],
             ),
           if (team?.canDelete == true)
@@ -581,10 +641,18 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
                   _teamFuture = Future.value(updatedTeam);
                 }),
               ),
+            if (team != null)
+              TeamRoleOffersPanel(
+                offers: team.roleOffers,
+                language: AirmiusScope.of(context).language,
+                busy: _respondingToRoleOffer,
+                showHint: _section == 'Kader' && team.canUpdateMemberRoles,
+                onRespond: _respondToRoleOffer,
+              ),
             if (_section == 'Kader')
               _RosterPanel(
                 team: team,
-                canManageTeam: canManageTeam,
+                canManageTeam: team?.canUpdateMemberRoles ?? false,
                 updatingUserId: _updatingRoleUserId,
                 onRoleChanged: team == null
                     ? null
@@ -3718,7 +3786,14 @@ class _MemberRow extends StatelessWidget {
                         for (final item in _teamRoleValues)
                           PopupMenuItem(
                             value: item,
-                            child: Text(_teamRoleLabel(item, t)),
+                            child: Text(
+                              item == 'Player' && role != 'Player'
+                                  ? teamRoleOfferCopy(
+                                      AirmiusScope.of(context).language,
+                                      'revoke',
+                                    )
+                                  : _teamRoleLabel(item, t),
+                            ),
                           ),
                       ],
                       child: Padding(
@@ -3737,7 +3812,10 @@ class _MemberRow extends StatelessWidget {
                             Text(
                               isUpdating
                                   ? t('teamDetail.saving')
-                                  : t('teamDetail.changeRole'),
+                                  : teamRoleOfferCopy(
+                                      AirmiusScope.of(context).language,
+                                      'change',
+                                    ),
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.w800,

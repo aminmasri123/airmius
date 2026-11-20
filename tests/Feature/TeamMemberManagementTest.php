@@ -8,6 +8,7 @@ use App\Models\ClubRoleDefinition;
 use App\Models\Notification;
 use App\Models\Team;
 use App\Models\TeamInvitation;
+use App\Models\TeamRoleOffer;
 use App\Models\User;
 use App\Support\ClubPermissions;
 use App\Support\TeamRoles;
@@ -87,7 +88,12 @@ class TeamMemberManagementTest extends TestCase
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('success', 'Teamrolle aktualisiert.');
+            ->assertSessionHas('success', __('team_role_offers.sent'));
+
+        $this->assertDatabaseHas('team_user', ['team_id' => $team->id, 'user_id' => $recipient->id, 'role' => TeamRoles::PLAYER]);
+        $offer = TeamRoleOffer::where('recipient_id', $recipient->id)->latest('id')->firstOrFail();
+        $this->actingAs($recipient)->post(route('auth.team-role-offers.respond', [$offer, 'accept']))->assertRedirect();
+        $this->actingAs($owner);
 
         $this->assertDatabaseHas('team_user', [
             'team_id' => $team->id,
@@ -132,7 +138,12 @@ class TeamMemberManagementTest extends TestCase
             ])
             ->assertRedirect()
             ->assertSessionHasNoErrors()
-            ->assertSessionHas('success', 'Teamrolle aktualisiert.');
+            ->assertSessionHas('success', __('team_role_offers.sent'));
+
+        $this->assertDatabaseHas('team_user', ['team_id' => $team->id, 'user_id' => $member->id, 'role' => TeamRoles::PLAYER]);
+        $offer = TeamRoleOffer::where('recipient_id', $member->id)->latest('id')->firstOrFail();
+        $this->actingAs($member)->post(route('auth.team-role-offers.respond', [$offer, 'accept']))->assertRedirect();
+        $this->actingAs($owner);
 
         $this->assertDatabaseHas('team_user', [
             'team_id' => $team->id,
@@ -177,7 +188,8 @@ class TeamMemberManagementTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.users.0.id', $member->id)
-            ->assertJsonPath('data.users.0.team_role', TeamRoles::TREASURER);
+            ->assertJsonPath('data.users.0.team_role', TeamRoles::PLAYER)
+            ->assertJsonPath('data.role_offers.0.role', TeamRoles::TREASURER);
 
         $this->deleteJson("/api/v1/teams/{$team->id}/members/{$member->id}")
             ->assertOk()

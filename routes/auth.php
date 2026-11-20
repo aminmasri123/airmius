@@ -55,6 +55,7 @@ use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\SupportCenterController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TeamRoleOfferController;
 use App\Http\Controllers\TrainerCockpitController;
 use App\Http\Controllers\TrainerResignationController;
 use App\Http\Controllers\TrainingAiGenerationController;
@@ -453,6 +454,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/teams/{team}/members', [TeamController::class, 'storeMember'])
         ->middleware(EnsureApiCorsHeaders::class)
         ->name('auth.teams.members.store');
+    Route::post('/team-role-offers/{offer}/{decision}', [TeamRoleOfferController::class, 'respond'])->whereIn('decision', ['accept', 'decline', 'cancel'])->name('auth.team-role-offers.respond');
     Route::put('/teams/{team}/members/{user}', [TeamController::class, 'updateMember'])
         ->middleware(EnsureApiCorsHeaders::class)
         ->name('auth.teams.members.update');

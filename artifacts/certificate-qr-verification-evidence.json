@@ -1,0 +1,21 @@
+{
+  "scope": "Local implementation only. No production deployment.",
+  "change": "A vector QR code in the certificate PDF opens the public certificate verification page.",
+  "checks": [
+    "Matching certificate, enrollment, participant and course",
+    "Active enrollment, recorded completion, 100 percent progress, no future issue/completion date",
+    "Completed lessons, passed quizzes and required assignments that existed at completion time",
+    "Unknown, revoked or unsupported certificates are not confirmed; no private answers or email addresses are exposed"
+  ],
+  "validation": {
+    "php_tests": 37,
+    "assertions": 341,
+    "result": "passed",
+    "pdf_visual_review": "passed after footer layout correction",
+    "qr_independent_decode": "zxing-cpp decoded the rendered PDF at 160 dpi and at 96 dpi; exact expected verification URL matched",
+    "web_build": "passed"
+  },
+  "sample_pdf": "tmp/pdfs/certificate-qr/certificate-qr-preview.pdf",
+  "sample_notice": "Fictional local test data; QR points to localhost and is not a live certificate.",
+  "deployment": "No database migration or app binary change is required for this certificate feature. Previously downloaded PDFs must be downloaded again from the updated backend to include the QR code."
+}

@@ -12,12 +12,14 @@ use App\Models\Sport;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\TeamJoinRequest;
+use App\Models\TeamRoleOffer;
 use App\Models\User;
 use App\Models\UserBadge;
 use App\Notifications\ExternalTeamInvitation;
 use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
 use App\Services\PlanFeatureService;
+use App\Services\TeamRoleOfferService;
 use App\Support\AppNotification;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
@@ -142,6 +144,8 @@ class TeamController extends Controller
                     $pendingJoinRequest = $team->joinRequests->firstWhere('user_id', $user->id);
                     $canHandleJoinRequests = $user->can('invite', $team) || $user->can('update', $team);
 
+                    $team->setAttribute('role_offers', app(TeamRoleOfferService::class)->visible($team, $user));
+                    $team->setAttribute('can_update_member_roles', $user->can('updateMemberRole', $team));
                     $team->setAttribute('can_manage', $user->can('update', $team));
                     $team->setAttribute('can_remove_members', $this->canRemoveTeamMembers($user, $team));
                     $team->setAttribute('can_delete', $user->can('delete', $team));
@@ -351,6 +355,7 @@ class TeamController extends Controller
                 'events_count' => $team->events_count,
                 'files_count' => $team->files_count,
                 'members' => $team->users,
+                'role_offers' => app(TeamRoleOfferService::class)->visible($team, $viewer),
                 'gamification' => $this->gamification->summaryFor($team, 'team'),
                 'attendance_stats' => $this->canViewTrainingAttendanceStats($viewer, $team)
                     ? $this->trainingAttendanceStats($team)
@@ -918,6 +923,9 @@ class TeamController extends Controller
             'role' => ['required', Rule::in(Team::ROLES)],
         ]);
 
+        if ($data['role'] !== TeamRoles::PLAYER) {
+            $this->authorize('updateMemberRole', $team);
+        }
         $member = User::findOrFail($data['user_id']);
 
         if (! $team->club->users()->where('users.id', $member->id)->exists()) {
@@ -934,10 +942,13 @@ class TeamController extends Controller
 
         DB::transaction(function () use ($team, $member, $data) {
             $team->users()->syncWithoutDetaching([
-                $member->id => ['role' => $data['role']],
+                $member->id => ['role' => TeamRoles::PLAYER],
             ]);
 
             $this->syncTeamChatMembers($team, [$member->id]);
+            if ($data['role'] !== TeamRoles::PLAYER) {
+                app(TeamRoleOfferService::class)->change($team, request()->user(), $member, $data['role']);
+            }
         });
 
         AppNotification::sendLocalized(
@@ -970,53 +981,13 @@ class TeamController extends Controller
             'role' => ['required', Rule::in(Team::ROLES)],
         ]);
 
-        $previousRole = $team->users()
-            ->where('users.id', $user->id)
-            ->first()?->pivot?->role;
-
-        $newRole = $data['role'];
-
-        $team->users()->updateExistingPivot($user->id, [
-            'role' => $newRole,
-        ]);
-
-        if ($previousRole !== $newRole) {
-            $previousRoleLabel = filled($previousRole)
-                ? TeamRoles::definition($previousRole)['label']
-                : 'Unbekannt';
-            $newRoleLabel = TeamRoles::definition($newRole)['label'] ?? $newRole;
-
-            AppNotification::sendLocalized(
-                $user,
-                'team.role_updated',
-                'organization.notifications.team_role_title',
-                'organization.notifications.team_role_body',
-                [
-                    'team' => $team->name,
-                    'previous' => AppNotification::translatedReplacement(
-                        $previousRole ? 'organization.roles.team.'.strtolower($previousRole) : 'organization.roles.unknown',
-                        $previousRoleLabel,
-                    ),
-                    'next' => AppNotification::translatedReplacement(
-                        'organization.roles.team.'.strtolower($newRole),
-                        $newRoleLabel,
-                    ),
-                ],
-                [
-                    'url' => route('auth.teams.show', $team),
-                    'team_id' => $team->id,
-                    'club_id' => $team->club_id,
-                    'previous_role' => $previousRole,
-                    'role' => $newRole,
-                ],
-            );
-        }
+        $offer = app(TeamRoleOfferService::class)->change($team, $request->user(), $user, $data['role']);
 
         if ($request->expectsJson()) {
             return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
         }
 
-        return back()->with('success', __('organization.team.role_updated'));
+        return back()->with('success', $offer ? __('team_role_offers.sent') : __('team_role_offers.updated_title'));
     }
 
     public function removeMember(Request $request, Team $team, User $user)
@@ -1048,6 +1019,8 @@ class TeamController extends Controller
             }
         }
 
+        app(TeamRoleOfferService::class)->cancelMembershipInvitations($team, $user);
+        TeamRoleOffer::where('team_id', $team->id)->where('recipient_id', $user->id)->where('status', 'pending')->update(['status' => 'cancelled', 'responded_at' => now()]);
         $team->users()->detach($user->id);
         $this->removeTeamChatMember($team, $user->id);
 

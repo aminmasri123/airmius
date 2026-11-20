@@ -510,7 +510,10 @@ class _NotificationLineState extends State<_NotificationLine> {
           MaterialPageRoute(
             builder: (_) => NotificationDetailScreen(
               notification: notification,
-              typeLabel: _labelForType(AirmiusScope.of(context), notification.type),
+              typeLabel: _labelForType(
+                AirmiusScope.of(context),
+                notification.type,
+              ),
               icon: _iconForType(notification.type),
               onChanged: widget.onChanged,
             ),
@@ -930,6 +933,7 @@ class _ErrorNotifications extends StatelessWidget {
 
 Map<String, String> _filters(AirmiusScope scope) => {
   'all': scope.t('notifications.all'),
+  'learning': scope.t('learning.myCourses'),
   'ride': scope.t('rides.title'),
   'club': scope.t('messages.club'),
   'chat': scope.t('messages.chat'),
@@ -939,6 +943,7 @@ Map<String, String> _filters(AirmiusScope scope) => {
 
 String _typeKey(String rawType) {
   final type = rawType.toLowerCase();
+  if (type.startsWith('learning.')) return 'learning';
   if (type.startsWith('ride.')) return 'ride';
   if (type.contains('club') ||
       type.contains('verein') ||
@@ -1033,6 +1038,7 @@ int? _intFromDynamic(Object? value) {
 
 IconData _iconForType(String rawType) {
   final type = _typeKey(rawType);
+  if (type == 'learning') return Icons.school_outlined;
   if (type == 'club') return Icons.assignment_ind_outlined;
   if (type == 'chat') return Icons.chat_bubble_outline;
   if (type == 'payment') return Icons.payments_outlined;

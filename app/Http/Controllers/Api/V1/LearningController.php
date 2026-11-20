@@ -17,6 +17,7 @@ use App\Models\LearningQuiz;
 use App\Models\LearningQuizAttempt;
 use App\Models\UserBadge;
 use App\Services\Learning\AssessmentSchema;
+use App\Services\Learning\AssignmentAssessmentService;
 use App\Services\Learning\LearningContinuation;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningParticipationService;
@@ -158,7 +159,7 @@ class LearningController extends Controller
         return response()->json([
             'data' => [
                 'course' => [
-                    ...$this->courseCard($course, $enrollment ?? LearningEnrollment::where('user_id', $request->user()->id)->where('learning_course_id', $course->id)->where('status', 'left')->first()),
+                    ...$this->courseCard($course, $enrollment ?? LearningEnrollment::where('user_id', $request->user()->id)->where('learning_course_id', $course->id)->first()),
                     'learning_goals' => $course->learning_goals ?: [],
                     'requirements' => $course->requirements ?: [],
                     'target_groups' => $course->target_groups ?: [],
@@ -244,12 +245,15 @@ class LearningController extends Controller
                         'revision' => $assignment->revision,
                         'questions' => $locked ? [] : collect($assignment->questions ?: [])->map(fn ($q) => app(AssessmentSchema::class)->publicQuestion($q))->values(),
                         'points' => $assignment->points,
+                        'grading_mode' => $assignment->grading_mode,
+                        'pass_percent' => $assignment->pass_percent,
                         'is_required' => $assignment->is_required,
                         'locked' => $locked,
                         'submission' => $submission ? [
                             'id' => $submission->id,
                             'status' => $submission->status,
                             'score' => $submission->score,
+                            'grading_snapshot' => $submission->grading_snapshot,
                             'feedback' => $submission->feedback,
                             'body' => $submission->body,
                             'attachment_url' => $submission->attachment_url,
@@ -279,7 +283,7 @@ class LearningController extends Controller
         abort_unless($course->is_free, 403, __('learning.errors.paid_course'));
         abort_if((int) $course->user_id === (int) $request->user()->id, 422, __('learning.errors.tutor_self_enroll'));
 
-        $result = $this->learningEnrollment->activate($request->user(), $course);
+        $result = $this->learningEnrollment->activate($request->user(), $course, 'self');
         $enrollment = $result['enrollment'];
 
         return response()->json([
@@ -418,59 +422,10 @@ class LearningController extends Controller
                 __('learning.errors.assignment_locked'),
             );
         }
-        $data = $request->validate([
-            'body' => ['nullable', 'string', 'max:10000'],
-            'attachment_url' => ['nullable', 'url', 'max:500'],
-        ]);
-        $structured = app(AssessmentSchema::class)->assignmentSubmission($request, $assignment);
-        abort_if(
-            empty($structured) && blank($data['body'] ?? null) && blank($data['attachment_url'] ?? null),
-            422,
-            __('learning.errors.submission_required'),
-        );
-        $submission = LearningAssignmentSubmission::query()->updateOrCreate([
-            'learning_assignment_id' => $assignment->id,
-            'learning_enrollment_id' => $enrollment->id,
-        ], [
-            'user_id' => $request->user()->id,
-            'body' => $data['body'] ?? null,
-            ...$structured,
-            'attachment_url' => $data['attachment_url'] ?? null,
-            'status' => 'submitted',
-            'submitted_at' => now(),
-            'score' => null,
-            'feedback' => null,
-            'graded_by' => null,
-            'graded_at' => null,
-        ]);
-        $course->loadMissing('tutor');
-        if ($course->tutor && (int) $course->user_id !== (int) $request->user()->id) {
-            AppNotification::sendLocalized(
-                $course->tutor,
-                'learning.assignment.submitted',
-                'learning.notifications.assignment_submitted_title',
-                'learning.notifications.assignment_submitted_body',
-                [
-                    'student' => $request->user()->name,
-                    'assignment' => $assignment->title,
-                    'course' => $course->title,
-                ],
-                [
-                    'course_id' => $course->id,
-                    'assignment_id' => $assignment->id,
-                    'submission_id' => $submission->id,
-                    'url' => route('auth.learning.studio.index', ['course' => $course->id]),
-                ],
-                ['dedupe_key' => sprintf(
-                    'learning-assignment-submission:%d:%s',
-                    $submission->id,
-                    $submission->updated_at?->format('Uu') ?: 'created',
-                )],
-            );
-        }
+        $submission = app(AssignmentAssessmentService::class)->submit($request, $course, $assignment, $enrollment);
 
         return response()->json([
-            'data' => $submission,
+            'data' => $submission->makeHidden('question_snapshot'),
             'message' => __('learning.responses.assignment_submitted'),
         ], 201);
     }
@@ -546,6 +501,7 @@ class LearningController extends Controller
             'reviews_count' => (int) ($course->reviews_count ?? 0),
             'tutor' => $course->tutor ? ['id' => $course->tutor->id, 'name' => $course->tutor->name] : null,
             'is_enrolled' => $enrollment?->status === 'active',
+            'access_revoked' => in_array($enrollment?->status, ['cancelled', 'revoked'], true),
             'can_resume' => $enrollment?->status === 'left',
             'enrollment_id' => $enrollment?->id,
             'progress_percent' => (int) ($enrollment?->progress_percent ?: 0),

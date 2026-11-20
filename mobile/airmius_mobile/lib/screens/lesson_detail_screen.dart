@@ -21,11 +21,13 @@ class LessonDetailScreen extends StatefulWidget {
     required this.courseId,
     required this.initialTitle,
     this.initialLessonId,
+    this.initialAssignmentId,
   });
 
   final int courseId;
   final String initialTitle;
   final int? initialLessonId;
+  final int? initialAssignmentId;
 
   @override
   State<LessonDetailScreen> createState() => _LessonDetailScreenState();
@@ -36,6 +38,7 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   JsonMap _courseResponse = <String, dynamic>{};
   bool _busy = false;
   final _targetKey = GlobalKey();
+  final _assignmentTargetKey = GlobalKey();
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -51,9 +54,10 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   Future<JsonMap> _load() async {
     final response = await _client.learningCourse(widget.courseId);
     _courseResponse = response;
-    if (widget.initialLessonId != null) {
+    if (widget.initialLessonId != null || widget.initialAssignmentId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final target = _targetKey.currentContext;
+        final target =
+            _assignmentTargetKey.currentContext ?? _targetKey.currentContext;
         if (mounted && target != null) {
           Scrollable.ensureVisible(target, alignment: .1);
         }
@@ -437,7 +441,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
             airmiusSurfaceColor(context),
         surfaceTintColor: Colors.transparent,
         title: Text(
-          widget.initialTitle,
+          widget.initialTitle.isNotEmpty
+              ? widget.initialTitle
+              : t('learning.assignments'),
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
@@ -449,7 +455,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
         ],
       ),
       body: PageFrame(
-        title: widget.initialTitle,
+        title: widget.initialTitle.isNotEmpty
+            ? widget.initialTitle
+            : t('learning.assignments'),
         subtitle: t('learning.roomSubtitle'),
         child: FutureBuilder<JsonMap>(
           future: _future,
@@ -621,6 +629,11 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
           const SizedBox(height: 10),
           for (var index = 0; index < assignments.length; index++) ...[
             _AssignmentCard(
+              key:
+                  _lessonInt(assignments[index]['id']) ==
+                      widget.initialAssignmentId
+                  ? _assignmentTargetKey
+                  : null,
               assignment: assignments[index],
               busy: _busy,
               onSubmit: () => _submitAssignment(assignments[index]),
@@ -1018,6 +1031,7 @@ class _QuizCard extends StatelessWidget {
 
 class _AssignmentCard extends StatelessWidget {
   const _AssignmentCard({
+    super.key,
     required this.assignment,
     required this.busy,
     required this.onSubmit,
@@ -1063,6 +1077,12 @@ class _AssignmentCard extends StatelessWidget {
                     ),
                     color: AirmiusColors.green,
                   ),
+                  if (submission['score'] != null)
+                    Text(
+                      '${t('studio.points')}: ${submission['score']} / ${_lessonMap(submission['grading_snapshot'])['points'] ?? assignment['points']}',
+                    ),
+                  if (_lessonText(submission['feedback']).isNotEmpty)
+                    Text(_lessonText(submission['feedback'])),
                 ],
               ],
             ),
@@ -1208,24 +1228,26 @@ class _AssignmentScreenState extends State<_AssignmentScreen> {
                         color: Theme.of(context).colorScheme.error,
                       ),
                     ),
-                  TextField(
-                    controller: _body,
-                    minLines: 4,
-                    maxLines: 10,
-                    maxLength: 10000,
-                    decoration: InputDecoration(
-                      labelText: t('learning.answerText'),
+                  if (widget.assignment['grading_mode'] != 'automatic') ...[
+                    TextField(
+                      controller: _body,
+                      minLines: 4,
+                      maxLines: 10,
+                      maxLength: 10000,
+                      decoration: InputDecoration(
+                        labelText: t('learning.answerText'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _url,
-                    keyboardType: TextInputType.url,
-                    decoration: InputDecoration(
-                      labelText: t('learning.attachmentLink'),
-                      hintText: 'https://',
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _url,
+                      keyboardType: TextInputType.url,
+                      decoration: InputDecoration(
+                        labelText: t('learning.attachmentLink'),
+                        hintText: 'https://',
+                      ),
                     ),
-                  ),
+                  ],
                   const SizedBox(height: 24),
                   TextButton(
                     onPressed: () => Navigator.pop(context),

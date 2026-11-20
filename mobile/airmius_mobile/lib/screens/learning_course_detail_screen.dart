@@ -346,6 +346,10 @@ class _LearningCourseDetailScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (course['access_revoked'] == true)
+                      Text(
+                        AirmiusScope.of(context).t('learning.accessRevoked'),
+                      ),
                     if (!access &&
                         course['can_resume'] != true &&
                         !free &&
@@ -354,6 +358,7 @@ class _LearningCourseDetailScreenState
                     FilledButton(
                       onPressed:
                           _busy ||
+                              course['access_revoked'] == true ||
                               (!access &&
                                   course['can_resume'] != true &&
                                   !free &&
@@ -361,7 +366,11 @@ class _LearningCourseDetailScreenState
                           ? null
                           : () => _action(data),
                       child: Text(
-                        access
+                        course['access_revoked'] == true
+                            ? AirmiusScope.of(
+                                context,
+                              ).t('learning.accessRevokedShort')
+                            : access
                             ? learningText(context, 'continue')
                             : course['can_resume'] == true
                             ? learningText(context, 'resume')

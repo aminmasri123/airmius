@@ -1712,17 +1712,24 @@ final _commerceAdvAr = {
 const _supportDe = {
   'support.title': 'Support & Hilfe',
   'support.lifecycle.withdraw': 'Anfrage zurückziehen',
-  'support.lifecycle.withdraw_confirm': 'Anfrage zurückziehen? Die Bearbeitung wird beendet und weitere Antworten werden gesperrt. Der Verlauf bleibt für berechtigte Personen erhalten.',
+  'support.lifecycle.withdraw_confirm':
+      'Anfrage zurückziehen? Die Bearbeitung wird beendet und weitere Antworten werden gesperrt. Der Verlauf bleibt für berechtigte Personen erhalten.',
   'support.lifecycle.hide': 'Aus meiner Liste ausblenden',
-  'support.lifecycle.hide_confirm': 'Ausblenden beendet die Bearbeitung nicht. Du findest die Anfrage anschließend unter „Ausgeblendete Anfragen“ und kannst sie wieder anzeigen.',
+  'support.lifecycle.hide_confirm':
+      'Ausblenden beendet die Bearbeitung nicht. Du findest die Anfrage anschließend unter „Ausgeblendete Anfragen“ und kannst sie wieder anzeigen.',
   'support.lifecycle.restore': 'Wieder anzeigen',
   'support.lifecycle.hidden_list': 'Ausgeblendete Anfragen',
   'support.lifecycle.withdrawn': 'Zurückgezogen',
-  'support.lifecycle.withdrawn_notice': 'Die Anfrage wurde zurückgezogen. Weitere Antworten sind gesperrt.',
-  'support.lifecycle.hidden_notice': 'Die Anfrage wurde aus deiner Liste ausgeblendet.',
-  'support.lifecycle.restored_notice': 'Die Anfrage wird wieder in deiner Liste angezeigt.',
-  'support.lifecycle.already_closed': 'Abgeschlossene Anfragen können nicht zurückgezogen werden.',
-  'support.lifecycle.action_failed': 'Die Aktion konnte nicht abgeschlossen werden.',
+  'support.lifecycle.withdrawn_notice':
+      'Die Anfrage wurde zurückgezogen. Weitere Antworten sind gesperrt.',
+  'support.lifecycle.hidden_notice':
+      'Die Anfrage wurde aus deiner Liste ausgeblendet.',
+  'support.lifecycle.restored_notice':
+      'Die Anfrage wird wieder in deiner Liste angezeigt.',
+  'support.lifecycle.already_closed':
+      'Abgeschlossene Anfragen können nicht zurückgezogen werden.',
+  'support.lifecycle.action_failed':
+      'Die Aktion konnte nicht abgeschlossen werden.',
   'support.subtitle':
       'Fragen und technische Probleme sicher an das Airmius-Team senden',
   'support.eyebrow': 'Direkter Kontakt',
@@ -4152,15 +4159,19 @@ final _supportEn = {
   ..._supportDe,
   'support.title': 'Support & help',
   'support.lifecycle.withdraw': 'Withdraw request',
-  'support.lifecycle.withdraw_confirm': 'Withdraw this request? Processing will end and further replies will be blocked. The history remains available to authorized people.',
+  'support.lifecycle.withdraw_confirm':
+      'Withdraw this request? Processing will end and further replies will be blocked. The history remains available to authorized people.',
   'support.lifecycle.hide': 'Hide from my list',
-  'support.lifecycle.hide_confirm': 'Hiding does not stop processing. You can find this request under Hidden requests and restore it to your list.',
+  'support.lifecycle.hide_confirm':
+      'Hiding does not stop processing. You can find this request under Hidden requests and restore it to your list.',
   'support.lifecycle.restore': 'Restore to my list',
   'support.lifecycle.hidden_list': 'Hidden requests',
   'support.lifecycle.withdrawn': 'Withdrawn',
-  'support.lifecycle.withdrawn_notice': 'The request was withdrawn. Further replies are blocked.',
+  'support.lifecycle.withdrawn_notice':
+      'The request was withdrawn. Further replies are blocked.',
   'support.lifecycle.hidden_notice': 'The request was hidden from your list.',
-  'support.lifecycle.restored_notice': 'The request is visible in your list again.',
+  'support.lifecycle.restored_notice':
+      'The request is visible in your list again.',
   'support.lifecycle.already_closed': 'Completed requests cannot be withdrawn.',
   'support.lifecycle.action_failed': 'The action could not be completed.',
   'support.subtitle':
@@ -4268,16 +4279,21 @@ final _supportFr = {
   ..._supportEn,
   'support.title': 'Support et aide',
   'support.lifecycle.withdraw': 'Retirer la demande',
-  'support.lifecycle.withdraw_confirm': 'Retirer cette demande ? Le traitement prendra fin et les réponses seront bloquées. L’historique restera accessible aux personnes autorisées.',
+  'support.lifecycle.withdraw_confirm':
+      'Retirer cette demande ? Le traitement prendra fin et les réponses seront bloquées. L’historique restera accessible aux personnes autorisées.',
   'support.lifecycle.hide': 'Masquer de ma liste',
-  'support.lifecycle.hide_confirm': 'Le masquage n’arrête pas le traitement. Vous pourrez retrouver cette demande dans les demandes masquées et la réafficher.',
+  'support.lifecycle.hide_confirm':
+      'Le masquage n’arrête pas le traitement. Vous pourrez retrouver cette demande dans les demandes masquées et la réafficher.',
   'support.lifecycle.restore': 'Réafficher',
   'support.lifecycle.hidden_list': 'Demandes masquées',
   'support.lifecycle.withdrawn': 'Retirée',
-  'support.lifecycle.withdrawn_notice': 'La demande a été retirée. Les réponses sont bloquées.',
+  'support.lifecycle.withdrawn_notice':
+      'La demande a été retirée. Les réponses sont bloquées.',
   'support.lifecycle.hidden_notice': 'La demande a été masquée de votre liste.',
-  'support.lifecycle.restored_notice': 'La demande est à nouveau visible dans votre liste.',
-  'support.lifecycle.already_closed': 'Les demandes terminées ne peuvent pas être retirées.',
+  'support.lifecycle.restored_notice':
+      'La demande est à nouveau visible dans votre liste.',
+  'support.lifecycle.already_closed':
+      'Les demandes terminées ne peuvent pas être retirées.',
   'support.lifecycle.action_failed': 'Impossible de terminer cette action.',
   'support.subtitle':
       'Envoyez vos questions et problèmes techniques à l’équipe Airmius',
@@ -4383,9 +4399,11 @@ final _supportAr = {
   ..._supportEn,
   'support.title': 'الدعم والمساعدة',
   'support.lifecycle.withdraw': 'سحب الطلب',
-  'support.lifecycle.withdraw_confirm': 'هل تريد سحب الطلب؟ ستتوقف المعالجة وتُحظر الردود اللاحقة. يبقى السجل متاحاً للأشخاص المخولين.',
+  'support.lifecycle.withdraw_confirm':
+      'هل تريد سحب الطلب؟ ستتوقف المعالجة وتُحظر الردود اللاحقة. يبقى السجل متاحاً للأشخاص المخولين.',
   'support.lifecycle.hide': 'إخفاء من قائمتي',
-  'support.lifecycle.hide_confirm': 'الإخفاء لا يوقف المعالجة. يمكنك العثور على الطلب ضمن الطلبات المخفية وإظهاره مجدداً.',
+  'support.lifecycle.hide_confirm':
+      'الإخفاء لا يوقف المعالجة. يمكنك العثور على الطلب ضمن الطلبات المخفية وإظهاره مجدداً.',
   'support.lifecycle.restore': 'إظهار مجدداً',
   'support.lifecycle.hidden_list': 'الطلبات المخفية',
   'support.lifecycle.withdrawn': 'مسحوب',
@@ -14559,6 +14577,13 @@ const _studioDe = {
   'studio.noStudentsBody': 'Vergib einen Kurszugang über die E-Mail-Adresse.',
   'studio.student': 'Teilnehmer',
   'studio.revokeAccess': 'Zugang entziehen',
+  'learning.accessRevoked':
+      'Dein Kurszugang wurde entzogen. Bitte wende dich an die Kursleitung.',
+  'learning.accessRevokedShort': 'Zugang entzogen',
+  'studio.confirmRevokeTitle': 'Zugang wirklich entziehen?',
+  'studio.confirmRevokeBody':
+      'Möchtest du {participant} den Zugang zum Kurs „{course}“ entziehen?',
+  'studio.confirmRevokeAction': 'Zugang entziehen',
   'studio.publishChecklist': 'Checkliste zur Veröffentlichung',
   'studio.editCourse': 'Kurs bearbeiten',
   'studio.courseCreated': 'Der Kurs wurde erstellt.',
@@ -14615,7 +14640,8 @@ const _studioDe = {
       'Optionales Logo, Unterschrift und ein kurzer Fußtext.',
   'studio.certificateLogo': 'Logo-URL für das Zertifikat',
   'studio.certificateLogoUpload': 'Zertifikatslogo hochladen',
-  'studio.certificateLogoHint': 'PNG, JPEG oder WebP, maximal 5 MB und 4096 × 4096 Pixel. Danach speichern.',
+  'studio.certificateLogoHint':
+      'PNG, JPEG oder WebP, maximal 5 MB und 4096 × 4096 Pixel. Danach speichern.',
   'studio.certificateSignature': 'Name der unterzeichnenden Person',
   'studio.certificateFooter': 'Fußtext des Zertifikats',
   'studio.lessonAvailability': 'Freigabe und Anhänge',
@@ -14746,6 +14772,13 @@ final _studioEn = {
   'studio.noStudentsBody': 'Grant course access using an email address.',
   'studio.student': 'Learner',
   'studio.revokeAccess': 'Revoke access',
+  'learning.accessRevoked':
+      'Your course access was removed. Please contact the instructor.',
+  'learning.accessRevokedShort': 'Access removed',
+  'studio.confirmRevokeTitle': 'Remove course access?',
+  'studio.confirmRevokeBody':
+      'Do you want to remove {participant}’s access to “{course}”?',
+  'studio.confirmRevokeAction': 'Remove access',
   'studio.publishChecklist': 'Publishing checklist',
   'studio.editCourse': 'Edit course',
   'studio.courseCreated': 'The course was created.',
@@ -14802,7 +14835,8 @@ final _studioEn = {
       'Optional logo, signature and a short footer.',
   'studio.certificateLogo': 'Certificate logo URL',
   'studio.certificateLogoUpload': 'Upload certificate logo',
-  'studio.certificateLogoHint': 'PNG, JPEG or WebP, up to 5 MB and 4096 × 4096 pixels. Save afterwards.',
+  'studio.certificateLogoHint':
+      'PNG, JPEG or WebP, up to 5 MB and 4096 × 4096 pixels. Save afterwards.',
   'studio.certificateSignature': 'Name of the signing person',
   'studio.certificateFooter': 'Certificate footer',
   'studio.lessonAvailability': 'Availability and attachments',
@@ -14932,6 +14966,13 @@ final _studioFr = {
   'studio.noStudentsBody': 'Donnez accès au cours avec une adresse e-mail.',
   'studio.student': 'Participant',
   'studio.revokeAccess': 'Retirer l’accès',
+  'learning.accessRevoked':
+      'Votre accès au cours a été retiré. Contactez le responsable du cours.',
+  'learning.accessRevokedShort': 'Accès retiré',
+  'studio.confirmRevokeTitle': 'Retirer l’accès au cours ?',
+  'studio.confirmRevokeBody':
+      'Voulez-vous retirer à {participant} l’accès au cours « {course} » ?',
+  'studio.confirmRevokeAction': 'Retirer l’accès',
   'studio.publishChecklist': 'Liste avant publication',
   'studio.editCourse': 'Modifier le cours',
   'studio.courseCreated': 'Le cours a été créé.',
@@ -14988,7 +15029,8 @@ final _studioFr = {
       'Logo, signature et court pied de page facultatifs.',
   'studio.certificateLogo': 'URL du logo du certificat',
   'studio.certificateLogoUpload': 'Importer le logo du certificat',
-  'studio.certificateLogoHint': 'PNG, JPEG ou WebP, 5 Mo et 4096 × 4096 pixels maximum. Enregistrez ensuite.',
+  'studio.certificateLogoHint':
+      'PNG, JPEG ou WebP, 5 Mo et 4096 × 4096 pixels maximum. Enregistrez ensuite.',
   'studio.certificateSignature': 'Nom de la personne signataire',
   'studio.certificateFooter': 'Pied de page du certificat',
   'studio.lessonAvailability': 'Disponibilité et pièces jointes',
@@ -15116,6 +15158,13 @@ final _studioAr = {
   'studio.noStudentsBody': 'امنح الوصول إلى الدورة باستخدام البريد الإلكتروني.',
   'studio.student': 'مشارك',
   'studio.revokeAccess': 'إلغاء الوصول',
+  'learning.accessRevoked':
+      'تم سحب وصولك إلى الدورة. يرجى التواصل مع مسؤول الدورة.',
+  'learning.accessRevokedShort': 'تم سحب الوصول',
+  'studio.confirmRevokeTitle': 'هل تريد سحب الوصول إلى الدورة؟',
+  'studio.confirmRevokeBody':
+      'هل تريد سحب وصول {participant} إلى دورة «{course}»؟',
+  'studio.confirmRevokeAction': 'سحب الوصول',
   'studio.publishChecklist': 'قائمة التحقق قبل النشر',
   'studio.editCourse': 'تعديل الدورة',
   'studio.courseCreated': 'تم إنشاء الدورة.',
@@ -15168,7 +15217,8 @@ final _studioAr = {
   'studio.certificateDesignHint': 'شعار وتوقيع ونص تذييل اختياري.',
   'studio.certificateLogo': 'رابط شعار الشهادة',
   'studio.certificateLogoUpload': 'رفع شعار الشهادة',
-  'studio.certificateLogoHint': 'PNG أو JPEG أو WebP، حتى 5 ميغابايت و4096 × 4096 بكسل. احفظ بعد الرفع.',
+  'studio.certificateLogoHint':
+      'PNG أو JPEG أو WebP، حتى 5 ميغابايت و4096 × 4096 بكسل. احفظ بعد الرفع.',
   'studio.certificateSignature': 'اسم الشخص الموقّع',
   'studio.certificateFooter': 'تذييل الشهادة',
   'studio.lessonAvailability': 'الإتاحة والمرفقات',

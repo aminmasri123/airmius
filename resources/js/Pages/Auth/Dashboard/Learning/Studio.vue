@@ -1,7 +1,7 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { majorToCents } from '@/utils/currency'
 import { confirmDialog } from '@/services/dialogService'
@@ -68,7 +68,7 @@ const props = defineProps({
 })
 
 const page = usePage()
-const activePanel = ref('structure')
+const activePanel = ref(typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('panel') === 'assignments' ? 'assignments' : 'structure')
 const editingLesson = ref(null)
 const replyForms = ref({})
 const uploadState = ref({ key: '', error: '' })
@@ -321,6 +321,7 @@ const couponForm = useForm({
 })
 
 const assignmentForm = useForm({
+    grading_mode: 'manual', pass_percent: 70,
     questions: [newAssessmentQuestion('long_text')],
     learning_lesson_id: '',
     title: '',
@@ -636,7 +637,8 @@ const createCoupon = () => {
 const createAssignment = () => {
     if (!props.selectedCourse) return
     if (assignmentImageBusy.value || assignmentForm.processing) return
-    const problem=assessmentEditorError(assignmentForm.questions,false)
+    const problem=assessmentEditorError(assignmentForm.questions,assignmentForm.grading_mode==='automatic')
+    if(assignmentForm.grading_mode==='automatic' && assignmentForm.questions.some(q=>q.question_type==='long_text')) {assignmentForm.setError('questions',ax('automatic_fixed_only'));return}
     if(problem){assignmentForm.setError('questions',ax(problem));return}
     const name=assignmentEditing.value?'auth.learning.studio.assignments.update':'auth.learning.studio.assignments.store'
     assignmentForm[assignmentEditing.value?'put':'post'](route(name,assignmentEditing.value?[props.selectedCourse.id,assignmentEditing.value.id]:props.selectedCourse.id), {
@@ -647,7 +649,7 @@ const createAssignment = () => {
 const editAssignment = assignment => {
     if(assignmentImageBusy.value||assignmentForm.processing)return
     assignmentEditing.value=assignment
-    Object.assign(assignmentForm,{title:assignment.title,instructions:assignment.instructions||'',points:assignment.points,due_after_days:assignment.due_after_days??'',is_required:assignment.is_required,learning_lesson_id:assignment.learning_lesson_id||'',questions:editableAssessmentQuestions(assignment.questions)})
+    Object.assign(assignmentForm,{grading_mode:assignment.grading_mode||'manual',pass_percent:assignment.pass_percent??70,title:assignment.title,instructions:assignment.instructions||'',points:assignment.points,due_after_days:assignment.due_after_days??'',is_required:assignment.is_required,learning_lesson_id:assignment.learning_lesson_id||'',questions:editableAssessmentQuestions(assignment.questions)})
     assignmentForm.clearErrors()
 }
 
@@ -664,7 +666,7 @@ const revokeEnrollment = async (enrollment) => {
 
     const confirmed = await confirmDialog({
         title: 'Zugang deaktivieren',
-        message: 'Soll der Zugang wirklich deaktiviert werden?',
+        message: `Soll ${enrollment.user?.name || 'dieser Person'} der Zugang zum Kurs „${props.selectedCourse.title}“ wirklich entzogen werden?`,
         confirmLabel: 'Deaktivieren',
         danger: true,
     })
@@ -703,6 +705,11 @@ const submitQuestionReply = (question) => {
         },
     })
 }
+onMounted(async () => {
+    const query = new URLSearchParams(window.location.search)
+    const submission = query.get('submission'), assignment = query.get('assignment')
+    if (submission || assignment) { activePanel.value='assignments'; await nextTick(); document.getElementById(submission ? `submission-${submission}` : `assignment-${assignment}`)?.scrollIntoView({block:'center'}) }
+})
 </script>
 
 <template>
@@ -1215,7 +1222,7 @@ const submitQuestionReply = (question) => {
                     </div>
                     <div class="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
                         <div class="grid gap-4">
-                            <div v-for="assignment in selectedCourse.assignments" :key="assignment.id" class="rounded-lg border border-border bg-bg p-4">
+                            <div v-for="assignment in selectedCourse.assignments" :key="assignment.id" :id="`assignment-${assignment.id}`" class="rounded-lg border border-border bg-bg p-4">
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <p class="font-semibold text-primary">{{ assignment.title }}</p>
@@ -1225,7 +1232,7 @@ const submitQuestionReply = (question) => {
                                     <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">{{ assignment.points }} {{ tx('learning_studio_ui.points', 'Punkte') }}</span>
                                 </div>
                                 <div v-if="assignment.submissions?.length" class="mt-4 grid gap-3">
-                                    <div v-for="submission in assignment.submissions" :key="submission.id" class="rounded-lg border border-border bg-card p-3">
+                                    <div v-for="submission in assignment.submissions" :key="submission.id" :id="`submission-${submission.id}`" class="rounded-lg border border-border bg-card p-3">
                                         <p class="text-sm font-semibold text-primary">{{ submission.user?.name || tx('learning_studio_ui.participant', 'Teilnehmer') }}</p>
                                         <p class="mt-1 text-sm text-secondary whitespace-pre-line">{{ submission.body }}</p>
                                         <LearningAnswersSummary :questions="submission.question_snapshot||[]" :answers="submission.answers||{}" />
@@ -1261,7 +1268,10 @@ const submitQuestionReply = (question) => {
                                 <input v-model="assignmentForm.is_required" type="checkbox" class="rounded border-border bg-inputBg" :aria-label="tx('learning_studio_ui.required_assignment', 'Pflichtaufgabe')">
                                 {{ tx('learning_studio_ui.required_assignment', 'Pflichtaufgabe') }}
                             </label>
-                            <LearningAssessmentEditor v-model="assignmentForm.questions" :solutions="false" :course-id="selectedCourse.id" @busy="assignmentImageBusy=$event" />
+                            <label class="block"><input v-model="assignmentForm.grading_mode" type="checkbox" true-value="automatic" false-value="manual" /> {{ ax('automatic') }}</label>
+                            <p class="text-sm text-secondary">{{ ax('automatic_help') }}</p>
+                            <label v-if="assignmentForm.grading_mode==='automatic'" class="block">{{ ax('pass_percent') }}<input v-model.number="assignmentForm.pass_percent" type="number" min="1" max="100" class="rounded border border-border bg-inputBg" /></label>
+                            <LearningAssessmentEditor v-model="assignmentForm.questions" :solutions="assignmentForm.grading_mode==='automatic'" :course-id="selectedCourse.id" @busy="assignmentImageBusy=$event" />
                             <p v-for="(error,key) in assignmentForm.errors" :key="key" role="alert" class="text-sm text-error">{{ error }}</p>
                             <button v-if="assignmentEditing" type="button" :disabled="assignmentImageBusy" class="rounded-lg border border-border p-2" @click="assignmentEditing=null;assignmentForm.reset();assignmentForm.questions=[newAssessmentQuestion('long_text')]">{{ ax('cancel') }}</button>
                             <button :disabled="assignmentImageBusy || assignmentForm.processing" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">{{ tx('learning_studio_ui.save_assignment', 'Aufgabe speichern') }}</button>

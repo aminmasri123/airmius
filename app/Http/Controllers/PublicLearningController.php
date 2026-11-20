@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\LearningAssignment;
-use App\Models\LearningAssignmentSubmission;
 use App\Models\LearningCertificate;
 use App\Models\LearningCourse;
 use App\Models\LearningCourseReview;
@@ -18,7 +17,9 @@ use App\Models\LearningSecurityEvent;
 use App\Models\UserBadge;
 use App\Services\AirmiusPdfDocument;
 use App\Services\Learning\AssessmentSchema;
+use App\Services\Learning\AssignmentAssessmentService;
 use App\Services\Learning\CertificateLogo;
+use App\Services\Learning\CertificateVerificationService;
 use App\Services\Learning\LearningContinuation;
 use App\Services\Learning\LearningEnrollmentService;
 use App\Services\Learning\LearningParticipationService;
@@ -289,6 +290,7 @@ class PublicLearningController extends Controller
             'enrollment' => $enrollment ? $this->enrollmentResource($enrollment) : null,
             'canUseLearningRoom' => $canUseLearningRoom,
             'leftEnrollmentId' => $leftEnrollment?->id,
+            'accessRevoked' => $request->user() && LearningEnrollment::where('user_id', $request->user()->id)->where('learning_course_id', $course->id)->whereIn('status', ['cancelled', 'revoked'])->exists(),
             'myReview' => $myReview,
             'translations' => $this->courseTranslations->variants($course, true)->all(),
             'seo' => [
@@ -313,7 +315,7 @@ class PublicLearningController extends Controller
         abort_if(! $course->is_free, 403, __('learning.errors.paid_course'));
         abort_if((int) $course->user_id === (int) $request->user()->id, 422, __('learning.errors.tutor_self_enroll'));
 
-        $result = $this->learningEnrollment->activate($request->user(), $course);
+        $result = $this->learningEnrollment->activate($request->user(), $course, 'self');
 
         if ($result['activated']) {
             $this->sendLearningMail($course->tutor, 'Neue Einschreibung: '.$course->title, [
@@ -473,56 +475,7 @@ class PublicLearningController extends Controller
             abort_if($this->learningProgress->dripLocked($lesson, $enrollment), 403, __('learning.errors.assignment_locked'));
         }
 
-        $data = $request->validate([
-            'body' => ['nullable', 'string', 'max:10000'],
-            'attachment_url' => ['nullable', 'url', 'max:500'],
-        ]);
-        $structured = app(AssessmentSchema::class)->assignmentSubmission($request, $assignment);
-        abort_if(empty($structured) && blank($data['body'] ?? null) && blank($data['attachment_url'] ?? null), 422, __('learning.errors.submission_required'));
-
-        $submission = LearningAssignmentSubmission::query()->updateOrCreate(
-            [
-                'learning_assignment_id' => $assignment->id,
-                'learning_enrollment_id' => $enrollment->id,
-            ],
-            [
-                'user_id' => $request->user()->id,
-                'body' => $data['body'] ?? null,
-                ...$structured,
-                'attachment_url' => $data['attachment_url'] ?? null,
-                'status' => 'submitted',
-                'submitted_at' => now(),
-                'score' => null,
-                'feedback' => null,
-                'graded_by' => null,
-                'graded_at' => null,
-            ],
-        );
-
-        if ((int) $course->user_id !== (int) $request->user()->id) {
-            AppNotification::sendLocalized(
-                $course->user_id,
-                'learning.assignment.submitted',
-                'learning.notifications.assignment_submitted_title',
-                'learning.notifications.assignment_submitted_body',
-                [
-                    'student' => $request->user()->name,
-                    'assignment' => $assignment->title,
-                    'course' => $course->title,
-                ],
-                [
-                    'course_id' => $course->id,
-                    'assignment_id' => $assignment->id,
-                    'submission_id' => $submission->id,
-                    'url' => route('auth.learning.studio.index', ['course' => $course->id]),
-                ],
-                ['dedupe_key' => sprintf(
-                    'learning-assignment-submission:%d:%s',
-                    $submission->id,
-                    $submission->updated_at?->format('Uu') ?: 'created',
-                )],
-            );
-        }
+        $submission = app(AssignmentAssessmentService::class)->submit($request, $course, $assignment, $enrollment);
 
         return back()->with('success', __('learning.responses.assignment_submitted'));
     }
@@ -726,7 +679,7 @@ class PublicLearningController extends Controller
 
         $certificate->load(['course.tutor:id,name', 'user:id,name', 'enrollment']);
         abort_unless($certificate->enrollment?->status === 'active', 403);
-        if (! $certificate->enrollment?->completed_at) {
+        if (! app(CertificateVerificationService::class)->valid($certificate)) {
             $this->logLearningSecurityEvent($request, $certificate->course, null, 'certificate_incomplete_denied', 'warning', [
                 'certificate_id' => $certificate->id,
                 'enrollment_id' => $certificate->learning_enrollment_id,
@@ -758,7 +711,11 @@ class PublicLearningController extends Controller
         $pdf->text($certificate->issued_at->format('d.m.Y'), 375, 225, 14, true);
         $pdf->strokeColor(...AirmiusPdfDocument::BORDER)->line(375, 214, 537, 214);
         $pdf->text($label('issued'), 375, 198, 9, false, AirmiusPdfDocument::SLATE);
-        $pdf->fitText($label('certificate_id', ['code' => $certificate->code]), 58, 157, 479, 9, false, AirmiusPdfDocument::MUTED);
+        $pdf->fitText($label('certificate_id', ['code' => $certificate->code]), 58, 157, 350, 9, false, AirmiusPdfDocument::MUTED);
+        $verifyUrl = route('guest.learning.certificates.verify', $certificate->code);
+        $pdf->fitText($label('verify_online'), 58, 141, 350, 9, false, AirmiusPdfDocument::SLATE);
+        $pdf->qrCode($verifyUrl, 437, 65, 100);
+        $pdf->text($label('scan_to_verify'), 437, 53, 8, false, AirmiusPdfDocument::SLATE);
         ProtectedDocumentDownload::audit(
             null,
             $request->user(),
@@ -767,7 +724,7 @@ class PublicLearningController extends Controller
             $certificate,
         );
 
-        return response($pdf->certificateFooter($label('congratulations'))->render(), 200, [
+        return response($pdf->certificateFooter($label('congratulations'), true)->render(), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="'.$certificate->code.'.pdf"',
         ]);
@@ -778,15 +735,22 @@ class PublicLearningController extends Controller
         $certificate = LearningCertificate::query()
             ->with(['course.tutor:id,name,profile_photo_path', 'user:id,name', 'enrollment'])
             ->where('code', Str::upper($code))
-            ->firstOrFail();
+            ->first();
 
-        abort_unless($certificate->enrollment?->status === 'active' && $certificate->enrollment?->completed_at, 404);
+        if (! $certificate || ! app(CertificateVerificationService::class)->valid($certificate)) {
+            return Inertia::render('Guest/LearningCertificateVerify', [
+                'canLogin' => Route::has('login'), 'canRegister' => Route::has('register'), 'certificate' => null,
+                'verificationError' => ['title' => __('learning.certificate.invalid_title'), 'body' => __('learning.certificate.invalid_body')],
+            ])->toResponse(request())->setStatusCode(404);
+        }
 
         return Inertia::render('Guest/LearningCertificateVerify', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
             'certificate' => [
                 'code' => $certificate->code,
+                'verified' => true,
+                'completion_status' => 'passed',
                 'issued_at' => optional($certificate->issued_at)->toIso8601String(),
                 'student_name' => $certificate->user?->name,
                 'course_title' => $certificate->course?->title,
@@ -812,9 +776,7 @@ class PublicLearningController extends Controller
             ->where('code', Str::upper($code))
             ->first();
 
-        if (! $certificate ||
-            $certificate->enrollment?->status !== 'active' ||
-            ! $certificate->enrollment?->completed_at) {
+        if (! $certificate || ! app(CertificateVerificationService::class)->valid($certificate)) {
             return response()->json([
                 'message' => self::CERTIFICATE_NOT_FOUND,
                 'message_text' => __('platform.learning.certificate_not_found'),
@@ -824,6 +786,8 @@ class PublicLearningController extends Controller
         return response()->json([
             'data' => [
                 'code' => $certificate->code,
+                'verified' => true,
+                'completion_status' => 'passed',
                 'issued_at' => optional($certificate->issued_at)->toIso8601String(),
                 'student_name' => $certificate->user?->name,
                 'course_title' => $certificate->course?->title,
@@ -1051,6 +1015,8 @@ class PublicLearningController extends Controller
             'revision' => $assignment->revision,
             'questions' => $locked ? [] : collect($assignment->questions ?: [])->map(fn ($q) => app(AssessmentSchema::class)->publicQuestion($q))->values(),
             'points' => $assignment->points,
+            'grading_mode' => $assignment->grading_mode,
+            'pass_percent' => $assignment->pass_percent,
             'due_after_days' => $assignment->due_after_days,
             'due_at' => optional($dueAt)->toIso8601String(),
             'is_required' => $assignment->is_required,
@@ -1058,6 +1024,7 @@ class PublicLearningController extends Controller
                 'id' => $submission->id,
                 'status' => $submission->status,
                 'score' => $submission->score,
+                'grading_snapshot' => $submission->grading_snapshot,
                 'feedback' => $submission->feedback,
                 'attachment_url' => $submission->attachment_url,
                 'body' => $submission->body,

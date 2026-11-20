@@ -1,0 +1,26 @@
+{
+  "scope": "local only; team roles in web and native app",
+  "version": "1.0.76+162",
+  "behavior": [
+    "Additional team roles require recipient acceptance",
+    "Decline preserves the existing role",
+    "Player removes the extra team role immediately",
+    "Existing role assignments are not rewritten by the migration",
+    "Offers expire after 14 days",
+    "Acceptance rechecks membership, previous role and proposer authority",
+    "Revocation cancels pending offers and old invitation tokens",
+    "Notifications link to the team with response buttons"
+  ],
+  "validation": {
+    "phpunit": "34 tests, 349 assertions passed",
+    "flutter": "9 tests passed including notification navigation",
+    "web_build": "artifacts/team-role-offers-web/",
+    "android_build": "debug APK compiled successfully",
+    "apk_path": "mobile\\airmius_mobile\\build\\app\\outputs\\flutter-apk\\app-debug.apk",
+    "apk_sha256": "75cc35f9a774286941f708fc7462eac24d7260a75b3b0bb86106cca8337fbe6f",
+    "android_api_base_url": "http://10.0.2.2:8000 (Android emulator local backend)"
+  },
+  "migration": "database/migrations/2026_11_20_000002_create_team_role_offers.php",
+  "activation": "Run migration only against an explicitly local database; use updated local web assets and rebuilt app. No real database migrated and no device installation performed.",
+  "deployment": "No upload, no production changes."
+}

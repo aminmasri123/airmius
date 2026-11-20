@@ -9,7 +9,8 @@ import { useI18n } from 'vue-i18n'
 defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
-    certificate: { type: Object, required: true },
+    certificate: { type: Object, default: null },
+    verificationError: { type: Object, default: () => ({}) },
 })
 
 const { t, locale } = useI18n()
@@ -27,11 +28,11 @@ const formatDate = (value) => value
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1" :lang="certificate.course_language" :dir="certificate.content_direction">
+        <main id="main-content" class="px-4 pt-36 md:pt-44" tabindex="-1" :lang="certificate?.course_language" :dir="certificate?.content_direction">
             <section class="mx-auto max-w-4xl">
                 <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">{{ t('Zurück zur Lernplattform') }}</Link>
 
-                <article class="mt-5 overflow-hidden rounded-xl border border-border bg-card">
+                <article v-if="certificate" class="mt-5 overflow-hidden rounded-xl border border-border bg-card">
                     <div class="border-b border-border bg-success/10 p-6">
                         <p class="text-xs font-bold uppercase tracking-wide text-success">{{ t('Zertifikat gültig') }}</p>
                         <h1 class="mt-2 font-heading text-3xl font-900 text-primary sm:text-5xl">{{ certificate.course_title }}</h1>
@@ -65,6 +66,10 @@ const formatDate = (value) => value
                             </Link>
                         </div>
                     </div>
+                </article>
+                <article v-else class="mt-5 rounded-xl border border-border bg-card p-6" role="alert">
+                    <h1 class="text-2xl font-bold">{{ verificationError.title }}</h1>
+                    <p class="mt-3 text-secondary">{{ verificationError.body }}</p>
                 </article>
             </section>
         </main>

@@ -17,13 +17,13 @@ class LearningAssignment extends Model
         'points',
         'due_after_days',
         'is_required',
-        'questions', 'revision',
+        'questions', 'revision', 'grading_mode', 'pass_percent',
     ];
 
     protected function casts(): array
     {
         return [
-            'points' => 'integer',
+            'points' => 'integer', 'pass_percent' => 'integer',
             'questions' => 'array',
             'revision' => 'integer',
             'due_after_days' => 'integer',

@@ -1,9 +1,13 @@
 ﻿import { router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import roleCopy from '@/../data/team-role-offers-copy.json'
 import { useTeamsJobs } from '@/composables/useTeamsJobs'
 
 export function useTeamsWorkspace({ props, t, te }) {
 const page = usePage()
+const { locale } = useI18n()
+const roleText = computed(() => roleCopy[locale.value?.split('-')[0]] || roleCopy.en)
 const user = page.props.auth?.user
 const tx = (key, fallback, params = {}) => te(`teams_workspace.${key}`) ? t(`teams_workspace.${key}`, params) : fallback
 
@@ -707,14 +711,14 @@ const deleteSponsor = (club, sponsor) => {
 
 const sponsorLogoUrl = (sponsor) => sponsor.logo_light_url || sponsor.logo_url || sponsor.logo_light || sponsor.logo
 
-const updateTeamMemberRole = (team, member) => {
+const updateTeamMemberRole = (team, member, role = member.pivot.role) => {
     actionNotice.value = null
 
     router.put(route('auth.teams.members.update', [team.id, member.id]), {
-        role: member.pivot.role,
+        role,
     }, {
         preserveScroll: true,
-        onSuccess: () => setActionNotice('success', tx('messages.team_role_saved', 'Teamrolle wurde gespeichert.')),
+        onSuccess: () => setActionNotice('success', (role === 'Player' ? roleText.value.done : roleText.value.sent)),
         onError: () => setActionNotice('error', tx('messages.team_role_error', 'Teamrolle konnte nicht gespeichert werden.')),
     })
 }

@@ -1,0 +1,39 @@
+{
+  "scope": "Local only; no production deployment and no live database migration",
+  "app_version": "1.0.75+161",
+  "notification_fix": [
+    "Learning assignment notifications use native course/studio destinations instead of the generic notification fallback.",
+    "Author links select the correct course and open the actual submission for grading.",
+    "Learner result links select the correct course task; web links select and scroll to its result.",
+    "Existing stored assignment notifications with course IDs receive a compatible native target."
+  ],
+  "grading": [
+    "Manual grading remains the default for existing assignments.",
+    "Optional automatic grading supports single choice, multiple choice, ordering and fixed short answers.",
+    "Total assignment points are shared equally across questions; course author chooses pass percentage.",
+    "Long text and attachments remain manual; invalid automatic setups are rejected.",
+    "Evaluation uses server-side answers and a submission snapshot. Participant responses do not include solution keys.",
+    "Duplicate identical submissions preserve the result and do not duplicate notifications."
+  ],
+  "validation": {
+    "server_tests": 51,
+    "server_assertions": 430,
+    "server_result": "passed",
+    "final_result_projection_tests": 8,
+    "final_result_projection_assertions": 98,
+    "flutter_tests": 15,
+    "flutter_result": "passed",
+    "dart_analysis": "passed",
+    "web_build": "passed",
+    "device_or_push_delivery_test": "Not performed"
+  },
+  "migration": "database/migrations/2026_11_20_000001_add_automatic_assignment_grading.php",
+  "activation": "Apply the migration only to a verified local database before using the updated backend. Then run an app build configured for that local backend. The release APK defaults to airmius.com.",
+  "manual_test": [
+    "As author: course studio > task > enable automatic grading > choose supported question types and correct answers > total points and pass percentage > save.",
+    "As enrolled learner: submit wrong answers, inspect points and needs-revision status; retry with correct answers and inspect passed result.",
+    "As author: open submission notification and check the correct student response.",
+    "As learner: open grading notification and check task/result.",
+    "Try identical retry, stale assignment revision, unrelated account and revoked enrollment."
+  ]
+}

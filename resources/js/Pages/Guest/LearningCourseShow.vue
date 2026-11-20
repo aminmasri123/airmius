@@ -19,6 +19,7 @@ const props = defineProps({
     enrollment: { type: Object, default: null },
     canUseLearningRoom: Boolean,
     leftEnrollmentId: Number,
+    accessRevoked: Boolean,
     myReview: { type: Object, default: null },
     translations: { type: Array, default: () => [] },
     seo: { type: Object, default: () => ({}) },
@@ -252,6 +253,15 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
     style: 'currency',
     currency,
 }).format(Number(cents || 0) / 100)
+onMounted(async () => {
+    const query = new URLSearchParams(window.location.search)
+    const assignment = Number(query.get('assignment')), lesson = Number(query.get('lesson'))
+    if (assignment > 0) {
+        const target = allLessons.value.find(l => Number(l.id)===lesson || (l.assignments||[]).some(a=>Number(a.id)===assignment))
+        if (target) { selectedLesson.value=target; await nextTick() }
+        document.getElementById(`assignment-${assignment}`)?.scrollIntoView({block:'center'})
+    }
+})
 </script>
 
 <template>
@@ -445,12 +455,13 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat(locale.va
                         <button
                             type="button"
                             class="mt-5 w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60"
-                            :disabled="enrolling || (isPaidCourse && !canUseLearningRoom && !leftEnrollmentId && !course.purchase_url)"
+                            :disabled="enrolling || accessRevoked || (isPaidCourse && !canUseLearningRoom && !leftEnrollmentId && !course.purchase_url)"
                             :aria-busy="enrolling"
                             @click="enroll"
                         >
-                            {{ enrolling ? t('Wird eingeschrieben…') : ctaLabel }}
+                            {{ accessRevoked ? t('Zugang entzogen') : enrolling ? t('Wird eingeschrieben…') : ctaLabel }}
                         </button>
+                        <p v-if="accessRevoked" class="mt-3 text-sm text-error">{{ t('Dein Kurszugang wurde entzogen. Bitte wende dich an die Kursleitung.') }}</p>
                         <p class="mt-3 text-xs text-secondary">
                             <span v-if="isPaidCourse && !canUseLearningRoom">
                                 {{ t('guest.learning.cta.price') }} {{ formatMoney(course.price_cents, course.currency) }}.

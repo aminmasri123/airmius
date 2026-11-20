@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use BaconQrCode\Common\ErrorCorrectionLevel;
+use BaconQrCode\Encoder\Encoder;
+
 class AirmiusPdfDocument
 {
     public const PAGE_WIDTH = 595;
@@ -117,11 +120,37 @@ class AirmiusPdfDocument
         return $this;
     }
 
-    public function certificateFooter(string $message): self
+    public function certificateFooter(string $message, bool $reserveVerificationCode = false): self
     {
-        $this->strokeColor(...self::BORDER)->line(58, 126, 537, 126);
-        $this->fitText($message, 58, 103, 479, 10, true);
-        $this->text('airmius.com', 58, 81, 9, false, self::SLATE);
+        $this->strokeColor(...self::BORDER)->line(58, 126, $reserveVerificationCode ? 418 : 537, 126);
+        if ($reserveVerificationCode) {
+            foreach (explode("\n", wordwrap($message, 42, "\n", true)) as $index => $line) {
+                $this->fitText($line, 58, 104 - $index * 14, 350, 10, true);
+            }
+            $this->text('airmius.com', 58, 69, 9, false, self::SLATE);
+        } else {
+            $this->fitText($message, 58, 103, 479, 10, true);
+            $this->text('airmius.com', 58, 81, 9, false, self::SLATE);
+        }
+
+        return $this;
+    }
+
+    /** Vector QR with four-module quiet zone, suitable for PDF printing and scans. */
+    public function qrCode(string $payload, float $x, float $y, float $size = 100): self
+    {
+        $matrix = Encoder::encode($payload, ErrorCorrectionLevel::M(), 'UTF-8')->getMatrix();
+        $width = $matrix->getWidth();
+        $module = $size / ($width + 8);
+        $this->fillColor(255, 255, 255)->rect($x, $y, $size, $size, true);
+        $this->fillColor(0, 0, 0);
+        for ($row = 0; $row < $width; $row++) {
+            for ($column = 0; $column < $width; $column++) {
+                if ($matrix->get($column, $row) === 1) {
+                    $this->rect($x + ($column + 4) * $module, $y + ($width - $row + 3) * $module, $module, $module, true);
+                }
+            }
+        }
 
         return $this;
     }

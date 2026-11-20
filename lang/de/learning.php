@@ -29,6 +29,7 @@ return [
         'quiz_failed' => 'Quiz nicht bestanden. Du kannst es erneut versuchen.',
     ],
     'errors' => [
+        'access_revoked' => 'Dein Zugang zu diesem Kurs wurde entzogen. Bitte wende dich an die Kursleitung.',
         'paid_course' => 'Dieser Kurs ist kostenpflichtig und kann nicht kostenlos eingeschrieben werden.',
         'tutor_self_enroll' => 'Kursleitungen müssen sich nicht selbst einschreiben.',
         'lesson_locked' => 'Diese Lektion wird später freigeschaltet.',
@@ -46,6 +47,10 @@ return [
         'assignments' => 'Pflicht-Aufgaben',
     ],
     'certificate' => [
+        'invalid_title' => 'Zertifikat nicht bestätigt',
+        'invalid_body' => 'Der erfolgreiche Kursabschluss konnte nicht bestätigt werden. Bitte prüfe den Code oder wende dich an die Kursleitung.',
+        'verify_online' => 'Abschluss online über den QR-Code prüfen.',
+        'scan_to_verify' => 'Zertifikat prüfen',
         'completion_statement' => 'hat den folgenden Kurs erfolgreich abgeschlossen.',
         'title' => 'ZERTIFIKAT',
         'issued' => 'Ausgestellt',

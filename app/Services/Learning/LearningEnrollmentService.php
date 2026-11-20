@@ -16,7 +16,7 @@ final class LearningEnrollmentService
     /** @return array{enrollment: LearningEnrollment, activated: bool} */
     public function activate(User $user, LearningCourse $course, string $source = 'self', bool $notifyStudent = false): array
     {
-        $result = DB::transaction(function () use ($user, $course): array {
+        $result = DB::transaction(function () use ($user, $course, $source): array {
             $lockedCourse = LearningCourse::query()->whereKey($course->id)->lockForUpdate()->firstOrFail();
             $this->bookingRules->assertCourseEnrollmentOpen($lockedCourse, $user);
 
@@ -30,6 +30,7 @@ final class LearningEnrollmentService
                     'started_at' => now(),
                 ],
             );
+            abort_if($source === 'self' && in_array($enrollment->status, ['cancelled', 'revoked'], true), 403, __('learning.errors.access_revoked'));
             $wasCreated = $enrollment->wasRecentlyCreated;
             $wasActive = $enrollment->status === 'active';
 
