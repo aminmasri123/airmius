@@ -6,6 +6,7 @@ import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import WelcomeShowcase from '@/Components/Guest/WelcomeShowcase.vue'
 import { canTrackMarketingEvent } from '@/services/privacyConsent'
 
 const props = defineProps({
@@ -630,6 +631,8 @@ const onBannerSecondaryCtaClick = () => {
             </div>
         </section>
         <!-- PROBLEM LÖSUNG -->
+        <WelcomeShowcase variant="platform" :join-url="heroPrimaryCta" />
+
         <section class="py-16 sm:py-24 px-4 border-t border-white/5 min-h-screen sm:h-dvh flex items-center">
             <div class="max-w-6xl mx-auto">
                 <div class="text-center mb-14">
@@ -765,6 +768,8 @@ const onBannerSecondaryCtaClick = () => {
             </div>
         </section>
 
+        <WelcomeShowcase variant="community" :join-url="heroPrimaryCta" />
+
         <!-- FUNKTIONEN -->
         <section id="funktionen" class="py-16 sm:py-24 px-4 border-t border-white/5"
             style="background: radial-gradient(ellipse 60% 40% at 50% 100%, rgba(0,102,255,.08) 0%, transparent 60%);">
@@ -793,6 +798,8 @@ const onBannerSecondaryCtaClick = () => {
                 </div>
             </div>
         </section>
+
+        <WelcomeShowcase variant="tools" :join-url="heroPrimaryCta" />
 
         <!-- SPORTARTEN -->
         <section id="sportarten" class="py-16 sm:py-24 px-4 border-t border-white/5">
