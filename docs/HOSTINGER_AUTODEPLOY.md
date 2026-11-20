@@ -16,40 +16,46 @@ Actions nicht; der Runner benötigt einen eigenen SSH-Zugang.
    Lokale Arbeitskopien, `.env`, Nutzerdaten, Git-Verzeichnis und App-Builds sind ausgeschlossen.
 3. Hostinger prüft die Archiv-Prüfsumme, bereitet ein neues Release außerhalb des
    öffentlichen Verzeichnisses vor und bindet bestehende Konfiguration und Storage ein.
-4. Die Anwendung geht kurz in Wartung, Migrationen laufen, und ein Symlink wird
-   atomar auf das neue Release umgeschaltet. Alte Dateien werden nicht einzeln überschrieben.
-5. Die öffentliche Commit-Kennung und Laravel `/up` werden geprüft. Bei Fehlern
-   wird auf das vorherige Code-Release zurückgeschaltet. Datenbankmigrationen werden
-   nicht automatisch zurückgerollt; Migrationen müssen mit dem vorherigen Release kompatibel sein.
+4. Vor dem Update wird der bisherige Code privat gesichert. Die Anwendung geht kurz
+   in Wartung, Migrationen laufen, und rsync übernimmt den getesteten Code in den
+   echten Ordner `public_html/airmius`. Dieser bleibt im hPanel-Dateimanager geöffnet.
+   Produktionskonfiguration, Uploads, Laufzeitdaten und bisherige Build-Dateien
+   werden dabei ausdrücklich ausgeschlossen; Caches werden am Live-Pfad neu erstellt.
+5. Die öffentliche Commit-Kennung, Laravel `/up`, Startseite und sämtliche
+   Manifest-Dateien über HTTPS werden geprüft. Bei Fehlern wird der vorherige Code
+   aus der Sicherung wiederhergestellt. Datenbankmigrationen werden nicht automatisch
+   zurückgerollt und müssen mit dem vorherigen Code kompatibel bleiben.
 
-## Einmalige Einrichtung vor Aktivierung
+## Serverstruktur und Dateimanager
 
-Der bisherige Stand unter `/domains/airmius.com/public_html/airmius` besitzt zwei
-verschiedene Build-Verzeichnisse. Sein Frontcontroller und der tatsächliche
-DocumentRoot müssen zuerst auf dem Server geprüft werden. Nicht blind verschieben
-oder einen der bisherigen Verzeichnisse löschen.
-
-Die Release-Struktur soll außerhalb von `public_html` liegen:
+Seit der Anpassung am 20.11.2026 ist
+`/domains/airmius.com/public_html/airmius` wieder ein echter Ordner.
+`app`, `routes`, `lang`, `resources`, `vendor`, `public/build/assets`,
+`storage` und die Produktions-`.env` liegen dort direkt und sind im
+Hostinger-Dateimanager zugänglich. Für versteckte Dateien muss dessen entsprechende
+Anzeige aktiviert sein. Nur Laravels üblicher öffentlicher Storage-Link bleibt ein Link.
 
 ```text
+/home/ACCOUNT/domains/airmius.com/public_html/airmius/   echter Live-Ordner
 /home/ACCOUNT/.airmius-deploy/
-  incoming/
-  releases/INITIAL/        vollständige bestehende Anwendung als Ausgangspunkt
-  current -> releases/INITIAL
-  shared/.env             vorhandene Produktionskonfiguration
-  shared/storage/         vorhandene Nutzerdaten und Laufzeitdaten
-  shared/assets/          bestehende und neue Assets mit Inhalts-Hash
+  incoming/                Archive und Prüfberichte (privat)
+  releases/COMMIT/         getrennt vorbereitete Releases
+  backups/code-COMMIT-*/   Code vor einer Veröffentlichung (privat)
+  current -> /home/ACCOUNT/domains/airmius.com/public_html/airmius
+  shared/assets/           gemeinsame Quelle historischer Hash-Dateien
+  shared/storage -> /home/ACCOUNT/domains/airmius.com/public_html/airmius/storage
 ```
 
-Die bestehende Domain bleibt auf dem bisherigen Anwendungsverzeichnis. Dieses
-ist ein Symlink auf `current`; `.htaccess` leitet HTTP ausschließlich in `public/`.
-Dadurch bleiben bestehende Cron-Pfade zu `artisan` und `cron-schedule.php` gültig.
-Der Runner prüft vor jedem Wechsel, dass der Domain-Pfad auf das aktuelle Release zeigt.
+`.htaccess` leitet HTTP ausschließlich nach `public/`; interne Anwendungsdateien
+werden nicht öffentlich ausgeliefert. Bestehende Cron-Pfade bleiben gültig.
+Assets im Live-Ordner sind echte Dateien (Hardlinks), keine Verzeichnis-Symlinks.
+Direkte Codeänderungen im Dateimanager werden beim nächsten Deployment durch GitHub
+ersetzt; `.env` und `storage` bleiben erhalten.
 
-Am 19.11.2026 wurden die Produktionsdatenbank und das bisherige Verzeichnis privat
-unter `.airmius-deploy/backups` gesichert und ein unverändertes Ausgangsrelease
-angelegt. Die Symlink-Erreichbarkeit, Startseite und `/up` wurden danach geprüft.
-Der alte Hostinger-GitHub-Webhook ist deaktiviert, damit nur dieser Workflow deployt.
+Die einmalige Migration erfolgt mit `scripts/deploy/hostinger-file-manager-layout.sh`
+unter derselben Deployment-Sperre. Sie übernimmt ausschließlich den aktuell laufenden
+Release-Stand und behält den ursprünglichen Link, Release und Storage-Snapshot privat.
+Der alte Hostinger-GitHub-Webhook ist deaktiviert; nur der Actions-Workflow deployt.
 
 SSH-Port laut gezeigter hPanel-Sitzung: `65002`; Benutzer `u270834523`; Host
 `46.202.158.65`. Diese Angaben sind vor Einrichtung des neuen Zugangs zu verifizieren.

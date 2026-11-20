@@ -12,18 +12,19 @@ expected_hash=${5:?archive checksum required}
 [[ "$web_root" =~ ^/home/[a-zA-Z0-9_./-]+$ && "$web_root" != *..* ]]
 [[ "$site_url" =~ ^https://[a-zA-Z0-9.-]+$ ]]
 [[ "$sha" =~ ^[a-f0-9]{40}$ && "$expected_hash" =~ ^[a-f0-9]{64}$ ]]
-for tool in php curl flock tar sha256sum readlink; do command -v "$tool" >/dev/null; done
+for tool in php curl flock tar sha256sum readlink rsync; do command -v "$tool" >/dev/null; done
 php -r 'exit(version_compare(PHP_VERSION, "8.2.0", ">=") ? 0 : 1);'
 test -d "$base/incoming" && test -d "$base/releases"
-test -f "$base/shared/.env" && test -d "$base/shared/storage"
+test -f "$web_root/.env" && test -d "$web_root/storage"
 # Provisioning is a separate operation: never replace an existing production directory.
 exec 9>"$base/deploy.lock"
 flock -n 9 || { echo 'Another deployment is running.'; exit 1; }
-test -L "$base/current"
-previous=$(readlink -f "$base/current")
-[[ "$previous" == "$base/releases/"* && -f "$previous/artisan" ]]
-test "$(readlink -f "$web_root")" = "$previous"
-if test "$previous" = "$base/releases/$sha"; then
+test -d "$web_root" && test ! -L "$web_root"
+test "$(readlink -f "$web_root")" = "$web_root"
+test -f "$web_root/artisan"
+previous_sha=$(php -r '$v=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR); echo $v["commit"]??"";' "$web_root/public/deployment.json")
+[[ "$previous_sha" =~ ^[a-f0-9]{40}$ ]]
+if test "$previous_sha" = "$sha"; then
     curl --fail --silent --show-error --max-time 30 "$site_url/deployment.json?release=$sha" \
         | php -r '$v=json_decode(stream_get_contents(STDIN),true); exit(($v["commit"]??null)===$argv[1]?0:1);' "$sha"
     curl --fail --silent --show-error --max-time 30 "$site_url/up" >/dev/null
@@ -42,8 +43,8 @@ chmod -R u+rwX,go+rX "$release"
 test -f "$release/vendor/autoload.php"
 test -f "$release/public/build/manifest.json"
 test ! -e "$release/.env" && test ! -e "$release/storage"
-ln -s "$base/shared/.env" "$release/.env"
-ln -s "$base/shared/storage" "$release/storage"
+ln -s "$web_root/.env" "$release/.env"
+ln -s "$web_root/storage" "$release/storage"
 mkdir -p "$release/bootstrap/cache" "$base/shared/assets"
 # Keep old hashed assets available for tabs opened before the release switch.
 for asset in "$release/public/build/assets/"*; do
@@ -64,28 +65,49 @@ php artisan config:cache
 php artisan view:cache
 php artisan route:list --json > "$base/incoming/$sha-routes.json"
 
+# Keep hPanel's application directory real. Never sync production/runtime files.
+sync_options=(-a --checksum --delete --delay-updates --exclude=/.env --exclude=/storage --exclude=/public/storage --exclude=/public/build/assets --exclude=/bootstrap/cache)
+backup="$base/backups/code-$sha-$(date -u +%Y%m%dT%H%M%S)-$$"
+mkdir -m 700 "$backup"
+rsync "${sync_options[@]}" "$web_root/" "$backup/"
+refresh_live() {
+    (
+        cd "$web_root"
+        # Rebuild caches with live paths, not the private staging directory.
+        find bootstrap/cache -maxdepth 1 -type f -name '*.php' -delete
+        php artisan package:discover --ansi || return $?
+        php artisan config:cache || return $?
+        php artisan view:cache || return $?
+    )
+}
 switched=false
 maintenance=false
 recover() {
     code=$?
     trap - ERR
     if $switched; then
-        ln -s "$previous" "$base/current.rollback"
-        mv -Tf "$base/current.rollback" "$base/current"
-        echo 'Application symlink restored to previous release.' >&2
+        if rsync "${sync_options[@]}" "$backup/" "$web_root/" && refresh_live; then
+            echo 'Previous application code restored from backup.' >&2
+        else
+            echo "Code recovery failed; maintenance retained. Backup: $backup" >&2
+            exit "$code"
+        fi
     fi
-    if $maintenance; then (cd "$previous" && php artisan up) || true; fi
+    if $maintenance; then (cd "$web_root" && php artisan up) || true; fi
     echo 'Deployment failed. Database migrations are not reversed automatically.' >&2
     exit "$code"
 }
 trap recover ERR
-# Shared storage makes maintenance visible to both old and new releases.
-(cd "$previous" && php artisan down --retry=30)
+(cd "$web_root" && php artisan down --retry=30)
 maintenance=true
 php artisan migrate --force
-ln -s "$release" "$base/current.next"
-mv -Tf "$base/current.next" "$base/current"
+# Recovery must run even if the copy is interrupted part way through.
 switched=true
+rsync "${sync_options[@]}" "$release/" "$web_root/"
+# Hard links are real files for hPanel; retain old hashes for already-open tabs.
+rsync -a --ignore-existing --link-dest="$base/shared/assets" "$base/shared/assets/" "$web_root/public/build/assets/"
+refresh_live
+cd "$web_root"
 php artisan up
 # Query the actual public site and match the complete commit, not merely HTTP 200.
 curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 30 \
