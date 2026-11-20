@@ -67,7 +67,7 @@ const exerciseIcons = ['la-walking', 'la-dumbbell', 'la-running']
                     <div class="feed-preview">
                         <div class="preview-top"><strong>{{ copy.world }}</strong><span class="demo-label">{{ copy.example }}</span></div>
                         <article class="preview-post">
-                            <div class="post-author"><span class="avatar">LN</span><div><strong>{{ copy.team }}</strong><small>{{ copy.postTime }}</small></div><i class="las la-ellipsis-h" aria-hidden="true"></i></div>
+                            <div class="post-author"><span class="avatar">{{ copy.teamInitials }}</span><div><strong>{{ copy.team }}</strong><small>{{ copy.postTime }}</small></div><i class="las la-ellipsis-h" aria-hidden="true"></i></div>
                             <img class="post-photo" src="/img/login/airmius-auth-community-events.png" :alt="copy.photoAlt" width="941" height="1672" loading="lazy" decoding="async">
                             <div class="post-copy"><strong>{{ copy.post }}</strong><p>{{ copy.postText }}</p></div>
                             <div class="post-actions"><span><i class="las la-heart" aria-hidden="true"></i> 24</span><span><i class="las la-comment" aria-hidden="true"></i> 3</span><i class="las la-share" aria-hidden="true"></i></div>
@@ -98,7 +98,7 @@ const exerciseIcons = ['la-walking', 'la-dumbbell', 'la-running']
                     <div class="community-copy"><span class="feature-number">02</span><h3>{{ copy.community.cards[1].title }}</h3><p>{{ copy.community.cards[1].text }}</p></div>
                 </article>
                 <article class="community-card" data-reveal>
-                    <div class="community-visual event-visual"><div class="event-ticket"><span class="event-icon"><i class="las la-calendar-check" aria-hidden="true"></i></span><small>{{ copy.team }}</small><strong>{{ copy.event }}</strong><span>{{ copy.eventTime }}</span><div class="event-people" aria-hidden="true"><span>LM</span><span>JS</span><span>AK</span><span>+3</span></div><span class="event-confirmation"><i class="las la-check" aria-hidden="true"></i>{{ copy.attending }}</span></div></div>
+                    <div class="community-visual event-visual"><div class="event-ticket"><span class="event-icon"><i class="las la-calendar-check" aria-hidden="true"></i></span><small>{{ copy.team }}</small><strong>{{ copy.event }}</strong><span>{{ copy.eventTime }}</span><div class="event-people" aria-hidden="true"><span>{{ copy.demoPeople.lena.initials }}</span><span>{{ copy.demoPeople.jonas.initials }}</span><span>{{ copy.attendeeInitials[2] }}</span><span>+3</span></div><span class="event-confirmation"><i class="las la-check" aria-hidden="true"></i>{{ copy.attending }}</span></div></div>
                     <div class="community-copy"><span class="feature-number">03</span><h3>{{ copy.community.cards[2].title }}</h3><p>{{ copy.community.cards[2].text }}</p></div>
                 </article>
             </div>
@@ -110,7 +110,7 @@ const exerciseIcons = ['la-walking', 'la-dumbbell', 'la-running']
                         <div class="tool-preview-heading"><strong>{{ [copy.weekPlan, copy.week, copy.teamChat][index] }}</strong><span class="demo-label">{{ copy.example }}</span></div>
                         <template v-if="index === 0"><div v-for="(exercise, exerciseIndex) in copy.exercises" :key="exercise" class="exercise-row"><i :class="['las', exerciseIcons[exerciseIndex]]" aria-hidden="true"></i><strong>{{ exercise }}</strong><span>{{ copy.prescriptions[exerciseIndex] }}</span></div></template>
                         <div v-else-if="index === 1" class="week-preview"><div v-for="(day, dayIndex) in copy.days" :key="day" class="week-day"><span>{{ day }}</span><strong>{{ 16 + dayIndex }}</strong><div v-if="dayIndex === 1 || dayIndex === 3" class="calendar-session"><span>18:00</span><strong>{{ dayIndex === 1 ? copy.training : copy.team }}</strong></div><span v-else class="calendar-empty" aria-hidden="true">—</span></div></div>
-                        <div v-else class="chat-preview"><div class="chat-bubble"><span class="chat-avatar">LM</span><p><strong>Lena</strong>{{ copy.chat[0] }}</p></div><div class="chat-bubble reply"><p><strong>Alex</strong>{{ copy.chat[1] }}</p><i class="las la-check-double" aria-hidden="true"></i></div><div class="chat-bubble"><span class="chat-avatar">JS</span><p><strong>Jonas</strong>{{ copy.chat[2] }}</p></div></div>
+                        <div v-else class="chat-preview"><div class="chat-bubble"><span class="chat-avatar">{{ copy.demoPeople.lena.initials }}</span><p><strong>{{ copy.demoPeople.lena.name }}</strong>{{ copy.chat[0] }}</p></div><div class="chat-bubble reply"><p><strong>{{ copy.demoPeople.alex.name }}</strong>{{ copy.chat[1] }}</p><i class="las la-check-double" aria-hidden="true"></i></div><div class="chat-bubble"><span class="chat-avatar">{{ copy.demoPeople.jonas.initials }}</span><p><strong>{{ copy.demoPeople.jonas.name }}</strong>{{ copy.chat[2] }}</p></div></div>
                     </div>
                 </article>
             </div>
