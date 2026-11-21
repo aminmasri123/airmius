@@ -15,6 +15,9 @@ const client = axios.create({ adapter: async config => {
     const data = config.url.endsWith('/metadata')
         ? { can_manage: !readOnly, can_edit: !readOnly, can_delete: false, custom_fields: [], categories: [], number_ranges: [] }
         : { can_edit: !readOnly, fields, categories: [{ id: 1, name: 'Leistung', is_active: true, selected: true }] }
+    // Exercise compatibility with deployed versions that only expose edit
+    // permission on the configuration endpoint.
+    if (!config.url.endsWith('/metadata')) delete data.can_edit
     return { config, status: 200, data: { data } }
 } })
 window.axios = client

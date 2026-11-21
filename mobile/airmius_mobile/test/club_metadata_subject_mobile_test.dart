@@ -10,6 +10,65 @@ import 'package:airmius/core/airmius_services_scope.dart';
 import 'package:airmius/screens/club_metadata_subject_screen.dart';
 
 void main() {
+  for (final readOnly in [false, true]) {
+    testWidgets(
+      'older subject response resolves edit rights from server; readOnly=$readOnly',
+      (tester) async {
+        final transport = _SubjectTransport(legacy: true, readOnly: readOnly);
+        await tester.pumpWidget(_subjectApp(transport));
+        await tester.pumpAndSettle();
+        expect(
+          transport.requests.where((r) => r.path == '/api/v1/clubs/7/metadata'),
+          hasLength(1),
+        );
+        expect(
+          find.text('Nur Leserechte – Änderungen sind nicht erlaubt.'),
+          readOnly ? findsOneWidget : findsNothing,
+        );
+        expect(
+          tester
+              .widget<TextFormField>(
+                find.byKey(const ValueKey('metadata-value-1')),
+              )
+              .enabled,
+          !readOnly,
+        );
+        if (!readOnly) {
+          await tester.tap(find.text('Speichern'));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const ValueKey('metadata-manage')), findsOneWidget);
+          expect(
+            tester
+                .widget<TextFormField>(
+                  find.byKey(const ValueKey('metadata-value-1')),
+                )
+                .enabled,
+            true,
+          );
+        } else {
+          expect(find.text('Speichern'), findsNothing);
+          expect(transport.requests.where((r) => r.method == 'PUT'), isEmpty);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+  testWidgets(
+    'unavailable legacy permission is an error, not a read-only decision',
+    (tester) async {
+      await tester.pumpWidget(
+        _subjectApp(_SubjectTransport(legacy: true, failPermission: true)),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Nur Leserechte – Änderungen sind nicht erlaubt.'),
+        findsNothing,
+      );
+      expect(find.text('Speichern'), findsNothing);
+      expect(find.text('Erneut versuchen'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
   test('subject editor labels exist in every supported language', () {
     for (final language in AirmiusLanguage.values) {
       final scope = AirmiusScope(
@@ -333,10 +392,14 @@ class _SubjectTransport implements AirmiusApiTransport {
     this.readOnly = false,
     this.longList = false,
     this.failSave = false,
+    this.legacy = false,
+    this.failPermission = false,
   });
   bool readOnly;
   final bool longList;
   final bool failSave;
+  final bool legacy;
+  final bool failPermission;
   final requests = <AirmiusApiRequest>[];
 
   static const body =
@@ -345,6 +408,14 @@ class _SubjectTransport implements AirmiusApiTransport {
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     requests.add(request);
+    if (request.path == '/api/v1/clubs/7/metadata') {
+      return AirmiusApiResponse(
+        statusCode: failPermission ? 503 : 200,
+        body: jsonEncode({
+          'data': {'can_edit': !readOnly},
+        }),
+      );
+    }
     if (request.method == 'PUT' && failSave)
       return const AirmiusApiResponse(
         statusCode: 422,
@@ -352,7 +423,7 @@ class _SubjectTransport implements AirmiusApiTransport {
             '{"message":"Please check the value","errors":{"values.1":["Invalid value"]}}',
       );
     final data = jsonDecode(body) as Map<String, dynamic>;
-    data['data']['can_edit'] = !readOnly;
+    if (!legacy) data['data']['can_edit'] = !readOnly;
     if (longList) {
       for (var i = 10; i < 50; i++) {
         data['data']['fields'].add({
@@ -366,4 +437,29 @@ class _SubjectTransport implements AirmiusApiTransport {
     }
     return AirmiusApiResponse(statusCode: 200, body: jsonEncode(data));
   }
+}
+
+Widget _subjectApp(_SubjectTransport transport) {
+  final container = AirmiusServiceContainer(
+    environment: const AirmiusAppEnvironment(
+      apiBaseUrl: 'https://example.test',
+      enableOfflineQueue: false,
+    ),
+    transport: transport,
+  );
+  return AirmiusScope(
+    language: AirmiusLanguage.de,
+    setLanguage: (_) {},
+    child: AirmiusServicesScope(
+      container: container,
+      child: const MaterialApp(
+        home: ClubMetadataSubjectScreen(
+          clubId: 7,
+          subjectType: 'team',
+          subjectId: 9,
+          subjectTitle: 'U18',
+        ),
+      ),
+    ),
+  );
 }

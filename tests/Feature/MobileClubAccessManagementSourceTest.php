@@ -12,6 +12,7 @@ class MobileClubAccessManagementSourceTest extends TestCase
         $repository = $this->source('mobile/airmius_mobile/lib/core/airmius_api_repositories.dart');
         $contract = $this->source('mobile/airmius_mobile/lib/core/airmius_api_models.dart');
         $screen = $this->source('mobile/airmius_mobile/lib/screens/club_access_management_screen.dart');
+        $delegationForm = $this->source('mobile/airmius_mobile/lib/screens/club_delegation_form_screen.dart');
 
         foreach ([
             '/api/v1/clubs/$clubId/members/$userId/permissions',
@@ -53,8 +54,9 @@ class MobileClubAccessManagementSourceTest extends TestCase
         $this->assertStringContainsString('length: 4', $screen);
         $this->assertStringContainsString("'assignments': assignments", $screen);
         $this->assertStringContainsString("'scope_type': scopeType", $screen);
-        $this->assertStringContainsString("'starts_at': startsAt.toIso8601String()", $screen);
-        $this->assertStringContainsString("'ends_at': endsAt.toIso8601String()", $screen);
+        $this->assertStringContainsString('ClubDelegationFormScreen(', $screen);
+        $this->assertStringContainsString("'starts_at': _startsAt.toIso8601String()", $delegationForm);
+        $this->assertStringContainsString("'ends_at': _endsAt.toIso8601String()", $delegationForm);
         $this->assertStringContainsString('_delegablePermissionKeys.contains', $screen);
         $this->assertStringNotContainsString('http://', $screen);
         $this->assertStringNotContainsString('https://', $screen);

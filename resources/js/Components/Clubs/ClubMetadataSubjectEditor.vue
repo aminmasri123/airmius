@@ -45,7 +45,13 @@ const load = async (preserveDraft = false) => {
     loading.value = true
     error.value = ''
     try {
-        hydrate((await window.axios.get(url.value, { headers: { Accept: 'application/json' } })).data.data)
+        const data = (await window.axios.get(url.value, { headers: { Accept: 'application/json' } })).data.data
+        if (!Object.hasOwn(data, 'can_edit')) {
+            const configuration = (await window.axios.get(`/api/v1/clubs/${encodeURIComponent(props.clubId)}/metadata`, { headers: { Accept: 'application/json' } })).data.data
+            if (typeof configuration.can_edit !== 'boolean') throw new Error('Metadata edit permission unavailable')
+            data.can_edit = configuration.can_edit
+        }
+        hydrate(data)
         if (draft) {
             for (const field of payload.value.fields) if (Object.hasOwn(draft.values, field.id)) values.value[field.id] = draft.values[field.id]
             selectedCategories.value = payload.value.categories.filter(item => draft.categories.includes(item.id)).map(item => item.id)
@@ -70,7 +76,8 @@ const save = async () => {
     try {
         const activeValues = Object.fromEntries(payload.value.fields.filter((field) => field.is_active).map((field) => [field.id, values.value[field.id] ?? null]))
         const activeCategoryIds = payload.value.categories.filter((category) => category.is_active && selectedCategories.value.includes(category.id)).map((category) => category.id)
-        hydrate((await window.axios.put(url.value, { values: activeValues, category_ids: activeCategoryIds }, { headers: { Accept: 'application/json' } })).data.data)
+        const data = (await window.axios.put(url.value, { values: activeValues, category_ids: activeCategoryIds }, { headers: { Accept: 'application/json' } })).data.data
+        hydrate({ ...data, can_edit: Object.hasOwn(data, 'can_edit') ? data.can_edit : true })
         success.value = vt('saved')
     } catch (cause) {
         error.value = apiError(cause)

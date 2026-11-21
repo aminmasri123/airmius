@@ -141,7 +141,19 @@ class ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen>
         widget.subjectId,
       );
       final raw = response['data'];
-      final data = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
+      final data = raw is Map<String, dynamic>
+          ? Map<String, dynamic>.from(raw)
+          : <String, dynamic>{};
+      // Older backends expose this permission on the configuration endpoint,
+      // but do not yet include it in subject responses. Missing is not denied.
+      if (!data.containsKey('can_edit')) {
+        final configuration = await _client.clubMetadata(widget.clubId);
+        final permissions = configuration['data'];
+        if (permissions is! Map || permissions['can_edit'] is! bool) {
+          throw StateError('Metadata edit permission unavailable');
+        }
+        data['can_edit'] = permissions['can_edit'];
+      }
       _replaceState(data);
       if (preserveDraft) {
         for (final entry in draft.entries) {
@@ -242,7 +254,14 @@ class ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen>
         {'values': values, 'category_ids': activeCategoryIds},
       );
       final raw = response['data'];
-      if (raw is Map<String, dynamic>) _replaceState(raw);
+      if (raw is Map<String, dynamic>) {
+        _replaceState({
+          ...raw,
+          // A successful write was authorized by the server, including on
+          // older backends whose response omits the permission flag.
+          'can_edit': raw.containsKey('can_edit') ? raw['can_edit'] : true,
+        });
+      }
       if (!mounted) return false;
       _dirty = false;
       ScaffoldMessenger.of(
@@ -327,8 +346,11 @@ class ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen>
                 if (_error != null && _data.isEmpty)
                   TextButton(onPressed: _load, child: Text(t('common.retry'))),
                 if (!_loading) ...[
-                  if (!canEdit) Text(t('clubMetadataValues.readOnly')),
-                  if (_items('fields').isEmpty && _items('categories').isEmpty)
+                  if (_data.containsKey('can_edit') && !canEdit)
+                    Text(t('clubMetadataValues.readOnly')),
+                  if (_data.isNotEmpty &&
+                      _items('fields').isEmpty &&
+                      _items('categories').isEmpty)
                     Text(t('clubMetadataValues.empty')),
                   ..._items('fields').map(_field),
                   if (_items('categories').isNotEmpty) ...[
