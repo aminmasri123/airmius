@@ -59,7 +59,16 @@ make_release() {
 }
 publish() {
     local sha=$1
-    bash ${DEPLOY_TEST_TRACE:+-x} "$root/scripts/deploy/hostinger-release.sh" "$fixture/deploy" "$LIVE_ROOT" https://example.com "$sha" "$(sha256sum "$fixture/deploy/incoming/$sha.tar.gz" | cut -d ' ' -f 1)"
+    local archive="$fixture/deploy/incoming/$sha.tar.gz"
+    local checksum
+    if test -f "$archive"; then
+        checksum=$(sha256sum "$archive" | cut -d ' ' -f 1)
+    else
+        # An already active commit exits after its health checks. Its archive
+        # was deliberately removed by the successful first publication.
+        checksum=$(printf '%064d' 0)
+    fi
+    bash ${DEPLOY_TEST_TRACE:+-x} "$root/scripts/deploy/hostinger-release.sh" "$fixture/deploy" "$LIVE_ROOT" https://example.com "$sha" "$checksum"
 }
 sha=$(printf '%040d' 2)
 make_release "$sha"
