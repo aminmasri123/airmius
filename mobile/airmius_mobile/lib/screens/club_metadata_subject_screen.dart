@@ -4,7 +4,8 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
-import '../core/airmius_theme.dart';
+import '../widgets/airmius_form.dart';
+import 'club_metadata_screen.dart';
 
 class ClubMetadataSubjectButton extends StatelessWidget {
   const ClubMetadataSubjectButton({
@@ -57,19 +58,30 @@ class ClubMetadataSubjectScreen extends StatefulWidget {
     required this.subjectType,
     required this.subjectId,
     required this.subjectTitle,
+    this.embedded = false,
+    this.onManage,
   });
 
+  final bool embedded;
+  final Future<void> Function()? onManage;
   final int clubId;
   final String subjectType;
   final int subjectId;
   final String subjectTitle;
 
   @override
-  State<ClubMetadataSubjectScreen> createState() =>
-      _ClubMetadataSubjectScreenState();
+  ClubMetadataSubjectScreenState createState() =>
+      ClubMetadataSubjectScreenState();
 }
 
-class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
+class ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen>
+    with AutomaticKeepAliveClientMixin<ClubMetadataSubjectScreen> {
+  @override
+  bool get wantKeepAlive => true;
+  final _formKey = GlobalKey<FormState>();
+  bool _dirty = false;
+  bool get canEdit => _data['can_edit'] == true;
+  Future<bool> saveIfChanged() async => _dirty ? saveChanges() : !_loading;
   Map<String, dynamic> _data = const {};
   final Map<int, TextEditingController> _controllers = {};
   final Map<int, bool> _booleans = {};
@@ -108,7 +120,15 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
       ? error.userMessage
       : AirmiusScope.of(context).t('clubMetadataValues.error');
 
-  Future<void> _load() async {
+  Future<void> _load({bool preserveDraft = false}) async {
+    final draft = preserveDraft
+        ? {
+            for (final entry in _controllers.entries)
+              entry.key: entry.value.text,
+          }
+        : <int, String>{};
+    final booleans = Map<int, bool>.from(_booleans);
+    final categories = Set<int>.from(_categories);
     if (!mounted) return;
     setState(() {
       _loading = true;
@@ -123,6 +143,19 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
       final raw = response['data'];
       final data = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
       _replaceState(data);
+      if (preserveDraft) {
+        for (final entry in draft.entries) {
+          _controllers[entry.key]?.text = entry.value;
+        }
+        for (final entry in booleans.entries) {
+          if (_booleans.containsKey(entry.key)) {
+            _booleans[entry.key] = entry.value;
+          }
+        }
+        _categories
+          ..clear()
+          ..addAll(categories);
+      }
     } catch (error) {
       if (mounted) setState(() => _error = _safeError(error));
     } finally {
@@ -164,7 +197,9 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
     if (mounted) setState(() => _data = data);
   }
 
-  Future<void> _save() async {
+  Future<bool> saveChanges() async {
+    if (_saving || _loading || !canEdit) return false;
+    if (!(_formKey.currentState?.validate() ?? false)) return false;
     final t = AirmiusScope.of(context).t;
     final values = <String, dynamic>{};
     for (final field in _items('fields')) {
@@ -184,7 +219,7 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
       }
       if (field['is_required'] == true && value == null) {
         setState(() => _error = t('clubMetadataValues.requiredError'));
-        return;
+        return false;
       }
       values['$id'] = value;
     }
@@ -208,12 +243,15 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
       );
       final raw = response['data'];
       if (raw is Map<String, dynamic>) _replaceState(raw);
-      if (!mounted) return;
+      if (!mounted) return false;
+      _dirty = false;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(t('clubMetadataValues.saved'))));
+      return true;
     } catch (error) {
       if (mounted) setState(() => _error = _safeError(error));
+      return false;
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -221,69 +259,116 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final t = AirmiusScope.of(context).t;
+    final header = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.embedded
+                ? t('clubMetadataValues.title')
+                : widget.subjectTitle,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          if (canEdit) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const ValueKey('metadata-manage'),
+              onPressed: _saving
+                  ? null
+                  : () async {
+                      if (widget.onManage != null) {
+                        await widget.onManage!();
+                      } else {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                ClubMetadataScreen(clubId: widget.clubId),
+                          ),
+                        );
+                      }
+                      if (mounted) await _load(preserveDraft: true);
+                    },
+              icon: const Icon(Icons.tune),
+              label: Text(t('clubMetadataValues.manageFields')),
+            ),
+          ],
+        ],
+      ),
+    );
+    final content = Column(
+      children: [
+        header,
+        if (_loading || _saving) const LinearProgressIndicator(),
+        Expanded(
+          child: AirmiusForm(
+            key: _formKey,
+            child: ListView(
+              key: const ValueKey('metadata-values-list'),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_error != null && _data.isEmpty)
+                  TextButton(onPressed: _load, child: Text(t('common.retry'))),
+                if (!_loading) ...[
+                  if (!canEdit) Text(t('clubMetadataValues.readOnly')),
+                  if (_items('fields').isEmpty && _items('categories').isEmpty)
+                    Text(t('clubMetadataValues.empty')),
+                  ..._items('fields').map(_field),
+                  if (_items('categories').isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      t('clubMetadataValues.categories'),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    ..._items('categories').map(_category),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+    if (widget.embedded) return content;
     return Scaffold(
       appBar: AppBar(title: Text(t('clubMetadataValues.title'))),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            Text(
-              widget.subjectTitle,
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              t('clubMetadataValues.hint'),
-              style: TextStyle(color: airmiusMutedColor(context)),
-            ),
-            if (_loading || _saving) ...[
-              const SizedBox(height: 12),
-              const LinearProgressIndicator(),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Semantics(
-                liveRegion: true,
-                child: MaterialBanner(
-                  content: Text(_error!),
-                  actions: [
-                    TextButton(
-                      onPressed: _load,
-                      child: Text(t('common.retry')),
-                    ),
-                  ],
+      body: content,
+      bottomNavigationBar: !_loading && canEdit
+          ? SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  16 + MediaQuery.viewInsetsOf(context).bottom,
+                ),
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : saveChanges,
+                  icon: const Icon(Icons.save_outlined),
+                  label: Text(t('common.save')),
                 ),
               ),
-            ],
-            if (!_loading) ...[
-              const SizedBox(height: 16),
-              if (_items('fields').isEmpty && _items('categories').isEmpty)
-                Text(t('clubMetadataValues.empty')),
-              ..._items('fields').map(_field),
-              if (_items('categories').isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(
-                  t('clubMetadataValues.categories'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                ..._items('categories').map(_category),
-              ],
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _saving ? null : _save,
-                icon: const Icon(Icons.save_outlined),
-                label: Text(t('common.save')),
-              ),
-            ],
-          ],
-        ),
-      ),
+            )
+          : null,
     );
   }
 
@@ -291,12 +376,12 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
     final t = AirmiusScope.of(context).t;
     final id = _int(field['id']);
     if (id == null) return const SizedBox.shrink();
-    final active = field['is_active'] == true;
+    final active = field['is_active'] == true && canEdit && !_saving;
     final type = '${field['field_type'] ?? 'text'}';
     final badges = [
       if (field['is_required'] == true) t('clubMetadataValues.required'),
       if (field['is_sensitive'] == true) t('clubMetadataValues.sensitive'),
-      if (!active) t('clubMetadataValues.inactive'),
+      if (field['is_active'] != true) t('clubMetadataValues.inactive'),
     ];
     final label = badges.isEmpty
         ? '${field['label'] ?? ''}'
@@ -308,7 +393,10 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
         title: Text(label),
         value: _booleans[id] ?? false,
         onChanged: active
-            ? (value) => setState(() => _booleans[id] = value)
+            ? (value) => setState(() {
+                _dirty = true;
+                _booleans[id] = value;
+              })
             : null,
       );
     } else if (type == 'select') {
@@ -318,17 +406,35 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
       final value = _controllers[id]?.text;
       input = DropdownButtonFormField<String>(
         initialValue: options.contains(value) ? value : null,
+        key: ValueKey('metadata-value-$id'),
+        validator: (value) =>
+            active &&
+                field['is_required'] == true &&
+                (value == null || value.isEmpty)
+            ? t('clubMetadataValues.requiredError')
+            : null,
         decoration: InputDecoration(labelText: label),
         items: options
             .map((item) => DropdownMenuItem(value: item, child: Text(item)))
             .toList(),
         onChanged: active
-            ? (value) => setState(() => _controllers[id]?.text = value ?? '')
+            ? (value) => setState(() {
+                _dirty = true;
+                _controllers[id]?.text = value ?? '';
+              })
             : null,
       );
     } else {
       input = TextFormField(
+        key: ValueKey('metadata-value-$id'),
         controller: _controllers[id],
+        onChanged: (_) => _dirty = true,
+        validator: (value) =>
+            active &&
+                field['is_required'] == true &&
+                (value == null || value.trim().isEmpty)
+            ? t('clubMetadataValues.requiredError')
+            : null,
         enabled: active,
         minLines: type == 'textarea' ? 3 : 1,
         maxLines: type == 'textarea' ? 5 : 1,
@@ -355,11 +461,12 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
     final t = AirmiusScope.of(context).t;
     final id = _int(category['id']);
     if (id == null) return const SizedBox.shrink();
-    final active = category['is_active'] == true;
+    final active = category['is_active'] == true && canEdit && !_saving;
     return CheckboxListTile(
       value: _categories.contains(id),
       onChanged: active
           ? (selected) => setState(() {
+              _dirty = true;
               if (selected == true) {
                 _categories.add(id);
               } else {
@@ -368,7 +475,9 @@ class _ClubMetadataSubjectScreenState extends State<ClubMetadataSubjectScreen> {
             })
           : null,
       title: Text('${category['name'] ?? ''}'),
-      subtitle: active ? null : Text(t('clubMetadataValues.inactiveHistory')),
+      subtitle: category['is_active'] == true
+          ? null
+          : Text(t('clubMetadataValues.inactiveHistory')),
       secondary: Icon(Icons.circle, color: _color(category['color'])),
     );
   }

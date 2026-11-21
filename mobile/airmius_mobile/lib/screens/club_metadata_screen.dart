@@ -8,9 +8,13 @@ import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 
 class ClubMetadataScreen extends StatefulWidget {
-  const ClubMetadataScreen({super.key, required this.club});
+  const ClubMetadataScreen({super.key, this.club, int? clubId})
+    : assert(club != null || clubId != null),
+      _clubId = clubId;
 
-  final ClubSummary club;
+  final ClubSummary? club;
+  final int? _clubId;
+  int get clubId => club?.id ?? _clubId!;
 
   @override
   State<ClubMetadataScreen> createState() => _ClubMetadataScreenState();
@@ -59,7 +63,7 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
       _error = null;
     });
     try {
-      final response = await _client.clubMetadata(widget.club.id);
+      final response = await _client.clubMetadata(widget.clubId);
       final data = response['data'];
       if (mounted) {
         setState(() => _data = data is Map<String, dynamic> ? data : const {});
@@ -115,7 +119,7 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
           item: item,
           onSave: (payload) async {
             await _client.saveClubMetadataCustomField(
-              widget.club.id,
+              widget.clubId,
               payload,
               fieldId: _int(item?['id']),
             );
@@ -133,7 +137,7 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
           item: item,
           onSave: (payload) async {
             await _client.saveClubMetadataCategory(
-              widget.club.id,
+              widget.clubId,
               payload,
               categoryId: _int(item?['id']),
             );
@@ -151,7 +155,7 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
           item: item,
           onSave: (payload) async {
             await _client.saveClubMetadataNumberRange(
-              widget.club.id,
+              widget.clubId,
               payload,
               numberRangeId: _int(item?['id']),
             );
@@ -278,7 +282,7 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
             if (await _confirmDelete() && mounted) {
               await _write(
                 () => _client.deleteClubMetadataCustomField(
-                  widget.club.id,
+                  widget.clubId,
                   _int(item['id'])!,
                 ),
               );
@@ -305,7 +309,7 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
             if (await _confirmDelete() && mounted) {
               await _write(
                 () => _client.deleteClubMetadataCategory(
-                  widget.club.id,
+                  widget.clubId,
                   _int(item['id'])!,
                 ),
               );
@@ -340,7 +344,7 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
                   if (await _confirmDelete() && mounted) {
                     await _write(
                       () => _client.deleteClubMetadataNumberRange(
-                        widget.club.id,
+                        widget.clubId,
                         _int(item['id'])!,
                       ),
                     );
@@ -358,7 +362,7 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
                     ? null
                     : () => _write(
                         () => _client.setClubMetadataNumberRangeDefault(
-                          widget.club.id,
+                          widget.clubId,
                           _int(item['id'])!,
                           enabled: !isDefault,
                         ),

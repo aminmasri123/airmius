@@ -21,7 +21,7 @@ const inertiaResponse = (req, res) => {
         res.end(JSON.stringify({ component: 'Harness', props: { errors: name === 'reject' ? { name: 'Please choose another name' } : {} }, url: '/tests/Frontend/fixtures/inertia-form-feedback.html', version: null }))
     })
 }
-const vite = await createServer({ configFile: false, root: process.cwd(), optimizeDeps: { include: ['vue', 'axios', '@inertiajs/vue3', 'vue-i18n'] }, server: { host: '127.0.0.1', port: 43219, strictPort: true, watch: { ignored: ['**/artifacts/**', '**/mobile/**', '**/vendor/**'] } }, plugins: [
+const vite = await createServer({ configFile: false, root: process.cwd(), resolve: { alias: { '@': resolve('resources/js') } }, optimizeDeps: { include: ['vue', 'axios', '@inertiajs/vue3', 'vue-i18n'] }, server: { host: '127.0.0.1', port: 43219, strictPort: true, watch: { ignored: ['**/artifacts/**', '**/mobile/**', '**/vendor/**'] } }, plugins: [
     { name: 'inertia-qa-response', configureServer(server) { server.middlewares.use('/__feedback-inertia', inertiaResponse) } },
     { name: 'feedback-test', enforce: 'pre', transform(source, id) {
         if (!id.endsWith('.vue')) return
@@ -136,4 +136,48 @@ try {
         return results;
     })()`)
     for (const result of inertiaResults) console.log(`PASS ${result}`)
+
+    for (const width of [360, 1280]) {
+        for (const readOnly of [false, true]) {
+            await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width < 500 });
+            await send('Page.navigate', { url: 'http://127.0.0.1:43219/tests/Frontend/fixtures/metadata-inline.html'+(readOnly?'?readonly':'') });
+            await sleep(700);
+            for (let i=0; i<100 && !await evaluate('Boolean(window.ready && document.querySelector(".metadata-subject-footer, input[disabled]"))');i++) await sleep(100);
+            const metadataResults = await evaluate(`(async () => {
+                const results=[]; const check=(value,label)=>{if(!value)throw Error(label);results.push(label)};
+                const wait=()=>new Promise(r=>setTimeout(r,100));
+                const inputs=[...document.querySelectorAll('.metadata-subject-form input[type=text]')];
+                const readOnly=${readOnly};
+                check(inputs.length===40, 'all metadata fields displayed directly');
+                const manage=[...document.querySelectorAll('header button')].find(el=>el.textContent.includes('verwalten'));
+                const footer=document.querySelector('.metadata-subject-footer');
+                if (readOnly) {
+                    check(!manage && !footer && inputs.every(el=>el.disabled), 'read-only user has no management or save actions');
+                    check(window.requests.every(req=>req.method==='get'), 'read-only display issues no writes');
+                } else {
+                    const top=manage.getBoundingClientRect().top;
+                    const scroll=document.querySelector('.metadata-subject-form .metadata-subject-scroll');
+                    scroll.scrollTop=scroll.scrollHeight; await wait();
+                    check(Math.abs(manage.getBoundingClientRect().top-top)<1, 'management remains reachable while scrolling long list');
+                    const category=scroll.querySelector('fieldset');
+                    check(category.getBoundingClientRect().bottom<=footer.getBoundingClientRect().top, 'save footer does not cover final category');
+                    scroll.scrollTop=0; inputs[0].value='My draft';inputs[0].dispatchEvent(new Event('input',{bubbles:true}));await wait();
+                    manage.click();await wait();
+                    const back=[...document.querySelectorAll('header button')].find(el=>el.textContent.includes('Zurück'));
+                    check(Boolean(document.querySelector('[role=tablist]')), 'management opens from header');
+                    back.click();await wait();
+                    check(document.querySelector('.metadata-subject-form input').value==='My draft', 'draft survives management round trip');
+                    window.failSave=true; document.querySelector('.metadata-subject-footer button').click();await wait();
+                    check(document.querySelector('.metadata-subject-form input').value==='My draft' && document.querySelector('[role=alert]'), 'failed save retains metadata draft');
+                }
+                check(document.documentElement.scrollWidth<=innerWidth,'metadata editor fits viewport');
+                return results;
+            })()`);
+            for (const result of metadataResults) console.log('PASS '+width+'px readOnly='+readOnly+' '+result);
+            if (!readOnly) {
+                const capture=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});
+                const {writeFile}=await import('node:fs/promises');await writeFile(dir+'/metadata-'+width+'.png',Buffer.from(capture.data,'base64'));
+            }
+        }
+    }
 } finally { socket?.close(); edge.kill(); await vite.close() }

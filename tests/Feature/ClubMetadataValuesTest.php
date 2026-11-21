@@ -11,6 +11,7 @@ use App\Models\ClubInventoryItem;
 use App\Models\Event;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -18,6 +19,31 @@ use Tests\TestCase;
 class ClubMetadataValuesTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_subject_editor_reports_read_only_permission_and_rejects_writes(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        $outsider = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $field = $this->field($club, 'team');
+        $club->users()->attach($viewer->id, [
+            'role' => 'member', 'roles' => ['member'], 'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::METADATA_VIEW => true],
+        ]);
+        $url = "/api/v1/clubs/{$club->id}/metadata/subjects/team/{$team->id}";
+        Sanctum::actingAs($viewer);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.can_edit', false);
+        $this->putJson($url, ['values' => [$field->id => 'Not allowed'], 'category_ids' => []])->assertForbidden();
+        $this->postJson("/api/v1/clubs/{$club->id}/metadata/custom-fields", [])->assertForbidden();
+        Sanctum::actingAs($outsider);
+        $this->getJson($url)->assertForbidden();
+        Sanctum::actingAs($owner);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.can_edit', true);
+        $this->putJson($url, ['values' => [$field->id => 'Allowed'], 'category_ids' => []])
+            ->assertOk()->assertJsonPath('data.can_edit', true)->assertJsonPath('data.fields.0.value', 'Allowed');
+    }
 
     public function test_manager_saves_and_reads_every_supported_field_type_and_categories(): void
     {

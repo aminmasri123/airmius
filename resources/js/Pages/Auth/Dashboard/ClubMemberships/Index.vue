@@ -2831,7 +2831,7 @@ const saveExternalMember = async () => {
                             <textarea v-model="invoiceForm.description" rows="2" :aria-label="tx('auto.Beschreibung optional', 'Beschreibung optional')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary sm:col-span-2 lg:col-span-4" :placeholder="tx('auto.Beschreibung optional', 'Beschreibung optional')"></textarea>
                             <p v-if="Object.keys(invoiceForm.errors).length" class="text-sm font-semibold text-error sm:col-span-2 lg:col-span-4" role="alert">{{ Object.values(invoiceForm.errors)[0] }}</p>
                         </form>
-                        <ClubMetadataSubjectEditor class="mt-3" :club-id="selectedClub.id" subject-type="external_member" :subject-id="member.id" :subject-label="member.name || member.email" />
+                        <ClubMetadataSubjectEditor v-if="selectedClub.can_view_metadata" class="mt-3" :club-id="selectedClub.id" subject-type="external_member" :subject-id="member.id" :subject-label="member.name || member.email" />
                     </article>
                     <p v-if="!filteredExternalMembers.length" class="text-sm text-secondary">{{ tx('auto.Keine passenden externen Personen gefunden.', 'Keine passenden externen Personen gefunden.') }}</p>
                 </div>
@@ -2977,6 +2977,7 @@ const saveExternalMember = async () => {
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="externalMemberForm.processing">{{ tx('auto.Speichern', 'Speichern') }}</button>
                     </div>
                 </form>
+                <ClubMetadataSubjectEditor v-if="externalMemberEdit && selectedClub.can_view_metadata" direct class="p-6 pt-0" :club-id="selectedClub.id" subject-type="external_member" :subject-id="externalMemberEdit.id" :subject-label="externalMemberEdit.name || externalMemberEdit.email" />
             </Modal>
 
             <section v-if="activeTab === 'requests'" class="surface-card p-5">
@@ -3697,7 +3698,7 @@ const saveExternalMember = async () => {
                             </div>
 
                             <div class="flex flex-wrap gap-2">
-                                <ClubMetadataSubjectEditor :club-id="selectedClub.id" subject-type="member" :subject-id="member.id" :subject-label="member.name" />
+                                <ClubMetadataSubjectEditor v-if="editingMemberId !== member.id && selectedClub.can_view_metadata" :club-id="selectedClub.id" subject-type="member" :subject-id="member.id" :subject-label="member.name" />
                                 <button
                                     v-if="selectedClub.can_manage_access"
                                     type="button"
@@ -3895,6 +3896,8 @@ const saveExternalMember = async () => {
                                 </button>
                             </div>
                         </form>
+
+                        <ClubMetadataSubjectEditor v-if="editingMemberId === member.id && selectedClub.can_view_metadata" direct class="mt-4" :club-id="selectedClub.id" subject-type="member" :subject-id="member.id" :subject-label="member.name" />
 
                         <form v-if="invoiceMemberId === member.id" class="mt-4 grid gap-3 rounded-lg border border-border bg-bg p-4 sm:grid-cols-2 lg:grid-cols-4" @submit.prevent="createInvoice(member)">
                             <input v-model="invoiceForm.title" :aria-label="tx('auto.Titel', 'Titel')" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :placeholder="tx('auto.Titel', 'Titel')">

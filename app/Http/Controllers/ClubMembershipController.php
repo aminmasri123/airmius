@@ -197,6 +197,8 @@ class ClubMembershipController extends Controller
                     'owner_id' => $club->owner_id,
                     'name' => $club->name,
                     'can_manage_access' => ClubPermissions::editableBy($club, $user),
+                    'can_view_metadata' => ClubPermissions::allows($club, $user, ClubPermissions::METADATA_VIEW),
+                    'can_edit_metadata' => ClubPermissions::allows($club, $user, ClubPermissions::METADATA_EDIT),
                     'sepa_creditor_id' => $club->sepa_creditor_id,
                     'sepa_account_holder' => $club->sepa_account_holder,
                     'sepa_iban' => $club->sepa_iban,

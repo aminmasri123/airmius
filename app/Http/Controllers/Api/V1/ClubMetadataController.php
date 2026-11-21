@@ -245,7 +245,10 @@ class ClubMetadataController extends Controller
         $this->authorizePermission($request, $club, ClubPermissions::METADATA_VIEW);
         $subject = $subjects->resolve($club, $subjectType, $subjectId);
 
-        return response()->json(['data' => $subjects->payload($club, $subjectType, $subject)]);
+        return response()->json(['data' => [
+            ...$subjects->payload($club, $subjectType, $subject),
+            'can_edit' => ClubPermissions::allows($club, $request->user(), ClubPermissions::METADATA_EDIT),
+        ]]);
     }
 
     public function updateSubject(
@@ -271,7 +274,7 @@ class ClubMetadataController extends Controller
             $data['category_ids']
         );
 
-        return response()->json(['data' => $payload]);
+        return response()->json(['data' => [...$payload, 'can_edit' => true]]);
     }
 
     private function authorizePermission(Request $request, Club $club, string $permission): void

@@ -4440,6 +4440,8 @@ class _ClubMembershipManagementScreenState
         ? 'external_member'
         : 'member';
     final metadataSubjectId = member.isExternal ? member.externalId : member.id;
+    final metadataKey = GlobalKey<ClubMetadataSubjectScreenState>();
+    var savingMetadata = false;
 
     final confirmed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
@@ -4896,95 +4898,28 @@ class _ClubMembershipManagementScreenState
                               ],
                             ),
                             if (canViewMetadata)
-                              ListView(
-                                padding: EdgeInsets.zero,
-                                children: [
-                                  AirmiusPanel(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.fact_check_outlined,
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.primary,
-                                            ),
-                                            const SizedBox(width: 10),
-                                            Expanded(
-                                              child: Text(
-                                                _tr('clubMetadataValues.title'),
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleMedium
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                    ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(_tr('clubMetadataValues.hint')),
-                                        if (metadataSubjectId != null) ...[
-                                          const SizedBox(height: 16),
-                                          ClubMetadataSubjectButton(
-                                            clubId: club.id,
-                                            subjectType: metadataSubjectType,
-                                            subjectId: metadataSubjectId,
-                                            subjectTitle: member.name,
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  if (club.canEditMetadata) ...[
-                                    const SizedBox(height: 14),
-                                    AirmiusPanel(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            _tr('clubMetadata.title'),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium
-                                                ?.copyWith(
-                                                  fontWeight: FontWeight.w800,
+                              metadataSubjectId == null
+                                  ? const SizedBox.shrink()
+                                  : ClubMetadataSubjectScreen(
+                                      key: metadataKey,
+                                      clubId: club.id,
+                                      subjectType: metadataSubjectType,
+                                      subjectId: metadataSubjectId,
+                                      subjectTitle: member.name,
+                                      embedded: true,
+                                      onManage: !club.canEditMetadata
+                                          ? null
+                                          : () async {
+                                              await Navigator.of(context).push(
+                                                MaterialPageRoute<void>(
+                                                  builder: (_) =>
+                                                      ClubMetadataScreen(
+                                                        club: club,
+                                                      ),
                                                 ),
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(_tr('clubMetadata.hint')),
-                                          const SizedBox(height: 14),
-                                          OutlinedButton.icon(
-                                            onPressed: () =>
-                                                Navigator.of(context).push(
-                                                  MaterialPageRoute<void>(
-                                                    builder: (_) =>
-                                                        ClubMetadataScreen(
-                                                          club: club,
-                                                        ),
-                                                  ),
-                                                ),
-                                            icon: const Icon(
-                                              Icons.add_box_outlined,
-                                            ),
-                                            label: Text(
-                                              _tr(
-                                                'clubMetadataValues.manageFields',
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                              );
+                                            },
                                     ),
-                                  ],
-                                ],
-                              ),
                           ],
                         ),
                       ),
@@ -4995,19 +4930,37 @@ class _ClubMembershipManagementScreenState
             ),
             bottomNavigationBar: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  16 + MediaQuery.viewInsetsOf(context).bottom,
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: TextButton(
-                        onPressed: () => Navigator.pop(pageContext, false),
+                        onPressed: savingMetadata
+                            ? null
+                            : () => Navigator.pop(pageContext, false),
                         child: Text(_tr('membership.cancel')),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
-                        onPressed: () => Navigator.pop(pageContext, true),
+                        onPressed: savingMetadata
+                            ? null
+                            : () async {
+                                setDialogState(() => savingMetadata = true);
+                                final saved =
+                                    await (metadataKey.currentState
+                                            ?.saveIfChanged() ??
+                                        Future.value(true));
+                                if (!pageContext.mounted) return;
+                                setDialogState(() => savingMetadata = false);
+                                if (saved) Navigator.pop(pageContext, true);
+                              },
                         child: Text(_tr('membership.save')),
                       ),
                     ),
