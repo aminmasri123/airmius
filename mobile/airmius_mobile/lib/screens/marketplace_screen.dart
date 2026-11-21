@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../widgets/airmius_form.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,9 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_external_url.dart';
 import '../core/airmius_l10n.dart';
+import '../core/marketplace_filters.dart';
+import '../core/marketplace_filter_labels.dart';
+import '../widgets/marketplace_filters_sheet.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -34,6 +38,15 @@ class MarketplaceScreen extends StatefulWidget {
 class _MarketplaceScreenState extends State<MarketplaceScreen> {
   late String _section;
   String _query = '';
+  MarketplaceFilters _filters = const MarketplaceFilters();
+  List<String> _categories = [];
+  Timer? _searchDebounce;
+  int _catalogRequest = 0;
+  int _productPage = 1;
+  int _lastProductPage = 1;
+  bool _refreshingProducts = false;
+  bool _appendRequest = false;
+  String? _catalogError;
   Future<_MarketplaceBundle>? _bundleFuture;
   _MarketplaceBundle? _bundle;
   bool _busy = false;
@@ -58,6 +71,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _catalogRequest++;
     _searchController.dispose();
     super.dispose();
   }
@@ -85,17 +100,31 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   Future<_MarketplaceBundle> _load() async {
+    final generation = ++_catalogRequest;
     final responses = await Future.wait([
-      _client.commerceProducts(),
+      _requestProducts(),
       _client.commerceWishlist(),
       _client.commerceOrders(),
       _client.commerceCart(),
     ]);
     final checkout = _marketMap(responses[3]['data']);
     final productResponse = responses[0];
+    final useCatalog = generation == _catalogRequest;
+    if (useCatalog) {
+      _readProductMeta(productResponse, 1);
+      _refreshingProducts = false;
+      _appendRequest = false;
+      _catalogError = null;
+    }
     final bundle = _MarketplaceBundle(
-      products: _marketMaps(productResponse['data']),
-      productTotal: _marketInt(_marketMap(productResponse['meta'])['total']),
+      products: useCatalog
+          ? _marketMaps(productResponse['data'])
+          : (_bundle?.products ?? []),
+      productTotal: useCatalog
+          ? (_marketMap(productResponse['meta'])['total'] == null
+                ? _marketMaps(productResponse['data']).length
+                : _marketInt(_marketMap(productResponse['meta'])['total']))
+          : (_bundle?.productTotal ?? 0),
       wishlist: _marketMaps(responses[1]['data']),
       orders: _marketMaps(responses[2]['data']),
       cart: _marketMap(checkout['cart']),
@@ -103,6 +132,180 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
     _bundle = bundle;
     return bundle;
+  }
+
+  Future<JsonMap> _requestProducts({int page = 1}) => _client.commerceProducts(
+    page: page,
+    perPage: 24,
+    search: _query,
+    category: _filters.category,
+    minPriceCents: _filters.minPriceCents,
+    maxPriceCents: _filters.maxPriceCents,
+    minRating: _filters.minRating,
+    sort: _filters.sort,
+  );
+
+  void _readProductMeta(JsonMap response, int page) {
+    final meta = _marketMap(response['meta']);
+    _productPage = page;
+    _lastProductPage = _marketInt(meta['last_page']).clamp(1, 1000000);
+    final facets = _marketMap(meta['filters']);
+    if (facets['categories'] is List) {
+      _categories =
+          (facets['categories'] as List)
+              .whereType<String>()
+              .where((v) => v.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+    } else if (_categories.isEmpty) {
+      _categories =
+          _marketMaps(response['data'])
+              .map((p) => _marketText(p['category']))
+              .where((v) => v.isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _query = value);
+    _searchDebounce?.cancel();
+    if (_section != 'products') return;
+    setState(() {
+      _refreshingProducts = true;
+      _appendRequest = false;
+      _catalogError = null;
+    });
+    // Invalidate an older response as soon as the query changes, not after debounce.
+    _catalogRequest++;
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) _fetchProducts();
+    });
+  }
+
+  Future<void> _fetchProducts({bool append = false}) async {
+    _searchDebounce?.cancel();
+    final generation = ++_catalogRequest;
+    final page = append ? _productPage + 1 : 1;
+    setState(() {
+      _refreshingProducts = true;
+      _appendRequest = append;
+      _catalogError = null;
+    });
+    try {
+      final response = await _requestProducts(page: page);
+      if (!mounted || generation != _catalogRequest) return;
+      final previous = _bundle ?? const _MarketplaceBundle();
+      final items = _marketMaps(response['data']);
+      _readProductMeta(response, page);
+      final products = append ? [...previous.products, ...items] : items;
+      final meta = _marketMap(response['meta']);
+      _commitBundle(
+        previous.copyWith(
+          products: products,
+          productTotal: meta['total'] == null
+              ? products.length
+              : _marketInt(meta['total']),
+        ),
+      );
+    } catch (_) {
+      if (mounted && generation == _catalogRequest) {
+        setState(() => _catalogError = marketplaceFilterText(context, 'error'));
+      }
+    } finally {
+      if (mounted && generation == _catalogRequest) {
+        setState(() => _refreshingProducts = false);
+      }
+    }
+  }
+
+  Future<void> _showFilters() async {
+    FocusScope.of(context).unfocus();
+    final selected = await showModalBottomSheet<MarketplaceFilters>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      constraints: const BoxConstraints(maxWidth: 640),
+      builder: (_) =>
+          MarketplaceFiltersSheet(initial: _filters, categories: _categories),
+    );
+    if (!mounted || selected == null || selected == _filters) return;
+    _setFilters(selected);
+  }
+
+  void _setFilters(MarketplaceFilters filters) {
+    setState(() => _filters = filters);
+    _fetchProducts();
+  }
+
+  Widget _activeFilters() {
+    final chips = <Widget>[];
+    void chip(String label, MarketplaceFilters next) {
+      chips.add(
+        InputChip(
+          label: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width * .65,
+            ),
+            child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          tooltip: label,
+          onDeleted: () => _setFilters(next),
+        ),
+      );
+    }
+
+    String t(String key) => marketplaceFilterText(context, key);
+    final format = NumberFormat(
+      '0.##',
+      AirmiusScope.of(context).language.locale.languageCode,
+    );
+    if (_filters.category.isNotEmpty) {
+      chip(
+        marketplaceCategoryLabel(context, _filters.category),
+        _filters.copyWith(category: ''),
+      );
+    }
+    if (_filters.minPriceCents != null || _filters.maxPriceCents != null) {
+      final min = _filters.minPriceCents == null
+          ? null
+          : format.format(_filters.minPriceCents! / 100);
+      final max = _filters.maxPriceCents == null
+          ? null
+          : format.format(_filters.maxPriceCents! / 100);
+      chip(
+        min != null && max != null
+            ? '$min – $max'
+            : min != null
+            ? t('priceFrom').replaceAll('{price}', min)
+            : t('priceTo').replaceAll('{price}', max!),
+        _filters.copyWith(clearPrice: true),
+      );
+    }
+    if (_filters.minRating > 0) {
+      chip(
+        t('stars').replaceAll('{rating}', format.format(_filters.minRating)),
+        _filters.copyWith(minRating: 0),
+      );
+    }
+    if (_filters.sort != 'newest') {
+      chip(t(_filters.sort), _filters.copyWith(sort: 'newest'));
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        ...chips,
+        TextButton(
+          onPressed: () => _setFilters(const MarketplaceFilters()),
+          child: Text(t('clear')),
+        ),
+      ],
+    );
   }
 
   void _commitBundle(_MarketplaceBundle bundle) {
@@ -116,35 +319,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     setState(() {
       _bundleFuture = _load();
     });
-  }
-
-  Future<bool> _run(
-    Future<void> Function() action, {
-    String? successMessage,
-  }) async {
-    if (_busy) return false;
-    setState(() => _busy = true);
-    try {
-      await action();
-      if (!mounted) return false;
-      if (successMessage != null) _toast(successMessage);
-      _reload();
-      return true;
-    } on AirmiusApiException catch (error) {
-      if (mounted) _toast(error.userMessage);
-      return false;
-    } catch (error) {
-      if (mounted) {
-        _toast(
-          error is AirmiusApiException
-              ? error.userMessage
-              : AirmiusScope.of(context).t('common.errorDetails'),
-        );
-      }
-      return false;
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
   }
 
   Future<bool> _runCart(
@@ -187,6 +361,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         child: FutureBuilder<_MarketplaceBundle>(
           future: _bundleFuture,
           builder: (context, snapshot) {
+            if (_bundle != null) return _buildContent(_bundle!);
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const _MarketLoading();
             }
@@ -205,7 +380,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     final normalized = _query.trim().toLowerCase();
     final source = _section == 'wishlist' ? bundle.wishlist : bundle.products;
     final products = source.where((product) {
-      if (normalized.isEmpty) return true;
+      if (_section == 'products' || normalized.isEmpty) return true;
       return [
         product['title'],
         product['description'],
@@ -218,9 +393,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     ).fold<int>(0, (sum, item) => sum + _marketInt(item['quantity']));
 
     if (_section == 'products') {
-      final resultCount = normalized.isEmpty
-          ? bundle.productTotal
-          : products.length;
+      final resultCount = bundle.productTotal;
       return _buildStorefront(products, cartCount, resultCount);
     }
 
@@ -233,10 +406,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             onReload: _busy ? null : _reload,
           ),
           const SizedBox(height: 12),
-          SearchBox(
-            hint: t('market.search'),
-            onChanged: (value) => setState(() => _query = value),
-          ),
+          SearchBox(hint: t('market.search'), onChanged: _onSearchChanged),
           const SizedBox(height: 14),
           if (products.isEmpty)
             _MarketEmpty(
@@ -307,76 +477,130 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 28),
       children: [
-        Text(
-          t('market.title'),
-          style: const TextStyle(
-            color: _marketInk,
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                t('market.title'),
+                style: const TextStyle(
+                  color: _marketInk,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: marketplaceFilterText(context, 'sections'),
+              icon: const Icon(Icons.apps_outlined, color: _marketInk),
+              onPressed: () => _showSectionPicker(cartCount),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         _MarketplaceSearchBar(
           controller: _searchController,
           hint: t('market.search'),
-          onChanged: (value) => setState(() => _query = value),
-          onFilter: () => _showSectionPicker(cartCount),
+          onChanged: _onSearchChanged,
+          onFilter: _showFilters,
+          activeFilterCount: _filters.activeCount,
           cartCount: cartCount,
           onCart: () => setState(() => _section = 'cart'),
         ),
         const SizedBox(height: 10),
-        Text(
-          '$resultCount ${t('market.results')}',
-          style: const TextStyle(
-            color: _marketBlue,
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 14),
-        if (products.isEmpty)
-          _MarketEmpty(
-            icon: Icons.storefront_outlined,
-            text: t('market.emptyProducts'),
-          )
-        else ...[
-          SizedBox(
-            height: 174,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: products.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 12),
-              itemBuilder: (context, index) => _MarketplaceHeroCard(
-                product: products[index],
-                onTap: () => _openProduct(products[index]),
-              ),
+        if (_catalogError == null)
+          Text(
+            _refreshingProducts
+                ? marketplaceFilterText(context, 'loading')
+                : '$resultCount ${t('market.results')}',
+            style: const TextStyle(
+              color: _marketBlue,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 18),
-          const _MarketplaceOfferHeader(),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 244,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: products.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 10),
-              itemBuilder: (context, index) => _MarketplaceProductTile(
-                product: products[index],
-                onTap: () => _openProduct(products[index]),
-                onAddToCart: () => _addToCart(products[index]),
-                busy: _busy,
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          _MarketplaceGrid(
-            products: products,
-            busy: _busy,
-            onOpen: (product) => _openProduct(product),
-            onAddToCart: (product) => _addToCart(product),
+        if (_filters.activeCount > 0) ...[
+          const SizedBox(height: 8),
+          _activeFilters(),
+        ],
+        if (_refreshingProducts) ...[
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            semanticsLabel: marketplaceFilterText(context, 'loading'),
           ),
         ],
+        if (_catalogError != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _catalogError!,
+            style: const TextStyle(color: _marketInk),
+            textAlign: TextAlign.center,
+          ),
+          TextButton.icon(
+            onPressed: () => _fetchProducts(append: _appendRequest),
+            icon: const Icon(Icons.refresh),
+            label: Text(marketplaceFilterText(context, 'retry')),
+          ),
+        ],
+        const SizedBox(height: 14),
+        if ((!_refreshingProducts && _catalogError == null) ||
+            _appendRequest) ...[
+          if (products.isEmpty)
+            _MarketEmpty(
+              icon: Icons.storefront_outlined,
+              text: t('market.emptyProducts'),
+            )
+          else ...[
+            SizedBox(
+              height: 174 + _marketExtraTextHeight(context),
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: products.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 12),
+                itemBuilder: (context, index) => _MarketplaceHeroCard(
+                  product: products[index],
+                  onTap: () => _openProduct(products[index]),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const _MarketplaceOfferHeader(),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 260 + _marketExtraTextHeight(context),
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: products.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, index) => _MarketplaceProductTile(
+                  product: products[index],
+                  onTap: () => _openProduct(products[index]),
+                  onAddToCart: () => _addToCart(products[index]),
+                  onToggleWishlist: () => _toggleWishlist(products[index]),
+                  busy: _busy,
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            _MarketplaceGrid(
+              products: products,
+              busy: _busy,
+              onOpen: (product) => _openProduct(product),
+              onAddToCart: (product) => _addToCart(product),
+              onToggleWishlist: _toggleWishlist,
+            ),
+          ],
+        ],
+        if (_productPage < _lastProductPage && _catalogError == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: OutlinedButton.icon(
+              onPressed: _refreshingProducts
+                  ? null
+                  : () => _fetchProducts(append: true),
+              icon: const Icon(Icons.expand_more),
+              label: Text(marketplaceFilterText(context, 'more')),
+            ),
+          ),
       ],
     );
   }
@@ -420,23 +644,61 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       return;
     }
     setState(() => _section = selected);
+    if (selected == 'products') _fetchProducts();
   }
 
-  Future<void> _toggleWishlist(JsonMap product) async {
+  Future<bool?> _toggleWishlist(JsonMap product) async {
+    if (_busy) return null;
+    final id = _marketInt(product['id']);
+    if (id <= 0) return null;
+
     final t = AirmiusScope.of(context).t;
-    final active = _marketBool(_marketMap(product['viewer'])['is_wishlisted']);
-    await _run(
-      () async {
-        if (active) {
-          await _client.removeCommerceWishlist(_marketInt(product['id']));
-        } else {
-          await _client.addCommerceWishlist(_marketInt(product['id']));
-        }
-      },
-      successMessage: t(
-        active ? 'market.wishlistRemoved' : 'market.wishlistAdded',
-      ),
-    );
+    final active = _isWishlisted(product);
+    setState(() => _busy = true);
+    try {
+      final response = active
+          ? await _client.removeCommerceWishlist(id)
+          : await _client.addCommerceWishlist(id);
+      if (!mounted) return null;
+
+      final data = _marketMap(response['data']);
+      final saved = _marketBool(data['is_wishlisted']);
+      JsonMap updateProduct(JsonMap item) => {
+        ...item,
+        'viewer': {..._marketMap(item['viewer']), 'is_wishlisted': saved},
+        'wishlist_summary': {
+          ..._marketMap(item['wishlist_summary']),
+          'count': _marketInt(data['wishlist_count']),
+        },
+      };
+
+      final current = _bundle;
+      if (current != null) {
+        _commitBundle(
+          current.copyWith(
+            products: [
+              for (final item in current.products)
+                _marketInt(item['id']) == id ? updateProduct(item) : item,
+            ],
+            wishlist: [
+              if (saved) updateProduct(product),
+              for (final item in current.wishlist)
+                if (_marketInt(item['id']) != id) item,
+            ],
+          ),
+        );
+      }
+      _toast(t(saved ? 'market.wishlistAdded' : 'market.wishlistRemoved'));
+      return saved;
+    } on AirmiusApiException catch (error) {
+      if (mounted) _toast(error.userMessage);
+      return null;
+    } catch (_) {
+      if (mounted) _toast(t('common.errorDetails'));
+      return null;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<bool> _addToCart(
@@ -479,6 +741,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         initialProduct: product,
         onAddToCart: (item, quantity) =>
             _addToCart(item, quantity: quantity, showSuccessMessage: false),
+        onToggleWishlist: _toggleWishlist,
         onChanged: _reload,
       ),
     );
@@ -591,6 +854,10 @@ class _MarketplaceBundle {
   );
 }
 
+double _marketExtraTextHeight(BuildContext context) =>
+    ((MediaQuery.textScalerOf(context).scale(14) / 14 - 1).clamp(0.0, 3.0)) *
+    120;
+
 const _marketBackground = Color(0xFFF5FAFF);
 const _marketBlue = Color(0xFF0EA5E9);
 const _marketInk = Color(0xFF142033);
@@ -658,6 +925,7 @@ class _MarketplaceSearchBar extends StatelessWidget {
     required this.hint,
     required this.onChanged,
     required this.onFilter,
+    this.activeFilterCount = 0,
     required this.cartCount,
     required this.onCart,
   });
@@ -666,6 +934,7 @@ class _MarketplaceSearchBar extends StatelessWidget {
   final String hint;
   final ValueChanged<String> onChanged;
   final VoidCallback onFilter;
+  final int activeFilterCount;
   final int cartCount;
   final VoidCallback onCart;
 
@@ -691,6 +960,8 @@ class _MarketplaceSearchBar extends StatelessWidget {
             child: TextField(
               controller: controller,
               onChanged: onChanged,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => FocusScope.of(context).unfocus(),
               style: const TextStyle(
                 color: _marketInk,
                 fontSize: 14,
@@ -699,6 +970,17 @@ class _MarketplaceSearchBar extends StatelessWidget {
               decoration: InputDecoration(
                 prefixIcon: const Icon(Icons.search, color: _marketBlue),
                 hintText: hint,
+                suffixIcon: controller.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: marketplaceFilterText(context, 'clearSearch'),
+                        onPressed: () {
+                          controller.clear();
+                          onChanged('');
+                        },
+                        icon: const Icon(Icons.close, size: 20),
+                      ),
+
                 hintStyle: const TextStyle(color: _marketMuted),
                 filled: true,
                 fillColor: const Color(0xFFF9FCFF),
@@ -739,21 +1021,17 @@ class _MarketplaceSearchBar extends StatelessWidget {
             color: const Color(0xFFF9FCFF),
             borderRadius: BorderRadius.circular(11),
             child: IconButton(
-              tooltip: 'Filter',
+              tooltip: marketplaceFilterText(context, 'filter'),
               onPressed: onFilter,
               color: _marketInk,
-              icon: const Icon(Icons.tune_outlined),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Material(
-            color: _marketBlue,
-            borderRadius: BorderRadius.circular(11),
-            child: IconButton(
-              tooltip: 'Suchen',
-              onPressed: () => FocusScope.of(context).unfocus(),
-              color: Colors.white,
-              icon: const Icon(Icons.search),
+              icon: Badge.count(
+                count: activeFilterCount,
+                isLabelVisible: activeFilterCount > 0,
+                child: Icon(
+                  Icons.tune_outlined,
+                  color: activeFilterCount > 0 ? _marketBlue : _marketInk,
+                ),
+              ),
             ),
           ),
         ],
@@ -876,8 +1154,8 @@ class _MarketplaceOfferHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 13),
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
       decoration: BoxDecoration(
         color: _marketBlue,
         borderRadius: BorderRadius.circular(4),
@@ -886,12 +1164,14 @@ class _MarketplaceOfferHeader extends StatelessWidget {
         children: [
           const Icon(Icons.bolt, color: Colors.white),
           const SizedBox(width: 8),
-          Text(
-            AirmiusScope.of(context).t('market.currentOffers'),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
+          Expanded(
+            child: Text(
+              AirmiusScope.of(context).t('market.currentOffers'),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
@@ -905,6 +1185,7 @@ class _MarketplaceProductTile extends StatelessWidget {
     required this.product,
     required this.onTap,
     required this.onAddToCart,
+    required this.onToggleWishlist,
     required this.busy,
     this.width,
   });
@@ -912,6 +1193,7 @@ class _MarketplaceProductTile extends StatelessWidget {
   final JsonMap product;
   final VoidCallback onTap;
   final VoidCallback onAddToCart;
+  final VoidCallback onToggleWishlist;
   final bool busy;
   final double? width;
 
@@ -983,6 +1265,15 @@ class _MarketplaceProductTile extends StatelessWidget {
                               fontWeight: FontWeight.w900,
                             ),
                           ),
+                        ),
+                      ),
+                      PositionedDirectional(
+                        end: 4,
+                        top: 4,
+                        child: _WishlistButton(
+                          saved: _isWishlisted(product),
+                          onPressed: busy ? null : onToggleWishlist,
+                          backgroundColor: Colors.white,
                         ),
                       ),
                     ],
@@ -1061,18 +1352,24 @@ class _MarketplaceGrid extends StatelessWidget {
     required this.busy,
     required this.onOpen,
     required this.onAddToCart,
+    required this.onToggleWishlist,
   });
 
   final List<JsonMap> products;
   final bool busy;
   final ValueChanged<JsonMap> onOpen;
   final ValueChanged<JsonMap> onAddToCart;
+  final ValueChanged<JsonMap> onToggleWishlist;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = (constraints.maxWidth - 10) / 2;
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final columns = (constraints.maxWidth / (scale > 1.3 ? 230 : 170))
+            .floor()
+            .clamp(1, 4);
+        final width = (constraints.maxWidth - (columns - 1) * 10) / columns;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1089,11 +1386,11 @@ class _MarketplaceGrid extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: products.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
-                childAspectRatio: .68,
+                mainAxisExtent: 260 + _marketExtraTextHeight(context),
               ),
               itemBuilder: (context, index) {
                 final product = products[index];
@@ -1103,6 +1400,7 @@ class _MarketplaceGrid extends StatelessWidget {
                   busy: busy,
                   onTap: () => onOpen(product),
                   onAddToCart: () => onAddToCart(product),
+                  onToggleWishlist: () => onToggleWishlist(product),
                 );
               },
             ),
@@ -1178,6 +1476,42 @@ class _MarketSectionPicker extends StatelessWidget {
   }
 }
 
+bool _isWishlisted(JsonMap product) =>
+    _marketBool(_marketMap(product['viewer'])['is_wishlisted']);
+
+class _WishlistButton extends StatelessWidget {
+  const _WishlistButton({
+    required this.saved,
+    required this.onPressed,
+    this.backgroundColor,
+  });
+
+  final bool saved;
+  final VoidCallback? onPressed;
+  final Color? backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return IconButton(
+      tooltip: t(saved ? 'market.removeWishlist' : 'market.addWishlist'),
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: backgroundColor,
+        disabledBackgroundColor: backgroundColor,
+      ),
+      icon: Icon(
+        saved ? Icons.favorite : Icons.favorite_border,
+        color: saved
+            ? Theme.of(context).colorScheme.error
+            : backgroundColor == null
+            ? airmiusMutedColor(context)
+            : _marketInk,
+      ),
+    );
+  }
+}
+
 class _ProductCard extends StatelessWidget {
   const _ProductCard({
     required this.product,
@@ -1196,12 +1530,10 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    final viewer = _marketMap(product['viewer']);
     final provider = _marketMap(product['provider_profile']);
     final trust = _marketMap(product['seller_trust']);
     final availability = _marketMap(product['availability']);
     final reviews = _marketMap(product['review_summary']);
-    final wished = _marketBool(viewer['is_wishlisted']);
     final available = _marketBool(availability['is_available']);
     final title = _marketText(
       product['title'],
@@ -1279,17 +1611,9 @@ class _ProductCard extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                tooltip: t(
-                  wished ? 'market.removeWishlist' : 'market.addWishlist',
-                ),
+              _WishlistButton(
+                saved: _isWishlisted(product),
                 onPressed: busy ? null : onToggleWishlist,
-                icon: Icon(
-                  wished ? Icons.favorite : Icons.favorite_border,
-                  color: wished
-                      ? Theme.of(context).colorScheme.error
-                      : airmiusMutedColor(context),
-                ),
               ),
             ],
           ),
@@ -1362,12 +1686,14 @@ class _ProductDetailSheet extends StatefulWidget {
     required this.client,
     required this.initialProduct,
     required this.onAddToCart,
+    required this.onToggleWishlist,
     required this.onChanged,
   });
 
   final AirmiusApiClient client;
   final JsonMap initialProduct;
   final Future<bool> Function(JsonMap product, int quantity) onAddToCart;
+  final Future<bool?> Function(JsonMap product) onToggleWishlist;
   final VoidCallback onChanged;
 
   @override
@@ -1379,6 +1705,20 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
   int _quantity = 1;
   bool _busy = false;
   bool _cartAdded = false;
+  bool? _wishlistSaved;
+
+  Future<void> _toggleWishlist(JsonMap product, bool saved) async {
+    setState(() => _busy = true);
+    try {
+      final result = await widget.onToggleWishlist({
+        ...product,
+        'viewer': {..._marketMap(product['viewer']), 'is_wishlisted': saved},
+      });
+      if (mounted && result != null) setState(() => _wishlistSaved = result);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   void initState() {
@@ -1425,6 +1765,7 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
               snapshot.data ??
               _ProductBundle(product: widget.initialProduct, reviews: const []);
           final product = bundle.product;
+          final saved = _wishlistSaved ?? _isWishlisted(product);
           final availability = _marketMap(product['availability']);
           final returnPolicy = _marketMap(product['return_policy']);
           final fulfillment = _marketMap(product['fulfillment']);
@@ -1455,6 +1796,12 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
+                  ),
+                  _WishlistButton(
+                    saved: saved,
+                    onPressed: _busy
+                        ? null
+                        : () => _toggleWishlist(product, saved),
                   ),
                   IconButton(
                     tooltip: t('close'),
@@ -3338,7 +3685,10 @@ class _ReturnDialogState extends State<_ReturnDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_reason.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
+            if (_reason.text.trim().isEmpty) {
+              showFormFeedback(context, formMessage(context, 'required'));
+              return;
+            }
             Navigator.pop(
               context,
               _ReturnDraft(

@@ -4097,12 +4097,29 @@ class AirmiusApiClient {
   Future<AirmiusJson> removeFriend(int userId) =>
       _json('DELETE', '/api/v1/friends/$userId');
 
-  Future<AirmiusJson> commerceProducts({int page = 1, int perPage = 50}) =>
-      _json(
-        'GET',
-        '/api/v1/commerce/products',
-        query: {'page': '$page', 'per_page': '$perPage'},
-      );
+  Future<AirmiusJson> commerceProducts({
+    int page = 1,
+    int perPage = 50,
+    String? search,
+    String? category,
+    int? minPriceCents,
+    int? maxPriceCents,
+    double? minRating,
+    String sort = 'newest',
+  }) => _json(
+    'GET',
+    '/api/v1/commerce/products',
+    query: {
+      'page': '$page',
+      'per_page': '$perPage',
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      if (category != null && category.isNotEmpty) 'category': category,
+      if (minPriceCents != null) 'min_price_cents': '$minPriceCents',
+      if (maxPriceCents != null) 'max_price_cents': '$maxPriceCents',
+      if (minRating != null && minRating > 0) 'min_rating': '$minRating',
+      if (sort != 'newest') 'sort': sort,
+    },
+  );
 
   Future<AirmiusJson> commerceProduct(int productId) =>
       _json('GET', '/api/v1/commerce/products/$productId');

@@ -11,29 +11,63 @@ use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductReview;
 use App\Models\MarketplaceProductWishlist;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CommerceController extends Controller
 {
     public function products(Request $request)
     {
-        $products = MarketplaceProduct::query()
-            ->with(['user.approvedSellerApplications', 'club', 'inventories'])
-            ->where('status', 'published')
-            ->where('moderation_status', 'approved')
-            ->when($request->filled('category'), fn ($query) => $query->where('category', $request->string('category')))
-            ->when($request->filled('country'), function ($query) use ($request) {
-                $country = strtoupper((string) $request->string('country'));
-
-                $query->where(function ($countries) use ($country) {
-                    $countries
-                        ->whereNull('available_countries')
-                        ->orWhereJsonContains('available_countries', $country);
-                });
+        $data = $request->validate([
+            'search' => ['nullable', 'string', 'max:200'],
+            'category' => ['nullable', 'string', 'max:160'],
+            'country' => ['nullable', 'string', 'size:2'],
+            'min_price_cents' => ['nullable', 'integer', 'min:0', 'max:999999999'],
+            'max_price_cents' => array_merge(['nullable', 'integer', 'min:0', 'max:999999999'],
+                $request->filled('min_price_cents') ? ['gte:min_price_cents'] : []),
+            'min_rating' => ['nullable', 'numeric', 'between:1,5'],
+            'sort' => ['nullable', Rule::in(['newest', 'price_asc', 'price_desc'])],
+        ]);
+        $catalog = MarketplaceProduct::query()
+            ->where('status', 'published')->where('moderation_status', 'approved')
+            ->when($request->filled('country'), function ($query) use ($data) {
+                $country = strtoupper($data['country']);
+                $query->where(fn ($countries) => $countries->whereNull('available_countries')
+                    ->orWhereJsonContains('available_countries', $country));
+            });
+        // Facets cover the visible catalog, not just the current page or category.
+        $categories = (clone $catalog)->whereNotNull('category')->where('category', '!=', '')
+            ->distinct()->orderBy('category')->pluck('category')->values();
+        $query = (clone $catalog)->with(['user.approvedSellerApplications', 'club', 'inventories'])
+            ->withAvg('publishedReviews as reviews_avg_rating', 'rating')
+            ->withCount(['publishedReviews as reviews_count',
+                'publishedReviews as verified_purchase_reviews_count' => fn ($reviews) => $reviews->where('verified_purchase', true)])
+            ->when(filled($data['category'] ?? null), fn ($query) => $query->where('category', $data['category']))
+            ->when(filled($data['search'] ?? null), function ($query) use ($data) {
+                $term = '%'.trim($data['search']).'%';
+                $query->where(fn ($search) => $search->where('title', 'like', $term)
+                    ->orWhere('description', 'like', $term)->orWhere('category', 'like', $term)
+                    ->orWhereHas('user.marketplaceProviderProfile', fn ($provider) => $provider->where('display_name', 'like', $term))
+                    ->orWhereHas('user', fn ($user) => $user->where('name', 'like', $term)));
             })
-            ->latest()
-            ->paginate($this->perPage($request));
+            ->when(isset($data['min_price_cents']), fn ($query) => $query->where('price_cents', '>=', $data['min_price_cents']))
+            ->when(isset($data['max_price_cents']), fn ($query) => $query->where('price_cents', '<=', $data['max_price_cents']))
+            ->when(isset($data['min_rating']), fn ($query) => $query->whereIn('id',
+                MarketplaceProductReview::query()->select('marketplace_product_id')->where('status', 'published')
+                    ->groupBy('marketplace_product_id')->havingRaw('AVG(rating) >= CAST(? AS DECIMAL(10,4))', [$data['min_rating']])));
+        foreach ([1, 2, 3, 4, 5] as $rating) {
+            $query->withCount(['publishedReviews as rating_'.$rating.'_count' => fn ($reviews) => $reviews->where('rating', $rating)]);
+        }
+        $sort = $data['sort'] ?? 'newest';
+        if ($sort === 'price_asc' || $sort === 'price_desc') {
+            $query->orderBy('price_cents', $sort === 'price_asc' ? 'asc' : 'desc')->orderBy('id');
+        } else {
+            $query->latest()->orderByDesc('id');
+        }
+        $products = $query->paginate($this->perPage($request))->withQueryString();
 
-        return MarketplaceProductResource::collection($products);
+        return MarketplaceProductResource::collection($products)->additional([
+            'meta' => ['filters' => ['categories' => $categories]],
+        ]);
     }
 
     public function showProduct(Request $request, MarketplaceProduct $product)
