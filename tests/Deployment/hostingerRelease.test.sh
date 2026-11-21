@@ -72,6 +72,8 @@ publish() {
 }
 sha=$(printf '%040d' 2)
 make_release "$sha"
+mkdir -p "$fixture/deploy/releases/stale-release" "$fixture/deploy/backups/code-stale-release"
+touch "$fixture/deploy/incoming/old-release.tar.gz" "$fixture/deploy/incoming/old-release-routes.json"
 publish "$sha"
 test -d "$LIVE_ROOT" && test ! -L "$LIVE_ROOT"
 test "$(cat "$LIVE_ROOT/.env")" = production-secret
@@ -79,11 +81,14 @@ test "$(cat "$LIVE_ROOT/storage/upload.txt")" = persistent-upload
 test ! -e "$LIVE_ROOT/old-only.php"
 test ! -L "$LIVE_ROOT/public/build/assets"
 test ! -e "$LIVE_ROOT/storage/maintenance-test"
-test -z "$(find "$fixture/deploy/releases" -mindepth 1 -maxdepth 1 -print -quit)"
-test -z "$(find "$fixture/deploy/backups" -mindepth 1 -maxdepth 1 -type d -name 'code-*' -print -quit)"
+test "$(find "$fixture/deploy/releases" -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
+test -d "$fixture/deploy/releases/$sha"
+test "$(find "$fixture/deploy/backups" -mindepth 1 -maxdepth 1 -type d -name 'code-*' | wc -l)" -eq 1
 test ! -e "$fixture/deploy/incoming/$sha.tar.gz"
 test ! -e "$fixture/deploy/incoming/$sha-routes.json"
 test ! -e "$fixture/deploy/incoming/$sha-assets.txt"
+test ! -e "$fixture/deploy/incoming/old-release.tar.gz"
+test ! -e "$fixture/deploy/incoming/old-release-routes.json"
 test -f "$fixture/deploy/shared/assets/app.js"
 test ! -e "$fixture/deploy/shared/assets/old.js"
 test ! -e "$LIVE_ROOT/public/build/assets/old.js"

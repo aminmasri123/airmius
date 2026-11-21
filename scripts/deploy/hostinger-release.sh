@@ -24,6 +24,27 @@ test "$(readlink -f "$web_root")" = "$web_root"
 test -f "$web_root/artisan"
 previous_sha=$(php -r '$v=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR); echo $v["commit"]??"";' "$web_root/public/deployment.json")
 [[ "$previous_sha" =~ ^[a-f0-9]{40}$ ]]
+
+# A previous deployment may have stopped before its final cleanup. Retain the
+# newest rollback tree of each kind and free every older copy before extracting
+# or backing up another release. This bounds inode use without removing the last
+# server-side recovery path.
+prune_older_directories() {
+    local root=$1
+    local pattern=$2
+    local newest
+    newest=$(find "$root" -mindepth 1 -maxdepth 1 -type d -name "$pattern" -printf '%T@ %p\n' \
+        | sort -nr | head -n 1 | cut -d ' ' -f 2-)
+    while IFS= read -r -d '' candidate; do
+        test "$candidate" = "$newest" || rm -rf -- "$candidate"
+    done < <(find "$root" -mindepth 1 -maxdepth 1 -type d -name "$pattern" -print0)
+}
+prune_older_directories "$base/releases" '*'
+prune_older_directories "$base/backups" 'code-*'
+find "$base/incoming" -mindepth 1 -maxdepth 1 -type f \
+    \( -name '*.tar.gz' -o -name '*-routes.json' -o -name '*-assets.txt' -o -name '*-asset-basenames.txt' \) \
+    ! -name "$sha.tar.gz" -delete
+
 if test "$previous_sha" = "$sha"; then
     curl --fail --silent --show-error --max-time 30 "$site_url/deployment.json?release=$sha" \
         | php -r '$v=json_decode(stream_get_contents(STDIN),true); exit(($v["commit"]??null)===$argv[1]?0:1);' "$sha"
@@ -138,10 +159,10 @@ for asset_root in "$base/shared/assets" "$web_root/public/build/assets"; do
 done
 
 # Retain runtime data snapshots such as storage-before-hpanel-* because GitHub
-# contains application code, not production uploads. Remove code-only rollback
-# copies and staging metadata after the new commit has passed every health check.
-find "$base/releases" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
-find "$base/backups" -mindepth 1 -maxdepth 1 -type d -name 'code-*' -exec rm -rf -- {} +
+# contains application code, not production uploads. Keep exactly the current
+# release and its previous-code rollback while deleting every older code tree.
+find "$base/releases" -mindepth 1 -maxdepth 1 -type d ! -path "$release" -exec rm -rf -- {} +
+find "$base/backups" -mindepth 1 -maxdepth 1 -type d -name 'code-*' ! -path "$backup" -exec rm -rf -- {} +
 find "$base/incoming" -mindepth 1 -maxdepth 1 -type f \
     \( -name '*.tar.gz' -o -name '*-routes.json' -o -name '*-assets.txt' -o -name '*-asset-basenames.txt' \) \
     -delete
