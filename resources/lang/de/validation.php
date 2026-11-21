@@ -88,6 +88,7 @@ return [
     'metadata_category_invalid' => 'Mindestens eine Kategorie ist für diesen Datensatz nicht verfügbar.',
     'metadata_field_in_use' => 'Das eigene Datenfeld enthält bereits Werte und kann nicht gelöscht werden.',
     'metadata_category_in_use' => 'Die Kategorie ist bereits zugeordnet und kann nicht gelöscht werden.',
+    'metadata_options_in_use' => 'Bei einem bereits verwendeten Feld können bestehende Auswahlwerte nicht gelöscht oder umbenannt werden. Du kannst neue Werte hinzufügen und die Reihenfolge ändern.',
     'metadata_field_structure_locked' => 'Typ, Schlüssel und Geltungsbereich eines verwendeten Feldes können nicht mehr geändert werden.',
     'metadata_category_scope_locked' => 'Der Geltungsbereich einer verwendeten Kategorie kann nicht mehr geändert werden.',
     'delegation_self' => 'Vertretungsrechte können nicht an die eigene Person vergeben werden.',

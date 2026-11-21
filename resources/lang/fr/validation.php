@@ -88,6 +88,7 @@ return [
     'metadata_category_invalid' => 'Au moins une catégorie n’est pas disponible pour cet enregistrement.',
     'metadata_field_in_use' => 'Le champ personnalisé contient déjà des valeurs et ne peut pas être supprimé.',
     'metadata_category_in_use' => 'La catégorie est déjà attribuée et ne peut pas être supprimée.',
+    'metadata_options_in_use' => 'Les options existantes d’un champ déjà utilisé ne peuvent pas être supprimées ou renommées. Vous pouvez ajouter des options et changer leur ordre.',
     'metadata_field_structure_locked' => 'Le type, la clé et la portée d’un champ utilisé ne peuvent plus être modifiés.',
     'metadata_category_scope_locked' => 'La portée d’une catégorie attribuée ne peut plus être modifiée.',
     'delegation_self' => 'Les droits de délégation ne peuvent pas être accordés à soi-même.',

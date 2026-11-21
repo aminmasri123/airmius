@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Activity;
 use App\Models\Club;
 use App\Models\ClubCustomFieldDefinition;
+use App\Models\ClubCustomFieldValue;
 use App\Models\ClubNumberAllocation;
 use App\Models\ClubNumberRange;
 use App\Models\User;
@@ -18,6 +19,30 @@ use Tests\TestCase;
 class ClubMetadataConfigurationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_selection_options_preserve_order_on_create_and_edit_and_reject_invalid_rows(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        Sanctum::actingAs($owner);
+        $url = "/api/v1/clubs/{$club->id}/metadata/custom-fields";
+        $payload = ['entity_type' => 'member', 'key' => 'shirt_size', 'label' => 'Trikotgröße', 'field_type' => 'select',
+            'options' => [' XS ', 'S', 'M'], 'is_required' => false, 'is_sensitive' => false, 'is_active' => true, 'sort_order' => 0];
+        $id = $this->postJson($url, $payload)->assertCreated()->assertJsonPath('data.options', ['XS', 'S', 'M'])->json('data.id');
+        $this->putJson("$url/$id", [...$payload, 'options' => ['M', 'XL', 'XS']])->assertOk()->assertJsonPath('data.options', ['M', 'XL', 'XS']);
+        $this->getJson("/api/v1/clubs/{$club->id}/metadata")->assertOk()->assertJsonPath('data.custom_fields.0.options', ['M', 'XL', 'XS']);
+        foreach ([['XS', ' '], ['XS', ' xs '], [str_repeat('x', 161)]] as $options) {
+            $this->putJson("$url/$id", [...$payload, 'options' => $options])->assertUnprocessable();
+            $this->assertSame(['M', 'XL', 'XS'], ClubCustomFieldDefinition::findOrFail($id)->options);
+        }
+        ClubCustomFieldValue::create(['club_id' => $club->id, 'club_custom_field_definition_id' => $id,
+            'subject_type' => 'member', 'subject_id' => $owner->id, 'payload' => ['value' => 'M'], 'updated_by' => $owner->id]);
+        $this->putJson("$url/$id", [...$payload, 'options' => ['XS', 'M', 'XL', 'XXL']])
+            ->assertOk()->assertJsonPath('data.options', ['XS', 'M', 'XL', 'XXL']);
+        $this->putJson("$url/$id", [...$payload, 'options' => ['XS', 'XL']])
+            ->assertUnprocessable()->assertJsonValidationErrors('options');
+        $this->assertSame('M', ClubCustomFieldValue::where('club_custom_field_definition_id', $id)->firstOrFail()->payload['value']);
+    }
 
     protected function tearDown(): void
     {

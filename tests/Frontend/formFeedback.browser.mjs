@@ -180,4 +180,38 @@ try {
             }
         }
     }
+
+    for (const width of [360,1280]) {
+        await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<500});
+        await send('Page.navigate',{url:'http://127.0.0.1:43219/tests/Frontend/fixtures/metadata-options.html'});await sleep(700);
+        for(let i=0;i<100&&!await evaluate('Boolean(window.ready && document.querySelector("#metadata-panel-fields form"))');i++)await sleep(100);
+        const optionsResults=await evaluate(`(async()=>{
+            const results=[];const check=(v,label)=>{if(!v)throw Error(label);results.push(label)};
+            const wait=()=>new Promise(r=>setTimeout(r,80));
+            const panel=()=>document.getElementById('metadata-panel-fields');
+            const form=()=>panel().querySelector('form');
+            const rows=()=>[...panel().querySelectorAll('[data-option-row]')];
+            const buttons=()=>[...panel().querySelectorAll('button')];
+            const edit=async()=>{buttons().find(b=>b.textContent.trim()==='Bearbeiten').click();await wait()};
+            const enter=async(i,value)=>{const input=rows()[i].querySelector('input');input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));await wait()};
+            const add=async()=>{buttons().find(b=>b.textContent.includes('Auswahlwert hinzufügen')).click();await wait()};
+            const save=async()=>{form().querySelector('button:not([type])').click();await wait()};
+            await edit();check(rows().length===3,'existing options load as individual rows');
+            rows()[0].querySelector('button[title="Nach unten"]').click();await wait();
+            await enter(1,' XS ');rows()[2].querySelector('button[title="Auswahlwert entfernen"]').click();await wait();await add();
+            await save();check(window.requests.every(r=>r.method==='get'),'blank row prevents save');
+            await enter(2,'m');await save();check(document.body.textContent.includes('bereits vorhanden')&&window.requests.every(r=>r.method==='get'),'duplicates are explained and not submitted');
+            await enter(2,'XL');await save();
+            check(JSON.stringify(window.fields[0].options)===JSON.stringify(['M','XS','XL']),'edit remove and reorder save correct array');
+            await edit();check(JSON.stringify(rows().map(r=>r.querySelector('input').value))===JSON.stringify(['M','XS','XL']),'reopening preserves saved order');
+            await enter(0,'XXL');await save();check(window.fields[0].options[0]==='XXL','saved option can be edited again');
+            const type=form().querySelectorAll('select')[1];type.value='select';type.dispatchEvent(new Event('change',{bubbles:true}));await wait();
+            for(const [field,value]of [['label','New selection'],['key','new_selection']]){const input=form().querySelector('[data-feedback-field="'+field+'"]');input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));}
+            await enter(0,'One');await add();await enter(1,'Two');rows()[1].querySelector('button[title="Nach oben"]').click();await wait();await save();
+            check(window.fields.length===2&&JSON.stringify(window.fields[1].options)===JSON.stringify(['Two','One']),'new selection saves ordered option rows');
+            check(document.documentElement.scrollWidth<=innerWidth,'option editor fits viewport');
+            return results;
+        })()`);
+        for(const result of optionsResults)console.log('PASS '+width+'px '+result);
+    }
 } finally { socket?.close(); edge.kill(); await vite.close() }

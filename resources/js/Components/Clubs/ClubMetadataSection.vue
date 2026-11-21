@@ -1,4 +1,5 @@
 <script setup>
+import MetadataOptionEditor from './MetadataOptionEditor.vue'
 import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import metadataTranslations from '@/i18n/clubMetadataLocalization.json'
 import { confirmDialog } from '@/services/dialogService'
@@ -20,11 +21,13 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 const activePanel = ref('fields')
+const optionEditor = ref(null)
+const fieldErrors = ref({})
 const entityTypes = ['member', 'external_member', 'team', 'event', 'inventory_item']
 const categoryScopes = ['member', 'team', 'event', 'inventory_item']
 const rangeScopes = ['member', 'invoice', 'receipt', 'donation', 'inventory_item', 'shop_invoice', 'shop_credit_note', 'shop_sku']
 const fieldTypes = ['text', 'textarea', 'number', 'date', 'boolean', 'select']
-const emptyField = () => ({ id: null, entity_type: 'member', key: '', label: '', field_type: 'text', options_text: '', is_required: false, is_sensitive: false, is_active: true, sort_order: 0 })
+const emptyField = () => ({ id: null, entity_type: 'member', key: '', label: '', field_type: 'text', options: [''], is_required: false, is_sensitive: false, is_active: true, sort_order: 0 })
 const emptyCategory = () => ({ id: null, scope: 'member', name: '', color: '#2563EB', is_active: true, sort_order: 0 })
 const emptyRange = () => ({ id: null, scope: 'member', name: '', prefix: '', suffix: '', padding: 4, start_number: 1, reset_policy: 'never', is_active: true })
 const fieldForm = ref(emptyField())
@@ -48,11 +51,13 @@ const loadMetadata = async () => {
 const request = async (method, path, data = undefined) => {
     saving.value = true
     error.value = ''
+    fieldErrors.value = {}
     try {
         await window.axios({ method, url: `${baseUrl}/${path}`, data, headers: { Accept: 'application/json' } })
         await loadMetadata()
         return true
     } catch (cause) {
+        fieldErrors.value = cause?.response?.data?.errors || {}
         error.value = apiError(cause)
         return false
     } finally {
@@ -61,9 +66,9 @@ const request = async (method, path, data = undefined) => {
 }
 const saveField = async () => {
     const current = fieldForm.value
-    const payload = { ...current, options: current.field_type === 'select' ? current.options_text.split(/\r?\n/).map((value) => value.trim()).filter(Boolean) : null }
+    if (current.field_type === 'select' && !await optionEditor.value?.validate()) return
+    const payload = { ...current, options: current.field_type === 'select' ? current.options.map(value => value.trim()) : null }
     delete payload.id
-    delete payload.options_text
     if (await request(current.id ? 'put' : 'post', `custom-fields${current.id ? `/${current.id}` : ''}`, payload)) fieldForm.value = emptyField()
 }
 const saveCategory = async () => {
@@ -78,7 +83,7 @@ const saveRange = async () => {
     delete payload.id
     if (await request(current.id ? 'put' : 'post', `number-ranges${current.id ? `/${current.id}` : ''}`, payload)) rangeForm.value = emptyRange()
 }
-const editField = (item) => { fieldForm.value = { ...item, options_text: (item.options || []).join('\n') } }
+const editField = (item) => { fieldErrors.value = {}; fieldForm.value = { ...item, options: [...(item.options?.length ? item.options : [''])] } }
 const editCategory = (item) => { categoryForm.value = { ...item, color: item.color || '#2563EB' } }
 const editRange = (item) => { rangeForm.value = { ...item } }
 const remove = async (path) => {
@@ -119,7 +124,7 @@ onMounted(loadMetadata)
                     <label class="text-xs font-semibold text-secondary">{{ mt('type') }}<select v-model="fieldForm.field_type" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"><option v-for="item in fieldTypes" :key="item" :value="item">{{ mt(item) }}</option></select></label>
                     <label class="text-xs font-semibold text-secondary">{{ mt('name') }}<input v-model="fieldForm.label" required maxlength="160" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></label>
                     <label class="text-xs font-semibold text-secondary">{{ mt('key') }}<input v-model="fieldForm.key" required maxlength="80" pattern="[a-z][a-z0-9_]*" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 font-mono text-sm text-primary"></label>
-                    <label v-if="fieldForm.field_type === 'select'" class="text-xs font-semibold text-secondary md:col-span-2">{{ mt('options') }}<textarea data-feedback-name="options" v-model="fieldForm.options_text" required rows="3" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></textarea></label>
+                    <MetadataOptionEditor v-if="fieldForm.field_type === 'select'" ref="optionEditor" v-model="fieldForm.options" class="md:col-span-2" :disabled="saving" :server-errors="fieldErrors" @change="fieldErrors = {}" />
                     <label class="text-xs font-semibold text-secondary">{{ mt('sortOrder') }}<input v-model.number="fieldForm.sort_order" required type="number" min="0" max="10000" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></label>
                     <div class="flex flex-wrap items-center gap-4 text-sm text-secondary"><label><input v-model="fieldForm.is_required" type="checkbox" class="me-2 rounded border-border">{{ mt('required') }}</label><label><input v-model="fieldForm.is_sensitive" type="checkbox" class="me-2 rounded border-border">{{ mt('sensitive') }}</label><label><input v-model="fieldForm.is_active" type="checkbox" class="me-2 rounded border-border">{{ mt('active') }}</label></div>
                     <div class="flex gap-2 md:col-span-2"><button class="rounded-lg bg-buttonPrimary px-4 py-2 text-xs font-semibold text-buttonTextPrimary" :disabled="saving">{{ fieldForm.id ? mt('save') : mt('add') }}</button><button v-if="fieldForm.id" type="button" class="px-3 py-2 text-xs font-semibold text-secondary" @click="fieldForm = emptyField()">{{ mt('cancel') }}</button></div>

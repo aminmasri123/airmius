@@ -88,6 +88,7 @@ return [
     'metadata_category_invalid' => 'هناك فئة واحدة على الأقل غير متاحة لهذا السجل.',
     'metadata_field_in_use' => 'يحتوي الحقل المخصص على قيم ولا يمكن حذفه.',
     'metadata_category_in_use' => 'الفئة معيّنة بالفعل ولا يمكن حذفها.',
+    'metadata_options_in_use' => 'لا يمكن حذف أو إعادة تسمية الخيارات الحالية لحقل مستخدم. يمكنك إضافة خيارات جديدة وتغيير ترتيبها.',
     'metadata_field_structure_locked' => 'لا يمكن تغيير نوع الحقل المستخدم أو مفتاحه أو نطاقه.',
     'metadata_category_scope_locked' => 'لا يمكن تغيير نطاق فئة معيّنة.',
     'delegation_self' => 'لا يمكن منح صلاحيات التفويض لنفسك.',

@@ -428,7 +428,7 @@ class _CustomFieldPageState extends _MetadataFormState<_CustomFieldPage> {
   late String _type;
   late final TextEditingController _label;
   late final TextEditingController _key;
-  late final TextEditingController _options;
+  late final List<TextEditingController> _options;
   late final TextEditingController _order;
   late bool _required;
   late bool _sensitive;
@@ -442,9 +442,12 @@ class _CustomFieldPageState extends _MetadataFormState<_CustomFieldPage> {
     _type = '${item['field_type'] ?? 'text'}';
     _label = TextEditingController(text: '${item['label'] ?? ''}');
     _key = TextEditingController(text: '${item['key'] ?? ''}');
-    _options = TextEditingController(
-      text: item['options'] is List ? (item['options'] as List).join('\n') : '',
-    );
+    final options = item['options'] is List
+        ? (item['options'] as List).map((v) => '$v').toList()
+        : <String>[];
+    _options = (options.isEmpty ? [''] : options)
+        .map((v) => TextEditingController(text: v))
+        .toList();
     _order = TextEditingController(text: '${item['sort_order'] ?? 0}');
     _required = item['is_required'] == true;
     _sensitive = item['is_sensitive'] == true;
@@ -455,7 +458,9 @@ class _CustomFieldPageState extends _MetadataFormState<_CustomFieldPage> {
   void dispose() {
     _label.dispose();
     _key.dispose();
-    _options.dispose();
+    for (final option in _options) {
+      option.dispose();
+    }
     _order.dispose();
     super.dispose();
   }
@@ -474,11 +479,122 @@ class _CustomFieldPageState extends _MetadataFormState<_CustomFieldPage> {
     }, widget.onSave);
   }
 
-  List<String> get _optionValues => _options.text
-      .split(RegExp(r'\r?\n'))
-      .map((value) => value.trim())
-      .where((value) => value.isNotEmpty)
-      .toList();
+  List<String> get _optionValues => _options.map((v) => v.text.trim()).toList();
+
+  void _clearOptionErrors() {
+    serverErrors.removeWhere(
+      (key, _) => key == 'options' || key.startsWith('options.'),
+    );
+    error = null;
+  }
+
+  Widget _optionsEditor() {
+    final t = AirmiusScope.of(context).t;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          t('clubMetadata.options'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        for (var index = 0; index < _options.length; index++)
+          Card(
+            key: ValueKey(_options[index]),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  TextFormField(
+                    key: ValueKey('metadata-option-$index'),
+                    controller: _options[index],
+                    enabled: !busy,
+                    keyboardType: TextInputType.text,
+                    textInputAction: TextInputAction.next,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    decoration: InputDecoration(
+                      labelText:
+                          '${t('clubMetadata.optionValue')} ${index + 1}',
+                      errorMaxLines: 3,
+                    ),
+                    validator: (raw) {
+                      final value = (raw ?? '').trim();
+                      if (value.isEmpty) return t('clubMetadata.optionEmpty');
+                      if (value.length > 160) {
+                        return t('clubMetadata.optionTooLong');
+                      }
+                      if (_optionValues
+                              .where(
+                                (v) => v.toLowerCase() == value.toLowerCase(),
+                              )
+                              .length >
+                          1) {
+                        return t('clubMetadata.optionDuplicate');
+                      }
+                      return serverErrors['options.$index'] ??
+                          (index == 0 ? serverErrors['options'] : null);
+                    },
+                    onChanged: (_) => setState(_clearOptionErrors),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        key: ValueKey('option-up-$index'),
+                        tooltip: t('clubMetadata.moveOptionUp'),
+                        icon: const Icon(Icons.arrow_upward),
+                        onPressed: index == 0 || busy
+                            ? null
+                            : () => setState(() {
+                                final option = _options.removeAt(index);
+                                _options.insert(index - 1, option);
+                                _clearOptionErrors();
+                              }),
+                      ),
+                      IconButton(
+                        key: ValueKey('option-down-$index'),
+                        tooltip: t('clubMetadata.moveOptionDown'),
+                        icon: const Icon(Icons.arrow_downward),
+                        onPressed: index == _options.length - 1 || busy
+                            ? null
+                            : () => setState(() {
+                                final option = _options.removeAt(index);
+                                _options.insert(index + 1, option);
+                                _clearOptionErrors();
+                              }),
+                      ),
+                      IconButton(
+                        key: ValueKey('option-remove-$index'),
+                        tooltip: t('clubMetadata.removeOption'),
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: _options.length == 1 || busy
+                            ? null
+                            : () => setState(() {
+                                _options.removeAt(index).dispose();
+                                _clearOptionErrors();
+                              }),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        OutlinedButton.icon(
+          key: const ValueKey('option-add'),
+          onPressed: _options.length >= 50 || busy
+              ? null
+              : () => setState(() {
+                  _options.add(TextEditingController());
+                  _clearOptionErrors();
+                }),
+          icon: const Icon(Icons.add),
+          label: Text(t('clubMetadata.addOption')),
+        ),
+        if (_options.length >= 50) Text(t('clubMetadata.optionLimit')),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -514,8 +630,7 @@ class _CustomFieldPageState extends _MetadataFormState<_CustomFieldPage> {
             ),
             _field('label', t('clubMetadata.name'), _label),
             _field('key', t('clubMetadata.key'), _key),
-            if (_type == 'select')
-              _field('options', t('clubMetadata.options'), _options, lines: 3),
+            if (_type == 'select') _optionsEditor(),
             _field(
               'sort_order',
               t('clubMetadata.sortOrder'),

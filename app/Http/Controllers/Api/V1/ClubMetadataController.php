@@ -65,8 +65,16 @@ class ClubMetadataController extends Controller
                     ? json_encode($data[$lockedField] ?? [])
                     : (string) $data[$lockedField];
                 if ($current !== $next) {
+                    // Reordering or adding choices cannot invalidate existing
+                    // answers, including writes using an older definition.
+                    if ($lockedField === 'options' && $customField->field_type === 'select'
+                        && array_diff($customField->options ?? [], $data['options'] ?? []) === []) {
+                        continue;
+                    }
                     throw ValidationException::withMessages([
-                        $lockedField => __('validation.metadata_field_structure_locked'),
+                        $lockedField => __($lockedField === 'options'
+                            ? 'validation.metadata_options_in_use'
+                            : 'validation.metadata_field_structure_locked'),
                     ]);
                 }
             }
@@ -311,7 +319,7 @@ class ClubMetadataController extends Controller
             'label' => ['required', 'string', 'max:160'],
             'field_type' => ['required', Rule::in(ClubCustomFieldDefinition::FIELD_TYPES)],
             'options' => [Rule::requiredIf($request->input('field_type') === 'select'), 'nullable', 'array', 'max:50'],
-            'options.*' => ['required', 'string', 'max:160', 'distinct'],
+            'options.*' => ['required', 'string', 'max:160', 'distinct:ignore_case'],
             'is_required' => ['required', 'boolean'],
             'is_sensitive' => ['required', 'boolean'],
             'is_active' => ['required', 'boolean'],

@@ -88,6 +88,7 @@ return [
     'metadata_category_invalid' => 'At least one category is not available for this record.',
     'metadata_field_in_use' => 'The custom field already contains values and cannot be deleted.',
     'metadata_category_in_use' => 'The category is already assigned and cannot be deleted.',
+    'metadata_options_in_use' => 'Existing options of a field already in use cannot be removed or renamed. You can add new options and change their order.',
     'metadata_field_structure_locked' => 'The type, key and scope of a used field can no longer be changed.',
     'metadata_category_scope_locked' => 'The scope of an assigned category can no longer be changed.',
     'delegation_self' => 'Delegated permissions cannot be granted to yourself.',

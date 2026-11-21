@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -10,6 +11,90 @@ import 'package:airmius/models/club_summary.dart';
 import 'package:airmius/screens/club_metadata_screen.dart';
 
 void main() {
+  testWidgets(
+    'selection rows add edit reorder remove validate and reload saved order',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final transport = _OptionsTransport();
+      await _mountMetadata(tester, transport);
+      Future<void> edit() async {
+        await tester.tap(find.byType(PopupMenuButton<String>).first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Bearbeiten').last);
+        await tester.pumpAndSettle();
+      }
+
+      Future<void> tap(String key) async {
+        tester.testTextInput.hide();
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(ValueKey<String>(key)));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(ValueKey<String>(key)));
+        await tester.pumpAndSettle();
+      }
+
+      Future<void> enter(int index, String value) async {
+        final input = find.byKey(ValueKey('metadata-option-$index'));
+        await tester.ensureVisible(input);
+        await tester.pumpAndSettle();
+        await tester.enterText(input, value);
+      }
+
+      Future<void> save() async {
+        tester.testTextInput.hide();
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Speichern'));
+        await tester.pumpAndSettle();
+      }
+
+      await edit();
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('metadata-option-0')),
+            )
+            .controller!
+            .text,
+        'S',
+      );
+      await tap('option-down-0');
+      await enter(1, ' XS ');
+      await tap('option-remove-2');
+      await tap('option-add');
+      await save();
+      expect(find.text('Bitte gib einen Auswahlwert ein.'), findsWidgets);
+      expect(transport.requests.where((r) => r.method == 'PUT'), isEmpty);
+      await enter(2, 'm');
+      await save();
+      expect(
+        find.text('Dieser Auswahlwert ist bereits vorhanden.'),
+        findsWidgets,
+      );
+      expect(transport.requests.where((r) => r.method == 'PUT'), isEmpty);
+      await enter(2, 'XL');
+      await save();
+      expect(transport.savedOptions, ['M', 'XS', 'XL']);
+      await edit();
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('metadata-option-1')),
+            )
+            .controller!
+            .text,
+        'XS',
+      );
+      await enter(0, 'XXL');
+      await save();
+      expect(transport.savedOptions, ['XXL', 'XS', 'XL']);
+      expect(transport.requests.where((r) => r.method == 'PUT'), hasLength(2));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('field errors explain invalid input and preserve entries', (
     tester,
   ) async {
@@ -326,5 +411,22 @@ class _MetadataReadOnlyTransport implements AirmiusApiTransport {
       body:
           '''{"data":{"custom_fields":[{"id":2,"entity_type":"member","key":"shirt_size","label":"Trikotgröße","field_type":"text","options":null,"is_required":false,"is_sensitive":false,"is_active":true,"sort_order":0}],"categories":[],"number_ranges":[],"can_manage":false,"can_edit":false,"can_delete":false}}''',
     );
+  }
+}
+
+class _OptionsTransport extends _MetadataTransport {
+  List<dynamic>? savedOptions;
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    final response = await super.send(request);
+    if (request.method == 'PUT' && request.path.endsWith('/custom-fields/2')) {
+      savedOptions = List.from(request.body!['options'] as List);
+    }
+    if (request.method == 'GET' && savedOptions != null) {
+      final data = jsonDecode(response.body);
+      data['data']['custom_fields'][0]['options'] = savedOptions;
+      return AirmiusApiResponse(statusCode: 200, body: jsonEncode(data));
+    }
+    return response;
   }
 }
