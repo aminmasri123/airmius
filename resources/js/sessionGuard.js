@@ -5,6 +5,9 @@ export function installSessionGuard(router, initialPage, browser = window) {
     let redirecting = false;
     const login = () => {
         if (!authenticated || redirecting) return;
+        // A form may keep an unsaved draft on screen while authentication is
+        // renewed. This never grants access: the server still rejects requests.
+        if (browser.CustomEvent && !browser.dispatchEvent(new browser.CustomEvent('airmius:session-expired', { cancelable: true }))) return;
         redirecting = true;
         browser.location.replace('/login');
     };

@@ -628,7 +628,7 @@ export function useSettingsWorkspace({ props, t, te }) {
     
         router.post(route('auth.settings.subscription-invoices.cancel-open-payment', invoice.id), {}, {
             preserveScroll: true,
-            onFinish: closeOpenPaymentModal,
+            onSuccess: closeOpenPaymentModal,
         })
     }
     
@@ -637,7 +637,7 @@ export function useSettingsWorkspace({ props, t, te }) {
     
         router.delete(route('auth.settings.subscription-invoices.destroy-open-payment', invoice.id), {
             preserveScroll: true,
-            onFinish: closeOpenPaymentModal,
+            onSuccess: closeOpenPaymentModal,
         })
     }
     
@@ -686,7 +686,7 @@ export function useSettingsWorkspace({ props, t, te }) {
     
         router.post(route('auth.user-subscriptions.cancel', subscription.id), {}, {
             preserveScroll: true,
-            onFinish: closeSubscriptionCancelModal,
+            onSuccess: closeSubscriptionCancelModal,
         })
     }
     
@@ -747,7 +747,7 @@ export function useSettingsWorkspace({ props, t, te }) {
     const disconnectIntegration = (account) => {
         router.delete(route('auth.sport-integrations.destroy', account.id), {
             preserveScroll: true,
-            onFinish: closeDisconnectIntegrationModal,
+            onSuccess: closeDisconnectIntegrationModal,
         })
     }
     
@@ -779,7 +779,7 @@ export function useSettingsWorkspace({ props, t, te }) {
         if (sportActivityDeleteModal.value.mode === 'all') {
             router.delete(route('auth.sport-activities.destroy-all'), {
                 preserveScroll: true,
-                onFinish: closeSportActivityDeleteModal,
+                onSuccess: closeSportActivityDeleteModal,
             })
     
             return
@@ -790,7 +790,7 @@ export function useSettingsWorkspace({ props, t, te }) {
     
         router.delete(route('auth.sport-activities.destroy', activity.id), {
             preserveScroll: true,
-            onFinish: closeSportActivityDeleteModal,
+            onSuccess: closeSportActivityDeleteModal,
         })
     }
     

@@ -111,7 +111,20 @@
     "BIC": "BIC",
     "Aktiv": "Aktiv",
     "Bearbeiten": "Bearbeiten",
-    "Nicht zugeordnet": "Nicht zugeordnet"
+    "Nicht zugeordnet": "Nicht zugeordnet",
+    "Kassen & Bankkonten": "Kassen & Bankkonten",
+    "Vereinsfinanzen": "Vereinsfinanzen",
+    "Kasse oder Bankkonto anlegen": "Kasse oder Bankkonto anlegen",
+    "Kassen und Bankkonten verwalten": "Kassen und Bankkonten verwalten",
+    "Barkassen und Bankkonten des Vereins oder Teams getrennt verwalten.": "Barkassen und Bankkonten des Vereins oder Teams getrennt verwalten.",
+    "Noch keine Kasse oder kein Bankkonto angelegt.": "Noch keine Kasse oder kein Bankkonto angelegt.",
+    "Kassen und Bankkonten konnten nicht geladen werden.": "Kassen und Bankkonten konnten nicht geladen werden.",
+    "Erneut versuchen": "Erneut versuchen",
+    "Barkassen": "Barkassen",
+    "Bankkonten": "Bankkonten",
+    "Was möchtest du anlegen?": "Was möchtest du anlegen?",
+    "Bargeld im Verein oder Team verwalten.": "Bargeld im Verein oder Team verwalten.",
+    "Ein Bankkonto des Vereins oder Teams hinterlegen.": "Ein Bankkonto des Vereins oder Teams hinterlegen."
   },
   "en": {
     "Budgets & Teamkassen": "Budgets & team funds",
@@ -225,7 +238,20 @@
     "BIC": "BIC",
     "Aktiv": "Active",
     "Bearbeiten": "Edit",
-    "Nicht zugeordnet": "Unassigned"
+    "Nicht zugeordnet": "Unassigned",
+    "Kassen & Bankkonten": "Cash & bank accounts",
+    "Vereinsfinanzen": "Club finances",
+    "Kasse oder Bankkonto anlegen": "Add cash or bank account",
+    "Kassen und Bankkonten verwalten": "Manage cash and bank accounts",
+    "Barkassen und Bankkonten des Vereins oder Teams getrennt verwalten.": "Manage club or team cash and bank accounts separately.",
+    "Noch keine Kasse oder kein Bankkonto angelegt.": "No cash or bank account created yet.",
+    "Kassen und Bankkonten konnten nicht geladen werden.": "Cash and bank accounts could not be loaded.",
+    "Erneut versuchen": "Try again",
+    "Barkassen": "Cash accounts",
+    "Bankkonten": "Bank accounts",
+    "Was möchtest du anlegen?": "What would you like to add?",
+    "Bargeld im Verein oder Team verwalten.": "Manage club or team cash.",
+    "Ein Bankkonto des Vereins oder Teams hinterlegen.": "Add a club or team bank account."
   },
   "fr": {
     "Budgets & Teamkassen": "Budgets et caisses d'équipe",
@@ -339,7 +365,20 @@
     "BIC": "BIC",
     "Aktiv": "Actif",
     "Bearbeiten": "Modifier",
-    "Nicht zugeordnet": "Non attribué"
+    "Nicht zugeordnet": "Non attribué",
+    "Kassen & Bankkonten": "Caisses et comptes bancaires",
+    "Vereinsfinanzen": "Finances du club",
+    "Kasse oder Bankkonto anlegen": "Créer une caisse ou un compte bancaire",
+    "Kassen und Bankkonten verwalten": "Gérer les caisses et comptes bancaires",
+    "Barkassen und Bankkonten des Vereins oder Teams getrennt verwalten.": "Gérez séparément les caisses et comptes bancaires du club ou de l’équipe.",
+    "Noch keine Kasse oder kein Bankkonto angelegt.": "Aucune caisse ni aucun compte bancaire créé.",
+    "Kassen und Bankkonten konnten nicht geladen werden.": "Impossible de charger les caisses et comptes bancaires.",
+    "Erneut versuchen": "Réessayer",
+    "Barkassen": "Caisses",
+    "Bankkonten": "Comptes bancaires",
+    "Was möchtest du anlegen?": "Que souhaitez-vous créer ?",
+    "Bargeld im Verein oder Team verwalten.": "Gérer les espèces du club ou de l’équipe.",
+    "Ein Bankkonto des Vereins oder Teams hinterlegen.": "Ajouter un compte bancaire du club ou de l’équipe."
   },
   "ar": {
     "Budgets & Teamkassen": "الميزانيات وصناديق الفرق",
@@ -453,6 +492,19 @@
     "BIC": "BIC",
     "Aktiv": "نشط",
     "Bearbeiten": "تعديل",
-    "Nicht zugeordnet": "غير مخصص"
+    "Nicht zugeordnet": "غير مخصص",
+    "Kassen & Bankkonten": "الصناديق والحسابات البنكية",
+    "Vereinsfinanzen": "مالية النادي",
+    "Kasse oder Bankkonto anlegen": "إنشاء صندوق نقدي أو حساب بنكي",
+    "Kassen und Bankkonten verwalten": "إدارة الصناديق والحسابات البنكية",
+    "Barkassen und Bankkonten des Vereins oder Teams getrennt verwalten.": "إدارة الصناديق والحسابات البنكية للنادي أو الفريق بشكل منفصل.",
+    "Noch keine Kasse oder kein Bankkonto angelegt.": "لم يتم إنشاء صندوق نقدي أو حساب بنكي بعد.",
+    "Kassen und Bankkonten konnten nicht geladen werden.": "تعذر تحميل الصناديق والحسابات البنكية.",
+    "Erneut versuchen": "إعادة المحاولة",
+    "Barkassen": "الصناديق النقدية",
+    "Bankkonten": "الحسابات البنكية",
+    "Was möchtest du anlegen?": "ماذا تريد إنشاءه؟",
+    "Bargeld im Verein oder Team verwalten.": "إدارة الأموال النقدية للنادي أو الفريق.",
+    "Ein Bankkonto des Vereins oder Teams hinterlegen.": "إضافة حساب بنكي للنادي أو الفريق."
   }
 }

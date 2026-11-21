@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -1318,7 +1319,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
       initialChildSize: 0.94,
       minChildSize: 0.7,
       maxChildSize: 0.98,
-      builder: (context, scrollController) => Form(
+      builder: (context, scrollController) => AirmiusForm(
         key: _formKey,
         child: SingleChildScrollView(
           controller: scrollController,

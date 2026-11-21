@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
@@ -1776,7 +1777,7 @@ class _ClubTaskEditorState extends State<_ClubTaskEditor> {
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Form(
+            child: AirmiusForm(
               key: _formKey,
               child: Column(
                 children: [

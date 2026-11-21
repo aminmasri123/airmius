@@ -362,10 +362,8 @@ export const useFilesWorkspace = (props) => {
         deleteProcessing.value = true
         router.delete(deleteRoute, {
             preserveScroll: true,
-            onFinish: () => {
-                deleteProcessing.value = false
-                closeDeleteModal()
-            },
+            onSuccess: () => { deleteProcessing.value = false; closeDeleteModal() },
+            onFinish: () => { deleteProcessing.value = false },
         })
     }
     

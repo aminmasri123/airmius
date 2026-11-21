@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_date_input.dart';
 
@@ -491,7 +492,7 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
         ),
       ),
       bottomNavigationBar: _bottomActions(),
-      body: Form(
+      body: AirmiusForm(
         key: _key,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
@@ -867,7 +868,7 @@ class _ClubGovernanceDecisionFormState
       content: SizedBox(
         width: 560,
         child: SingleChildScrollView(
-          child: Form(
+          child: AirmiusForm(
             key: _key,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

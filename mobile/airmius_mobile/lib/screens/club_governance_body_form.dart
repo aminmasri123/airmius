@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_date_input.dart';
@@ -268,7 +269,7 @@ class _ClubGovernanceBodyFormState extends State<ClubGovernanceBodyForm> {
           ),
         ),
       ),
-      body: Form(
+      body: AirmiusForm(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),

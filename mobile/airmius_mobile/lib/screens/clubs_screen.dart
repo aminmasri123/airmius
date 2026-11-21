@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import '../widgets/country_field.dart';
 import 'package:http/http.dart' as http;
 
@@ -4166,9 +4167,7 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
     if (_visibility != 'private' &&
         (_lines(_availabilityController.text).isEmpty ||
             _lines(_skillsController.text).isEmpty ||
-            (_preferredTeamIds.isEmpty && _preferredAreas.isEmpty))) {
-      return;
-    }
+            (_preferredTeamIds.isEmpty && _preferredAreas.isEmpty))) { showFormFeedback(context, formMessage(context, 'required')); return; }
     setState(() => _saving = true);
     final workload = int.tryParse(_workloadController.text.trim());
     try {

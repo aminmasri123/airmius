@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:flutter/services.dart';
 
 import '../core/airmius_api_client.dart';
@@ -1675,7 +1676,7 @@ class _RoleAdminDialogState extends State<_RoleAdminDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (widget.role == null && _name.text.trim().isEmpty) return;
+            if (widget.role == null && _name.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
             Navigator.pop(context, {
               if (widget.role == null) 'name': _name.text.trim(),
               'description': _description.text.trim(),
@@ -1743,7 +1744,7 @@ class _PermissionAdminDialogState extends State<_PermissionAdminDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_name.text.trim().isEmpty) return;
+            if (_name.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
             Navigator.pop(context, {
               'name': _name.text.trim(),
               'description': _description.text.trim(),
@@ -2016,7 +2017,7 @@ class _GamificationRuleDialogState extends State<_GamificationRuleDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_label.text.trim().isEmpty) return;
+            if (_label.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
             Navigator.pop(context, {
               'label': _label.text.trim(),
               'description': _description.text.trim(),
@@ -2199,7 +2200,7 @@ class _SportAdminDialogState extends State<_SportAdminDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_name.text.trim().isEmpty) return;
+            if (_name.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
             Navigator.pop(context, {
               'name': _name.text.trim(),
               'slug': _slug.text.trim(),
@@ -2346,7 +2347,7 @@ class _BadgeAdminDialogState extends State<_BadgeAdminDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_key.text.trim().isEmpty || _name.text.trim().isEmpty) return;
+            if (_key.text.trim().isEmpty || _name.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
             Navigator.pop(context, {
               'key': _key.text.trim(),
               'name': _name.text.trim(),

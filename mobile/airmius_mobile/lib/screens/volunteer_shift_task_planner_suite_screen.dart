@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
@@ -972,7 +973,7 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
           widget.initial == null ? 'Einsatz anlegen' : 'Einsatz bearbeiten',
         ),
       ),
-      body: Form(
+      body: AirmiusForm(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -544,7 +545,7 @@ class _CreateClubSurveyDialogState extends State<_CreateClubSurveyDialog> {
       title: Text(scope.t('clubs.surveys.createTitle')),
       content: SizedBox(
         width: 540,
-        child: Form(
+        child: AirmiusForm(
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(

@@ -4,6 +4,7 @@ import metadataTranslations from '@/i18n/clubMetadataLocalization.json'
 import { confirmDialog } from '@/services/dialogService'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formFailureText, safeFieldMessage } from '@/services/formFeedbackMessages'
 
 const props = defineProps({ clubId: { type: [Number, String], required: true } })
 const { locale } = useI18n({ useScope: 'global' })
@@ -29,8 +30,9 @@ const emptyRange = () => ({ id: null, scope: 'member', name: '', prefix: '', suf
 const fieldForm = ref(emptyField())
 const categoryForm = ref(emptyCategory())
 const rangeForm = ref(emptyRange())
-const apiError = (cause) => Object.values(cause?.response?.data?.errors || {}).flat()[0]
-    || cause?.response?.data?.message || mt('saveError')
+const apiError = (cause) => cause?.response?.status === 422
+    ? safeFieldMessage(Object.values(cause.response.data?.errors || {}).flat()[0], locale.value)
+    : formFailureText(cause?.response?.status, locale.value)
 
 const loadMetadata = async () => {
     loading.value = true
@@ -117,7 +119,7 @@ onMounted(loadMetadata)
                     <label class="text-xs font-semibold text-secondary">{{ mt('type') }}<select v-model="fieldForm.field_type" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"><option v-for="item in fieldTypes" :key="item" :value="item">{{ mt(item) }}</option></select></label>
                     <label class="text-xs font-semibold text-secondary">{{ mt('name') }}<input v-model="fieldForm.label" required maxlength="160" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></label>
                     <label class="text-xs font-semibold text-secondary">{{ mt('key') }}<input v-model="fieldForm.key" required maxlength="80" pattern="[a-z][a-z0-9_]*" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 font-mono text-sm text-primary"></label>
-                    <label v-if="fieldForm.field_type === 'select'" class="text-xs font-semibold text-secondary md:col-span-2">{{ mt('options') }}<textarea v-model="fieldForm.options_text" required rows="3" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></textarea></label>
+                    <label v-if="fieldForm.field_type === 'select'" class="text-xs font-semibold text-secondary md:col-span-2">{{ mt('options') }}<textarea data-feedback-name="options" v-model="fieldForm.options_text" required rows="3" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></textarea></label>
                     <label class="text-xs font-semibold text-secondary">{{ mt('sortOrder') }}<input v-model.number="fieldForm.sort_order" required type="number" min="0" max="10000" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></label>
                     <div class="flex flex-wrap items-center gap-4 text-sm text-secondary"><label><input v-model="fieldForm.is_required" type="checkbox" class="me-2 rounded border-border">{{ mt('required') }}</label><label><input v-model="fieldForm.is_sensitive" type="checkbox" class="me-2 rounded border-border">{{ mt('sensitive') }}</label><label><input v-model="fieldForm.is_active" type="checkbox" class="me-2 rounded border-border">{{ mt('active') }}</label></div>
                     <div class="flex gap-2 md:col-span-2"><button class="rounded-lg bg-buttonPrimary px-4 py-2 text-xs font-semibold text-buttonTextPrimary" :disabled="saving">{{ fieldForm.id ? mt('save') : mt('add') }}</button><button v-if="fieldForm.id" type="button" class="px-3 py-2 text-xs font-semibold text-secondary" @click="fieldForm = emptyField()">{{ mt('cancel') }}</button></div>

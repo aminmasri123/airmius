@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/learning_assessment.dart';
@@ -128,7 +129,7 @@ class _LearningAssessmentEditorScreenState
           absorbing: _saving,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: Form(
+            child: AirmiusForm(
               key: _form,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

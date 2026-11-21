@@ -25021,6 +25021,7 @@ const _clubMetadataDe = {
   'clubMetadata.type.select': 'Auswahl',
   'clubMetadataValues.title': 'Eigene Daten',
   'clubMetadataValues.action': 'Eigene Daten bearbeiten',
+  'clubMetadataValues.manageFields': 'Felder und Kategorien verwalten',
   'clubMetadataValues.hint':
       'Zusätzliche Vereinsangaben und Kategorien pflegen.',
   'clubMetadataValues.error':
@@ -25102,6 +25103,7 @@ const _clubMetadataEn = {
   'clubMetadata.type.select': 'Selection',
   'clubMetadataValues.title': 'Custom data',
   'clubMetadataValues.action': 'Edit custom data',
+  'clubMetadataValues.manageFields': 'Manage fields and categories',
   'clubMetadataValues.hint': 'Manage additional club details and categories.',
   'clubMetadataValues.error': 'Additional details could not be loaded.',
   'clubMetadataValues.empty': 'No custom data is configured for this area yet.',
@@ -25179,6 +25181,7 @@ final _clubMetadataFr = {
   'clubMetadata.type.select': 'Sélection',
   'clubMetadataValues.title': 'Données personnalisées',
   'clubMetadataValues.action': 'Modifier les données personnalisées',
+  'clubMetadataValues.manageFields': 'Gérer les champs et les catégories',
   'clubMetadataValues.hint':
       'Gérer les informations et catégories supplémentaires.',
   'clubMetadataValues.error':
@@ -25263,6 +25266,7 @@ final _clubMetadataAr = {
   'clubMetadata.type.select': 'اختيار',
   'clubMetadataValues.title': 'البيانات المخصصة',
   'clubMetadataValues.action': 'تعديل البيانات المخصصة',
+  'clubMetadataValues.manageFields': 'إدارة الحقول والفئات',
   'clubMetadataValues.hint': 'إدارة معلومات النادي الإضافية والفئات.',
   'clubMetadataValues.error': 'تعذر تحميل المعلومات الإضافية.',
   'clubMetadataValues.empty': 'لا توجد بيانات مخصصة لهذا القسم بعد.',

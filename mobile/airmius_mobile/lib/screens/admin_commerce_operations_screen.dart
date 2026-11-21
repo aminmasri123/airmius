@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -2574,7 +2575,7 @@ class _CommerceFormDialogState extends State<_CommerceFormDialog> {
               ),
               const SizedBox(height: 14),
               Expanded(
-                child: Form(
+                child: AirmiusForm(
                   key: _formKey,
                   child: ListView.separated(
                     itemCount: widget.fields.length,

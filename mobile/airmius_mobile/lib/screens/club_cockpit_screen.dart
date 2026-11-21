@@ -10,6 +10,7 @@ import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'club_membership_management_screen.dart';
 import 'club_governance_screen.dart';
+import 'club_organization_screen.dart';
 import 'club_announcement_screen.dart';
 import 'club_asset_inventory_checkout_suite_screen.dart';
 import 'club_jobs_screen.dart';
@@ -1298,6 +1299,14 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           body: 'Funktionen und Ansprechpartner im Verein',
           color: theme.colorScheme.secondary,
           onTap: () => _open(ClubGovernanceScreen(club: club)),
+        ),
+      if (club.isMember || club.canManage)
+        _ClubArea(
+          icon: Icons.schema_outlined,
+          title: t('clubOrganization.title'),
+          body: t('clubOrganization.hint'),
+          color: theme.colorScheme.primary,
+          onTap: () => _open(ClubOrganizationScreen(club: club)),
         ),
       _ClubArea(
         icon: Icons.apartment_outlined,

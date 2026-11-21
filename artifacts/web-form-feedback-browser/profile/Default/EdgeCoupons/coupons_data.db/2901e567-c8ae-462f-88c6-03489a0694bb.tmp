@@ -1,0 +1,6 @@
+2026/11/21-10:42:45.535 c520 Reusing MANIFEST C:\Users\pcc\Documents\Codex\airmius\artifacts\web-form-feedback-browser\profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/11/21-10:42:45.537 c520 Recovering log #3
+2026/11/21-10:42:45.538 c520 Reusing old log C:\Users\pcc\Documents\Codex\airmius\artifacts\web-form-feedback-browser\profile\Default\EdgeCoupons/coupons_data.db/000003.log 
+2026/11/21-10:42:45.649 dce0 Level-0 table #5: started
+2026/11/21-10:42:45.652 dce0 Level-0 table #5: 683284 bytes OK
+2026/11/21-10:42:45.653 dce0 Delete type=0 #3

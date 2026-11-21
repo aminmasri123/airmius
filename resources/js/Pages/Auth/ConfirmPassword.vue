@@ -16,11 +16,8 @@ const passwordInput = ref(null);
 
 const submit = () => {
     form.post(route('password.confirm'), {
-        onFinish: () => {
-            form.reset();
-
-            passwordInput.value.focus();
-        },
+        onSuccess: () => form.reset(),
+        onError: () => passwordInput.value?.focus(),
     });
 };
 </script>

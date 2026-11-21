@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/airmius_api_client.dart';
@@ -2035,7 +2036,7 @@ class _CourseSheetState extends State<_CourseSheet> {
       title: t(
         widget.course == null ? 'studio.newCourse' : 'studio.editCourse',
       ),
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2458,7 +2459,7 @@ class _LessonSheetState extends State<_LessonSheet> {
       title: t(
         widget.lesson == null ? 'studio.addLesson' : 'studio.editLesson',
       ),
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

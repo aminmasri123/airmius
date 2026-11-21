@@ -20,7 +20,7 @@ void main() {
       expect(find.byType(AlertDialog), findsNothing);
       expect(find.byType(BackButton), findsOneWidget);
       expect(find.text(scope.t('clubTasks.add')), findsOneWidget);
-      expect(tester.getSize(find.byType(Form)).width, 358);
+      expect(tester.getSize(find.byWidgetPredicate((widget) => widget is Form)).width, 358);
 
       await tester.enterText(find.byType(TextFormField).first, 'New task');
       tester.view.viewInsets = const FakeViewPadding(bottom: 300);
@@ -41,7 +41,7 @@ void main() {
       tester.view.resetViewInsets();
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
-      expect(find.byType(Form), findsNothing);
+      expect(find.byWidgetPredicate((widget) => widget is Form), findsNothing);
       expect(find.byKey(const ValueKey('calendar-add-task')), findsOneWidget);
       expect(tester.takeException(), isNull);
     });

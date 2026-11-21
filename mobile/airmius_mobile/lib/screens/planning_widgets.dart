@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:intl/intl.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -332,7 +333,7 @@ class PlanningEditorState extends State<PlanningEditor> {
           ),
         ],
       ),
-      body: Form(
+      body: AirmiusForm(
         key: form,
         child: ListView(
           padding: const EdgeInsets.all(16),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'admin_club_workspace_screen.dart';
 
 import '../core/airmius_api_client.dart';
@@ -116,7 +117,7 @@ class _AdminClubsState extends State<AdminClubsScreen> {
       builder: (dialogContext) => AlertDialog(
         title: Text(t('adminNative.deleteClub')),
         content: SingleChildScrollView(
-          child: Form(
+          child: AirmiusForm(
             key: form,
             child: Column(
               mainAxisSize: MainAxisSize.min,

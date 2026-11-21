@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -1614,7 +1615,7 @@ class _InventoryItemEditorScreenState
         ),
       ),
       body: SafeArea(
-        child: Form(
+        child: AirmiusForm(
           key: _formKey,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 120),

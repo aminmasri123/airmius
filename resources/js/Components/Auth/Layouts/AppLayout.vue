@@ -548,15 +548,18 @@ const installGlobalFeedback = () => {
     })
 
     stopInertiaError = router.on('error', (event) => {
+        if (event.formFeedbackHandled) return
         addFeedback('error', firstErrorMessage(event.detail.errors || {}))
     })
 
     stopInertiaInvalid = router.on('invalid', (event) => {
+        if (event.formFeedbackHandled) return
         event.preventDefault()
         addFeedback('error', httpErrorMessage(event.detail.response?.status))
     })
 
     stopInertiaException = router.on('exception', (event) => {
+        if (event.formFeedbackHandled) return
         event.preventDefault()
         addFeedback('error', 'Unerwarteter Fehler. Bitte versuche es erneut.')
     })

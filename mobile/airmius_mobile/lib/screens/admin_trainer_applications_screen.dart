@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -57,7 +58,7 @@ class _ApplicationsState extends State<AdminTrainerApplicationsScreen> {
         title: Text(
           t(approve ? 'platformAdmin.approve' : 'platformAdmin.reject'),
         ),
-        content: Form(
+        content: AirmiusForm(
           key: form,
           child: SingleChildScrollView(
             child: Column(

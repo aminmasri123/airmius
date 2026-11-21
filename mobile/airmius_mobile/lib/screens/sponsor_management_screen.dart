@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -687,7 +688,7 @@ class _SponsorEditorSheetState extends State<_SponsorEditorSheet> {
       initialChildSize: 0.95,
       minChildSize: 0.7,
       maxChildSize: 0.98,
-      builder: (context, controller) => Form(
+      builder: (context, controller) => AirmiusForm(
         key: _formKey,
         child: SingleChildScrollView(
           controller: controller,

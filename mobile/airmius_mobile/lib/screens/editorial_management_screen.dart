@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../core/airmius_api_client.dart';
@@ -788,7 +789,7 @@ class _EditorialPostSheetState extends State<_EditorialPostSheet> {
         initialChildSize: 0.95,
         minChildSize: 0.7,
         maxChildSize: 0.98,
-        builder: (context, controller) => Form(
+        builder: (context, controller) => AirmiusForm(
           key: _formKey,
           child: SingleChildScrollView(
             controller: controller,
@@ -1046,7 +1047,7 @@ class _CategoryManagerState extends State<_CategoryManager> {
           ),
           FilledButton(
             onPressed: () {
-              if (name.text.trim().isEmpty) return;
+              if (name.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
               Navigator.pop(context, {
                 'name': name.text.trim(),
                 'slug': category == null ? null : _editorText(category['slug']),

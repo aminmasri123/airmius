@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
@@ -112,9 +113,11 @@ class ClubFinanceWorkspaceScreen extends StatefulWidget {
     super.key,
     required this.club,
     this.initialTabIndex = 0,
+    this.createAccountOnOpen = false,
   });
   final ClubSummary club;
   final int initialTabIndex;
+  final bool createAccountOnOpen;
   @override
   State<ClubFinanceWorkspaceScreen> createState() =>
       _ClubFinanceWorkspaceScreenState();
@@ -189,6 +192,7 @@ class _ClubFinanceWorkspaceScreenState
   bool _loading = true, _busy = false;
   String? _error;
   String? _transferKey;
+  bool _initialAccountOpened = false;
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
     return services.clientForSession(services.authState.session);
@@ -203,7 +207,17 @@ class _ClubFinanceWorkspaceScreenState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _load();
+      if (mounted &&
+          widget.createAccountOnOpen &&
+          !_initialAccountOpened &&
+          _data['can_manage'] == true &&
+          _data['available'] == true) {
+        _initialAccountOpened = true;
+        await _account();
+      }
+    });
   }
 
   Future<void> _load() async {
@@ -407,6 +421,40 @@ class _ClubFinanceWorkspaceScreenState
   }
 
   Future<void> _account([Map<String, dynamic>? row]) async {
+    if (_data['can_manage'] != true) return;
+    final type = row == null
+        ? await showDialog<String>(
+            context: context,
+            builder: (dialogContext) => SimpleDialog(
+              title: Text(c('Was möchtest du anlegen?')),
+              children: [
+                for (final option in ['cash', 'bank'])
+                  ListTile(
+                    leading: Icon(
+                      option == 'cash'
+                          ? Icons.account_balance_wallet_outlined
+                          : Icons.account_balance_outlined,
+                    ),
+                    title: Text(c(option == 'cash' ? 'Barkasse' : 'Bankkonto')),
+                    subtitle: Text(
+                      c(
+                        option == 'cash'
+                            ? 'Bargeld im Verein oder Team verwalten.'
+                            : 'Ein Bankkonto des Vereins oder Teams hinterlegen.',
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(dialogContext).pop(option),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(c('Abbrechen')),
+                ),
+              ],
+            ),
+          )
+        : row['type'] as String?;
+    if (type == null || !mounted) return;
     final canManageClub = _data['can_manage_club'] == true;
     final manageableIds = (_data['manageable_team_ids'] as List? ?? const [])
         .whereType<num>()
@@ -416,11 +464,10 @@ class _ClubFinanceWorkspaceScreenState
       _data['teams'],
     ).where((team) => manageableIds.contains(team['id'])).toList();
     final value = await form(
-      'Kasse / Bankkonto',
+      type == 'cash' ? 'Barkasse' : 'Bankkonto',
       [
         text('name', 'Name', required: true),
         if (row == null) ...[
-          select('type', 'Art', {'cash': c('Bar'), 'bank': c('Bank')}),
           select(
             'team_id',
             'Team',
@@ -430,7 +477,7 @@ class _ClubFinanceWorkspaceScreenState
           text('opening', 'Anfangsbestand (EUR)', number: true, required: true),
           text('opened_on', 'Stichtag', date: true, required: true),
         ],
-        if (row == null || row['type'] == 'bank') ...[
+        if (type == 'bank') ...[
           text('bank_name', 'Bankname'),
           text('account_holder', 'Kontoinhaber'),
           text('iban', 'IBAN'),
@@ -440,7 +487,7 @@ class _ClubFinanceWorkspaceScreenState
       ],
       row == null
           ? {
-              'type': 'cash',
+              'type': type,
               'opening': 0,
               'opened_on': today(),
               if (!canManageClub && manageableTeams.length == 1)
@@ -449,7 +496,10 @@ class _ClubFinanceWorkspaceScreenState
           : {...row},
     );
     if (value == null || !mounted) return;
-    if (row == null) value['opening_cents'] = cents(value.remove('opening'));
+    if (row == null) {
+      value['type'] = type;
+      value['opening_cents'] = cents(value.remove('opening'));
+    }
     await _write(
       row == null ? 'POST' : 'PUT',
       row == null ? 'money-accounts' : "money-accounts/${row['id']}",
@@ -718,7 +768,7 @@ class _ClubFinanceWorkspaceScreenState
       initialIndex: widget.initialTabIndex,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(c('Budgets & Teamkassen')),
+          title: Text(c('Vereinsfinanzen')),
           actions: [
             IconButton(
               tooltip: c('Aktualisieren'),
@@ -731,7 +781,7 @@ class _ClubFinanceWorkspaceScreenState
             tabs: [
               for (final key in [
                 'Budgets',
-                'Kassen & Konten',
+                'Kassen & Bankkonten',
                 'Beschaffungen',
                 'Zuordnungen',
                 'Jahresabschluss',
@@ -840,7 +890,7 @@ class _ClubFinanceWorkspaceScreenState
                             Wrap(
                               children: [
                                 command(
-                                  'Kasse / Konto anlegen',
+                                  'Kasse oder Bankkonto anlegen',
                                   Icons.add,
                                   _account,
                                 ),
@@ -1207,7 +1257,7 @@ class _FinanceDialogState extends State<_FinanceDialog> {
     title: Text(widget.title),
     content: SizedBox(
       width: 440,
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: SingleChildScrollView(
           child: Column(

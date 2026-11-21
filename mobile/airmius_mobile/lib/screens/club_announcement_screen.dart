@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -661,7 +662,7 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
     return AlertDialog(
       title: Text(scope.t('clubs.announcements.createTitle')),
       content: SingleChildScrollView(
-        child: Form(
+        child: AirmiusForm(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,

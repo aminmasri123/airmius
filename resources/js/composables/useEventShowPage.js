@@ -234,9 +234,7 @@ export function useEventShowPage(props) {
     const deleteEvent = () => {
         router.delete(route('auth.events.destroy', props.event.id), {
             preserveScroll: true,
-            onFinish: () => {
-                showDeleteModal.value = false
-            },
+            onSuccess: () => { showDeleteModal.value = false },
         })
     }
 

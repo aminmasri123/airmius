@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -108,48 +109,57 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
   }
 
   Future<void> _editField([Map<String, dynamic>? item]) async {
-    final payload = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _CustomFieldDialog(item: item),
-    );
-    if (payload == null || !mounted) return;
-    await _write(
-      () => _client.saveClubMetadataCustomField(
-        widget.club.id,
-        payload,
-        fieldId: _int(item?['id']),
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => _CustomFieldPage(
+          item: item,
+          onSave: (payload) async {
+            await _client.saveClubMetadataCustomField(
+              widget.club.id,
+              payload,
+              fieldId: _int(item?['id']),
+            );
+          },
+        ),
       ),
     );
+    if (saved == true && mounted) await _load();
   }
 
   Future<void> _editCategory([Map<String, dynamic>? item]) async {
-    final payload = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _CategoryDialog(item: item),
-    );
-    if (payload == null || !mounted) return;
-    await _write(
-      () => _client.saveClubMetadataCategory(
-        widget.club.id,
-        payload,
-        categoryId: _int(item?['id']),
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => _CategoryPage(
+          item: item,
+          onSave: (payload) async {
+            await _client.saveClubMetadataCategory(
+              widget.club.id,
+              payload,
+              categoryId: _int(item?['id']),
+            );
+          },
+        ),
       ),
     );
+    if (saved == true && mounted) await _load();
   }
 
   Future<void> _editRange([Map<String, dynamic>? item]) async {
-    final payload = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _NumberRangeDialog(item: item),
-    );
-    if (payload == null || !mounted) return;
-    await _write(
-      () => _client.saveClubMetadataNumberRange(
-        widget.club.id,
-        payload,
-        numberRangeId: _int(item?['id']),
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => _NumberRangePage(
+          item: item,
+          onSave: (payload) async {
+            await _client.saveClubMetadataNumberRange(
+              widget.club.id,
+              payload,
+              numberRangeId: _int(item?['id']),
+            );
+          },
+        ),
       ),
     );
+    if (saved == true && mounted) await _load();
   }
 
   @override
@@ -341,7 +351,8 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: TextButton.icon(
-                onPressed: !_canEdit ||
+                onPressed:
+                    !_canEdit ||
                         _busy ||
                         (item['is_active'] != true && !isDefault)
                     ? null
@@ -384,15 +395,16 @@ class _ClubMetadataScreenState extends State<ClubMetadataScreen> {
   }
 }
 
-class _CustomFieldDialog extends StatefulWidget {
-  const _CustomFieldDialog({this.item});
+class _CustomFieldPage extends StatefulWidget {
+  const _CustomFieldPage({this.item, required this.onSave});
   final Map<String, dynamic>? item;
+  final Future<void> Function(Map<String, dynamic>) onSave;
 
   @override
-  State<_CustomFieldDialog> createState() => _CustomFieldDialogState();
+  State<_CustomFieldPage> createState() => _CustomFieldPageState();
 }
 
-class _CustomFieldDialogState extends State<_CustomFieldDialog> {
+class _CustomFieldPageState extends _MetadataFormState<_CustomFieldPage> {
   static const _entities = [
     'member',
     'external_member',
@@ -445,12 +457,7 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
   }
 
   void _submit() {
-    if (_label.text.trim().isEmpty ||
-        !RegExp(r'^[a-z][a-z0-9_]*$').hasMatch(_key.text.trim()) ||
-        (_type == 'select' && _optionValues.isEmpty)) {
-      return;
-    }
-    Navigator.pop(context, {
+    savePayload({
       'entity_type': _entity,
       'key': _key.text.trim(),
       'label': _label.text.trim(),
@@ -460,7 +467,7 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
       'is_sensitive': _sensitive,
       'is_active': _active,
       'sort_order': int.tryParse(_order.text) ?? 0,
-    });
+    }, widget.onSave);
   }
 
   List<String> get _optionValues => _options.text
@@ -472,7 +479,10 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
+    return _MetadataEditorPage(
+      formKey: formKey,
+      busy: busy,
+      error: error,
       title: Text(
         t(
           widget.item == null
@@ -498,11 +508,16 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
               _types,
               (v) => setState(() => _type = v),
             ),
-            _text(t('clubMetadata.name'), _label),
-            _text(t('clubMetadata.key'), _key),
+            _field('label', t('clubMetadata.name'), _label),
+            _field('key', t('clubMetadata.key'), _key),
             if (_type == 'select')
-              _text(t('clubMetadata.options'), _options, lines: 3),
-            _text(t('clubMetadata.sortOrder'), _order, number: true),
+              _field('options', t('clubMetadata.options'), _options, lines: 3),
+            _field(
+              'sort_order',
+              t('clubMetadata.sortOrder'),
+              _order,
+              number: true,
+            ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _required,
@@ -524,20 +539,21 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
           ],
         ),
       ),
-      actions: _dialogActions(context, _submit),
+      onSave: _submit,
     );
   }
 }
 
-class _CategoryDialog extends StatefulWidget {
-  const _CategoryDialog({this.item});
+class _CategoryPage extends StatefulWidget {
+  const _CategoryPage({this.item, required this.onSave});
   final Map<String, dynamic>? item;
+  final Future<void> Function(Map<String, dynamic>) onSave;
 
   @override
-  State<_CategoryDialog> createState() => _CategoryDialogState();
+  State<_CategoryPage> createState() => _CategoryPageState();
 }
 
-class _CategoryDialogState extends State<_CategoryDialog> {
+class _CategoryPageState extends _MetadataFormState<_CategoryPage> {
   static const _scopes = ['member', 'team', 'event', 'inventory_item'];
   late String _scope;
   late final TextEditingController _name;
@@ -567,7 +583,10 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
+    return _MetadataEditorPage(
+      formKey: formKey,
+      busy: busy,
+      error: error,
       title: Text(
         t(
           widget.item == null
@@ -586,9 +605,14 @@ class _CategoryDialogState extends State<_CategoryDialog> {
               _scopes,
               (v) => setState(() => _scope = v),
             ),
-            _text(t('clubMetadata.name'), _name),
-            _text(t('clubMetadata.color'), _color),
-            _text(t('clubMetadata.sortOrder'), _order, number: true),
+            _field('name', t('clubMetadata.name'), _name),
+            _field('color', t('clubMetadata.color'), _color),
+            _field(
+              'sort_order',
+              t('clubMetadata.sortOrder'),
+              _order,
+              number: true,
+            ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               value: _active,
@@ -598,32 +622,31 @@ class _CategoryDialogState extends State<_CategoryDialog> {
           ],
         ),
       ),
-      actions: _dialogActions(context, () {
-        if (_name.text.trim().isEmpty ||
-            !RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(_color.text.trim())) {
-          return;
-        }
-        Navigator.pop(context, {
+      onSave: () {
+        savePayload({
           'scope': _scope,
           'name': _name.text.trim(),
           'color': _color.text.trim(),
           'is_active': _active,
           'sort_order': int.tryParse(_order.text) ?? 0,
-        });
-      }),
+        }, widget.onSave);
+      },
     );
   }
 }
 
-class _NumberRangeDialog extends StatefulWidget {
-  const _NumberRangeDialog({this.item});
+class _NumberRangePage extends StatefulWidget {
+  const _NumberRangePage({this.item, required this.onSave});
   final Map<String, dynamic>? item;
+  final Future<void> Function(Map<String, dynamic>) onSave;
 
   @override
-  State<_NumberRangeDialog> createState() => _NumberRangeDialogState();
+  State<_NumberRangePage> createState() => _NumberRangePageState();
 }
 
-class _NumberRangeDialogState extends State<_NumberRangeDialog> {
+class _NumberRangePageState extends _MetadataFormState<_NumberRangePage> {
+  @override
+  bool get requiresYear => _resetPolicy == 'yearly';
   static const _scopes = [
     'member',
     'invoice',
@@ -669,7 +692,10 @@ class _NumberRangeDialogState extends State<_NumberRangeDialog> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
+    return _MetadataEditorPage(
+      formKey: formKey,
+      busy: busy,
+      error: error,
       title: Text(
         t(
           widget.item == null
@@ -688,11 +714,21 @@ class _NumberRangeDialogState extends State<_NumberRangeDialog> {
               _scopes,
               (v) => setState(() => _scope = v),
             ),
-            _text(t('clubMetadata.name'), _name),
-            _text(t('clubMetadata.prefix'), _prefix),
-            _text(t('clubMetadata.suffix'), _suffix),
-            _text(t('clubMetadata.padding'), _padding, number: true),
-            _text(t('clubMetadata.start'), _start, number: true),
+            _field('name', t('clubMetadata.name'), _name),
+            _field('prefix', t('clubMetadata.prefix'), _prefix),
+            _field('suffix', t('clubMetadata.suffix'), _suffix),
+            _field(
+              'padding',
+              t('clubMetadata.padding'),
+              _padding,
+              number: true,
+            ),
+            _field(
+              'start_number',
+              t('clubMetadata.start'),
+              _start,
+              number: true,
+            ),
             _dropdown(
               t,
               'clubMetadata.resetPolicy',
@@ -709,9 +745,8 @@ class _NumberRangeDialogState extends State<_NumberRangeDialog> {
           ],
         ),
       ),
-      actions: _dialogActions(context, () {
-        if (_name.text.trim().isEmpty) return;
-        Navigator.pop(context, {
+      onSave: () {
+        savePayload({
           'scope': _scope,
           'name': _name.text.trim(),
           'prefix': _prefix.text.trim(),
@@ -720,10 +755,234 @@ class _NumberRangeDialogState extends State<_NumberRangeDialog> {
           'start_number': int.tryParse(_start.text) ?? 1,
           'reset_policy': _resetPolicy,
           'is_active': _active,
-        });
-      }),
+        }, widget.onSave);
+      },
     );
   }
+}
+
+abstract class _MetadataFormState<T extends StatefulWidget> extends State<T> {
+  final formKey = GlobalKey<FormState>();
+  final inputs = <String, TextEditingController>{};
+  bool busy = false;
+  String? error;
+  Map<String, String> serverErrors = {};
+  bool get requiresYear => false;
+
+  Future<void> savePayload(
+    Map<String, dynamic> payload,
+    Future<void> Function(Map<String, dynamic>) action,
+  ) async {
+    if (busy || !(formKey.currentState?.validate() ?? false)) return;
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await action(payload);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (exception) {
+      if (!mounted) return;
+      setState(() {
+        error = formErrorMessage(context, exception);
+        serverErrors = formServerErrors(exception);
+      });
+      if (serverErrors.isNotEmpty) formKey.currentState?.validate();
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  String? _validate(String key, String? raw) {
+    for (final entry in serverErrors.entries) {
+      if (entry.key == key || entry.key.startsWith('$key.')) return entry.value;
+    }
+    final value = (raw ?? '').trim();
+    String message(String name) => formMessage(context, name);
+    if (['name', 'label'].contains(key) &&
+        (value.isEmpty || value.length > 160)) {
+      return message('name');
+    }
+    if (key == 'key' &&
+        (value.length > 80 || !RegExp(r'^[a-z][a-z0-9_]*$').hasMatch(value))) {
+      return message('key');
+    }
+    if (key == 'color' &&
+        value.isNotEmpty &&
+        !RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(value)) {
+      return message('color');
+    }
+    if (key == 'options') {
+      final values = value
+          .split(RegExp(r'\r?\n'))
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      if (values.isEmpty ||
+          values.length > 50 ||
+          values.toSet().length != values.length ||
+          values.any((s) => s.length > 160)) {
+        return message('options');
+      }
+    }
+    final number = int.tryParse(value);
+    if (key == 'sort_order' &&
+        (number == null || number < 0 || number > 10000)) {
+      return message('order');
+    }
+    if (key == 'padding' && (number == null || number < 1 || number > 12)) {
+      return message('padding');
+    }
+    if (key == 'start_number' &&
+        (number == null || number < 1 || number > 999999999999)) {
+      return message('start');
+    }
+    if (key == 'prefix' || key == 'suffix') {
+      if (value.length > 40 ||
+          !RegExp(r'^(?:[^{}]|\{YYYY\}|\{YY\})*$').hasMatch(value)) {
+        return message('token');
+      }
+      final combined =
+          (inputs['prefix']?.text ?? '') + (inputs['suffix']?.text ?? '');
+      if (key == 'prefix' &&
+          requiresYear &&
+          !combined.contains('{YYYY}') &&
+          !combined.contains('{YY}')) {
+        return message('year');
+      }
+    }
+    return null;
+  }
+
+  Widget _field(
+    String key,
+    String label,
+    TextEditingController controller, {
+    int lines = 1,
+    bool number = false,
+  }) {
+    inputs[key] = controller;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        key: ValueKey('metadata-field-$key'),
+        controller: controller,
+        enabled: !busy,
+        maxLines: lines,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        keyboardType: number
+            ? const TextInputType.numberWithOptions(signed: true)
+            : TextInputType.text,
+        decoration: InputDecoration(labelText: label, errorMaxLines: 4),
+        validator: (value) => _validate(key, value),
+        onChanged: (_) {
+          if (serverErrors.isNotEmpty || error != null) {
+            setState(() {
+              serverErrors.removeWhere(
+                (field, _) => field == key || field.startsWith('$key.'),
+              );
+              error = null;
+            });
+          }
+        },
+      ),
+    );
+  }
+}
+
+/// Form pages close only after a successful API response.
+class _MetadataEditorPage extends StatelessWidget {
+  const _MetadataEditorPage({
+    required this.title,
+    required this.content,
+    required this.formKey,
+    required this.onSave,
+    required this.busy,
+    this.error,
+  });
+  final Widget title, content;
+  final GlobalKey<FormState> formKey;
+  final VoidCallback onSave;
+  final bool busy;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !busy,
+    child: Scaffold(
+      appBar: AppBar(title: title),
+      body: SafeArea(
+        bottom: false,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: AirmiusForm(
+                key: formKey,
+                child: AbsorbPointer(absorbing: busy, child: content),
+              ),
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (busy)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: LinearProgressIndicator(),
+                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: busy ? null : () => Navigator.pop(context),
+                        child: Text(
+                          AirmiusScope.of(context).t('common.cancel'),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: busy ? null : onSave,
+                        child: Text(AirmiusScope.of(context).t('common.save')),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 Widget _dropdown(
@@ -735,6 +994,7 @@ Widget _dropdown(
 ) => Padding(
   padding: const EdgeInsets.only(bottom: 12),
   child: DropdownButtonFormField<String>(
+    isExpanded: true,
     initialValue: value,
     decoration: InputDecoration(labelText: t(labelKey)),
     items: values
@@ -750,32 +1010,6 @@ Widget _dropdown(
     },
   ),
 );
-
-Widget _text(
-  String label,
-  TextEditingController controller, {
-  int lines = 1,
-  bool number = false,
-}) => Padding(
-  padding: const EdgeInsets.only(bottom: 12),
-  child: TextField(
-    controller: controller,
-    maxLines: lines,
-    keyboardType: number ? TextInputType.number : TextInputType.text,
-    decoration: InputDecoration(labelText: label),
-  ),
-);
-
-List<Widget> _dialogActions(BuildContext context, VoidCallback save) {
-  final t = AirmiusScope.of(context).t;
-  return [
-    TextButton(
-      onPressed: () => Navigator.pop(context),
-      child: Text(t('common.cancel')),
-    ),
-    FilledButton(onPressed: save, child: Text(t('common.save'))),
-  ];
-}
 
 int? _int(Object? value) => switch (value) {
   int number => number,

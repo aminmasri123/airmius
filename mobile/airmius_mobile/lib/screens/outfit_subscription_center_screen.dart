@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -959,7 +960,7 @@ class _OutfitCheckoutSheetState extends State<_OutfitCheckoutSheet> {
     );
     return _Sheet(
       title: t('outfit.checkoutTitle'),
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

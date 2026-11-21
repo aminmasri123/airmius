@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_date_input.dart';
@@ -526,7 +527,7 @@ class _EditorState extends State<_MemberEditor> {
             ),
           );
         }
-        return Form(
+        return AirmiusForm(
           key: _form,
           child: ListView(
             padding: const EdgeInsets.all(16),

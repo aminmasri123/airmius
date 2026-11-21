@@ -3489,76 +3489,96 @@ void main() {
   );
 
   for (final withRoute in [false, true]) {
-  testWidgets('free run starts from a GPS-ready compact mobile layout (route: $withRoute)', (
-    WidgetTester tester,
-  ) async {
-    _setTestViewport(tester, const Size(390, 844));
-    final user = AirmiusUser.fromJson({
-      'id': 7,
-      'name': 'Lena Lauf',
-      'email': 'lena@example.test',
-      'role': 'sportler',
-      'roles': ['sportler'],
-      'permissions': <String>[],
-      'clubs': <Object>[],
-      'teams': <Object>[],
-    });
-    final transport = _FreeRunTransport();
-    final client = AirmiusApiClient(
-      transport: transport,
-      baseUrl: 'https://airmius.test',
-      token: 'free-run-token',
+    testWidgets(
+      'free run starts from a GPS-ready compact mobile layout (route: $withRoute)',
+      (WidgetTester tester) async {
+        _setTestViewport(tester, const Size(390, 844));
+        final user = AirmiusUser.fromJson({
+          'id': 7,
+          'name': 'Lena Lauf',
+          'email': 'lena@example.test',
+          'role': 'sportler',
+          'roles': ['sportler'],
+          'permissions': <String>[],
+          'clubs': <Object>[],
+          'teams': <Object>[],
+        });
+        final transport = _FreeRunTransport();
+        final client = AirmiusApiClient(
+          transport: transport,
+          baseUrl: 'https://airmius.test',
+          token: 'free-run-token',
+        );
+        final container = await _authenticatedWidgetTestContainer(user);
+        final location = _FakeFreeRunLocationSource(
+          supportsBackgroundTracking: true,
+        );
+        addTearDown(location.close);
+
+        await _pumpAirmiusWidget(
+          tester,
+          container,
+          FreeRunScreen(
+            plannedRoute: withRoute
+                ? {
+                    'id': 42,
+                    'title': 'Parkrunde',
+                    'route_geometry': {
+                      'type': 'LineString',
+                      'coordinates': [
+                        [13.405, 52.52],
+                        [13.406, 52.521],
+                      ],
+                    },
+                  }
+                : null,
+            client: client,
+            locationSource: location,
+            draftStore: AirmiusFreeRunDraftStore(
+              store: _MemoryPreferencesStore(),
+            ),
+            showMapTiles: false,
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(find.text('Standort im Hintergrund'), findsOneWidget);
+        await tester.tap(find.text('GPS aktivieren'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Ohne Plan loslaufen'),
+          withRoute ? findsNothing : findsOneWidget,
+        );
+        if (withRoute)
+          expect(find.textContaining('Orange: geplante Route'), findsOneWidget);
+        expect(find.text('Lauf starten'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+
+        await tester.tap(find.text('Lauf starten'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Pause'), findsOneWidget);
+        expect(find.text('Beenden'), findsOneWidget);
+        expect(find.text('00:00'), findsOneWidget);
+        expect(transport.requests.single.path, '/api/v1/sport-tracks');
+        expect(
+          transport.requests.single.body?['sport_route_id'],
+          withRoute ? 42 : null,
+        );
+        expect(location.backgroundPreparationCount, 1);
+        expect(location.notificationTitle, 'Airmius · Freier Lauf');
+
+        tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        await tester.pump();
+        expect(find.text('Pause'), findsOneWidget);
+        expect(find.text('Lauf pausiert'), findsNothing);
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        expect(tester.takeException(), isNull);
+      },
     );
-    final container = await _authenticatedWidgetTestContainer(user);
-    final location = _FakeFreeRunLocationSource(
-      supportsBackgroundTracking: true,
-    );
-    addTearDown(location.close);
-
-    await _pumpAirmiusWidget(
-      tester,
-      container,
-      FreeRunScreen(
-        plannedRoute: withRoute ? {
-          'id': 42, 'title': 'Parkrunde',
-          'route_geometry': {'type': 'LineString', 'coordinates': [[13.405, 52.52], [13.406, 52.521]]},
-        } : null,
-        client: client,
-        locationSource: location,
-        draftStore: AirmiusFreeRunDraftStore(store: _MemoryPreferencesStore()),
-        showMapTiles: false,
-      ),
-    );
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(find.text('Standort im Hintergrund'), findsOneWidget);
-    await tester.tap(find.text('GPS aktivieren'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Ohne Plan loslaufen'), withRoute ? findsNothing : findsOneWidget);
-    if (withRoute) expect(find.textContaining('Orange: geplante Route'), findsOneWidget);
-    expect(find.text('Lauf starten'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-
-    await tester.tap(find.text('Lauf starten'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Pause'), findsOneWidget);
-    expect(find.text('Beenden'), findsOneWidget);
-    expect(find.text('00:00'), findsOneWidget);
-    expect(transport.requests.single.path, '/api/v1/sport-tracks');
-    expect(transport.requests.single.body?['sport_route_id'], withRoute ? 42 : null);
-    expect(location.backgroundPreparationCount, 1);
-    expect(location.notificationTitle, 'Airmius · Freier Lauf');
-
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    await tester.pump();
-    expect(find.text('Pause'), findsOneWidget);
-    expect(find.text('Lauf pausiert'), findsNothing);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    expect(tester.takeException(), isNull);
-  });
-
   }
 
   testWidgets('training templates screen renders an honest empty state', (

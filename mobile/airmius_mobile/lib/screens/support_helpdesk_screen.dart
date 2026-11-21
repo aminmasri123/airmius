@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -524,7 +525,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
               ),
               const SizedBox(height: 14),
             ],
-            Form(
+            AirmiusForm(
               key: _form,
               child: AirmiusPanel(
                 child: Column(

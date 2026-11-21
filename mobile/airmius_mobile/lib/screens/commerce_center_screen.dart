@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -2122,7 +2123,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
       title: t(
         _editing ? 'commerceAdv.editCampaign' : 'commerceAdv.createCampaign',
       ),
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2438,7 +2439,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
     final t = AirmiusScope.of(context).t;
     return _SheetFrame(
       title: t('commerceAdv.requestWebsite'),
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2560,7 +2561,7 @@ class _SellerApplicationSheetState extends State<_SellerApplicationSheet> {
     final t = AirmiusScope.of(context).t;
     return _SheetFrame(
       title: t('seller.applyTitle'),
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2696,7 +2697,7 @@ class _ProductSheetState extends State<_ProductSheet> {
     final t = AirmiusScope.of(context).t;
     return _SheetFrame(
       title: t(_editing ? 'seller.editProduct' : 'seller.addProduct'),
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2942,7 +2943,7 @@ class _ProviderSheetState extends State<_ProviderSheet> {
     final t = AirmiusScope.of(context).t;
     return _SheetFrame(
       title: t('seller.editProvider'),
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3172,7 +3173,7 @@ class _LocationSheetState extends State<_LocationSheet> {
       title: t(
         widget.location == null ? 'seller.addLocation' : 'seller.editLocation',
       ),
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3350,7 +3351,7 @@ class _PayoutProfileSheetState extends State<_PayoutProfileSheet> {
     final t = AirmiusScope.of(context).t;
     return _SheetFrame(
       title: t('seller.payoutDetails'),
-      child: Form(
+      child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

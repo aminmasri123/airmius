@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import '../widgets/country_field.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -20,10 +21,13 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/club_money_accounts_overview.dart';
 import 'club_request_inbox_screen.dart';
 import 'club_access_management_screen.dart';
 import 'club_sepa_batches_screen.dart';
 import 'club_finance_workspace_screen.dart';
+import 'club_metadata_screen.dart';
+import 'club_metadata_subject_screen.dart';
 import 'file_preview_screen.dart';
 import 'team_detail_screen.dart';
 import 'teams_center_screen.dart';
@@ -4053,7 +4057,9 @@ class _ClubMembershipManagementScreenState
     if (_mergingDuplicate) return;
     setState(() => _mergingDuplicate = true);
     try {
-      final management = await AirmiusServicesScope.of(context).repositories.clubs
+      final management = await AirmiusServicesScope.of(context)
+          .repositories
+          .clubs
           .mergeClubExternalMember(club.id, member.externalId!, targetUserId, {
             'resolution': resolution,
             'confirm_email': email.text.trim(),
@@ -4247,7 +4253,13 @@ class _ClubMembershipManagementScreenState
 
   Future<void> _editMember(ClubSummary club, _MemberEntry member) async {
     if (member.status.startsWith('removal_')) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Die Entfernung ist noch offen. Bitte zuerst den Widerspruch prüfen oder die Frist abwarten.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Die Entfernung ist noch offen. Bitte zuerst den Widerspruch prüfen oder die Frist abwarten.',
+          ),
+        ),
+      );
       return;
     }
     var role = member.role;
@@ -4423,6 +4435,12 @@ class _ClubMembershipManagementScreenState
       interval = _stringFromJson(rule, ['billing_interval'], fallback: 'none');
     }
 
+    final canViewMetadata = club.canViewMetadata;
+    final metadataSubjectType = member.isExternal
+        ? 'external_member'
+        : 'member';
+    final metadataSubjectId = member.isExternal ? member.externalId : member.id;
+
     final confirmed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (pageContext) => StatefulBuilder(
@@ -4434,7 +4452,7 @@ class _ClubMembershipManagementScreenState
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: DefaultTabController(
-                  length: 3,
+                  length: canViewMetadata ? 4 : 3,
                   child: Column(
                     children: [
                       TabBar(
@@ -4444,6 +4462,8 @@ class _ClubMembershipManagementScreenState
                           Tab(text: _tr('membership.member')),
                           Tab(text: _tr('membership.contribution')),
                           Tab(text: _tr('membership.address')),
+                          if (canViewMetadata)
+                            Tab(text: _tr('clubMetadataValues.title')),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -4875,6 +4895,96 @@ class _ClubMembershipManagementScreenState
                                 ),
                               ],
                             ),
+                            if (canViewMetadata)
+                              ListView(
+                                padding: EdgeInsets.zero,
+                                children: [
+                                  AirmiusPanel(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.fact_check_outlined,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                _tr('clubMetadataValues.title'),
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(_tr('clubMetadataValues.hint')),
+                                        if (metadataSubjectId != null) ...[
+                                          const SizedBox(height: 16),
+                                          ClubMetadataSubjectButton(
+                                            clubId: club.id,
+                                            subjectType: metadataSubjectType,
+                                            subjectId: metadataSubjectId,
+                                            subjectTitle: member.name,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  if (club.canEditMetadata) ...[
+                                    const SizedBox(height: 14),
+                                    AirmiusPanel(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _tr('clubMetadata.title'),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(_tr('clubMetadata.hint')),
+                                          const SizedBox(height: 14),
+                                          OutlinedButton.icon(
+                                            onPressed: () =>
+                                                Navigator.of(context).push(
+                                                  MaterialPageRoute<void>(
+                                                    builder: (_) =>
+                                                        ClubMetadataScreen(
+                                                          club: club,
+                                                        ),
+                                                  ),
+                                                ),
+                                            icon: const Icon(
+                                              Icons.add_box_outlined,
+                                            ),
+                                            label: Text(
+                                              _tr(
+                                                'clubMetadataValues.manageFields',
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                           ],
                         ),
                       ),
@@ -6467,7 +6577,10 @@ class _ClubMembershipManagementScreenState
               ),
               FilledButton.icon(
                 onPressed: () {
-                  if (amount.text.trim().isEmpty) return;
+                  if (amount.text.trim().isEmpty) {
+                    showFormFeedback(context, formMessage(context, 'required'));
+                    return;
+                  }
                   Navigator.pop(dialogContext, {
                     'user_id': selectedMemberId,
                     'amount': _normalizePaymentAmount(amount.text),
@@ -6678,7 +6791,10 @@ class _ClubMembershipManagementScreenState
               ),
               FilledButton.icon(
                 onPressed: () {
-                  if (amount.text.trim().isEmpty) return;
+                  if (amount.text.trim().isEmpty) {
+                    showFormFeedback(context, formMessage(context, 'required'));
+                    return;
+                  }
                   Navigator.pop(dialogContext, {
                     if (canChangeMember) 'user_id': selectedMemberId,
                     'amount': _normalizePaymentAmount(amount.text),
@@ -6827,6 +6943,7 @@ class _ClubMembershipManagementScreenState
           builder: (context, setEditorState) {
             Future<void> submit() async {
               if (title.text.trim().isEmpty || amount.text.trim().isEmpty) {
+                showFormFeedback(context, formMessage(context, 'required'));
                 return;
               }
               if (pickedReceipt != null && receiptFileId <= 0) {
@@ -8523,6 +8640,32 @@ class _ClubMembershipManagementScreenState
                   const SizedBox(height: 14),
                 ],
                 if (_section == 'payments') ...[
+                  ClubMoneyAccountsOverview(
+                    key: ValueKey('money-accounts-${club.id}'),
+                    load: () async {
+                      final services = AirmiusServicesScope.of(context);
+                      final client = services.clientForSession(
+                        services.authState.session,
+                      );
+                      final response = await client.clubFinanceWorkspace(
+                        club.id,
+                      );
+                      return response['data'] as Map<String, dynamic>? ?? {};
+                    },
+                    onOpen: (create) async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => ClubFinanceWorkspaceScreen(
+                            club: club,
+                            initialTabIndex: 1,
+                            createAccountOnOpen: create,
+                          ),
+                        ),
+                      );
+                      if (mounted) _reloadClub();
+                    },
+                  ),
+                  const SizedBox(height: 14),
                   AirmiusPanel(
                     child: Row(
                       children: [
@@ -8588,9 +8731,7 @@ class _ClubMembershipManagementScreenState
                   ),
                   TextButton.icon(
                     icon: const Icon(Icons.account_balance_wallet_outlined),
-                    label: Text(
-                      financeWorkspaceLabel(context, 'Budgets & Teamkassen'),
-                    ),
+                    label: Text(financeWorkspaceLabel(context, 'Budgets')),
                     onPressed: () async {
                       await Navigator.of(context).push(
                         MaterialPageRoute<void>(
@@ -8609,14 +8750,21 @@ class _ClubMembershipManagementScreenState
                         const SizedBox(height: 8),
                         _FinanceGuideTile(
                           icon: Icons.account_balance_wallet_outlined,
-                          title: 'Mannschaftskasse',
-                          body:
-                              'Unter Budgets & Teamkassen findest du Vereins- und Teamkassen, Umbuchungen und verfügbare Gelder.',
+                          title: financeWorkspaceLabel(
+                            context,
+                            'Kassen & Bankkonten',
+                          ),
+                          body: financeWorkspaceLabel(
+                            context,
+                            'Barkassen und Bankkonten des Vereins oder Teams getrennt verwalten.',
+                          ),
                           onTap: () async {
                             await Navigator.of(context).push(
                               MaterialPageRoute<void>(
-                                builder: (_) =>
-                                    ClubFinanceWorkspaceScreen(club: club),
+                                builder: (_) => ClubFinanceWorkspaceScreen(
+                                  club: club,
+                                  initialTabIndex: 1,
+                                ),
                               ),
                             );
                             if (mounted) _reloadClub();
@@ -10339,6 +10487,7 @@ class _MembershipRulesAdminPanelState
           FilledButton(
             onPressed: () {
               if (german.text.trim().isEmpty || value.text.trim().isEmpty) {
+                showFormFeedback(context, formMessage(context, 'required'));
                 return;
               }
               Navigator.pop(dialogContext, {
@@ -10585,6 +10734,7 @@ class _MembershipRulesAdminPanelState
                   if (source == 'link' &&
                       title.text.trim().isEmpty &&
                       url.text.trim().isEmpty) {
+                    showFormFeedback(context, formMessage(context, 'required'));
                     return;
                   }
                   Navigator.pop(context, {
@@ -13594,9 +13744,11 @@ class _MemberCard extends StatelessWidget {
                         : AirmiusColors.amber,
                   ),
                   StatusPill(
-                    t(member.isExternal
-                        ? 'membership.filter.external'
-                        : 'membership.account.internal'),
+                    t(
+                      member.isExternal
+                          ? 'membership.filter.external'
+                          : 'membership.account.internal',
+                    ),
                     color: member.isExternal
                         ? AirmiusColors.amber
                         : airmiusAccentColor(context),

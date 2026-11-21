@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'airmius_form.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
@@ -575,7 +576,7 @@ class _FormattedBlockDialogState extends State<_FormattedBlockDialog> {
     content: SizedBox(
       width: 640,
       child: SingleChildScrollView(
-        child: Form(
+        child: AirmiusForm(
           key: formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,

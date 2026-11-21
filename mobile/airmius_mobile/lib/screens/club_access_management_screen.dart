@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'club_delegation_form_screen.dart';
 
 import '../core/airmius_api_models.dart';
+import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
@@ -29,6 +31,11 @@ class _ClubAccessManagementScreenState
   bool _loading = true;
   bool _saving = false;
   String? _error;
+  bool _canRetryError = false;
+
+  String _errorMessage(Object error) => error is AirmiusApiException
+      ? error.userMessage
+      : _tr('membership.actionFailed');
   JsonMap _permissionData = {};
   JsonMap _roleData = {};
   JsonMap _assignmentData = {};
@@ -122,7 +129,12 @@ class _ClubAccessManagementScreenState
           );
       });
     } catch (error) {
-      if (mounted) setState(() => _error = '$error');
+      if (mounted) {
+        setState(() {
+        _error = _errorMessage(error);
+        _canRetryError = true;
+        });
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -141,7 +153,12 @@ class _ClubAccessManagementScreenState
         SnackBar(content: Text(_tr('membership.access.saved'))),
       );
     } catch (error) {
-      if (mounted) setState(() => _error = '$error');
+      if (mounted) {
+        setState(() {
+        _error = _errorMessage(error);
+        _canRetryError = false;
+        });
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -440,161 +457,27 @@ class _ClubAccessManagementScreenState
   }
 
   Future<void> _createDelegation() async {
-    final selected = <String>{};
-    var scopeType = 'club';
-    int? scopeId;
-    var startsAt = DateTime.now();
-    var endsAt = startsAt.add(const Duration(days: 7));
-    final result = await showDialog<JsonMap>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(_tr('membership.access.delegationCreate')),
-          content: SizedBox(
-            width: 480,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: scopeType,
-                    decoration: InputDecoration(
-                      labelText: _tr('membership.access.scope'),
-                    ),
-                    items: [
-                      ('club', _tr('membership.access.scopeClub')),
-                      ('department', _tr('membership.access.scopeDepartment')),
-                      ('team', _tr('membership.access.scopeTeam')),
-                    ]
-                        .map(
-                          (item) => DropdownMenuItem(
-                            value: item.$1,
-                            child: Text(item.$2),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) => setDialogState(() {
-                      scopeType = value ?? 'club';
-                      scopeId = null;
-                    }),
-                  ),
-                  if (scopeType != 'club') ...[
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int>(
-                      initialValue: scopeId,
-                      decoration: InputDecoration(
-                        labelText: _tr('membership.access.scopeTarget'),
-                      ),
-                      items: _scopeTargets(scopeType)
-                          .map(
-                            (target) => DropdownMenuItem(
-                              value: _integer(target['id']),
-                              child: Text('${target['name']}'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) =>
-                          setDialogState(() => scopeId = value),
-                    ),
-                  ],
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(_tr('membership.access.startsAt')),
-                    subtitle: Text(MaterialLocalizations.of(context).formatMediumDate(startsAt)),
-                    onTap: () async {
-                      final selectedDate = await showDatePicker(
-                        context: context,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 90)),
-                        initialDate: startsAt,
-                      );
-                      if (selectedDate != null) {
-                        final now = DateTime.now();
-                        setDialogState(() {
-                          startsAt = DateUtils.isSameDay(selectedDate, now)
-                              ? now
-                              : DateTime(
-                                  selectedDate.year,
-                                  selectedDate.month,
-                                  selectedDate.day,
-                                  12,
-                                );
-                          if (!endsAt.isAfter(startsAt)) {
-                            endsAt = startsAt.add(const Duration(days: 1));
-                          }
-                        });
-                      }
-                    },
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(_tr('membership.access.endsAt')),
-                    subtitle: Text(MaterialLocalizations.of(context).formatMediumDate(endsAt)),
-                    onTap: () async {
-                      final selectedDate = await showDatePicker(
-                        context: context,
-                        firstDate: startsAt.add(const Duration(days: 1)),
-                        lastDate: startsAt.add(const Duration(days: 90)),
-                        initialDate: endsAt.isAfter(startsAt) ? endsAt : startsAt.add(const Duration(days: 1)),
-                      );
-                      if (selectedDate != null) {
-                        setDialogState(
-                          () => endsAt = DateTime(
-                            selectedDate.year,
-                            selectedDate.month,
-                            selectedDate.day,
-                            23,
-                            59,
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  for (final permission in _permissionCatalog.where(
-                    (item) => _delegablePermissionKeys.contains('${item['key']}'),
-                  ))
-                    CheckboxListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('${permission['label'] ?? permission['key']}'),
-                      value: selected.contains('${permission['key']}'),
-                      onChanged: (value) => setDialogState(() {
-                        final permissionKey = '${permission['key']}';
-                        value == true
-                            ? selected.add(permissionKey)
-                            : selected.remove(permissionKey);
-                      }),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(_tr('membership.cancel')),
-            ),
-            FilledButton(
-              onPressed:
-                  selected.isEmpty || (scopeType != 'club' && scopeId == null)
-                  ? null
-                  : () => Navigator.pop(dialogContext, {
-                      'grantee_user_id': widget.memberId,
-                      'permissions': selected.toList(),
-                      'scope_type': scopeType,
-                      'scope_id': scopeType == 'club' ? null : scopeId,
-                      'starts_at': startsAt.toIso8601String(),
-                      'ends_at': endsAt.toIso8601String(),
-                    }),
-              child: Text(_tr('membership.access.grant')),
-            ),
-          ],
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ClubDelegationFormScreen(
+          clubName: widget.clubName,
+          memberName: widget.memberName,
+          memberId: widget.memberId,
+          permissions: _permissionCatalog
+              .where(
+                (item) => _delegablePermissionKeys.contains('${item['key']}'),
+              )
+              .toList(),
+          departments: _departments,
+          teams: _teams,
+          onSubmit: (payload) async {
+            await _repo.createClubPermissionDelegation(widget.clubId, payload);
+          },
         ),
       ),
     );
-    if (result == null || !mounted) return;
+    if (saved != true || !mounted) return;
     await _run(() async {
-      await _repo.createClubPermissionDelegation(widget.clubId, result);
       _delegationData = await _repo.clubPermissionDelegations(widget.clubId);
       if (mounted) setState(() {});
     });
@@ -941,9 +824,15 @@ class _ClubAccessManagementScreenState
                 children: [
                   if (_error != null)
                     MaterialBanner(
-                      content: Text(_error!),
+                      leading: const Icon(Icons.info_outline),
+                      content: Semantics(liveRegion: true, child: Text(_error!)),
                       actions: [
-                        TextButton(onPressed: _load, child: Text(_tr('membership.retry'))),
+                        if (_canRetryError)
+                          TextButton(onPressed: _load, child: Text(_tr('membership.retry'))),
+                        TextButton(
+                          onPressed: () => setState(() => _error = null),
+                          child: Text(_tr('common.close')),
+                        ),
                       ],
                     ),
                   ListTile(

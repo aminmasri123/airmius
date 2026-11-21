@@ -288,7 +288,7 @@ export function useOutfitSubscriptionsWorkspace(props) {
 
         router.post(route('auth.outfit-subscriptions.cancel', pendingCancelSubscription.value.id), {}, {
             preserveScroll: true,
-            onFinish: closeCancelModal,
+            onSuccess: closeCancelModal,
         })
     }
 

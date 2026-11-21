@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -259,7 +260,7 @@ class _ClubMembershipProspectsScreenState
           content: SizedBox(
             width: 520,
             child: SingleChildScrollView(
-              child: Form(
+              child: AirmiusForm(
                 key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

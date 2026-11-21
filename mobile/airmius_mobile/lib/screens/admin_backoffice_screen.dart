@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
@@ -1577,9 +1578,7 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
                 onPressed: () {
                   if (ownerId == null ||
                       title.text.trim().isEmpty ||
-                      _decimal(amount.text) <= 0) {
-                    return;
-                  }
+                      _decimal(amount.text) <= 0) { showFormFeedback(context, formMessage(context, 'required')); return; }
                   Navigator.pop(dialogContext, {
                     'source': source,
                     'club_id': actor == 'club' ? ownerId : null,
@@ -2017,9 +2016,7 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
             ),
             FilledButton(
               onPressed: () {
-                if (name.text.trim().isEmpty || _decimal(amount.text) < 0) {
-                  return;
-                }
+                if (name.text.trim().isEmpty || _decimal(amount.text) < 0) { showFormFeedback(context, formMessage(context, 'required')); return; }
                 Navigator.pop(dialogContext, {
                   'owner_user_id': contract?['owner'] is Map
                       ? _map(contract!['owner'])['id']

@@ -1,6 +1,8 @@
 import { defineConfig, loadEnv } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
+import { instrumentFormFeedback } from './resources/js/support/formFeedbackCompiler.js';
+import { parse as parseSfc } from '@vue/compiler-sfc';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
@@ -21,6 +23,18 @@ export default defineConfig(({ mode }) => {
             ...(devServerUrl ? { origin: devServerUrl } : {}),
         },
         plugins: [
+            {
+                name: 'airmius-form-feedback',
+                enforce: 'pre',
+                transform(source, id) {
+                    if (!id.endsWith('.vue') || id.includes('node_modules')) return;
+                    const template = parseSfc(source).descriptor.template;
+                    if (!template) return;
+                    return source.slice(0, template.loc.start.offset)
+                        + instrumentFormFeedback(template.content)
+                        + source.slice(template.loc.end.offset);
+                },
+            },
             laravel({
                 input: 'resources/js/app.js',
                 refresh: true,

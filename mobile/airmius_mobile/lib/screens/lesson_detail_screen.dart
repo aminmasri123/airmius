@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:http/http.dart' as http;
 
 import '../core/airmius_api_client.dart';
@@ -1270,9 +1271,7 @@ class _AssignmentScreenState extends State<_AssignmentScreen> {
                       }
                       if (questions.isEmpty &&
                           _body.text.trim().isEmpty &&
-                          _url.text.trim().isEmpty) {
-                        return;
-                      }
+                          _url.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
                       Navigator.pop(context, {
                         'body': _body.text.trim(),
                         'attachment_url': _url.text.trim(),

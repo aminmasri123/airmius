@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:flutter/services.dart';
 
 import '../core/airmius_api_client.dart';
@@ -251,7 +252,7 @@ class _TwoFactorSecurityScreenState extends State<TwoFactorSecurityScreen> {
   }
 
   Future<void> _confirm() async {
-    if (_confirmationCode.text.trim().isEmpty) return;
+    if (_confirmationCode.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
     final authState = AirmiusServicesScope.of(context).authState;
     await _run(() async {
       final response = await _client.confirmTwoFactor(

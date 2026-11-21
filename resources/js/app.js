@@ -1,6 +1,7 @@
 import { installSessionGuard } from './sessionGuard';
 ﻿import './bootstrap';
 import '../css/app.css';
+import '../css/form-feedback.css';
 
 import { createApp, h } from 'vue';
 import { createInertiaApp, router } from '@inertiajs/vue3';
@@ -14,6 +15,7 @@ import { createI18n } from 'vue-i18n';
 
 import sports from './lang/sports';
 import CookiePreferences from './Components/Privacy/CookiePreferences.vue';
+import { fieldFeedbackDirective, installFormFeedback } from './services/formFeedback';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const rtlLocales = ['ar'];
@@ -558,11 +560,13 @@ createInertiaApp({
         });
 
         installSessionGuard(router, props.initialPage);
+        installFormFeedback({ router, axios: window.axios });
 
         const mountedApp = createApp({ render: () => [h(App, props), h(CookiePreferences)] })
             .use(plugin)
             .use(ZiggyVue)
             .use(i18n)
+            .directive('field-feedback', fieldFeedbackDirective)
             .mount(el);
 
         scheduleAutoLocale(activeInitialLocale, localeActivationSequence);

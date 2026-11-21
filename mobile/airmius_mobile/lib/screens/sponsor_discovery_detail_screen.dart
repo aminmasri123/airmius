@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/airmius_api_client.dart';
@@ -134,7 +135,7 @@ class _SponsorDiscoveryDetailScreenState extends State<SponsorDiscoveryDetailScr
               ],
             )) else ...[
               if (inquiry != null) Text('${tx('Letzte Antwort', 'Latest response')}: ${txt(inquiry['status'])}${txt(inquiry['response_note']).isEmpty ? '' : ' · ${txt(inquiry['response_note'])}'}'),
-              Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              AirmiusForm(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Text(tx('Sponsoring anfragen', 'Request sponsorship'), style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 10),
                 TextFormField(controller: _subject, maxLength: 160,

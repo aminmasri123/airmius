@@ -26,3 +26,13 @@ test('Inertia session expiry clears the page through full login navigation',()=>
  s.events.invalid({detail:{response:{status:419}},preventDefault:()=>prevented=true});
  assert.equal(prevented,true);assert.deepEqual(s.redirects,['/login']);
 });
+
+test('unsaved form can postpone login navigation until its draft is safe', async()=>{
+ const s=setup();
+ s.browser.CustomEvent=class { constructor(type,options){this.type=type;this.cancelable=options.cancelable;} };
+ s.browser.dispatchEvent=event=>{assert.equal(event.type,'airmius:session-expired');assert.equal(event.cancelable,true);return false;};
+ s.browser.fetch=async()=>({status:401});
+ await s.listeners.tick();assert.deepEqual(s.redirects,[]);
+ s.browser.dispatchEvent=()=>true;
+ await s.listeners.focus();assert.deepEqual(s.redirects,['/login']);
+});

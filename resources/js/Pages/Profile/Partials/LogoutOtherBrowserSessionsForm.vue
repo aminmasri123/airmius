@@ -33,7 +33,6 @@ const logoutOtherBrowserSessions = () => {
         preserveScroll: true,
         onSuccess: () => closeModal(),
         onError: () => passwordInput.value.focus(),
-        onFinish: () => form.reset(),
     });
 };
 

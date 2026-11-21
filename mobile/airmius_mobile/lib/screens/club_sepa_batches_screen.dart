@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:intl/intl.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_date_input.dart';
@@ -139,7 +140,7 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
             content: SizedBox(
               width: 440,
               child: SingleChildScrollView(
-                child: Form(
+                child: AirmiusForm(
                   key: form,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -269,7 +270,7 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
             content: SizedBox(
               width: 440,
               child: SingleChildScrollView(
-                child: Form(
+                child: AirmiusForm(
                   key: form,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -716,7 +717,7 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
             content: SizedBox(
               width: 440,
               child: SingleChildScrollView(
-                child: Form(
+                child: AirmiusForm(
                   key: form,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

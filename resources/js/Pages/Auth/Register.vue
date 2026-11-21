@@ -67,7 +67,7 @@ const requiresGuardianConsent = computed(() => {
 
 const submit = () => {
     form.post(route('register'), {
-        onFinish: () => form.reset('password', 'password_confirmation'),
+        onSuccess: () => form.reset('password', 'password_confirmation'),
     });
 };
 

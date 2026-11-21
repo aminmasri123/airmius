@@ -3327,8 +3327,14 @@ class AirmiusApiClient {
   Future<AirmiusJson> enrollLearningCourse(int courseId) =>
       _json('POST', '/api/v1/learning/courses/$courseId/enroll');
 
-  Future<AirmiusJson> updateLearningParticipation(int enrollmentId, String action) =>
-      _json('PUT', '/api/v1/learning/enrollments/$enrollmentId/participation', body: {'action':action});
+  Future<AirmiusJson> updateLearningParticipation(
+    int enrollmentId,
+    String action,
+  ) => _json(
+    'PUT',
+    '/api/v1/learning/enrollments/$enrollmentId/participation',
+    body: {'action': action},
+  );
 
   Future<AirmiusJson> completeLearningLesson(int courseId, int lessonId) =>
       _json(
@@ -3369,9 +3375,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> submitLearningQuiz(
     int courseId,
     int quizId,
-    AirmiusJson answers,
-    {int? revision}
-  ) => _json(
+    AirmiusJson answers, {
+    int? revision,
+  }) => _json(
     'POST',
     '/api/v1/learning/courses/$courseId/quizzes/$quizId/attempts',
     body: {'answers': answers, if (revision != null) 'quiz_revision': revision},
@@ -3453,9 +3459,20 @@ class AirmiusApiClient {
     body: body,
   );
 
-  Future<AirmiusJson> deleteLearningStudioCourse(int courseId) => _json('DELETE', '/api/v1/learning-studio/courses/$courseId', body: {'confirmation': 'DELETE'});
+  Future<AirmiusJson> deleteLearningStudioCourse(int courseId) => _json(
+    'DELETE',
+    '/api/v1/learning-studio/courses/$courseId',
+    body: {'confirmation': 'DELETE'},
+  );
 
-  Future<AirmiusJson> deleteLearningStudioSection(int courseId, int sectionId) => _json('DELETE', '/api/v1/learning-studio/courses/$courseId/sections/$sectionId', body: {'confirmation': 'DELETE'});
+  Future<AirmiusJson> deleteLearningStudioSection(
+    int courseId,
+    int sectionId,
+  ) => _json(
+    'DELETE',
+    '/api/v1/learning-studio/courses/$courseId/sections/$sectionId',
+    body: {'confirmation': 'DELETE'},
+  );
 
   Future<AirmiusJson> createLearningStudioLesson(
     int courseId,
@@ -3511,9 +3528,34 @@ class AirmiusApiClient {
     body: {'body': body.trim()},
   );
 
-  Future<AirmiusJson> updateLearningStudioQuiz(int courseId, int quizId, AirmiusJson body) => _json('PUT', '/api/v1/learning-studio/courses/$courseId/quizzes/$quizId', body: body);
-  Future<AirmiusJson> gradeLearningStudioQuiz(int courseId, int quizId, int attemptId, AirmiusJson body) => _json('PUT', '/api/v1/learning-studio/courses/$courseId/quizzes/$quizId/attempts/$attemptId', body: body);
-  Future<AirmiusJson> updateLearningStudioAssignment(int courseId, int assignmentId, AirmiusJson body) => _json('PUT', '/api/v1/learning-studio/courses/$courseId/assignments/$assignmentId', body: body);
+  Future<AirmiusJson> updateLearningStudioQuiz(
+    int courseId,
+    int quizId,
+    AirmiusJson body,
+  ) => _json(
+    'PUT',
+    '/api/v1/learning-studio/courses/$courseId/quizzes/$quizId',
+    body: body,
+  );
+  Future<AirmiusJson> gradeLearningStudioQuiz(
+    int courseId,
+    int quizId,
+    int attemptId,
+    AirmiusJson body,
+  ) => _json(
+    'PUT',
+    '/api/v1/learning-studio/courses/$courseId/quizzes/$quizId/attempts/$attemptId',
+    body: body,
+  );
+  Future<AirmiusJson> updateLearningStudioAssignment(
+    int courseId,
+    int assignmentId,
+    AirmiusJson body,
+  ) => _json(
+    'PUT',
+    '/api/v1/learning-studio/courses/$courseId/assignments/$assignmentId',
+    body: body,
+  );
 
   Future<AirmiusJson> createLearningStudioQuiz(
     int courseId,
@@ -3969,7 +4011,12 @@ class AirmiusApiClient {
   Future<AirmiusJson> updateRide(int rideId, AirmiusJson body) =>
       _json('PUT', '/api/v1/rides/$rideId', body: body);
 
-  Future<AirmiusJson> requestRide(int rideId, {String? message, int? priceVersion, bool priceAcknowledged = false}) => _json(
+  Future<AirmiusJson> requestRide(
+    int rideId, {
+    String? message,
+    int? priceVersion,
+    bool priceAcknowledged = false,
+  }) => _json(
     'POST',
     '/api/v1/rides/$rideId/join',
     body: {
@@ -3980,7 +4027,11 @@ class AirmiusApiClient {
     },
   );
 
-  Future<AirmiusJson> confirmRidePrice(int rideId, int version) => _json('POST', '/api/v1/rides/$rideId/price/confirm', body: {'price_version': version, 'price_acknowledged': true});
+  Future<AirmiusJson> confirmRidePrice(int rideId, int version) => _json(
+    'POST',
+    '/api/v1/rides/$rideId/price/confirm',
+    body: {'price_version': version, 'price_acknowledged': true},
+  );
 
   Future<AirmiusJson> leaveRide(int rideId) =>
       _json('POST', '/api/v1/rides/$rideId/leave');

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
@@ -1642,7 +1643,7 @@ class _CreateDecisionDialogState extends State<_CreateDecisionDialog> {
       title: Text(scope.t('events.createDecisionTitle')),
       content: SizedBox(
         width: 520,
-        child: Form(
+        child: AirmiusForm(
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(
@@ -1839,7 +1840,7 @@ class _EditEventDialogState extends State<_EditEventDialog> {
       title: Text(scope.t('events.editTitle')),
       content: SizedBox(
         width: 520,
-        child: Form(
+        child: AirmiusForm(
           key: _formKey,
           child: SingleChildScrollView(
             child: Column(

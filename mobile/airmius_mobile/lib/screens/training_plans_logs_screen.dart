@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import '../core/exercise_suitability.dart';
 
 import '../core/airmius_api_client.dart';
@@ -5452,7 +5453,7 @@ class _LogFormDialogState extends State<_LogFormDialog> {
   }
 
   void _submit() {
-    if (_title.text.trim().isEmpty) return;
+    if (_title.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
     Navigator.pop(context, _payload());
   }
 

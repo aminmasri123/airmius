@@ -31,7 +31,7 @@ const selectClub = (club) => {
     router.post(route('auth.workspaces.club.select', club.id), {}, {
         preserveScroll: true,
         only: ['workspaceContext', 'auth', 'flash'],
-        onFinish: close,
+        onSuccess: close,
     })
 }
 
@@ -44,7 +44,7 @@ const selectPersonal = () => {
     router.delete(route('auth.workspaces.club.clear'), {
         preserveScroll: true,
         only: ['workspaceContext', 'auth', 'flash'],
-        onFinish: close,
+        onSuccess: close,
     })
 }
 </script>

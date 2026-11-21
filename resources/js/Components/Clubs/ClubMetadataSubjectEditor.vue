@@ -3,6 +3,7 @@ import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import valueTranslations from '@/i18n/clubMetadataValuesLocalization.json'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { formFailureText, safeFieldMessage } from '@/services/formFeedbackMessages'
 
 const props = defineProps({
     clubId: { type: [Number, String], required: true },
@@ -27,8 +28,9 @@ const selectedCategories = ref([])
 const error = ref('')
 const success = ref('')
 const url = computed(() => `/api/v1/clubs/${encodeURIComponent(props.clubId)}/metadata/subjects/${encodeURIComponent(props.subjectType)}/${encodeURIComponent(props.subjectId)}`)
-const apiError = (cause) => Object.values(cause?.response?.data?.errors || {}).flat()[0]
-    || cause?.response?.data?.message || vt('error')
+const apiError = (cause) => cause?.response?.status === 422
+    ? safeFieldMessage(Object.values(cause.response.data?.errors || {}).flat()[0], locale.value)
+    : formFailureText(cause?.response?.status, locale.value)
 const hydrate = (data) => {
     payload.value = data
     values.value = Object.fromEntries(data.fields.map((field) => [field.id, field.value]))

@@ -36,7 +36,7 @@ const submit = () => {
     }
 
     form.post(route('guardian-access.account.store'), {
-        onFinish: () => form.reset('password', 'password_confirmation'),
+        onSuccess: () => form.reset('password', 'password_confirmation'),
     })
 }
 </script>

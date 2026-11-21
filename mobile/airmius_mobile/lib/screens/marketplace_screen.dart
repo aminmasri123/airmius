@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -2373,7 +2374,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
       initialChildSize: .94,
       minChildSize: .65,
       maxChildSize: .98,
-      builder: (context, controller) => Form(
+      builder: (context, controller) => AirmiusForm(
         key: _formKey,
         child: ListView(
           controller: controller,
@@ -3337,7 +3338,7 @@ class _ReturnDialogState extends State<_ReturnDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_reason.text.trim().isEmpty) return;
+            if (_reason.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
             Navigator.pop(
               context,
               _ReturnDraft(

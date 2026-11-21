@@ -1,0 +1,25 @@
+.form-feedback-status {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .75rem 1rem;
+    margin-block: .5rem 1rem;
+    border: 1px solid var(--border, #94a3b8);
+    border-radius: .75rem;
+    background: var(--card, #fff);
+    color: var(--primary, #172033);
+    font-size: .875rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    grid-column: 1 / -1;
+}
+.form-feedback-status[hidden] { display: none; }
+.form-feedback-status[data-kind="error"], .form-feedback-field { color: var(--error, #b91c1c); }
+.form-feedback-status[data-kind="error"] { border-color: currentColor; }
+.form-feedback-status[data-kind="success"] { border-color: var(--success, #15803d); }
+.form-feedback-status button { flex-shrink: 0; padding-inline: .25rem; }
+.form-feedback-field { font-size: .8125rem; line-height: 1.5; margin-block: .375rem; overflow-wrap: anywhere; }
+[aria-invalid="true"][data-feedback-field] { outline: 2px solid var(--error, #b91c1c); outline-offset: 2px; }
+.form-feedback-global { position: fixed; inset-inline: 1rem; bottom: 1rem; z-index: 100; max-width: 36rem; margin-inline: auto; pointer-events: none; }
+.form-feedback-global > * { pointer-events: auto; box-shadow: 0 8px 28px #0002; }

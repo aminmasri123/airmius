@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import '../widgets/country_field.dart';
 
 import '../core/airmius_api_client.dart';
@@ -547,7 +548,7 @@ class _OrganizationUnitDialogState extends State<_OrganizationUnitDialog> {
       content: SingleChildScrollView(
         child: SizedBox(
           width: 520,
-          child: Form(
+          child: AirmiusForm(
             key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,

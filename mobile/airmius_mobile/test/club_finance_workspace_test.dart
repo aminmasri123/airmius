@@ -11,6 +11,36 @@ import 'package:airmius/models/club_summary.dart';
 import 'package:airmius/screens/club_finance_workspace_screen.dart';
 
 void main() {
+  testWidgets('direct create opens type choice and submits a bank account', (
+    tester,
+  ) async {
+    final transport = _FinanceTransport();
+    await _mountDirectCreate(tester, transport);
+    expect(find.text('Was möchtest du anlegen?'), findsOneWidget);
+    await tester.tap(find.text('Bankkonto'));
+    await tester.pumpAndSettle();
+    expect(find.text('IBAN'), findsOneWidget);
+    expect(find.text('Bankname'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField).first, 'Vereinsbank');
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+    final request = transport.requests.lastWhere((r) => r.method == 'POST');
+    expect(request.path, '/api/v1/clubs/7/money-accounts');
+    expect(request.body?['type'], 'bank');
+    expect(find.text('Was möchtest du anlegen?'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('direct create does not open for read-only finance users', (
+    tester,
+  ) async {
+    final transport = _FinanceTransport(canManage: false);
+    await _mountDirectCreate(tester, transport);
+    expect(find.text('Was möchtest du anlegen?'), findsNothing);
+    expect(find.text('Kasse oder Bankkonto anlegen'), findsNothing);
+    expect(transport.requests.where((r) => r.method == 'POST'), isEmpty);
+  });
+
   test('finance labels match all supported languages', () {
     final keys = clubFinanceWorkspaceLabels['de']!.keys.toSet();
     for (final language in ['de', 'en', 'fr', 'ar']) {
@@ -120,10 +150,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('U17 Budget'), findsOneWidget);
       expect(find.text('Frei: 800.00 EUR'), findsOneWidget);
-      await tester.tap(find.text('Kassen & Konten'));
+      await tester.tap(find.text('Kassen & Bankkonten'));
       await tester.pumpAndSettle();
       expect(find.text('Team cash'), findsOneWidget);
-      await tester.tap(find.text('Kasse / Konto anlegen'));
+      await tester.tap(find.text('Kasse oder Bankkonto anlegen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Barkasse'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Speichern'));
       await tester.pumpAndSettle();
@@ -174,7 +206,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Kassen & Konten'));
+    await tester.tap(find.text('Kassen & Bankkonten'));
     await tester.pumpAndSettle();
     for (var attempt = 0; attempt < 2; attempt++) {
       await tester.tap(find.text('Transfer'));
@@ -204,9 +236,51 @@ void main() {
   });
 }
 
+Future<void> _mountDirectCreate(
+  WidgetTester tester,
+  _FinanceTransport transport,
+) async {
+  final container = AirmiusServiceContainer(
+    environment: const AirmiusAppEnvironment(
+      apiBaseUrl: 'https://example.test',
+      enableOfflineQueue: false,
+    ),
+    transport: transport,
+  );
+  final club = ClubSummary.fromAirmiusClub(
+    AirmiusClub.fromJson(const {
+      'id': 7,
+      'name': 'Test Club',
+      'can_manage': true,
+    }),
+  );
+  await tester.pumpWidget(
+    AirmiusScope(
+      language: AirmiusLanguage.de,
+      setLanguage: (_) {},
+      child: AirmiusServicesScope(
+        container: container,
+        child: MaterialApp(
+          home: ClubFinanceWorkspaceScreen(
+            club: club,
+            initialTabIndex: 1,
+            createAccountOnOpen: true,
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 class _FinanceTransport implements AirmiusApiTransport {
-  _FinanceTransport({this.fail = false, this.failTransferOnce = false});
+  _FinanceTransport({
+    this.fail = false,
+    this.failTransferOnce = false,
+    this.canManage = true,
+  });
   final bool fail;
+  final bool canManage;
   bool failTransferOnce;
   final requests = <AirmiusApiRequest>[];
   @override
@@ -223,7 +297,8 @@ class _FinanceTransport implements AirmiusApiTransport {
     if (request.path.endsWith('finance-workspace')) {
       data = {
         'available': true,
-        'can_manage': true,
+        'can_manage': canManage,
+        'can_manage_club': canManage,
         'can_approve': true,
         'can_close': true,
         'teams': [],

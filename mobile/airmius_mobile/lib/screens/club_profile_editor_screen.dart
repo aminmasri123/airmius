@@ -448,7 +448,7 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 14),
                     child: AirmiusButton(
-                      label: financeWorkspaceLabel(context, 'Kassen & Konten'),
+                      label: financeWorkspaceLabel(context, 'Kassen & Bankkonten'),
                       icon: Icons.account_balance_outlined,
                       secondary: true,
                       onPressed: () => Navigator.of(context).push(

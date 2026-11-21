@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/airmius_form.dart';
 import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
@@ -675,7 +676,7 @@ class _OutfitOperationsScreenState extends State<OutfitOperationsScreen> {
           18 + MediaQuery.viewInsetsOf(sheetContext).bottom,
         ),
         child: SingleChildScrollView(
-          child: Form(
+          child: AirmiusForm(
             key: formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -353,7 +353,7 @@ const submitTrainerApplication = () => {
 
     roleApplicationForm.post(route('auth.role-applications.store'), {
         preserveScroll: true,
-        onFinish: () => roleApplicationForm.reset('message', 'application_data'),
+        onSuccess: () => roleApplicationForm.reset('message', 'application_data'),
     })
 }
 const openPaymentModal = ref({
@@ -1180,7 +1180,7 @@ const cancelOpenSubscriptionPayment = (invoice) => {
 
     router.post(route('auth.settings.subscription-invoices.cancel-open-payment', invoice.id), {}, {
         preserveScroll: true,
-        onFinish: closeOpenPaymentModal,
+        onSuccess: closeOpenPaymentModal,
     })
 }
 
@@ -1189,7 +1189,7 @@ const deleteOpenSubscriptionPayment = (invoice) => {
 
     router.delete(route('auth.settings.subscription-invoices.destroy-open-payment', invoice.id), {
         preserveScroll: true,
-        onFinish: closeOpenPaymentModal,
+        onSuccess: closeOpenPaymentModal,
     })
 }
 
@@ -1238,7 +1238,7 @@ const confirmSubscriptionCancel = () => {
 
     router.post(route('auth.user-subscriptions.cancel', subscription.id), {}, {
         preserveScroll: true,
-        onFinish: closeSubscriptionCancelModal,
+        onSuccess: closeSubscriptionCancelModal,
     })
 }
 

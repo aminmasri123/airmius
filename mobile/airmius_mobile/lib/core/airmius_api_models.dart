@@ -2065,7 +2065,9 @@ class AirmiusTeam {
       users: _jsonList(json['users']).map(AirmiusUser.fromJson).toList(),
       canManage: _bool(json['can_manage']) || _bool(json['can_update']),
       canUpdateMemberRoles: _bool(json['can_update_member_roles']),
-      roleOffers: _jsonList(json['role_offers']).map(AirmiusTeamRoleOffer.fromJson).toList(),
+      roleOffers: _jsonList(
+        json['role_offers'],
+      ).map(AirmiusTeamRoleOffer.fromJson).toList(),
       canManageMetadata: _bool(json['can_manage_metadata']),
       canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
       viewerIsMember: _bool(json['viewer_is_member']),
@@ -2102,7 +2104,16 @@ int? _nullableIntFromJson(Object? value) {
 }
 
 class AirmiusTeamRoleOffer {
-  const AirmiusTeamRoleOffer({required this.id, required this.recipientId, required this.recipientName, required this.role, required this.previousRole, required this.expiresAt, this.canRespond = false, this.canCancel = false});
+  const AirmiusTeamRoleOffer({
+    required this.id,
+    required this.recipientId,
+    required this.recipientName,
+    required this.role,
+    required this.previousRole,
+    required this.expiresAt,
+    this.canRespond = false,
+    this.canCancel = false,
+  });
   final int id;
   final int recipientId;
   final String recipientName;
@@ -2112,9 +2123,14 @@ class AirmiusTeamRoleOffer {
   final bool canRespond;
   final bool canCancel;
   factory AirmiusTeamRoleOffer.fromJson(JsonMap json) => AirmiusTeamRoleOffer(
-    id: _int(json['id']), recipientId: _int(json['recipient_id']), recipientName: _string(json['recipient_name']),
-    role: _string(json['role']), previousRole: _string(json['previous_role']), expiresAt: _string(json['expires_at']),
-    canRespond: _bool(json['can_respond']), canCancel: _bool(json['can_cancel']),
+    id: _int(json['id']),
+    recipientId: _int(json['recipient_id']),
+    recipientName: _string(json['recipient_name']),
+    role: _string(json['role']),
+    previousRole: _string(json['previous_role']),
+    expiresAt: _string(json['expires_at']),
+    canRespond: _bool(json['can_respond']),
+    canCancel: _bool(json['can_cancel']),
   );
 }
 
