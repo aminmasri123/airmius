@@ -2,19 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_services_scope.dart';
-import '../core/airmius_theme.dart';
 
 class SponsorProfileReviewScreen extends StatefulWidget {
-  const SponsorProfileReviewScreen({super.key, required this.sponsor, required this.canReview});
+  const SponsorProfileReviewScreen({
+    super.key,
+    required this.sponsor,
+    required this.canReview,
+  });
 
   final Map<String, dynamic> sponsor;
   final bool canReview;
 
   @override
-  State<SponsorProfileReviewScreen> createState() => _SponsorProfileReviewScreenState();
+  State<SponsorProfileReviewScreen> createState() =>
+      _SponsorProfileReviewScreenState();
 }
 
-class _SponsorProfileReviewScreenState extends State<SponsorProfileReviewScreen> {
+class _SponsorProfileReviewScreenState
+    extends State<SponsorProfileReviewScreen> {
   bool _busy = false;
   String? _error;
 
@@ -39,11 +44,17 @@ class _SponsorProfileReviewScreenState extends State<SponsorProfileReviewScreen>
 
   static const _readinessLabels = <String, (String, String)>{
     'sponsor_name': ('Markenname', 'Brand name'),
-    'sponsor_legal_name': ('Rechtlicher Unternehmensname', 'Legal company name'),
+    'sponsor_legal_name': (
+      'Rechtlicher Unternehmensname',
+      'Legal company name',
+    ),
     'sponsor_country': ('Land', 'Country'),
     'sponsor_contact': ('E-Mail', 'Email'),
     'sponsor_website': ('Website', 'Website'),
-    'sponsor_legal_accuracy': ('Bestätigung der rechtlichen Angaben', 'Legal accuracy confirmation'),
+    'sponsor_legal_accuracy': (
+      'Bestätigung der rechtlichen Angaben',
+      'Legal accuracy confirmation',
+    ),
     'sponsor_data_privacy': ('Datenschutzbestätigung', 'Privacy confirmation'),
   };
 
@@ -52,14 +63,67 @@ class _SponsorProfileReviewScreenState extends State<SponsorProfileReviewScreen>
     return text.isEmpty ? '–' : text;
   }
 
+  bool _isLogo(String field) =>
+      const {'logo', 'logo_light', 'logo_dark'}.contains(field);
+
+  String? _logoUrl(Object? value) {
+    final raw = value?.toString().trim() ?? '';
+    if (raw.isEmpty) return null;
+    final uri = Uri.tryParse(raw);
+    if (uri != null &&
+        (uri.scheme == 'https' || uri.scheme == 'http') &&
+        uri.host.isNotEmpty) {
+      return raw;
+    }
+    if (raw.startsWith('/') ||
+        raw.contains('..') ||
+        raw.contains('?') ||
+        raw.contains('#')) {
+      return null;
+    }
+    final services = AirmiusServicesScope.of(context);
+    final origin = Uri.tryParse(services.environment.apiBaseUrl);
+    if (origin == null || origin.host.isEmpty) return null;
+    final normalized = raw.startsWith('storage/') ? raw.substring(8) : raw;
+    if (origin.host == 'airmius.com' || origin.host == 'www.airmius.com') {
+      return Uri.https('cdn.airmius.com', '/$normalized').toString();
+    }
+    return origin.resolve('/storage/$normalized').toString();
+  }
+
+  Widget _logoPreview(Object? value) {
+    final url = _logoUrl(value);
+    if (url == null) return Text(_text('Kein Bild', 'No image'));
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 128,
+        height: 100,
+        color: Colors.white,
+        child: Image.network(
+          url,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => Center(
+            child: Text(
+              _text('Bild nicht verfügbar', 'Image unavailable'),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _decide(String decision) async {
     final note = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(decision == 'verified'
-            ? _text('Sponsorprofil freigeben?', 'Approve sponsor profile?')
-            : _text('Sponsorprofil ablehnen?', 'Reject sponsor profile?')),
+        title: Text(
+          decision == 'verified'
+              ? _text('Sponsorprofil freigeben?', 'Approve sponsor profile?')
+              : _text('Sponsorprofil ablehnen?', 'Reject sponsor profile?'),
+        ),
         content: TextField(
           controller: note,
           minLines: 2,
@@ -67,8 +131,14 @@ class _SponsorProfileReviewScreenState extends State<SponsorProfileReviewScreen>
           decoration: InputDecoration(labelText: _text('Begründung', 'Reason')),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(_text('Abbrechen', 'Cancel'))),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(_text('Bestätigen', 'Confirm'))),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(_text('Abbrechen', 'Cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(_text('Bestätigen', 'Confirm')),
+          ),
         ],
       ),
     );
@@ -76,19 +146,35 @@ class _SponsorProfileReviewScreenState extends State<SponsorProfileReviewScreen>
     note.dispose();
     if (confirmed != true || !mounted) return;
     if (decision == 'rejected' && reason.isEmpty) {
-      setState(() => _error = _text('Bitte begründe die Ablehnung.', 'Please provide a reason for rejection.'));
+      setState(
+        () => _error = _text(
+          'Bitte begründe die Ablehnung.',
+          'Please provide a reason for rejection.',
+        ),
+      );
       return;
     }
-    setState(() { _busy = true; _error = null; });
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       final services = AirmiusServicesScope.of(context);
       final client = services.clientForSession(services.authState.session);
-      await client.reviewManagedSponsor(widget.sponsor['id'] as int, decision: decision, note: reason);
+      await client.reviewManagedSponsor(
+        widget.sponsor['id'] as int,
+        decision: decision,
+        note: reason,
+      );
       if (mounted) Navigator.pop(context, true);
     } on AirmiusApiException catch (error) {
       if (mounted) setState(() => _error = error.userMessage);
     } catch (_) {
-      if (mounted) setState(() => _error = _text('Prüfung fehlgeschlagen.', 'Review failed.'));
+      if (mounted) {
+        setState(
+          () => _error = _text('Prüfung fehlgeschlagen.', 'Review failed.'),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -112,58 +198,122 @@ class _SponsorProfileReviewScreenState extends State<SponsorProfileReviewScreen>
         : <String>[];
 
     return Scaffold(
-      appBar: AppBar(title: Text(_text('Sponsorprofil prüfen', 'Review sponsor profile'))),
+      appBar: AppBar(
+        title: Text(_text('Sponsorprofil prüfen', 'Review sponsor profile')),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(_value(sponsor['name']), style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            _value(sponsor['name']),
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 6),
-          Text(pending ? _text('In Prüfung', 'Pending review') : _value(sponsor['verification_status'])),
+          Text(
+            pending
+                ? _text('In Prüfung', 'Pending review')
+                : _value(sponsor['verification_status']),
+          ),
           if (missing.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(_text('Für die Freigabe fehlen:', 'Required before approval:'),
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(
+              _text('Für die Freigabe fehlen:', 'Required before approval:'),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
             ...missing.map((key) {
               final label = _readinessLabels[key];
-              return Text('• ${label == null ? key : _text(label.$1, label.$2)}');
+              return Text(
+                '• ${label == null ? key : _text(label.$1, label.$2)}',
+              );
             }),
           ],
           const SizedBox(height: 20),
-          Text(_text('Änderungen seit der letzten Einreichung', 'Changes since submission'),
-              style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            _text(
+              'Änderungen seit der letzten Einreichung',
+              'Changes since submission',
+            ),
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 10),
           if (changes.isEmpty)
-            Text(_text('Für diese Einreichung ist kein Vorher/Nachher-Vergleich vorhanden. Prüfe alle aktuellen Angaben unten.',
-                'No before-and-after history is available for this submission. Review all current details below.')),
+            Text(
+              _text(
+                'Für diese Einreichung ist kein Vorher/Nachher-Vergleich vorhanden. Prüfe alle aktuellen Angaben unten.',
+                'No before-and-after history is available for this submission. Review all current details below.',
+              ),
+            ),
           ...changes.map((change) {
             final field = '${change['field'] ?? ''}';
             final label = _labels[field];
             return Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(label == null ? field : _text(label.$1, label.$2),
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 7),
-                  Text('${_text('Vorher', 'Before')}: ${_value(change['before'])}'),
-                  Text('${_text('Jetzt', 'Now')}: ${_value(change['after'])}'),
-                ]),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label == null ? field : _text(label.$1, label.$2),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 7),
+                    if (_isLogo(field))
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 12,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_text('Vorher', 'Before')),
+                              _logoPreview(change['before']),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_text('Jetzt', 'Now')),
+                              _logoPreview(change['after']),
+                            ],
+                          ),
+                        ],
+                      )
+                    else ...[
+                      Text(
+                        '${_text('Vorher', 'Before')}: ${_value(change['before'])}',
+                      ),
+                      Text(
+                        '${_text('Jetzt', 'Now')}: ${_value(change['after'])}',
+                      ),
+                    ],
+                  ],
+                ),
               ),
             );
           }),
           const SizedBox(height: 20),
-          Text(_text('Aktuelle Unternehmensangaben', 'Current company details'),
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ..._labels.entries.map((entry) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(_text(entry.value.$1, entry.value.$2)),
-                subtitle: SelectableText(_value(fields[entry.key])),
-              )),
-          if (_error != null) Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          Text(
+            _text('Aktuelle Unternehmensangaben', 'Current company details'),
+            style: Theme.of(context).textTheme.titleMedium,
           ),
+          const SizedBox(height: 8),
+          ..._labels.entries.map(
+            (entry) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(_text(entry.value.$1, entry.value.$2)),
+              subtitle: _isLogo(entry.key)
+                  ? _logoPreview(fields[entry.key])
+                  : SelectableText(_value(fields[entry.key])),
+            ),
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           if (pending && widget.canReview) ...[
             const SizedBox(height: 16),
             FilledButton.icon(

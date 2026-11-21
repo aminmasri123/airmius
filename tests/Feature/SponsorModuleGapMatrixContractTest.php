@@ -179,7 +179,6 @@ class SponsorModuleGapMatrixContractTest extends TestCase
             'legal_name' => 'Complete Contract Partner GmbH',
             'country_code' => 'DE',
             'email' => 'contracts@example.test',
-            'website' => 'https://contracts.example.test',
             'accepted_rules' => ['legal_accuracy' => true, 'data_privacy' => true],
             'verification_version' => RevenueTrustService::CONTRACT_VERSION,
         ]);
@@ -188,6 +187,7 @@ class SponsorModuleGapMatrixContractTest extends TestCase
 
         $this->assertTrue($readiness['can_approve']);
         $this->assertSame([], $readiness['blocks']);
+        $this->assertNotContains('sponsor_website', $readiness['blocks']);
         $service->ensureSponsorApprovable($complete);
     }
 

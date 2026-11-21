@@ -2508,7 +2508,7 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
               _field('vat_id', _profileCopy(context, 'vat_id'), max: 80),
               _field('contact_name', t('sponsorCockpit.contact')),
               _field('email', t('sponsorCockpit.email')),
-              _field('website', t('sponsorCockpit.website')),
+              _field('website', '${t('sponsorCockpit.website')} (${_profileCopy(context, 'optional')})'),
               const SizedBox(height: 4),
               Text(
                 t('sponsorCockpit.logoUploadTitle'),
@@ -2650,6 +2650,7 @@ const _profileMessages = <AirmiusLanguage, Map<String, String>>{
     'data_privacy':
         'Ich nutze Kontakt- und Kampagnendaten nur zweckgebunden und beachte die Datenschutzregeln.',
     'verification_title': 'Öffentliche Verifizierung',
+    'optional': 'optional',
     'status_pending_review': 'In Prüfung',
     'status_verified': 'Verifiziert',
     'status_rejected': 'Korrektur nötig',
@@ -2677,6 +2678,7 @@ const _profileMessages = <AirmiusLanguage, Map<String, String>>{
     'data_privacy':
         'I use contact and campaign data only for its intended purpose and follow privacy rules.',
     'verification_title': 'Public verification',
+    'optional': 'optional',
     'status_pending_review': 'Under review',
     'status_verified': 'Verified',
     'status_rejected': 'Changes needed',
@@ -2702,6 +2704,7 @@ const _profileMessages = <AirmiusLanguage, Map<String, String>>{
     'data_privacy':
         'J’utilise les données de contact et de campagne uniquement aux fins prévues et respecte les règles de confidentialité.',
     'verification_title': 'Vérification publique',
+    'optional': 'facultatif',
     'status_pending_review': 'En cours d’examen',
     'status_verified': 'Vérifié',
     'status_rejected': 'Correction requise',
@@ -2728,6 +2731,7 @@ const _profileMessages = <AirmiusLanguage, Map<String, String>>{
     'data_privacy':
         'أستخدم بيانات الاتصال والحملات للغرض المحدد فقط وألتزم بقواعد الخصوصية.',
     'verification_title': 'التحقق العلني',
+    'optional': 'اختياري',
     'status_pending_review': 'قيد المراجعة',
     'status_verified': 'تم التحقق',
     'status_rejected': 'يلزم التصحيح',

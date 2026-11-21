@@ -58,6 +58,14 @@ const reviewLabels = {
     logo_dark: 'Logo für dunkles Design',
 }
 const reviewValue = value => String(value ?? '').trim() || '–'
+const isReviewLogo = field => ['logo', 'logo_light', 'logo_dark'].includes(field)
+const reviewImageUrl = value => {
+    const source = String(value ?? '').trim()
+    if (!source || source.includes('..') || source.includes('?') || source.includes('#')) return ''
+    if (/^https?:\/\//i.test(source)) return source
+    if (source.startsWith('/')) return source
+    return `/storage/${source.startsWith('storage/') ? source.slice(8) : source}`
+}
 const openReview = sponsor => { reviewTarget.value = sponsor; reviewNote.value = ''; reviewError.value = '' }
 const submitReview = decision => {
     if (!reviewTarget.value || reviewBusy.value) return
@@ -802,14 +810,25 @@ const paginationLabel = (label) => String(label || '')
                     <div v-else class="mt-2 grid gap-2">
                         <div v-for="(change, index) in reviewTarget.review_changes" :key="index" class="rounded border border-border bg-inputBg p-3 text-sm">
                             <p class="font-bold text-primary">{{ reviewLabels[change.field] || change.field }}</p>
-                            <p class="break-all text-secondary">Vorher: {{ reviewValue(change.before) }}</p>
-                            <p class="break-all text-primary">Jetzt: {{ reviewValue(change.after) }}</p>
+                            <div v-if="isReviewLogo(change.field)" class="mt-2 flex flex-wrap gap-4">
+                                <div v-for="side in [{ label: 'Vorher', value: change.before }, { label: 'Jetzt', value: change.after }]" :key="side.label">
+                                    <p class="mb-1 text-secondary">{{ side.label }}</p>
+                                    <img v-if="reviewImageUrl(side.value)" :src="reviewImageUrl(side.value)" :alt="`${reviewLabels[change.field]} ${side.label}`" class="h-24 w-32 rounded-lg bg-white object-contain" />
+                                    <p v-else class="text-secondary">Kein Bild</p>
+                                </div>
+                            </div>
+                            <template v-else>
+                                <p class="break-all text-secondary">Vorher: {{ reviewValue(change.before) }}</p>
+                                <p class="break-all text-primary">Jetzt: {{ reviewValue(change.after) }}</p>
+                            </template>
                         </div>
                     </div>
                     <h3 class="mt-6 font-bold text-primary">Aktuelle Unternehmensangaben</h3>
                     <dl class="mt-2 grid gap-2 sm:grid-cols-2">
                         <div v-for="(label, field) in reviewLabels" :key="field" class="min-w-0 border-b border-border py-2 text-sm">
-                            <dt class="font-semibold text-secondary">{{ label }}</dt><dd class="break-all text-primary">{{ reviewValue(reviewTarget.profile_fields?.[field]) }}</dd>
+                            <dt class="font-semibold text-secondary">{{ label }}</dt>
+                            <dd v-if="isReviewLogo(field)"><img v-if="reviewImageUrl(reviewTarget.profile_fields?.[field])" :src="reviewImageUrl(reviewTarget.profile_fields?.[field])" :alt="label" class="mt-1 h-24 w-32 rounded-lg bg-white object-contain" /><span v-else class="text-secondary">Kein Bild</span></dd>
+                            <dd v-else class="break-all text-primary">{{ reviewValue(reviewTarget.profile_fields?.[field]) }}</dd>
                         </div>
                     </dl>
                     <template v-if="canReview && reviewTarget.verification_status === 'pending_review'">

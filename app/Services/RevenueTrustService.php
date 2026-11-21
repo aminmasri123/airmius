@@ -94,7 +94,6 @@ class RevenueTrustService
             $this->check('sponsor_legal_name', filled($sponsor->legal_name)),
             $this->check('sponsor_country', filled($sponsor->country_code)),
             $this->check('sponsor_contact', filled($sponsor->email)),
-            $this->check('sponsor_website', filled($sponsor->website)),
             $this->check('sponsor_legal_accuracy', ($rules['legal_accuracy'] ?? false) === true),
             $this->check('sponsor_data_privacy', ($rules['data_privacy'] ?? false) === true),
         ];
