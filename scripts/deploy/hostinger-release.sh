@@ -33,11 +33,14 @@ prune_older_directories() {
     local root=$1
     local pattern=$2
     local newest
+    local candidates="$base/incoming/.prune-directories-$$"
     newest=$(find "$root" -mindepth 1 -maxdepth 1 -type d -name "$pattern" -printf '%T@ %p\n' \
         | sort -nr | head -n 1 | cut -d ' ' -f 2-)
-    while IFS= read -r -d '' candidate; do
+    find "$root" -mindepth 1 -maxdepth 1 -type d -name "$pattern" -print > "$candidates"
+    while IFS= read -r candidate; do
         test "$candidate" = "$newest" || rm -rf -- "$candidate"
-    done < <(find "$root" -mindepth 1 -maxdepth 1 -type d -name "$pattern" -print0)
+    done < "$candidates"
+    rm -f -- "$candidates"
 }
 prune_older_directories "$base/releases" '*'
 prune_older_directories "$base/backups" 'code-*'
@@ -153,9 +156,12 @@ while IFS= read -r asset; do basename "$asset"; done < "$base/incoming/$sha-asse
     | sort -u > "$asset_keep_list"
 for asset_root in "$base/shared/assets" "$web_root/public/build/assets"; do
     test -d "$asset_root"
-    while IFS= read -r -d '' asset; do
+    asset_candidates="$base/incoming/.prune-assets-$$"
+    find "$asset_root" -maxdepth 1 -type f -print > "$asset_candidates"
+    while IFS= read -r asset; do
         grep -Fqx "$(basename "$asset")" "$asset_keep_list" || rm -f -- "$asset"
-    done < <(find "$asset_root" -maxdepth 1 -type f -print0)
+    done < "$asset_candidates"
+    rm -f -- "$asset_candidates"
 done
 
 # Retain runtime data snapshots such as storage-before-hpanel-* because GitHub
