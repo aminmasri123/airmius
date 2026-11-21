@@ -72,10 +72,12 @@ class SupportInboxNotificationService
 
     private function send(User $user, SupportTicket $ticket, string $event, ?string $dedupe = null): void
     {
+        $deletionReviewer = $ticket->report_source === 'club_deletion_review' && $user->hasRole('super_admin');
+        $inbox = $ticket->is_confidential && ! $deletionReviewer ? 'safety' : 'general';
         // Notification previews never contain reporter identities or case text.
         AppNotification::sendLocalized($user, 'support.inbox.'.$event,
             'support.inbox.'.$event.'_title', 'support.inbox.notification_body', [], [
-                'url' => '/support?tab=operations&inbox='.($ticket->is_confidential ? 'safety' : 'general').'&ticket='.$ticket->id,
+                'url' => '/support?tab=operations&inbox='.$inbox.'&ticket='.$ticket->id,
                 'mobile_url' => 'airmius://support?ticket='.$ticket->id,
                 'support_ticket_id' => $ticket->id,
             ], ['after_commit' => true, 'dedupe_key' => $dedupe]);

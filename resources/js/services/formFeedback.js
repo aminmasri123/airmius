@@ -234,7 +234,7 @@ export function installFormFeedback({ router, axios, document: doc = document, w
     doc.addEventListener('change', input, true)
     const mutation = method => ['post', 'put', 'patch', 'delete'].includes(String(method || '').toLowerCase())
     const requestId = axios.interceptors.request.use(config => {
-        if (mutation(config.method)) {
+        if (mutation(config.method) && config.formFeedback !== false) {
             const ctx = context(config.data)
             if (ctx) { pending.set(config, ctx); start(ctx) }
         }

@@ -501,77 +501,98 @@ class _CustomFieldPageState extends _MetadataFormState<_CustomFieldPage> {
           Card(
             key: ValueKey(_options[index]),
             child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
+              padding: const EdgeInsets.all(8),
+              child: Row(
                 children: [
-                  TextFormField(
-                    key: ValueKey('metadata-option-$index'),
-                    controller: _options[index],
-                    enabled: !busy,
-                    keyboardType: TextInputType.text,
-                    textInputAction: TextInputAction.next,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    decoration: InputDecoration(
-                      labelText:
-                          '${t('clubMetadata.optionValue')} ${index + 1}',
-                      errorMaxLines: 3,
+                  Expanded(
+                    child: TextFormField(
+                      key: ValueKey('metadata-option-$index'),
+                      controller: _options[index],
+                      enabled: !busy,
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.next,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      decoration: InputDecoration(
+                        labelText:
+                            '${t('clubMetadata.optionValue')} ${index + 1}',
+                        errorMaxLines: 3,
+                      ),
+                      validator: (raw) {
+                        final value = (raw ?? '').trim();
+                        if (value.isEmpty) return t('clubMetadata.optionEmpty');
+                        if (value.length > 160) {
+                          return t('clubMetadata.optionTooLong');
+                        }
+                        if (_optionValues
+                                .where(
+                                  (v) => v.toLowerCase() == value.toLowerCase(),
+                                )
+                                .length >
+                            1) {
+                          return t('clubMetadata.optionDuplicate');
+                        }
+                        return serverErrors['options.$index'] ??
+                            (index == 0 ? serverErrors['options'] : null);
+                      },
+                      onChanged: (_) => setState(_clearOptionErrors),
                     ),
-                    validator: (raw) {
-                      final value = (raw ?? '').trim();
-                      if (value.isEmpty) return t('clubMetadata.optionEmpty');
-                      if (value.length > 160) {
-                        return t('clubMetadata.optionTooLong');
-                      }
-                      if (_optionValues
-                              .where(
-                                (v) => v.toLowerCase() == value.toLowerCase(),
-                              )
-                              .length >
-                          1) {
-                        return t('clubMetadata.optionDuplicate');
-                      }
-                      return serverErrors['options.$index'] ??
-                          (index == 0 ? serverErrors['options'] : null);
-                    },
-                    onChanged: (_) => setState(_clearOptionErrors),
                   ),
+                  const SizedBox(width: 8),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(
-                        key: ValueKey('option-up-$index'),
-                        tooltip: t('clubMetadata.moveOptionUp'),
-                        icon: const Icon(Icons.arrow_upward),
-                        onPressed: index == 0 || busy
-                            ? null
-                            : () => setState(() {
-                                final option = _options.removeAt(index);
-                                _options.insert(index - 1, option);
-                                _clearOptionErrors();
-                              }),
+                      SizedBox(
+                        width: 44,
+                        height: 48,
+                        child: IconButton(
+                          key: ValueKey('option-up-$index'),
+                          padding: const EdgeInsets.all(8),
+                          iconSize: 20,
+                          tooltip: t('clubMetadata.moveOptionUp'),
+                          icon: const Icon(Icons.arrow_upward),
+                          onPressed: index == 0 || busy
+                              ? null
+                              : () => setState(() {
+                                  final option = _options.removeAt(index);
+                                  _options.insert(index - 1, option);
+                                  _clearOptionErrors();
+                                }),
+                        ),
                       ),
-                      IconButton(
-                        key: ValueKey('option-down-$index'),
-                        tooltip: t('clubMetadata.moveOptionDown'),
-                        icon: const Icon(Icons.arrow_downward),
-                        onPressed: index == _options.length - 1 || busy
-                            ? null
-                            : () => setState(() {
-                                final option = _options.removeAt(index);
-                                _options.insert(index + 1, option);
-                                _clearOptionErrors();
-                              }),
+                      SizedBox(
+                        width: 44,
+                        height: 48,
+                        child: IconButton(
+                          key: ValueKey('option-down-$index'),
+                          padding: const EdgeInsets.all(8),
+                          iconSize: 20,
+                          tooltip: t('clubMetadata.moveOptionDown'),
+                          icon: const Icon(Icons.arrow_downward),
+                          onPressed: index == _options.length - 1 || busy
+                              ? null
+                              : () => setState(() {
+                                  final option = _options.removeAt(index);
+                                  _options.insert(index + 1, option);
+                                  _clearOptionErrors();
+                                }),
+                        ),
                       ),
-                      IconButton(
-                        key: ValueKey('option-remove-$index'),
-                        tooltip: t('clubMetadata.removeOption'),
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: _options.length == 1 || busy
-                            ? null
-                            : () => setState(() {
-                                _options.removeAt(index).dispose();
-                                _clearOptionErrors();
-                              }),
+                      SizedBox(
+                        width: 44,
+                        height: 48,
+                        child: IconButton(
+                          key: ValueKey('option-remove-$index'),
+                          padding: const EdgeInsets.all(8),
+                          iconSize: 20,
+                          tooltip: t('clubMetadata.removeOption'),
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: _options.length == 1 || busy
+                              ? null
+                              : () => setState(() {
+                                  _options.removeAt(index).dispose();
+                                  _clearOptionErrors();
+                                }),
+                        ),
                       ),
                     ],
                   ),

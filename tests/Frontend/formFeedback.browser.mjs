@@ -214,4 +214,30 @@ try {
         })()`);
         for(const result of optionsResults)console.log('PASS '+width+'px '+result);
     }
+
+    for(const width of [360,1280]) {
+      await send('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<500});
+      await send('Page.navigate',{url:'http://127.0.0.1:43219/tests/Frontend/fixtures/policy-editor.html'});await sleep(700);
+      for(let i=0;i<100&&!await evaluate('Boolean(window.ready && document.querySelector("form select"))');i++)await sleep(100);
+      const policyResults=await evaluate(`(async()=>{
+        const results=[];const check=(v,label)=>{if(!v)throw Error(label);results.push(label)};const wait=()=>new Promise(r=>setTimeout(r,100));
+        const form=document.querySelector('form');const enter=async(field,value)=>{const input=form.querySelector('[data-feedback-field="'+field+'"]');input.value=value;input.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText'}));await wait();return input};
+        await enter('title','Neue Satzung');await enter('version_label','2027');
+        let input=await enter('valid_from','01');check(input.value==='01.','day inserts dot');
+        input=await enter('valid_from','0105');check(input.value==='01.05.','month inserts dot');
+        await enter('valid_from','01052027');
+        const calendars=[...form.querySelectorAll('input[type=date]')];const calendarButton=form.querySelector('button[aria-label="Datum im Kalender wählen"]');
+        check(Boolean(calendarButton)&&calendars.length===2,'calendar buttons and native date pickers available');
+        calendars[1].value='2028-06-02';calendars[1].dispatchEvent(new Event('change',{bubbles:true}));await wait();
+        check(form.querySelector('[data-feedback-field="valid_until"]').value==='02.06.2028','calendar choice updates formatted text');
+        const source=form.querySelector('select');source.value='upload';source.dispatchEvent(new Event('change',{bubbles:true}));await wait();
+        const file=form.querySelector('input[type=file]');const transfer=new DataTransfer();transfer.items.add(new File(['%PDF-1.4'],'new.pdf',{type:'application/pdf'}));file.files=transfer.files;file.dispatchEvent(new Event('change',{bubbles:true}));await wait();
+        const submit=()=>form.querySelector('button:not([type])').click();submit();await wait();
+        check(window.uploads.length===1&&window.uploads[0].type==='statutes'&&window.uploads[0].scope==='club'&&window.uploads[0].club==='7','upload sends club and document type for folder routing');
+        check(window.writes[0].valid_from==='2027-05-01'&&window.writes[0].valid_until==='2028-06-02','formatted dates saved as ISO');
+        check(document.body.textContent.includes('Version already exists')&&form.querySelector('[data-feedback-field="title"]').value==='Neue Satzung','failed save retains form values');
+        submit();await wait();check(window.uploads.length===1&&window.writes.length===2&&window.writes[1].file_id===17,'retry reuses uploaded file and saves version');
+        check(document.documentElement.scrollWidth<=innerWidth,'policy form fits viewport');return results;
+      })()`);for(const result of policyResults)console.log('PASS '+width+'px '+result);
+    }
 } finally { socket?.close(); edge.kill(); await vite.close() }

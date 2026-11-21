@@ -24,7 +24,8 @@ class SupportAccessService
 
     public function canAccessTicket(User $user, SupportTicket $ticket, ?string $permission = null): bool
     {
-        if ($ticket->is_confidential && (! $this->canHandleSafety($user)
+        $deletionReviewer = $ticket->report_source === 'club_deletion_review' && $user->hasRole('super_admin');
+        if ($ticket->is_confidential && ((! $deletionReviewer && ! $this->canHandleSafety($user))
             || in_array((int) $user->id, array_map('intval', $ticket->conflict_user_ids ?? []), true))) {
             return false;
         }

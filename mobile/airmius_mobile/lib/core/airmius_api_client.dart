@@ -2215,6 +2215,17 @@ class AirmiusApiClient {
     );
   }
 
+  Future<AirmiusJson> clubPolicyFiles(int clubId, {int page = 1}) => _json(
+    'GET',
+    '/api/v1/uploads',
+    query: {
+      'scope': 'club',
+      'club_id': '$clubId',
+      'per_page': '100',
+      'page': '$page',
+    },
+  );
+
   Future<AirmiusJson> fileWorkspace({
     String scope = 'user',
     int? folderId,

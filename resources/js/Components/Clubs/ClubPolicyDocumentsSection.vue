@@ -1,4 +1,6 @@
 <script setup>
+import { formFailureText, safeFieldMessage } from '@/services/formFeedbackMessages'
+import DateInput from '@/Components/DateInput.vue'
 import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import translations from '@/i18n/clubPolicyDocumentsLocalization.json'
 import { confirmDialog } from '@/services/dialogService'
@@ -22,6 +24,9 @@ const files = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const uploading = ref(false)
+const fileSource = ref('existing')
+const pendingFile = ref(null)
+const uploadedType = ref(null)
 const error = ref('')
 const emptyForm = () => ({
     id: null,
@@ -36,15 +41,18 @@ const emptyForm = () => ({
 })
 const form = ref(emptyForm())
 const documentsFor = (type) => state.value.documents.filter((document) => document.type === type)
-const apiError = (cause) => Object.values(cause?.response?.data?.errors || {}).flat()[0]
-    || cause?.response?.data?.message || dt('saveError')
+const apiError = cause => cause?.response?.status === 422 ? safeFieldMessage(Object.values(cause.response.data?.errors || {}).flat()[0], locale.value) : formFailureText(cause?.response?.status, locale.value)
 
 const loadFiles = async () => {
-    const response = await window.axios.get('/api/v1/uploads', {
-        params: { scope: 'club', club_id: props.clubId, per_page: 100 },
-        headers: { Accept: 'application/json' },
-    })
-    files.value = response.data.data || []
+    const collected = []
+    let page = 1
+    while (true) {
+        const response = await window.axios.get('/api/v1/uploads', { params: { scope: 'club', club_id: props.clubId, per_page: 100, page }, headers: { Accept: 'application/json' } })
+        collected.push(...(response.data.data || []))
+        if (page >= (response.data.meta?.last_page || page)) break
+        page++
+    }
+    files.value = collected
 }
 const loadDocuments = async () => {
     loading.value = true
@@ -59,6 +67,7 @@ const loadDocuments = async () => {
     }
 }
 const editDocument = (document) => {
+    fileSource.value = 'existing'; pendingFile.value = null; uploadedType.value = null
     form.value = {
         id: document.id,
         type: document.type,
@@ -72,9 +81,17 @@ const editDocument = (document) => {
     }
 }
 const saveDocument = async () => {
+    if (saving.value || uploading.value) return
     saving.value = true
     error.value = ''
     try {
+        if (fileSource.value === 'upload' && pendingFile.value && (!form.value.file_id || uploadedType.value !== form.value.type)) {
+            const data = new FormData(); data.append('scope', 'club'); data.append('club_id',String(props.clubId)); data.append('policy_document_type',form.value.type); data.append('file',pendingFile.value)
+            uploading.value = true
+            const response = await window.axios.post('/api/v1/uploads', data, { formFeedback: false, headers: { Accept: 'application/json' } })
+            form.value.file_id = response.data.data.id; uploadedType.value = form.value.type
+            uploading.value = false
+        }
         const url = `${baseUrl}${form.value.id ? `/${form.value.id}` : ''}`
         await window.axios({
             method: form.value.id ? 'put' : 'post',
@@ -83,34 +100,20 @@ const saveDocument = async () => {
             headers: { Accept: 'application/json' },
         })
         form.value = emptyForm()
+        pendingFile.value = null; fileSource.value = 'existing'; uploadedType.value = null
         await loadDocuments()
     } catch (cause) {
         error.value = apiError(cause)
     } finally {
         saving.value = false
+        uploading.value = false
     }
 }
-const uploadFile = async (event) => {
+const uploadFile = event => {
     const selected = event.target.files?.[0]
     if (!selected) return
-    uploading.value = true
-    error.value = ''
-    try {
-        const data = new FormData()
-        data.append('scope', 'club')
-        data.append('club_id', String(props.clubId))
-        data.append('file', selected)
-        const response = await window.axios.post('/api/v1/uploads', data, {
-            headers: { Accept: 'application/json', 'Content-Type': 'multipart/form-data' },
-        })
-        await loadFiles()
-        form.value.file_id = response.data.data.id
-    } catch (cause) {
-        error.value = apiError(cause)
-    } finally {
-        uploading.value = false
-        event.target.value = ''
-    }
+    if (!selected.size || selected.size > 50*1024*1024) { error.value = dt('fileLimit'); return }
+    pendingFile.value = selected; form.value.file_id = ''; uploadedType.value = null; error.value = ''
 }
 const deleteDocument = async (document) => {
     if (!await confirmDialog({ title: dt('deleteTitle'), message: dt('deleteMessage'), confirmLabel: dt('delete') })) return
@@ -155,17 +158,20 @@ onMounted(loadDocuments)
             </div>
         </div>
 
-        <form v-if="canEdit" class="mt-5 grid gap-3 border-t border-border pt-5 md:grid-cols-2 lg:grid-cols-3" @submit.prevent="saveDocument">
-            <label class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('file') }}</span><select v-model="form.file_id" required class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"><option value="" disabled>{{ dt('selectFile') }}</option><option v-for="file in files" :key="file.id" :value="file.id">{{ file.display_name }}</option></select></label>
-            <label class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('uploadFile') }}</span><input type="file" class="block w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :aria-label="dt('uploadFile')" :disabled="uploading" @change="uploadFile"><span class="mt-1 block text-xs text-secondary">{{ uploading ? dt('uploading') : dt('fileHint') }}</span></label>
+        <form v-if="canEdit" class="mt-5 grid gap-5 border-t border-border pt-5 md:grid-cols-2 lg:grid-cols-3" @submit.prevent="saveDocument">
+            <fieldset :disabled="saving || uploading" class="contents">
+            <label class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('fileSource') }}</span><select v-model="fileSource" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2" :disabled="saving"><option value="existing">{{ dt('useExisting') }}</option><option value="upload">{{ dt('uploadNew') }}</option></select></label>
+            <label v-if="fileSource === 'existing'" class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('file') }}</span><select v-model="form.file_id" required class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"><option value="" disabled>{{ dt('selectFile') }}</option><option v-for="file in files" :key="file.id" :value="file.id">{{ file.display_name }}</option></select></label>
+            <label v-if="fileSource === 'upload'" class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('uploadFile') }}</span><input type="file" :required="!pendingFile" class="block w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" :aria-label="dt('uploadFile')" :disabled="uploading" @change="uploadFile"><span class="mt-1 block text-xs text-secondary">{{ uploading ? dt('uploading') : dt('folderHint') }}</span></label>
             <label class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('documentTitle') }}</span><input v-model="form.title" required maxlength="160" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></label>
             <label class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('version') }}</span><input v-model="form.version_label" required maxlength="80" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></label>
-            <label class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('validFrom') }}</span><input v-model="form.valid_from" required type="date" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></label>
-            <label class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('validUntil') }}</span><input v-model="form.valid_until" type="date" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></label>
+            <label class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('validFrom') }}</span><DateInput v-model="form.valid_from" calendar trailing-separators :placeholder="dt('dateFormat')" required class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" /></label>
+            <label class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('validUntil') }}</span><DateInput v-model="form.valid_until" calendar trailing-separators :placeholder="dt('dateFormat')" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" /></label>
             <label class="text-sm text-primary"><span class="mb-1 block font-semibold">{{ dt('type') }}</span><select v-model="form.type" required class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"><option v-for="type in types" :key="type" :value="type">{{ dt(type) }}</option></select></label>
             <label class="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-primary"><input v-model="form.is_public" type="checkbox" class="rounded border-border bg-inputBg">{{ dt('public') }}</label>
             <label class="text-sm text-primary md:col-span-2 lg:col-span-3"><span class="mb-1 block font-semibold">{{ dt('notes') }}</span><textarea v-model="form.notes" maxlength="5000" rows="3" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"></textarea></label>
             <div class="flex gap-2"><button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" :disabled="saving || uploading">{{ form.id ? dt('save') : dt('add') }}</button><button v-if="form.id" type="button" class="px-3 py-2 text-xs font-semibold text-secondary" @click="form = emptyForm()">{{ dt('cancel') }}</button></div>
+            </fieldset>
         </form>
     </section>
 </template>

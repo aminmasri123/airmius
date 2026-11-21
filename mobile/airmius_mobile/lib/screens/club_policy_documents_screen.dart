@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import '../core/club_policy_upload_client.dart';
+import '../core/airmius_date_input.dart';
+import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -8,7 +12,19 @@ import '../models/club_summary.dart';
 import 'file_manager_screen.dart';
 
 class ClubPolicyDocumentsScreen extends StatefulWidget {
-  const ClubPolicyDocumentsScreen({super.key, this.club});
+  const ClubPolicyDocumentsScreen({
+    super.key,
+    this.club,
+    this.pickFile,
+    this.uploadFile,
+  });
+  final Future<PlatformFile?> Function()? pickFile;
+  final Future<AirmiusJson> Function(
+    int clubId,
+    String type,
+    PlatformFile file,
+  )?
+  uploadFile;
 
   final ClubSummary? club;
 
@@ -31,11 +47,14 @@ class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
   }
 
   bool get _canManage => _data['can_manage'] == true;
-  bool get _canEdit => _data['can_edit'] == true ||
+  bool get _canEdit =>
+      _data['can_edit'] == true ||
       (!_data.containsKey('can_edit') && _canManage);
-  bool get _canDelete => _data['can_delete'] == true ||
+  bool get _canDelete =>
+      _data['can_delete'] == true ||
       (!_data.containsKey('can_delete') && _canManage);
-  bool get _canDownload => _data['can_download'] == true ||
+  bool get _canDownload =>
+      _data['can_download'] == true ||
       (!_data.containsKey('can_download') && _canManage);
 
   List<Map<String, dynamic>> get _documents {
@@ -81,21 +100,24 @@ class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
       final data = response['data'];
       final parsed = data is Map<String, dynamic> ? data : <String, dynamic>{};
       var files = const <Map<String, dynamic>>[];
-      final canEdit = parsed['can_edit'] == true ||
+      final canEdit =
+          parsed['can_edit'] == true ||
           (!parsed.containsKey('can_edit') && parsed['can_manage'] == true);
       if (canEdit) {
-        final workspace = await _client.fileWorkspace(
-          scope: 'club',
-          clubId: club.id,
-          perPage: 100,
-        );
-        final workspaceData = workspace['data'];
-        final rawFiles = workspaceData is Map<String, dynamic>
-            ? workspaceData['files']
-            : null;
-        files = rawFiles is List
-            ? rawFiles.whereType<Map<String, dynamic>>().toList()
-            : const [];
+        final collected = <Map<String, dynamic>>[];
+        var page = 1;
+        while (true) {
+          final response = await _client.clubPolicyFiles(club.id, page: page);
+          final rows = response['data'];
+          if (rows is List) {
+            collected.addAll(rows.whereType<Map<String, dynamic>>());
+          }
+          final meta = response['meta'];
+          final last = meta is Map ? _int(meta['last_page']) ?? page : page;
+          if (page >= last) break;
+          page++;
+        }
+        files = collected;
       }
       if (mounted) {
         setState(() {
@@ -126,18 +148,25 @@ class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
   }
 
   Future<void> _edit([Map<String, dynamic>? document]) async {
-    final payload = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _PolicyDocumentDialog(document: document, files: _files),
-    );
-    if (payload == null || !mounted) return;
-    await _write(
-      () => _client.saveClubPolicyDocument(
-        _club!.id,
-        payload,
-        documentId: _int(document?['id']),
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => _PolicyDocumentPage(
+          document: document,
+          files: _files,
+          clubId: _club!.id,
+          pickFile: widget.pickFile,
+          uploadFile: (type, file) => widget.uploadFile != null
+              ? widget.uploadFile!(_club!.id, type, file)
+              : uploadClubPolicyFile(_client, _club!.id, type, file),
+          onSave: (payload) => _client.saveClubPolicyDocument(
+            _club!.id,
+            payload,
+            documentId: _int(document?['id']),
+          ),
+        ),
       ),
     );
+    if (saved == true && mounted) await _load();
   }
 
   Future<void> _delete(Map<String, dynamic> document) async {
@@ -339,186 +368,446 @@ class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
   }
 }
 
-class _PolicyDocumentDialog extends StatefulWidget {
-  const _PolicyDocumentDialog({required this.document, required this.files});
-
+class _PolicyDocumentPage extends StatefulWidget {
+  const _PolicyDocumentPage({
+    required this.document,
+    required this.files,
+    required this.clubId,
+    required this.onSave,
+    required this.uploadFile,
+    this.pickFile,
+  });
   final Map<String, dynamic>? document;
   final List<Map<String, dynamic>> files;
-
+  final int clubId;
+  final Future<AirmiusJson> Function(Map<String, dynamic>) onSave;
+  final Future<AirmiusJson> Function(String, PlatformFile) uploadFile;
+  final Future<PlatformFile?> Function()? pickFile;
   @override
-  State<_PolicyDocumentDialog> createState() => _PolicyDocumentDialogState();
+  State<_PolicyDocumentPage> createState() => _PolicyDocumentPageState();
 }
 
-class _PolicyDocumentDialogState extends State<_PolicyDocumentDialog> {
+class _PolicyDocumentPageState extends State<_PolicyDocumentPage> {
+  final _formKey = GlobalKey<FormState>();
   late String _type;
-  late final TextEditingController _title;
-  late final TextEditingController _version;
-  late final TextEditingController _start;
-  late final TextEditingController _end;
-  late final TextEditingController _notes;
+  late final TextEditingController _title, _version, _start, _end, _notes;
   int? _fileId;
-  bool _public = false;
-  String? _error;
-
+  bool _public = false, _busy = false;
+  String _source = 'existing';
+  String? _error, _fileName, _uploadedType;
+  PlatformFile? _pending;
   @override
   void initState() {
     super.initState();
-    final document = widget.document ?? const {};
-    _type = '${document['type'] ?? 'statutes'}';
-    _title = TextEditingController(text: '${document['title'] ?? ''}');
-    _version = TextEditingController(
-      text: '${document['version_label'] ?? ''}',
+    final data = widget.document ?? const {};
+    _type = '${data['type'] ?? 'statutes'}';
+    _title = TextEditingController(text: '${data['title'] ?? ''}');
+    _version = TextEditingController(text: '${data['version_label'] ?? ''}');
+    _start = TextEditingController(
+      text: formatAirmiusDate(parseAirmiusDate(data['valid_from']?.toString())),
     );
-    _start = TextEditingController(text: '${document['valid_from'] ?? ''}');
-    _end = TextEditingController(text: '${document['valid_until'] ?? ''}');
-    _notes = TextEditingController(text: '${document['notes'] ?? ''}');
-    _public = document['is_public'] == true;
-    final file = document['file'];
-    _fileId = file is Map<String, dynamic> ? _int(file['id']) : null;
+    _end = TextEditingController(
+      text: formatAirmiusDate(
+        parseAirmiusDate(data['valid_until']?.toString()),
+      ),
+    );
+    _notes = TextEditingController(text: '${data['notes'] ?? ''}');
+    _public = data['is_public'] == true;
+    final file = data['file'];
+    if (file is Map) {
+      _fileId = _int(file['id']);
+      _fileName = file['display_name']?.toString();
+    }
   }
 
   @override
   void dispose() {
-    _title.dispose();
-    _version.dispose();
-    _start.dispose();
-    _end.dispose();
-    _notes.dispose();
+    for (final field in [_title, _version, _start, _end, _notes]) {
+      field.dispose();
+    }
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _pickUpload() async {
+    try {
+      final file = widget.pickFile != null
+          ? await widget.pickFile!()
+          : (await FilePicker.platform.pickFiles(withData: true))?.files.single;
+      if (!mounted || file == null) return;
+      if (file.size == 0 || file.size > 50 * 1024 * 1024) {
+        setState(
+          () => _error = AirmiusScope.of(
+            context,
+          ).t('clubPolicyDocuments.fileLimit'),
+        );
+        return;
+      }
+      setState(() {
+        _pending = file;
+        _fileId = null;
+        _fileName = file.name;
+        _uploadedType = null;
+        _error = null;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = formErrorMessage(context, error));
+    }
+  }
+
+  Future<void> _pickExisting() async {
+    final files = [...widget.files];
+    if (_fileId != null && !files.any((f) => _int(f['id']) == _fileId)) {
+      files.add({'id': _fileId, 'display_name': _fileName});
+    }
+    final file = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(builder: (_) => _PolicyFilePage(files: files)),
+    );
+    if (mounted && file != null) {
+      setState(() {
+        _fileId = _int(file['id']);
+        _fileName = file['display_name']?.toString();
+        _error = null;
+      });
+    }
+  }
+
+  Future<void> _calendar(TextEditingController controller) async {
+    final current = parseAirmiusDate(controller.text) ?? DateTime.now();
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: current.year < 1900 || current.year > 2200
+          ? DateTime.now()
+          : current,
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2200, 12, 31),
+    );
+    if (selected != null && mounted) {
+      setState(() => controller.text = formatAirmiusDate(selected));
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_busy || !(_formKey.currentState?.validate() ?? false)) return;
     final t = AirmiusScope.of(context).t;
-    final start = DateTime.tryParse(_start.text.trim());
-    final endText = _end.text.trim();
-    final end = endText.isEmpty ? null : DateTime.tryParse(endText);
-    if (_title.text.trim().isEmpty ||
-        _version.text.trim().isEmpty ||
-        start == null ||
-        _fileId == null) {
+    if ((_source == 'existing' && _fileId == null) ||
+        (_source == 'upload' && _pending == null)) {
       setState(() => _error = t('clubPolicyDocuments.required'));
       return;
     }
-    if ((endText.isNotEmpty && end == null) ||
-        (end != null && end.isBefore(start))) {
-      setState(() => _error = t('clubPolicyDocuments.invalidRange'));
-      return;
-    }
-    Navigator.pop(context, {
-      'type': _type,
-      'title': _title.text.trim(),
-      'version_label': _version.text.trim(),
-      'valid_from': _start.text.trim(),
-      'valid_until': endText.isEmpty ? null : endText,
-      'is_public': _public,
-      'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-      'file_id': _fileId,
+    setState(() {
+      _busy = true;
+      _error = null;
     });
+    try {
+      if (_source == 'upload' && (_fileId == null || _uploadedType != _type)) {
+        final file = await widget.uploadFile(_type, _pending!);
+        _fileId = _int(file['id']);
+        if (_fileId == null) throw StateError('Invalid upload');
+        _uploadedType = _type;
+      }
+      await widget.onSave({
+        'type': _type,
+        'title': _title.text.trim(),
+        'version_label': _version.text.trim(),
+        'valid_from': formatAirmiusApiDate(parseAirmiusDate(_start.text)),
+        'valid_until': _end.text.trim().isEmpty
+            ? null
+            : formatAirmiusApiDate(parseAirmiusDate(_end.text)),
+        'is_public': _public,
+        'notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+        'file_id': _fileId,
+      });
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (mounted) setState(() => _error = formErrorMessage(context, error));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Widget _field(
+    TextEditingController controller,
+    String key, {
+    bool required = false,
+    bool date = false,
+    int lines = 1,
+  }) {
+    final t = AirmiusScope.of(context).t;
+    return TextFormField(
+      key: ValueKey('policy-$key'),
+      controller: controller,
+      enabled: !_busy,
+      maxLines: lines,
+      keyboardType: date
+          ? TextInputType.datetime
+          : lines > 1
+          ? TextInputType.multiline
+          : TextInputType.text,
+      textInputAction: lines > 1
+          ? TextInputAction.newline
+          : TextInputAction.next,
+      inputFormatters: date
+          ? const [AirmiusDateInputFormatter(trailingSeparator: true)]
+          : null,
+      decoration: InputDecoration(
+        labelText: t('clubPolicyDocuments.$key'),
+        hintText: date ? t('clubPolicyDocuments.dateFormat') : null,
+        errorMaxLines: 3,
+        suffixIcon: date
+            ? IconButton(
+                tooltip: t('clubPolicyDocuments.calendar'),
+                onPressed: _busy ? null : () => _calendar(controller),
+                icon: const Icon(Icons.calendar_month_outlined),
+              )
+            : null,
+      ),
+      validator: (value) {
+        final text = (value ?? '').trim();
+        if (required && text.isEmpty) return t('clubPolicyDocuments.required');
+        if (date && text.isNotEmpty && parseAirmiusDate(text) == null) {
+          return t('clubPolicyDocuments.invalidRange');
+        }
+        if (key == 'validUntil' && text.isNotEmpty) {
+          final end = parseAirmiusDate(text),
+              start = parseAirmiusDate(_start.text);
+          if (end != null && start != null && end.isBefore(start)) {
+            return t('clubPolicyDocuments.invalidRange');
+          }
+        }
+        return null;
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
-      title: Text(
-        t(
-          widget.document == null
-              ? 'clubPolicyDocuments.add'
-              : 'clubPolicyDocuments.edit',
+    return PopScope(
+      canPop: !_busy,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            t(
+              widget.document == null
+                  ? 'clubPolicyDocuments.add'
+                  : 'clubPolicyDocuments.edit',
+            ),
+          ),
         ),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: _type,
-              decoration: InputDecoration(
-                labelText: t('clubPolicyDocuments.type'),
+        body: AirmiusForm(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _type,
+                decoration: InputDecoration(
+                  labelText: t('clubPolicyDocuments.type'),
+                ),
+                items: ['statutes', 'regulation', 'contribution_model']
+                    .map(
+                      (type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(t('clubPolicyDocuments.type.$type')),
+                      ),
+                    )
+                    .toList(),
+                onChanged: _busy
+                    ? null
+                    : (value) => setState(() {
+                        _type = value ?? _type;
+                      }),
               ),
-              items: const ['statutes', 'regulation', 'contribution_model']
-                  .map(
-                    (type) => DropdownMenuItem(
-                      value: type,
-                      child: Text(t('clubPolicyDocuments.type.$type')),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _type = value ?? _type),
-            ),
-            DropdownButtonFormField<int>(
-              initialValue: _fileId,
-              decoration: InputDecoration(
-                labelText: t('clubPolicyDocuments.file'),
-              ),
-              items: widget.files
-                  .map(
-                    (file) => DropdownMenuItem(
-                      value: _int(file['id']),
-                      child: Text('${file['display_name'] ?? ''}'),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _fileId = value),
-            ),
-            TextField(
-              controller: _title,
-              decoration: InputDecoration(
-                labelText: t('clubPolicyDocuments.documentTitle'),
-              ),
-            ),
-            TextField(
-              controller: _version,
-              decoration: InputDecoration(
-                labelText: t('clubPolicyDocuments.version'),
-              ),
-            ),
-            TextField(
-              controller: _start,
-              decoration: InputDecoration(
-                labelText: t('clubPolicyDocuments.validFrom'),
-              ),
-            ),
-            TextField(
-              controller: _end,
-              decoration: InputDecoration(
-                labelText: t('clubPolicyDocuments.validUntil'),
-              ),
-            ),
-            TextField(
-              controller: _notes,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: t('clubPolicyDocuments.notes'),
-              ),
-            ),
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              value: _public,
-              title: Text(t('clubPolicyDocuments.public')),
-              onChanged: (value) => setState(() => _public = value),
-            ),
-            if (_error != null)
+              const SizedBox(height: 16),
               Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                t('clubPolicyDocuments.fileSource'),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-          ],
+              RadioGroup<String>(
+                groupValue: _source,
+                onChanged: (value) {
+                  if (!_busy && value != null && value != _source) {
+                    setState(() {
+                      _source = value;
+                      _fileId = null;
+                      _fileName = value == 'upload' ? _pending?.name : null;
+                    });
+                  }
+                },
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      enabled: !_busy,
+                      title: Text(t('clubPolicyDocuments.useExisting')),
+                      value: 'existing',
+                    ),
+                    RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      enabled: !_busy,
+                      title: Text(t('clubPolicyDocuments.uploadNew')),
+                      value: 'upload',
+                    ),
+                  ],
+                ),
+              ),
+              OutlinedButton.icon(
+                onPressed: _busy
+                    ? null
+                    : _source == 'existing'
+                    ? _pickExisting
+                    : _pickUpload,
+                icon: Icon(
+                  _source == 'existing' ? Icons.folder_open : Icons.upload_file,
+                ),
+                label: Text(
+                  t(
+                    _source == 'existing'
+                        ? 'clubPolicyDocuments.chooseExisting'
+                        : 'clubPolicyDocuments.chooseUpload',
+                  ),
+                ),
+              ),
+              if (_fileName != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(_fileName!),
+                ),
+              if (_source == 'upload')
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(t('clubPolicyDocuments.folderHint')),
+                ),
+              const SizedBox(height: 20),
+              _field(_title, 'documentTitle', required: true),
+              const SizedBox(height: 16),
+              _field(_version, 'version', required: true),
+              const SizedBox(height: 16),
+              _field(_start, 'validFrom', required: true, date: true),
+              const SizedBox(height: 16),
+              _field(_end, 'validUntil', date: true),
+              const SizedBox(height: 16),
+              _field(_notes, 'notes', lines: 3),
+              const SizedBox(height: 8),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: _public,
+                title: Text(t('clubPolicyDocuments.public')),
+                onChanged: _busy ? null : (v) => setState(() => _public = v),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              12 + MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_busy) const LinearProgressIndicator(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: _busy
+                            ? null
+                            : () => Navigator.pop(context, false),
+                        child: Text(t('common.cancel')),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _busy ? null : _submit,
+                        child: Text(t('common.save')),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(t('common.cancel')),
-        ),
-        FilledButton(onPressed: _submit, child: Text(t('common.save'))),
-      ],
+    );
+  }
+}
+
+class _PolicyFilePage extends StatefulWidget {
+  const _PolicyFilePage({required this.files});
+  final List<Map<String, dynamic>> files;
+  @override
+  State<_PolicyFilePage> createState() => _PolicyFilePageState();
+}
+
+class _PolicyFilePageState extends State<_PolicyFilePage> {
+  String _search = '';
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final files = widget.files
+        .where(
+          (f) => '${f['display_name'] ?? ''}'.toLowerCase().contains(
+            _search.toLowerCase(),
+          ),
+        )
+        .toList();
+    return Scaffold(
+      appBar: AppBar(title: Text(t('clubPolicyDocuments.chooseExisting'))),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              decoration: InputDecoration(
+                labelText: t('clubPolicyDocuments.searchFile'),
+                prefixIcon: const Icon(Icons.search),
+              ),
+              onChanged: (v) => setState(() => _search = v),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              children: [
+                if (files.isEmpty)
+                  ListTile(title: Text(t('clubPolicyDocuments.noFiles'))),
+                ...files.map(
+                  (file) => ListTile(
+                    leading: const Icon(Icons.description_outlined),
+                    title: Text('${file['display_name'] ?? ''}'),
+                    onTap: () => Navigator.pop(context, file),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 int? _int(Object? value) => switch (value) {
-  int number => number,
-  String text => int.tryParse(text),
+  int n => n,
+  String s => int.tryParse(s),
   _ => null,
 };

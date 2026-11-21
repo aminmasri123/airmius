@@ -50,14 +50,18 @@ defineExpose({ validate })
 <template>
     <fieldset class="min-w-0 space-y-3">
         <legend class="text-sm font-semibold text-primary">{{ t('options') }}</legend>
-        <div v-for="(row, index) in rows" :key="row.id" class="min-w-0 rounded-xl border border-border p-3" data-option-row>
+        <div v-for="(row, index) in rows" :key="row.id" class="min-w-0 rounded-xl border border-border p-2" data-option-row>
+            <div class="flex items-center gap-2">
+            <div class="min-w-0 flex-1">
             <label :for="`${prefix}-${row.id}`" class="text-xs font-semibold text-secondary">{{ t('optionValue') }} {{ index + 1 }}</label>
             <input :id="`${prefix}-${row.id}`" :ref="el => el ? inputs.set(row.id, el) : inputs.delete(row.id)" v-model="row.value" required maxlength="160" :disabled="disabled" :aria-invalid="Boolean(message(index))" :aria-describedby="message(index) ? `${prefix}-${row.id}-error` : undefined" class="mt-1 w-full min-w-0 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" @input="edit(row)">
             <p v-if="message(index)" :id="`${prefix}-${row.id}-error`" role="alert" class="mt-1 text-sm text-error">{{ message(index) }}</p>
-            <div class="mt-2 flex justify-end gap-1">
+            </div>
+            <div class="flex shrink-0 items-center gap-0.5">
                 <button type="button" class="min-h-11 min-w-11 rounded-lg border border-border disabled:opacity-40" :disabled="disabled || index === 0" :aria-label="`${t('moveOptionUp')}: ${index + 1}`" :title="t('moveOptionUp')" @click="move(index, -1)">↑</button>
                 <button type="button" class="min-h-11 min-w-11 rounded-lg border border-border disabled:opacity-40" :disabled="disabled || index === rows.length - 1" :aria-label="`${t('moveOptionDown')}: ${index + 1}`" :title="t('moveOptionDown')" @click="move(index, 1)">↓</button>
                 <button type="button" class="min-h-11 min-w-11 rounded-lg border border-border text-error disabled:opacity-40" :disabled="disabled || rows.length === 1" :aria-label="`${t('removeOption')}: ${index + 1}`" :title="t('removeOption')" @click="remove(index)"><i class="las la-trash" aria-hidden="true"></i></button>
+            </div>
             </div>
         </div>
         <p v-if="checked && validation.list" role="alert" class="text-sm text-error">{{ t(validation.list) }}</p>

@@ -6,11 +6,17 @@ defineOptions({ inheritAttrs: false })
 const props = defineProps({
     modelValue: { type: String, default: '' },
     placeholder: { type: String, default: 'TT.MM.JJJJ' },
+    calendar: { type: Boolean, default: false },
+    trailingSeparators: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
 const displayValue = ref(toDisplayValue(props.modelValue))
 const input = ref(null)
+const calendarInput = ref(null)
+const calendarLabel = () => ({de:'Datum im Kalender wählen',en:'Choose date from calendar',fr:'Choisir une date dans le calendrier',ar:'اختيار تاريخ من التقويم'}[document.documentElement.lang.split('-')[0]] || 'Choose date from calendar')
+const openCalendar = () => { try { if (calendarInput.value.showPicker) calendarInput.value.showPicker(); else { calendarInput.value.focus(); calendarInput.value.click() } } catch { calendarInput.value.focus() } }
+const chooseDate = event => { const value = event.target.value; displayValue.value = toDisplayValue(value); input.value?.setCustomValidity(''); emit('update:modelValue', value) }
 
 watch(() => props.modelValue, (value) => {
     // While typing an incomplete date the form model is intentionally empty.
@@ -30,12 +36,13 @@ function toDisplayValue(value) {
     return formatDigits(text.replace(/\D/g, '').slice(0, 8))
 }
 
-function formatDigits(value) {
+function formatDigits(value, trailing = false) {
     let result = ''
     for (let index = 0; index < value.length; index += 1) {
         if (index === 2 || index === 4) result += '.'
         result += value[index]
     }
+    if (trailing && [2,4].includes(value.length)) result += '.'
     return result
 }
 
@@ -65,7 +72,7 @@ function handleInput(event) {
     }
 
     const digits = rawValue.replace(/\D/g, '').slice(0, 8)
-    displayValue.value = formatDigits(digits)
+    displayValue.value = formatDigits(digits, props.trailingSeparators && !event.inputType?.startsWith('delete'))
     event.target.value = displayValue.value
     const isoValue = toIso(displayValue.value)
     event.target.setCustomValidity(
@@ -84,7 +91,12 @@ function invalidDateMessage() {
 </script>
 
 <template>
-    <input
+    <div v-if="calendar" class="relative min-w-0">
+        <input ref="input" v-bind="$attrs" :value="displayValue" type="text" inputmode="numeric" maxlength="10" :placeholder="placeholder" class="w-full pr-12" @input="handleInput" />
+        <button type="button" class="absolute right-1 top-1/2 -translate-y-1/2 rounded p-2" :aria-label="calendarLabel()" :disabled="$attrs.disabled" @click="openCalendar"><i class="las la-calendar text-xl" aria-hidden="true"></i></button>
+        <input ref="calendarInput" type="date" tabindex="-1" aria-hidden="true" class="pointer-events-none absolute h-px w-px opacity-0" :value="modelValue" :min="$attrs.min" :max="$attrs.max" @change="chooseDate" />
+    </div>
+    <input v-else
         ref="input"
         v-bind="$attrs"
         :value="displayValue"

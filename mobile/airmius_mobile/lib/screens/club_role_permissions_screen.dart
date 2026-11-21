@@ -288,33 +288,51 @@ class _RolesHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const AirmiusLogo(size: 42),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const logo = AirmiusLogo(size: 42, markOnly: true);
+              const heading = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Eyebrow('ZUGRIFF & VERANTWORTUNG'),
+                  SizedBox(height: 4),
+                  Text(
+                    'Vereinsrollen sauber steuern',
+                    style: TextStyle(
+                      color: AirmiusColors.text,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              );
+              if (constraints.maxWidth < 480) {
+                return const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Eyebrow('ZUGRIFF & VERANTWORTUNG'),
-                    SizedBox(height: 4),
-                    Text(
-                      'Vereinsrollen sauber steuern',
-                      style: TextStyle(
-                        color: AirmiusColors.text,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
+                    logo,
+                    SizedBox(height: 12),
+                    SizedBox(width: double.infinity, child: heading),
                   ],
-                ),
-              ),
-              AirmiusButton(
-                label: 'Speichern',
-                icon: Icons.save_outlined,
-                onPressed: onSave,
-              ),
-            ],
+                );
+              }
+              return const Row(
+                children: [
+                  logo,
+                  SizedBox(width: 12),
+                  Expanded(child: heading),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: AirmiusButton(
+              label: 'Speichern',
+              icon: Icons.save_outlined,
+              onPressed: onSave,
+            ),
           ),
           const SizedBox(height: 14),
           const Text(
@@ -326,20 +344,34 @@ class _RolesHero extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          const Row(
-            children: [
-              Expanded(
-                child: MetricCard(value: '8', label: 'Rollen'),
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: MetricCard(value: '21', label: 'Rechte'),
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: MetricCard(value: '4', label: 'Risiken'),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 480
+                  ? 3
+                  : constraints.maxWidth >= 250
+                  ? 2
+                  : 1;
+              final width =
+                  (constraints.maxWidth - (columns - 1) * 10) / columns;
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  SizedBox(
+                    width: width,
+                    child: const MetricCard(value: '8', label: 'Rollen'),
+                  ),
+                  SizedBox(
+                    width: width,
+                    child: const MetricCard(value: '21', label: 'Rechte'),
+                  ),
+                  SizedBox(
+                    width: width,
+                    child: const MetricCard(value: '4', label: 'Risiken'),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -443,16 +475,23 @@ class _RoleCard extends StatelessWidget {
                   ),
                 ),
               ),
-              StatusPill(data.status, color: data.color),
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            data.people,
-            style: const TextStyle(
-              color: AirmiusColors.text,
-              fontWeight: FontWeight.w900,
-            ),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              StatusPill(data.status, color: data.color),
+              Text(
+                data.people,
+                style: const TextStyle(
+                  color: AirmiusColors.text,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Wrap(

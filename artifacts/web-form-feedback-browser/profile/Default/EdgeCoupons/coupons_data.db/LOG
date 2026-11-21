@@ -1,15 +1,6 @@
-2026/11/21-12:00:30.664 7e64 Reusing MANIFEST C:\Users\pcc\Documents\Codex\airmius\artifacts\web-form-feedback-browser\profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
-2026/11/21-12:00:30.664 7e64 Recovering log #29
-2026/11/21-12:00:30.664 7e64 Reusing old log C:\Users\pcc\Documents\Codex\airmius\artifacts\web-form-feedback-browser\profile\Default\EdgeCoupons/coupons_data.db/000029.log 
-2026/11/21-12:00:30.735 e494 Level-0 table #33: started
-2026/11/21-12:00:30.738 e494 Level-0 table #33: 683444 bytes OK
-2026/11/21-12:00:30.739 e494 Delete type=0 #29
-2026/11/21-12:00:30.739 e494 Compacting 4@0 + 1@1 files
-2026/11/21-12:00:30.743 e494 Generated table #34@0: 4 keys, 683351 bytes
-2026/11/21-12:00:30.743 e494 Compacted 4@0 + 1@1 files => 683351 bytes
-2026/11/21-12:00:30.743 e494 compacted to: files[ 0 1 1 0 0 0 0 ]
-2026/11/21-12:00:30.744 e494 Delete type=2 #21
-2026/11/21-12:00:30.744 e494 Delete type=2 #24
-2026/11/21-12:00:30.744 e494 Delete type=2 #27
-2026/11/21-12:00:30.744 e494 Delete type=2 #30
-2026/11/21-12:00:30.744 e494 Delete type=2 #33
+2026/11/21-12:44:20.472 ae84 Reusing MANIFEST C:\Users\pcc\Documents\Codex\airmius\artifacts\web-form-feedback-browser\profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/11/21-12:44:20.473 ae84 Recovering log #36
+2026/11/21-12:44:20.474 ae84 Reusing old log C:\Users\pcc\Documents\Codex\airmius\artifacts\web-form-feedback-browser\profile\Default\EdgeCoupons/coupons_data.db/000036.log 
+2026/11/21-12:44:20.564 e4b8 Level-0 table #40: started
+2026/11/21-12:44:20.566 e4b8 Level-0 table #40: 683444 bytes OK
+2026/11/21-12:44:20.567 e4b8 Delete type=0 #36

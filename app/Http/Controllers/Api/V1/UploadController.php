@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\FileResource;
 use App\Models\Club;
+use App\Models\ClubPolicyDocument;
 use App\Models\Event;
 use App\Models\File;
 use App\Models\FileShare;
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -248,6 +250,7 @@ class UploadController extends Controller
             'team_id' => ['nullable', 'required_if:scope,team', 'exists:teams,id'],
             'event_id' => ['nullable', 'required_if:scope,event', 'exists:events,id'],
             'folder_id' => ['nullable', 'exists:folders,id'],
+            'policy_document_type' => ['nullable', 'prohibited_unless:scope,club', Rule::in(ClubPolicyDocument::TYPES)],
             'file' => ['required', 'file', 'max:'.self::MAX_FILE_SIZE_KB],
         ]);
 
@@ -255,6 +258,10 @@ class UploadController extends Controller
         $this->authorizeUploadToScope($request, $scope);
         $upload = $request->file('file');
         $this->assertSafeUpload($upload);
+        if (! empty($data['policy_document_type'])) {
+            $club = Club::findOrFail($scope['club_id']);
+            abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::POLICY_DOCUMENTS_EDIT), 403);
+        }
 
         if (! empty($scope['club_id'])) {
             $this->planFeatures->ensureCanStoreFile(Club::findOrFail($scope['club_id']), $upload);
@@ -268,6 +275,15 @@ class UploadController extends Controller
             $this->assertFolderScope($folder, $scope);
         }
 
+        if (! empty($data['policy_document_type'])) {
+            $data['folder_id'] = DB::transaction(function () use ($scope, $data) {
+                Club::whereKey($scope['club_id'])->lockForUpdate()->firstOrFail();
+                $root = Folder::firstOrCreate([...$scope, 'parent_id' => null, 'name' => 'Satzungen und Ordnungen']);
+                return Folder::firstOrCreate([...$scope, 'parent_id' => $root->id, 'name' => match ($data['policy_document_type']) {
+                    'statutes' => 'Satzungen', 'regulation' => 'Ordnungen', 'contribution_model' => 'Beitragsordnungen',
+                }])->id;
+            });
+        }
         $file = $this->files->upload($request->user(), $upload, array_merge($scope, [
             'folder_id' => $data['folder_id'] ?? null,
         ]));

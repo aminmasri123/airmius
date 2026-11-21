@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -115,6 +117,146 @@ void main() {
     }
   });
 
+  testWidgets(
+    'policy page uploads once, formats dates, opens calendar and retains failed save',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final transport = _PolicyDocumentTransport(failSaveOnce: true);
+      final container = AirmiusServiceContainer(
+        environment: const AirmiusAppEnvironment(
+          apiBaseUrl: 'https://example.test',
+          enableOfflineQueue: false,
+        ),
+        transport: transport,
+      );
+      var uploads = 0;
+      final club = ClubSummary.fromAirmiusClub(
+        AirmiusClub.fromJson(const {
+          'id': 7,
+          'name': 'Airmius SC',
+          'can_manage': true,
+        }),
+      );
+      await tester.pumpWidget(
+        AirmiusScope(
+          language: AirmiusLanguage.de,
+          setLanguage: (_) {},
+          child: AirmiusServicesScope(
+            container: container,
+            child: MaterialApp(
+              home: ClubPolicyDocumentsScreen(
+                club: club,
+                pickFile: () async => PlatformFile(
+                  name: 'new.pdf',
+                  size: 4,
+                  bytes: Uint8List.fromList([1, 2, 3, 4]),
+                ),
+                uploadFile: (clubId, type, file) async {
+                  expect(clubId, 7);
+                  expect(type, 'statutes');
+                  uploads++;
+                  return {'id': 17, 'display_name': file.name};
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Fassung anlegen'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+      await tester.tap(find.text('Vereinsdatei auswählen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Datei suchen'), findsOneWidget);
+      await tester.tap(find.text('satzung.pdf'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Neue Datei hochladen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Datei vom Gerät auswählen'));
+      await tester.pumpAndSettle();
+      Future<void> enter(String key, String value) async {
+        final field = find.byKey(ValueKey('policy-$key'));
+        await tester.ensureVisible(field);
+        await tester.pumpAndSettle();
+        await tester.enterText(field, value);
+      }
+
+      await enter('documentTitle', 'Neue Satzung');
+      await enter('version', '2027');
+      await enter('validFrom', '01');
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('policy-validFrom')),
+            )
+            .controller!
+            .text,
+        '01.',
+      );
+      await enter('validFrom', '0105');
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('policy-validFrom')),
+            )
+            .controller!
+            .text,
+        '01.05.',
+      );
+      await enter('validFrom', '01052027');
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('policy-validUntil')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Datum im Kalender wählen').last);
+      await tester.pumpAndSettle();
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('policy-validUntil')),
+            )
+            .controller!
+            .text,
+        isNotEmpty,
+      );
+      await enter('validUntil', '');
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+      expect(find.text('Version already exists'), findsOneWidget);
+      expect(uploads, 1);
+      expect(transport.writes.single.body!['valid_from'], '2027-05-01');
+      expect(transport.writes.single.body!['file_id'], 17);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('policy-documentTitle')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextFormField>(
+              find.byKey(const ValueKey('policy-documentTitle')),
+            )
+            .controller!
+            .text,
+        'Neue Satzung',
+      );
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+      expect(uploads, 1);
+      expect(transport.writes, hasLength(2));
+      expect(tester.takeException(), isNull);
+    },
+  );
   test('management payload preserves contribution model versions', () {
     final management = AirmiusClubManagement.fromJson(const {
       'can_manage': true,
@@ -150,7 +292,7 @@ void main() {
     }
   });
 
-  testWidgets('policy document screen renders versions and manager dialog', (
+  testWidgets('policy document screen renders versions and manager page', (
     tester,
   ) async {
     final container = AirmiusServiceContainer(
@@ -191,13 +333,13 @@ void main() {
     await tester.tap(find.byTooltip('Fassung anlegen'));
     await tester.pumpAndSettle();
     expect(find.text('Fassung anlegen'), findsOneWidget);
-    expect(find.text('Vereinsdatei'), findsOneWidget);
-    expect(find.text('satzung.pdf'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Vereinsdatei auswählen'), findsOneWidget);
     await tester.tap(find.text('Speichern'));
     await tester.pumpAndSettle();
     expect(
       find.text('Titel, Version, Beginn und Datei sind erforderlich.'),
-      findsOneWidget,
+      findsWidgets,
     );
   });
 
@@ -269,8 +411,28 @@ class _ThrowingTransport implements AirmiusApiTransport {
 }
 
 class _PolicyDocumentTransport implements AirmiusApiTransport {
+  _PolicyDocumentTransport({this.failSaveOnce = false});
+  bool failSaveOnce;
+  final writes = <AirmiusApiRequest>[];
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    if (request.method == 'POST' &&
+        request.path.endsWith('/policy-documents')) {
+      writes.add(request);
+      if (failSaveOnce) {
+        failSaveOnce = false;
+        return const AirmiusApiResponse(
+          statusCode: 422,
+          body: '{"errors":{"version_label":["Version already exists"]}}',
+        );
+      }
+    }
+    if (request.path == '/api/v1/uploads')
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":9,"display_name":"satzung.pdf"}],"meta":{"last_page":1}}',
+      );
     if (request.path == '/api/v1/files') {
       return const AirmiusApiResponse(
         statusCode: 200,

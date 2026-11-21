@@ -519,7 +519,12 @@ class SupportTicketController extends Controller
         $inbox = $filters['inbox'] ?? 'general';
         abort_if($inbox === 'safety' && ! $this->access->canHandleSafety($request->user()), 403);
         $baseQuery = $this->scopedSupportQuery($scope)
-            ->where('is_confidential', $inbox === 'safety');
+            ->where(function ($query) use ($inbox, $request): void {
+                $query->where('is_confidential', $inbox === 'safety');
+                if ($inbox === 'general' && $request->user()->hasRole('super_admin')) {
+                    $query->orWhere('report_source', 'club_deletion_review');
+                }
+            });
         $tickets = (clone $baseQuery)
             ->with(['club:id,name', 'department:id,name', 'team:id,name', 'user:id,name,email', 'assignee:id,name,email', 'responsibleUser:id,name,email'])
             ->when($filters['status'] ?? null, fn ($query, string $status) => $query->where('status', $status))
@@ -767,7 +772,14 @@ class SupportTicketController extends Controller
     private function scopedSupportQuery(array $scope)
     {
         return SupportTicket::query()
-            ->when(! $this->access->canHandleSafety(request()->user()), fn ($query) => $query->where('is_confidential', false))
+            ->when(! $this->access->canHandleSafety(request()->user()), function ($query): void {
+                $query->where(function ($visible): void {
+                    $visible->where('is_confidential', false);
+                    if (request()->user()->hasRole('super_admin')) {
+                        $visible->orWhere('report_source', 'club_deletion_review');
+                    }
+                });
+            })
             ->where(function ($query): void {
                 $query->whereNull('conflict_user_ids')->orWhereJsonDoesntContain('conflict_user_ids', (int) request()->user()->id);
             })

@@ -53,6 +53,27 @@ class SupportInboxNotificationTest extends TestCase
         return SupportTicket::findOrFail($id);
     }
 
+    public function test_super_admin_receives_and_opens_deletion_review_without_safety_access(): void
+    {
+        $admin = $this->admin();
+        Role::findOrCreate('super_admin', 'web');
+        $admin->syncRoles(['super_admin']);
+        $requester = User::factory()->create();
+        $ticket = SupportTicket::create([
+            'user_id' => $requester->id, 'name' => $requester->name, 'email' => $requester->email,
+            'subject' => 'Deletion review', 'message' => 'Review financial retention',
+            'category' => 'privacy', 'priority' => 'high', 'status' => 'open',
+            'is_confidential' => true, 'report_source' => 'club_deletion_review',
+        ]);
+        $notice = Notification::where('user_id', $admin->id)->where('type', 'support.inbox.new')->firstOrFail();
+        $this->assertStringContainsString('inbox=general', $notice->data['url']);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::tokenAbility()]);
+        $this->getJson('/api/v1/admin/support/tickets?inbox=general')->assertOk()
+            ->assertJsonPath('data.tickets.0.id', $ticket->id);
+        $this->getJson('/api/v1/support/tickets/'.$ticket->id)->assertOk();
+        $this->getJson('/api/v1/admin/support/tickets?inbox=safety')->assertForbidden();
+    }
+
     public function test_new_request_notifies_support_and_opted_in_admins_once_without_private_text(): void
     {
         $support = $this->operator();

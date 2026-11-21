@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\File;
+use App\Models\Club;
+use App\Models\Folder;
 use App\Models\User;
 use App\Support\UploadStorage;
+use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -16,6 +19,35 @@ use Tests\TestCase;
 class UploadValidationTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_policy_uploads_are_private_scoped_and_filed_by_type(): void
+    {
+        Storage::fake(UploadStorage::disk());
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->syncWithoutDetaching([$owner->id => ['role' => 'manager', 'roles' => ['manager'], 'membership_status' => 'active']]);
+        Sanctum::actingAs($owner);
+        foreach (['statutes' => 'Satzungen', 'regulation' => 'Ordnungen', 'contribution_model' => 'Beitragsordnungen', 'statutes' => 'Satzungen'] as $type => $name) {
+            $id = $this->postJson('/api/v1/uploads', ['scope' => 'club', 'club_id' => $club->id,
+                'policy_document_type' => $type, 'file' => UploadedFile::fake()->create('document.pdf', 4, 'application/pdf')])
+                ->assertCreated()->json('data.id');
+            $file = File::findOrFail($id);
+            $folder = Folder::findOrFail($file->folder_id);
+            $this->assertSame($name, $folder->name);
+            $this->assertEquals($club->id, $folder->club_id);
+            $this->assertSame('Satzungen und Ordnungen', $folder->parent->name);
+            $this->assertTrue(UploadStorage::isPrivate($file->path));
+            Storage::disk(UploadStorage::disk($file->path))->assertExists($file->path);
+        }
+        $this->assertSame(4, Folder::where('club_id', $club->id)->count());
+        $member = User::factory()->create();
+        $club->users()->attach($member->id, ['role' => 'manager', 'roles' => ['manager'], 'membership_status' => 'active',
+            'permission_overrides' => [ClubPermissions::POLICY_DOCUMENTS_EDIT => false]]);
+        Sanctum::actingAs($member);
+        $this->postJson('/api/v1/uploads', ['scope' => 'club', 'club_id' => $club->id,
+            'policy_document_type' => 'statutes', 'file' => UploadedFile::fake()->create('denied.pdf', 4, 'application/pdf')])->assertForbidden();
+        $this->assertSame(3, File::where('club_id', $club->id)->count());
+    }
 
     public function test_api_upload_flow_covers_size_type_success_and_abort(): void
     {
