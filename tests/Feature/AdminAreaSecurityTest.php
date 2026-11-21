@@ -150,6 +150,37 @@ class AdminAreaSecurityTest extends TestCase
             ->assertSessionHas('error', AdminTwoFactor::STEP_UP_MESSAGE);
     }
 
+    public function test_platform_admin_can_create_product_without_password_step_up(): void
+    {
+        [$user] = $this->platformAdmin([
+            'two_factor_secret' => 'encrypted-test-secret',
+            'two_factor_confirmed_at' => now(),
+        ]);
+        Permission::findOrCreate('subscriptions.manage', 'web');
+        $user->givePermissionTo('subscriptions.manage');
+
+        $response = $this
+            ->actingAs($user)
+            ->post(route('admin.commerce.products.store'), []);
+
+        $response->assertSessionHasErrors()->assertRedirect();
+        $this->assertNotSame(route('password.confirm'), $response->headers->get('Location'));
+    }
+
+    public function test_platform_admin_api_can_create_product_without_mobile_step_up(): void
+    {
+        [$user] = $this->platformAdmin([
+            'two_factor_secret' => 'encrypted-test-secret',
+            'two_factor_confirmed_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/admin/commerce/products', [])
+            ->assertUnprocessable()
+            ->assertJsonMissing(['code' => AdminTwoFactor::STEP_UP_ERROR_CODE]);
+    }
+
     public function test_platform_admin_api_requires_fresh_mobile_step_up_token(): void
     {
         [$user] = $this->platformAdmin([

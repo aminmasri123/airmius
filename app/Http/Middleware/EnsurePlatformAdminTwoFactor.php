@@ -19,6 +19,7 @@ class EnsurePlatformAdminTwoFactor
         }
 
         if (AdminTwoFactor::requiredFor($request->user())
+            && ! $request->routeIs('admin.commerce.products.store', '*.admin.commerce.products.store')
             && ! AdminTwoFactor::freshTokenStepUp($request->user())
         ) {
             return response()->json([

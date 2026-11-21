@@ -34,6 +34,7 @@ class HardenAdminArea
         }
 
         if (! $request->isMethodSafe()
+            && ! $request->routeIs('admin.commerce.products.store', '*.admin.commerce.products.store')
             && AdminTwoFactor::requiredFor($request->user())
             && ! AdminTwoFactor::freshWebStepUp($request->session()->get('auth.password_confirmed_at'))
         ) {
