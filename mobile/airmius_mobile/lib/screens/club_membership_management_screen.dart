@@ -9556,13 +9556,42 @@ class _ClubAuditPanel extends StatelessWidget {
         children: [
           Eyebrow(scope.t('membership.audit.title')),
           const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AirmiusColors.orange.withValues(alpha: 0.10),
+              border: Border.all(
+                color: AirmiusColors.orange.withValues(alpha: 0.40),
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  scope.t('membership.audit.retentionTitle'),
+                  style: TextStyle(
+                    color: airmiusTextColor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  scope.t('membership.audit.retentionBody'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           if (logs.isEmpty)
             Text(
               scope.t('membership.audit.empty'),
               style: TextStyle(color: airmiusMutedColor(context)),
             )
           else
-            for (final log in logs.take(50)) ...[
+            for (final log in logs) ...[
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(

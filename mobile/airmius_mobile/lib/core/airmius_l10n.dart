@@ -12225,6 +12225,9 @@ const _membershipDe = {
   'membership.audit.title': 'Änderungsverlauf',
   'membership.audit.empty': 'Noch keine Änderungen protokolliert.',
   'membership.audit.system': 'System',
+  'membership.audit.retentionTitle': 'Aufbewahrung: 7 Tage',
+  'membership.audit.retentionBody':
+      'Audit-Einträge werden sieben Tage gespeichert und danach automatisch sowie dauerhaft gelöscht.',
   'membership.audit.roleUpdated': 'Vereinsrolle geändert',
   'membership.audit.memberUpdated': 'Mitgliedsdaten geändert',
   'membership.audit.invoiceCreated': 'Rechnung erstellt',
@@ -12569,6 +12572,9 @@ final _membershipEn = {
   'membership.audit.title': 'Change history',
   'membership.audit.empty': 'No changes have been logged yet.',
   'membership.audit.system': 'System',
+  'membership.audit.retentionTitle': 'Retention: 7 days',
+  'membership.audit.retentionBody':
+      'Audit entries are stored for seven days and then deleted automatically and permanently.',
   'membership.audit.roleUpdated': 'Club role changed',
   'membership.audit.memberUpdated': 'Member data changed',
   'membership.audit.invoiceCreated': 'Invoice created',
@@ -12895,6 +12901,9 @@ final _membershipFr = {
   'membership.audit.title': 'Historique des modifications',
   'membership.audit.empty': 'Aucune modification enregistrée.',
   'membership.audit.system': 'Système',
+  'membership.audit.retentionTitle': 'Conservation : 7 jours',
+  'membership.audit.retentionBody':
+      'Les entrées d’audit sont conservées sept jours, puis supprimées automatiquement et définitivement.',
   'membership.audit.roleUpdated': 'Rôle du club modifié',
   'membership.audit.memberUpdated': 'Données du membre modifiées',
   'membership.audit.invoiceCreated': 'Facture créée',
@@ -13209,6 +13218,9 @@ final _membershipAr = {
   'membership.audit.title': 'سجل التغييرات',
   'membership.audit.empty': 'لم يتم تسجيل أي تغييرات بعد.',
   'membership.audit.system': 'النظام',
+  'membership.audit.retentionTitle': 'مدة الاحتفاظ: 7 أيام',
+  'membership.audit.retentionBody':
+      'تُحفظ سجلات التدقيق لمدة سبعة أيام ثم تُحذف تلقائيًا ونهائيًا.',
   'membership.audit.roleUpdated': 'تم تغيير دور النادي',
   'membership.audit.memberUpdated': 'تم تغيير بيانات العضو',
   'membership.audit.invoiceCreated': 'تم إنشاء الفاتورة',

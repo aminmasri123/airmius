@@ -635,15 +635,14 @@ onMounted(() => {
                     <i class="las la-comments mr-1"></i>
                     {{ $t('Teamchat') }}
                 </Link>
-                <button
+                <Link
                     v-if="can.update"
-                    type="button"
+                    :href="route('auth.events.edit', event.id)"
                     class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                    @click="showEditModal = true"
                 >
                     <i class="las la-edit mr-1"></i>
                     {{ $t('Event bearbeiten') }}
-                </button>
+                </Link>
                 <button
                     v-if="can.cancel && event.status !== 'cancelled'"
                     type="button"

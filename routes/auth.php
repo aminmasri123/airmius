@@ -471,6 +471,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/events/default-filters', [EventController::class, 'saveDefaultFilters'])->name('auth.events.default-filters.update');
     Route::post('/events', [EventController::class, 'store'])->name('auth.events.store');
     Route::get('/events/{event}', [EventController::class, 'show'])->name('auth.events.show');
+    Route::get('/events/{event}/edit', [EventController::class, 'edit'])->name('auth.events.edit');
     Route::get('/events/{event}/calendar.ics', [EventCompetitivenessController::class, 'exportIcs'])->name('auth.events.calendar');
     Route::put('/events/{event}', [EventController::class, 'update'])->name('auth.events.update');
     Route::post('/events/{event}/cancel', [EventController::class, 'cancel'])->name('auth.events.cancel');

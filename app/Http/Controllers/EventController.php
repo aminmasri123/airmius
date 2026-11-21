@@ -353,6 +353,33 @@ class EventController extends Controller
         ]);
     }
 
+    public function edit(Event $event)
+    {
+        $this->authorize('update', $event);
+
+        $event->loadMissing([
+            'team:id,name,club_id',
+            'club:id,name',
+            'sportRoute' => fn ($query) => $query->select($this->routeLinks->routeColumns()),
+        ]);
+
+        return Inertia::render('Auth/Dashboard/Events/Edit', [
+            'event' => $event,
+            'clubs' => Club::query()
+                ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
+                ->select(['id', 'name'])
+                ->orderBy('name')
+                ->get(),
+            'teams' => EventCreationPermissions::availableTeams(auth()->user())
+                ->map->only(['id', 'club_id', 'name'])
+                ->values(),
+            'eventTypes' => Event::TYPES,
+            'visibilities' => Event::VISIBILITIES,
+            'sportRoutes' => fn () => $this->routeLinks->selectableRoutes(auth()->user()),
+            'trainingSessions' => fn () => $this->trainingSessionLinks->selectable(auth()->user()),
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $this->validated($request);

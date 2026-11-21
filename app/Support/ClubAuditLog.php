@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ClubAuditLog
 {
+    public const RETENTION_DAYS = 7;
+
     public const LABELS = [
         'club.platform.updated' => 'Vereinsdaten durch Plattformverwaltung geändert',
         'club.platform.verification_updated' => 'Vereinsprüfung durch Plattformverwaltung geändert',
@@ -167,13 +169,14 @@ class ClubAuditLog
         ]);
     }
 
-    public static function forClub(Club $club, int $limit = 50): array
+    public static function forClub(Club $club, ?int $limit = null): array
     {
         return Activity::query()
             ->where('club_id', $club->id)
+            ->where('created_at', '>=', now()->subDays(self::RETENTION_DAYS))
             ->with('user:id,name,email')
             ->latest('id')
-            ->limit($limit)
+            ->when($limit !== null, fn ($query) => $query->limit($limit))
             ->get()
             ->map(fn (Activity $activity) => self::payload($activity))
             ->values()

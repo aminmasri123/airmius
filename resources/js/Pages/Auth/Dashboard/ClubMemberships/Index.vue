@@ -811,6 +811,22 @@ const invoiceStatusClass = (status) => ({
 const auditDetail = (entry) => {
     const data = entry.data || {}
 
+    if (data.from_role || data.to_role) {
+        return `${data.from_role || '-'} → ${data.to_role || '-'}`
+    }
+
+    if (data.before && data.after) {
+        const fields = [...new Set([...Object.keys(data.before), ...Object.keys(data.after)])]
+        const changed = fields.filter((field) => data.before[field] !== data.after[field])
+        if (changed.length) {
+            return changed.map((field) => `${field}: ${data.before[field] ?? '-'} → ${data.after[field] ?? '-'}`).join(' · ')
+        }
+    }
+
+    if (data.entity_type) {
+        return `${data.entity_type}${entry.subject_id ? ` #${entry.subject_id}` : ''}`
+    }
+
     if (data.old_status && data.new_status) {
         return `${invoiceStatusLabel(data.old_status)} -> ${invoiceStatusLabel(data.new_status)}`
     }
@@ -2650,6 +2666,11 @@ const saveExternalMember = async () => {
                         <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.audit_log', 'Audit Log') }}</h2>
                         <p class="mt-1 text-sm text-secondary">{{ tx('club_memberships.workspace.club_actions', '{count} Vereinsaktion(en)', { count: auditLogs.length }) }}</p>
                     </div>
+                </div>
+
+                <div class="mt-4 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-primary" role="note">
+                    <strong>{{ tx('club_memberships.audit.retention_title', 'Aufbewahrung: 7 Tage') }}</strong>
+                    <p class="mt-1 text-secondary">{{ tx('club_memberships.audit.retention_body', 'Audit-Einträge werden sieben Tage gespeichert und danach automatisch sowie dauerhaft gelöscht.') }}</p>
                 </div>
 
                 <div class="mt-4 overflow-x-auto">

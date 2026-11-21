@@ -137,6 +137,10 @@ Schedule::command('airmius:prune-ad-events --limit=1000')
     ->dailyAt('03:45')
     ->withoutOverlapping();
 
+Schedule::command('airmius:prune-club-audit-logs --limit=5000')
+    ->dailyAt('03:46')
+    ->withoutOverlapping();
+
 Schedule::command('airmius:prune-website-requests --limit=1000')
     ->dailyAt('03:48')
     ->withoutOverlapping();
