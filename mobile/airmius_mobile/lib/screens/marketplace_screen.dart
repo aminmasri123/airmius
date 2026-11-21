@@ -507,9 +507,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           onCart: () => setState(() => _section = 'cart'),
         ),
         const SizedBox(height: 10),
-        if (_catalogError == null)
+        if (_catalogError == null || _appendRequest)
           Text(
-            _refreshingProducts
+            _refreshingProducts && !_appendRequest
                 ? marketplaceFilterText(context, 'loading')
                 : '$resultCount ${t('market.results')}',
             style: const TextStyle(
@@ -522,25 +522,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           const SizedBox(height: 8),
           _activeFilters(),
         ],
-        if (_refreshingProducts) ...[
+        if (_refreshingProducts && !_appendRequest) ...[
           const SizedBox(height: 12),
           LinearProgressIndicator(
             semanticsLabel: marketplaceFilterText(context, 'loading'),
           ),
         ],
-        if (_catalogError != null) ...[
-          const SizedBox(height: 12),
-          Text(
-            _catalogError!,
-            style: const TextStyle(color: _marketInk),
-            textAlign: TextAlign.center,
-          ),
-          TextButton.icon(
-            onPressed: () => _fetchProducts(append: _appendRequest),
-            icon: const Icon(Icons.refresh),
-            label: Text(marketplaceFilterText(context, 'retry')),
-          ),
-        ],
+        if (_catalogError != null && !_appendRequest) _catalogFailure(),
         const SizedBox(height: 14),
         if ((!_refreshingProducts && _catalogError == null) ||
             _appendRequest) ...[
@@ -590,20 +578,63 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             ),
           ],
         ],
-        if (_productPage < _lastProductPage && _catalogError == null)
+        if (_catalogError != null && _appendRequest) _catalogFailure(),
+        if (_productPage < _lastProductPage &&
+            _catalogError == null &&
+            (!_refreshingProducts || _appendRequest))
           Padding(
             padding: const EdgeInsets.only(top: 20),
             child: OutlinedButton.icon(
               onPressed: _refreshingProducts
                   ? null
                   : () => _fetchProducts(append: true),
-              icon: const Icon(Icons.expand_more),
-              label: Text(marketplaceFilterText(context, 'more')),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52)),
+              icon: _refreshingProducts
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        semanticsLabel: marketplaceFilterText(
+                          context,
+                          'loading',
+                        ),
+                      ),
+                    )
+                  : const Icon(Icons.expand_more),
+              label: Text(
+                marketplaceFilterText(
+                  context,
+                  _refreshingProducts ? 'loading' : 'more',
+                ),
+              ),
             ),
           ),
       ],
     );
   }
+
+  Widget _catalogFailure() => Semantics(
+    liveRegion: true,
+    child: Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        children: [
+          Text(
+            _catalogError!,
+            style: const TextStyle(color: _marketInk),
+            textAlign: TextAlign.center,
+          ),
+          TextButton.icon(
+            onPressed: () => _fetchProducts(append: _appendRequest),
+            style: TextButton.styleFrom(minimumSize: const Size(0, 52)),
+            icon: const Icon(Icons.refresh),
+            label: Text(marketplaceFilterText(context, 'retry')),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Future<void> _showSectionPicker(int cartCount) async {
     final selected = await showModalBottomSheet<String>(

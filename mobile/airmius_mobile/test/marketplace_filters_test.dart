@@ -244,6 +244,39 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a pagination failure keeps products and exposes retry at the end of the list',
+    (tester) async {
+      final transport = _CatalogTransport();
+      await _mount(tester, transport);
+      await tester.scrollUntilVisible(
+        find.text('Mehr Produkte laden'),
+        350,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(find.text('Mehr Produkte laden'));
+      await tester.pumpAndSettle();
+      transport.failNext = true;
+      await tester.tap(find.text('Mehr Produkte laden'));
+      await tester.pumpAndSettle();
+      expect(find.text('Training product'), findsWidgets);
+      await tester.ensureVisible(find.text('Erneut versuchen'));
+      await tester.pumpAndSettle();
+      expect(tester.getCenter(find.text('Erneut versuchen')).dy, lessThan(844));
+      expect(
+        tester.getTopLeft(find.text('Erneut versuchen')).dy,
+        greaterThan(
+          tester.getBottomRight(find.text('Training product').last).dy,
+        ),
+      );
+      await tester.tap(find.text('Erneut versuchen'));
+      await tester.pumpAndSettle();
+      expect(transport.catalogRequests.last.query, containsPair('page', '2'));
+      expect(find.text('Erneut versuchen'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final language in [
     AirmiusLanguage.de,
     AirmiusLanguage.fr,
