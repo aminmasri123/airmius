@@ -68,21 +68,21 @@ const emit = defineEmits([
         <div v-if="products.length" class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3 text-sm">
             <label class="flex items-center gap-2">
                 <input type="checkbox" :checked="selectedIds.length === products.length"
-                    :indeterminate.prop="selectedIds.length > 0 && selectedIds.length < products.length"
+                    :indeterminate.prop="Boolean(selectedIds.length) && selectedIds.length < products.length"
                     @change="selected = $event.target.checked ? [...visibleIds] : []">
-                Alle auf dieser Seite auswählen
+                {{ $t('marketplace.bulk.selectPage') }}
             </label>
-            <span class="text-secondary" aria-live="polite">{{ selectedIds.length }} ausgewählt</span>
+            <span class="text-secondary" aria-live="polite">{{ $t('marketplace.bulk.selected', { count: selectedIds.length }) }}</span>
             <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 font-semibold text-buttonTextPrimary disabled:opacity-50"
                 :disabled="!selectedIds.length || selectedIds.length > 100" @click="openBulkActions">
-                Sammelaktion
+                {{ $t('marketplace.bulk.action') }}
             </button>
-            <span v-if="selectedIds.length > 100" class="text-warning">Maximal 100 Produkte pro Aktion.</span>
+            <span v-if="selectedIds.length > 100" class="text-warning">{{ $t('marketplace.bulk.limit') }}</span>
         </div>
         <div v-for="product in products" :key="product.id" class="rounded-lg border border-border p-3">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <input v-model="selected" type="checkbox" :value="product.id"
-                    :aria-label="product.title + ' auswählen'" class="shrink-0 self-start md:self-center">
+                    :aria-label="$t('marketplace.bulk.selectProduct', { title: product.title })" class="shrink-0 self-start md:self-center">
                 <div class="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-inputBg">
                     <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
                     <div v-else class="flex h-full items-center justify-center">
@@ -192,50 +192,50 @@ const emit = defineEmits([
     </div>
     <dialog ref="dialog" aria-labelledby="product-bulk-title" class="m-auto w-[calc(100%-2rem)] max-w-lg rounded-xl border border-border bg-card p-5 text-primary shadow-xl backdrop:bg-black/60" @cancel.prevent="!form.processing && dialog.close()">
         <form class="space-y-4" @submit.prevent="applyBulkAction">
-            <h2 id="product-bulk-title" class="text-lg font-semibold">Sammelaktion für {{ form.product_ids.length }} Produkte</h2>
+            <h2 id="product-bulk-title" class="text-lg font-semibold">{{ $t('marketplace.bulk.title', { count: form.product_ids.length }) }}</h2>
             <label class="grid gap-1 text-sm">
-                Aktion
+                {{ $t('marketplace.bulk.chooseAction') }}
                 <select v-model="form.action" :disabled="form.processing" class="rounded-lg border-border bg-inputBg" @change="form.clearErrors(); confirmed = false">
-                    <option value="discount">Rabatt anwenden</option>
-                    <option value="status">Status ändern</option>
-                    <option value="archive">Archivieren</option>
-                    <option value="delete">Löschen</option>
+                    <option value="discount">{{ $t('marketplace.bulk.discount') }}</option>
+                    <option value="status">{{ $t('marketplace.bulk.status') }}</option>
+                    <option value="archive">{{ $t('marketplace.bulk.archive') }}</option>
+                    <option value="delete">{{ $t('marketplace.bulk.delete') }}</option>
                 </select>
             </label>
             <template v-if="form.action === 'discount'">
                 <label class="grid gap-1 text-sm">
-                    Rabatt in Prozent
+                    {{ $t('marketplace.bulk.percent') }}
                     <input v-model.number="form.discount_percent" type="number" min="1" max="100" required :disabled="form.processing" class="rounded-lg border-border bg-inputBg">
                 </label>
-                <p class="text-sm text-secondary">Senkt die aktuellen Produktpreise und expliziten Variantenpreise dauerhaft.</p>
+                <p class="text-sm text-secondary">{{ $t('marketplace.bulk.discountEffect') }}</p>
             </template>
             <template v-if="form.action === 'status'">
                 <label class="grid gap-1 text-sm">
-                    Neuer Status
+                    {{ $t('marketplace.bulk.newStatus') }}
                     <select v-model="form.status" :disabled="form.processing" class="rounded-lg border-border bg-inputBg">
-                        <option value="draft">Entwurf</option>
-                        <option value="review">Zur Prüfung</option>
-                        <option value="published">Freigeben</option>
-                        <option value="rejected">Ablehnen</option>
+                        <option value="draft">{{ $t('marketplace.bulk.draft') }}</option>
+                        <option value="review">{{ $t('marketplace.bulk.review') }}</option>
+                        <option value="published">{{ $t('marketplace.bulk.publish') }}</option>
+                        <option value="rejected">{{ $t('marketplace.bulk.reject') }}</option>
                     </select>
                 </label>
                 <label v-if="form.status === 'rejected'" class="grid gap-1 text-sm">
-                    Ablehnungsgrund
+                    {{ $t('marketplace.bulk.reason') }}
                     <textarea v-model="form.rejection_reason" required maxlength="2000" :disabled="form.processing" class="rounded-lg border-border bg-inputBg" />
                 </label>
             </template>
             <label v-if="form.action === 'delete'" class="flex items-start gap-2 text-sm">
                 <input v-model="confirmed" type="checkbox" :disabled="form.processing" class="mt-0.5">
-                Produkte ohne Bestellungen endgültig löschen. Produkte mit Bestellungen werden archiviert.
+                {{ $t('marketplace.bulk.deleteConfirm') }}
             </label>
             <ul v-if="form.hasErrors" role="alert" class="space-y-1 text-sm text-danger">
                 <li v-for="(error, field) in form.errors" :key="field">{{ error }}</li>
             </ul>
             <div class="flex flex-wrap justify-end gap-2">
-                <button type="button" :disabled="form.processing" class="rounded-lg border border-border px-3 py-2 text-sm" @click="dialog.close()">Abbrechen</button>
+                <button type="button" :disabled="form.processing" class="rounded-lg border border-border px-3 py-2 text-sm" @click="dialog.close()">{{ $t('marketplace.bulk.cancel') }}</button>
                 <button type="submit" :disabled="form.processing || (form.action === 'delete' && !confirmed)"
                     class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
-                    {{ form.action === 'delete' ? 'Produkte löschen' : 'Anwenden' }}
+                    {{ form.action === 'delete' ? $t('marketplace.bulk.deleteProducts') : $t('marketplace.bulk.apply') }}
                 </button>
             </div>
         </form>

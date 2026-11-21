@@ -1315,9 +1315,9 @@ const {
                         <input v-model="campaignForm.headline" maxlength="120" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurze Botschaft der Anzeige">
                     </label>
                     <label>
-                        <span class="text-xs font-semibold uppercase text-secondary">Link beim Klick auf die Anzeige</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ $t('marketplace.ad.clickLink') }}</span>
                         <input v-model="campaignForm.target_url" type="url" inputmode="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://example.de/aktion">
-                        <span class="mt-1 block text-xs text-secondary">Diese Seite öffnet sich, wenn jemand auf die Anzeige klickt. Nur HTTP- oder HTTPS-Links sind zulässig.</span>
+                        <span class="mt-1 block text-xs text-secondary">{{ $t('marketplace.ad.clickHelpHttp') }}</span>
                     </label>
                     <label>
                         <span class="text-xs font-semibold uppercase text-secondary">Anzeigentext</span>
@@ -1359,10 +1359,10 @@ const {
                         </p>
                     </div>
                     <fieldset class="rounded-lg border border-border bg-bg p-3">
-                        <legend class="px-1 text-xs font-semibold uppercase text-secondary">Anzeigenbild wählen</legend>
+                        <legend class="px-1 text-xs font-semibold uppercase text-secondary">{{ $t('marketplace.ad.chooseImage') }}</legend>
                         <div class="flex flex-wrap gap-4 text-sm text-primary">
-                            <label class="flex items-center gap-2"><input v-model="campaignImageSource" type="radio" value="link" @change="campaignForm.creative_image_upload = null"> Bild-Link verwenden</label>
-                            <label class="flex items-center gap-2"><input v-model="campaignImageSource" type="radio" value="upload"> Bild hochladen</label>
+                            <label class="flex items-center gap-2"><input v-model="campaignImageSource" type="radio" value="link" @change="campaignForm.creative_image_upload = null"> {{ $t('marketplace.ad.useImageLink') }}</label>
+                            <label class="flex items-center gap-2"><input v-model="campaignImageSource" type="radio" value="upload"> {{ $t('marketplace.ad.uploadImage') }}</label>
                         </div>
                     </fieldset>
                     <label v-if="campaignImageSource === 'link'">
@@ -1370,7 +1370,7 @@ const {
                         <input v-model="campaignForm.creative_image_url" type="url" inputmode="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://example.de/motiv.webp">
                     </label>
                     <div v-else class="rounded-lg border border-border bg-bg p-3">
-                        <label class="text-xs font-semibold uppercase text-secondary">Bild hochladen</label>
+                        <label class="text-xs font-semibold uppercase text-secondary">{{ $t('marketplace.ad.uploadImage') }}</label>
                         <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setCampaignCreativeUpload">
                         <p class="mt-1 text-xs text-secondary">JPG, PNG oder WebP bis 8 MB. Empfohlen: {{ selectedAdFormat.size }}.</p>
                     </div>
@@ -1838,7 +1838,7 @@ const {
                     <input v-model="editProductForm.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
                     <input v-model="editProductForm.image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL">
                     <label class="rounded-lg border border-border bg-bg p-3 text-sm text-secondary md:col-span-2">
-                        <span class="block text-xs font-semibold uppercase text-secondary">Bild hochladen</span>
+                        <span class="block text-xs font-semibold uppercase text-secondary">{{ $t('marketplace.ad.uploadImage') }}</span>
                         <input type="file" accept="image/*" class="mt-2 text-sm text-primary" @change="editProductForm.image_upload = $event.target.files?.[0] || null">
                     </label>
                     <label class="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-primary">
@@ -2116,9 +2116,9 @@ const {
                     <input v-model="editCampaignForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kampagnenname">
                     <p v-if="editCampaignForm.errors.name" class="text-sm text-error">{{ editCampaignForm.errors.name }}</p>
                     <input v-model="editCampaignForm.headline" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline, max. 120 Zeichen">
-                    <label class="text-xs font-semibold uppercase text-secondary">Link beim Klick auf die Anzeige
+                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t('marketplace.ad.clickLink') }}
                         <input v-model="editCampaignForm.target_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://example.de/aktion">
-                        <span class="mt-1 block text-xs font-normal normal-case text-secondary">Diese Seite öffnet sich, wenn jemand auf die Anzeige klickt.</span>
+                        <span class="mt-1 block text-xs font-normal normal-case text-secondary">{{ $t('marketplace.ad.clickHelp') }}</span>
                     </label>
                     <p v-if="editCampaignForm.errors.target_url" class="text-sm text-error">{{ editCampaignForm.errors.target_url }}</p>
                     <textarea v-model="editCampaignForm.primary_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anzeigentext / Primary Text"></textarea>
@@ -2155,13 +2155,13 @@ const {
                         </p>
                     </div>
                     <fieldset class="rounded-lg border border-border bg-bg p-3">
-                        <legend class="px-1 text-xs font-semibold uppercase text-secondary">Anzeigenbild ändern</legend>
+                        <legend class="px-1 text-xs font-semibold uppercase text-secondary">{{ $t('marketplace.ad.changeImage') }}</legend>
                         <div class="flex flex-wrap gap-4 text-sm text-primary">
-                            <label class="flex items-center gap-2"><input v-model="editCampaignImageSource" type="radio" value="link" @change="editCampaignForm.creative_image_upload = null"> Bild-Link verwenden</label>
-                            <label class="flex items-center gap-2"><input v-model="editCampaignImageSource" type="radio" value="upload"> Bild hochladen</label>
+                            <label class="flex items-center gap-2"><input v-model="editCampaignImageSource" type="radio" value="link" @change="editCampaignForm.creative_image_upload = null"> {{ $t('marketplace.ad.useImageLink') }}</label>
+                            <label class="flex items-center gap-2"><input v-model="editCampaignImageSource" type="radio" value="upload"> {{ $t('marketplace.ad.uploadImage') }}</label>
                         </div>
                     </fieldset>
-                    <input v-if="editCampaignImageSource === 'link'" v-model="editCampaignForm.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL optional">
+                    <input v-if="editCampaignImageSource === 'link'" v-model="editCampaignForm.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('marketplace.ad.optionalImageUrl')">
                     <div class="overflow-hidden rounded-lg border border-border bg-bg">
                         <div class="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
                             <span class="text-xs font-semibold uppercase text-secondary">Aktuelles Anzeigenbild</span>
