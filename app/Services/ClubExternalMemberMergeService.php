@@ -123,6 +123,7 @@ class ClubExternalMemberMergeService
                     'subject_id' => $target->id,
                     'updated_at' => now(),
                 ]);
+            app(ClubMemberNumberService::class)->linkAllocation($externalMember, $target);
             $externalId = $externalMember->id;
             $externalMember->delete();
 

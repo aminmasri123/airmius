@@ -621,6 +621,16 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
+  Future<AirmiusClubManagement> generateClubExternalMemberNumber(
+    int clubId,
+    int externalMemberId,
+  ) async {
+    return _managementFromJson(
+      await client.generateClubExternalMemberNumber(clubId, externalMemberId),
+    );
+  }
+
+  @override
   Future<AirmiusClubManagement> createClubMemberInvoice(
     int clubId,
     int userId,

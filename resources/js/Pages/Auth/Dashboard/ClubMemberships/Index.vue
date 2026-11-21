@@ -1676,6 +1676,14 @@ const generateMemberNumber = (member) => {
     })
 }
 
+const generateExternalMemberNumber = (member) => {
+    if (!selectedClub.value) return
+    router.post(route('auth.club-memberships.external-members.member-number', [selectedClub.value.id, member.id]), {}, {
+        preserveScroll: true,
+        only: ['clubs', 'flash'],
+    })
+}
+
 const removeMember = async (member) => {
     if (!selectedClub.value) return
 
@@ -2769,6 +2777,9 @@ const saveExternalMember = async () => {
                             <div class="flex flex-wrap gap-2">
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="openExternalMemberEdit(member)">
                                 {{ tx('auto.Bearbeiten', 'Bearbeiten') }}
+                            </button>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="generateExternalMemberNumber(member)">
+                                {{ tx('auto.Mitgliedsnummer', 'Mitgliedsnummer') }}: {{ tx('auto.Generieren', 'Generieren') }}
                             </button>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="openTimeline(member, true)">
                                 {{ tx('club_memberships.workspace.timeline', 'Verlauf') }}

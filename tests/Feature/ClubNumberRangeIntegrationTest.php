@@ -85,6 +85,80 @@ class ClubNumberRangeIntegrationTest extends TestCase
         $this->assertDatabaseCount('club_number_allocations', 0);
     }
 
+    public function test_external_and_linked_members_share_the_default_member_number_range(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $member = User::factory()->create();
+        $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+        $external = $this->externalMember($club, ['club_id' => $club->id, 'created_by' => $owner->id, 'linked_user_id' => null]);
+        $range = $this->defaultRange($club, 'member', 'VM-', 12);
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/external-members/{$external->id}/member-number")->assertOk();
+        $this->assertSame('VM-0012', $external->fresh()->member_number);
+        $this->assertNull($external->fresh()->linked_user_id);
+        $this->assertDatabaseHas('club_number_allocations', ['formatted_number' => 'VM-0012', 'assigned_subject_type' => 'external_member', 'assigned_subject_id' => $external->id]);
+        $this->postJson("/api/v1/clubs/{$club->id}/members/{$member->id}/member-number")->assertOk();
+        $this->assertDatabaseHas('club_user', ['club_id' => $club->id, 'user_id' => $member->id, 'member_number' => 'VM-0013']);
+        $this->assertSame(14, $range->fresh()->next_number);
+    }
+
+    public function test_generated_external_number_is_kept_when_a_user_account_is_linked(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $user = User::factory()->create();
+        $external = $this->externalMember($club, [
+            'email' => $user->email, 'invitation_token' => str_repeat('a', 64),
+            'invitation_status' => 'pending', 'invitation_expires_at' => now()->addDay(),
+        ]);
+        $this->defaultRange($club, 'member', 'VM-', 12);
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/external-members/{$external->id}/member-number")->assertOk();
+        Sanctum::actingAs($user);
+        $this->postJson('/api/v1/club-external-invitations/'.str_repeat('a', 64).'/accept')->assertOk();
+        $this->assertDatabaseMissing('club_external_members', ['id' => $external->id]);
+        $this->assertDatabaseHas('club_user', ['club_id' => $club->id, 'user_id' => $user->id, 'member_number' => 'VM-0012']);
+        $this->assertDatabaseHas('club_number_allocations', ['formatted_number' => 'VM-0012', 'assigned_subject_type' => 'member', 'assigned_subject_id' => $user->id]);
+    }
+
+    public function test_external_number_collision_preserves_member_and_range_and_foreign_clubs_are_rejected(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $member = User::factory()->create();
+        $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active', 'member_number' => 'COL-0001']);
+        $external = $this->externalMember($club, ['club_id' => $club->id, 'member_number' => 'MANUAL-42']);
+        $range = $this->defaultRange($club, 'member', 'COL-', 1);
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/external-members/{$external->id}/member-number")->assertUnprocessable()->assertJsonValidationErrors('number_range');
+        $this->assertSame('MANUAL-42', $external->fresh()->member_number);
+        $this->assertSame(1, $range->fresh()->next_number);
+        $this->assertDatabaseCount('club_number_allocations', 0);
+        $foreign = $this->externalMember(Club::factory()->create());
+        $this->postJson("/api/v1/clubs/{$club->id}/external-members/{$foreign->id}/member-number")->assertNotFound();
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/clubs/{$club->id}/external-members/{$external->id}/member-number")->assertForbidden();
+        $this->assertSame('MANUAL-42', $external->fresh()->member_number);
+    }
+
+    public function test_external_web_generation_and_legacy_numbering_do_not_require_a_user_account(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $external = $this->externalMember($club, ['club_id' => $club->id, 'member_number' => null, 'linked_user_id' => null]);
+        $other = $this->externalMember($club, ['club_id' => $club->id, 'member_number' => 'M-'.$club->id.'-00002']);
+        $this->actingAs($owner)->post(route('auth.club-memberships.external-members.member-number', [$club, $external]))->assertRedirect();
+        $this->assertSame('M-'.$club->id.'-00003', $external->fresh()->member_number);
+        $member = User::factory()->create();
+        $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+        Sanctum::actingAs($owner);
+        $this->postJson("/api/v1/clubs/{$club->id}/members/{$member->id}/member-number")->assertOk();
+        $this->assertSame('M-'.$club->id.'-00004', DB::table('club_user')->where('club_id', $club->id)->where('user_id', $member->id)->value('member_number'));
+    }
+
     public function test_manual_and_recurring_club_invoices_use_default_range_and_link_allocations(): void
     {
         Notification::fake();
@@ -429,6 +503,19 @@ class ClubNumberRangeIntegrationTest extends TestCase
         $this->assertSame('MANUELL-G', $service->assign($existing, 'shop_credit_note', fn () => 'NEU-G', $owner));
         $this->assertSame(31, $invoiceRange->fresh()->next_number);
         $this->assertSame(6, $creditRange->fresh()->next_number);
+    }
+
+    private function externalMember(Club $club, array $overrides = []): ClubExternalMember
+    {
+        return ClubExternalMember::query()->create(array_merge([
+            'club_id' => $club->id,
+            'created_by' => $club->owner_id,
+            'name' => 'External Athlete',
+            'email' => 'external-'.bin2hex(random_bytes(6)).'@example.test',
+            'role' => 'member',
+            'membership_status' => 'active',
+            'linked_user_id' => null,
+        ], $overrides));
     }
 
     private function defaultRange(Club $club, string $scope, string $prefix, int $start): ClubNumberRange

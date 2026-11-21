@@ -4277,6 +4277,10 @@ abstract class AirmiusClubRepository {
     int clubId,
     int userId,
   );
+  Future<AirmiusClubManagement> generateClubExternalMemberNumber(
+    int clubId,
+    int externalMemberId,
+  );
   Future<AirmiusClubManagement> createClubMemberInvoice(
     int clubId,
     int userId,

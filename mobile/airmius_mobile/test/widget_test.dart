@@ -5350,6 +5350,73 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('external member can generate a number for the selected club', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1400));
+    final external = <String, Object?>{
+      'id': 17,
+      'name': 'External Athlete',
+      'email': 'external@example.test',
+      'membership_status': 'active',
+      'member_number': null,
+    };
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":[{"id":4,"name":"Testclub","can_manage":true}]}',
+      ),
+      AirmiusApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'data': {
+            'id': 4,
+            'name': 'Testclub',
+            'can_manage': true,
+            'permissions': {'can_manage_members': true},
+            'management': {
+              'can_manage': true,
+            'permissions': {'can_manage_members': true},
+              'external_members': [external],
+            },
+          },
+        }),
+      ),
+      AirmiusApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'data': {
+            'can_manage': true,
+            'permissions': {'can_manage_members': true},
+            'external_members': [
+              {...external, 'member_number': 'M-4-00001'},
+            ],
+          },
+        }),
+      ),
+    ], responsesByPath: {
+      '/api/v1/saved-views': const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+    });
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubMembershipManagementScreen(initialClubId: 4),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('Mitglied verwalten'));
+    await tester.tap(find.byTooltip('Mitglied verwalten'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mitgliedsnummer generieren'), findsOneWidget);
+    await tester.tap(find.text('Mitgliedsnummer generieren'));
+    await tester.pumpAndSettle();
+    final request = transport.requests.lastWhere((r) => r.method == 'POST');
+    expect(request.path, '/api/v1/clubs/4/external-members/17/member-number');
+    await tester.tap(find.byTooltip('Mitglied verwalten'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('M-4-00001'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('club member search filters names and emails', (
     WidgetTester tester,
   ) async {

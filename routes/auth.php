@@ -407,6 +407,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/clubs/{club}/membership/{user}', [ClubMembershipController::class, 'updateMember'])->name('auth.club-memberships.members.update');
     Route::delete('/clubs/{club}/membership/{user}', [ClubMembershipController::class, 'removeMember'])->name('auth.club-memberships.members.destroy');
     Route::post('/clubs/{club}/membership/{user}/member-number', [ClubMembershipController::class, 'generateMemberNumber'])->name('auth.club-memberships.members.member-number');
+    Route::post('/clubs/{club}/external-members/{externalMember}/member-number', [ClubMembershipController::class, 'generateExternalMemberNumber'])->name('auth.club-memberships.external-members.member-number');
     Route::post('/clubs/{club}/membership/{user}/invoices', [ClubMembershipController::class, 'storeInvoice'])->name('auth.club-memberships.invoices.store');
     Route::put('/membership-invoices/{invoice}', [ClubMembershipController::class, 'updateInvoiceStatus'])->name('auth.club-memberships.invoices.update');
     Route::post('/membership-invoices/{invoice}/replacement', [ClubMembershipController::class, 'replaceCancelledInvoice'])->name('auth.club-memberships.invoices.replacement.store');

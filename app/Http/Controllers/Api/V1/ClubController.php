@@ -1758,6 +1758,15 @@ class ClubController extends Controller
         return $this->membershipManagementResponse($request, $club, __('organization.club.member_number_generated'));
     }
 
+    public function generateExternalMemberNumber(Request $request, Club $club, ClubExternalMember $externalMember)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        app(WebClubMembershipController::class)->generateExternalMemberNumber($club, $externalMember, $request->user());
+
+        return $this->membershipManagementResponse($request, $club, __('organization.club.member_number_generated'));
+    }
+
     public function updateMembershipInvoiceStatus(Request $request, Club $club, Invoice $invoice)
     {
         $this->authorizeVisible($request, $club);

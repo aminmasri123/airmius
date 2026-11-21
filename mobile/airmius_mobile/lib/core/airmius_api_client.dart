@@ -1532,6 +1532,14 @@ class AirmiusApiClient {
   Future<AirmiusJson> generateClubMemberNumber(int clubId, int userId) =>
       _json('POST', '/api/v1/clubs/$clubId/members/$userId/member-number');
 
+  Future<AirmiusJson> generateClubExternalMemberNumber(
+    int clubId,
+    int externalMemberId,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/external-members/$externalMemberId/member-number',
+  );
+
   Future<AirmiusJson> createClubMemberInvoice(
     int clubId,
     int userId,

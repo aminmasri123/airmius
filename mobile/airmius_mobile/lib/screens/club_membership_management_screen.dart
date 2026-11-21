@@ -3693,12 +3693,12 @@ class _ClubMembershipManagementScreenState
                 iconColor: AirmiusColors.red,
                 onTap: () => Navigator.pop(context, 'remove'),
               ),
+            ListTile(
+              leading: Icon(Icons.pin_outlined),
+              title: Text(_tr('membership.generateMemberNumber')),
+              onTap: () => Navigator.pop(context, 'number'),
+            ),
             if (!member.isExternal) ...[
-              ListTile(
-                leading: Icon(Icons.pin_outlined),
-                title: Text(_tr('membership.generateMemberNumber')),
-                onTap: () => Navigator.pop(context, 'number'),
-              ),
               ListTile(
                 leading: Icon(Icons.receipt_long_outlined),
                 title: Text(_tr('membership.createInvoice')),
@@ -3729,7 +3729,9 @@ class _ClubMembershipManagementScreenState
       await _showMemberTimeline(club, member);
     } else if (action == 'number') {
       await _runManagementAction(
-        () => repo.generateClubMemberNumber(club.id, member.id),
+        () => member.isExternal
+            ? repo.generateClubExternalMemberNumber(club.id, member.externalId!)
+            : repo.generateClubMemberNumber(club.id, member.id),
         success: _tr('membership.memberNumberGenerated'),
       );
     } else if (action == 'invoice') {

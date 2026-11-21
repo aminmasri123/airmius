@@ -7,6 +7,7 @@ use App\Models\Club;
 use App\Models\ClubContributionRule;
 use App\Models\ClubExternalMember;
 use App\Models\ClubFinanceEntry;
+use App\Models\ClubMemberRemoval;
 use App\Models\ClubMembershipRequest;
 use App\Models\ClubMembershipType;
 use App\Models\ClubMemberTimelineEntry;
@@ -32,7 +33,10 @@ use App\Services\ClubExternalMemberMergeService;
 use App\Services\ClubFinanceBalanceService;
 use App\Services\ClubFinanceScopeService;
 use App\Services\ClubInvoiceCancellationService;
+use App\Services\ClubInvoiceCreditService;
 use App\Services\ClubInvoicePaymentService;
+use App\Services\ClubMemberNumberService;
+use App\Services\ClubMemberRemovalService;
 use App\Services\ClubMembershipLifecycleService;
 use App\Services\ClubMetadataSubjectService;
 use App\Services\ClubMoneyAccountService;
@@ -547,7 +551,7 @@ class ClubMembershipController extends Controller
 
     public function updateMember(Request $request, Club $club, User $user)
     {
-        abort_if(\App\Models\ClubMemberRemoval::where('club_id', $club->id)->where('user_id', $user->id)->whereIn('status', ['pending', 'objected'])->exists(), 422, 'Die Entfernung muss zuerst geklärt werden.');
+        abort_if(ClubMemberRemoval::where('club_id', $club->id)->where('user_id', $user->id)->whereIn('status', ['pending', 'objected'])->exists(), 422, 'Die Entfernung muss zuerst geklärt werden.');
         $submittedFields = array_keys($request->all());
         if (array_intersect(['role', 'roles'], $submittedFields) !== []) {
             abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::MEMBERS_ROLES), 403);
@@ -855,7 +859,7 @@ class ClubMembershipController extends Controller
         $reason = trim((string) $data['reason']);
         abort_if($reason === '', 422, __('organization.club.removal_reason_required'));
 
-        app(\App\Services\ClubMemberRemovalService::class)->request(
+        app(ClubMemberRemovalService::class)->request(
             $club, $user, $request->user(), $reason,
         );
 
@@ -919,10 +923,11 @@ class ClubMembershipController extends Controller
             'message' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $removal = \App\Models\ClubMemberRemoval::where('club_id', $club->id)
+        $removal = ClubMemberRemoval::where('club_id', $club->id)
             ->where('user_id', $request->user()->id)->latest('id')->first();
         if ($removal) {
-            app(\App\Services\ClubMemberRemovalService::class)->respond($removal, $request->user(), 'object', $data['message'] ?? null);
+            app(ClubMemberRemovalService::class)->respond($removal, $request->user(), 'object', $data['message'] ?? null);
+
             return back()->with('success', __('organization.club.appeal_sent'));
         }
 
@@ -1791,6 +1796,7 @@ class ClubMembershipController extends Controller
                 $user->forceFill($contactUpdates)->save();
             }
 
+            app(ClubMemberNumberService::class)->linkAllocation($externalMember, $request->user());
             $externalMember->delete();
         });
 
@@ -1824,8 +1830,8 @@ class ClubMembershipController extends Controller
             : $user;
 
         $invoice = DB::transaction(function () use ($club, $user, $payer, $data, $request, $isWaived) {
-            \App\Services\ClubInvoiceCreditService::lockClub((int) $club->id);
-            \App\Services\ClubInvoiceCreditService::assertNoDuplicate((int) $club->id, (int) $user->id, null, $data);
+            ClubInvoiceCreditService::lockClub((int) $club->id);
+            ClubInvoiceCreditService::assertNoDuplicate((int) $club->id, (int) $user->id, null, $data);
             $allocation = $this->numberRanges->allocateDefault(
                 $club,
                 'invoice',
@@ -1860,7 +1866,7 @@ class ClubMembershipController extends Controller
             if ($allocation) {
                 $this->numberRanges->assignTo($allocation, 'invoice', $invoice->id);
             }
-            app(\App\Services\ClubInvoiceCreditService::class)->apply($invoice, $request->user());
+            app(ClubInvoiceCreditService::class)->apply($invoice, $request->user());
             ClubAuditLog::record($club, $request->user(), 'club.invoice.created', $invoice, [
                 'invoice_number' => $invoice->number,
                 'invoice_title' => $invoice->title,
@@ -1929,8 +1935,8 @@ class ClubMembershipController extends Controller
             : null;
 
         $invoice = DB::transaction(function () use ($club, $externalMember, $payer, $data, $request, $isWaived) {
-            \App\Services\ClubInvoiceCreditService::lockClub((int) $club->id);
-            \App\Services\ClubInvoiceCreditService::assertNoDuplicate((int) $club->id, null, (int) $externalMember->id, $data);
+            ClubInvoiceCreditService::lockClub((int) $club->id);
+            ClubInvoiceCreditService::assertNoDuplicate((int) $club->id, null, (int) $externalMember->id, $data);
             $allocation = $this->numberRanges->allocateDefault(
                 $club,
                 'invoice',
@@ -1965,7 +1971,7 @@ class ClubMembershipController extends Controller
             if ($allocation) {
                 $this->numberRanges->assignTo($allocation, 'invoice', $invoice->id);
             }
-            app(\App\Services\ClubInvoiceCreditService::class)->apply($invoice, $request->user());
+            app(ClubInvoiceCreditService::class)->apply($invoice, $request->user());
             ClubAuditLog::record($club, $request->user(), 'club.invoice.created', $invoice, [
                 'invoice_number' => $invoice->number,
                 'invoice_title' => $invoice->title,
@@ -2105,24 +2111,17 @@ class ClubMembershipController extends Controller
         abort_unless(ClubPermissions::allows($club, $actor ?? request()->user(), ClubPermissions::METADATA_EDIT), 403);
         abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
 
+        app(ClubMemberNumberService::class)->generate($club, $user, $actor ?? request()->user());
+
+        return back()->with('success', __('organization.club.member_number_generated'));
+    }
+
+    public function generateExternalMemberNumber(Club $club, ClubExternalMember $externalMember, ?User $actor = null)
+    {
         $actor ??= request()->user();
-        DB::transaction(function () use ($club, $user, $actor) {
-            $allocation = $this->numberRanges->allocateDefault(
-                $club,
-                'member',
-                $actor,
-                (string) Str::uuid(),
-                fn (string $number) => ! DB::table('club_user')
-                    ->where('club_id', $club->id)->where('member_number', $number)->exists()
-                    && ! $club->externalMembers()->where('member_number', $number)->exists()
-            );
-            $club->users()->updateExistingPivot($user->id, [
-                'member_number' => $allocation?->formatted_number ?? $this->nextMemberNumber($club),
-            ]);
-            if ($allocation) {
-                $this->numberRanges->assignTo($allocation, 'member', $user->id);
-            }
-        });
+        abort_unless(ClubPermissions::allows($club, $actor, ClubPermissions::METADATA_EDIT), 403);
+        abort_unless((int) $externalMember->club_id === (int) $club->id, 404);
+        app(ClubMemberNumberService::class)->generate($club, $externalMember, $actor);
 
         return back()->with('success', __('organization.club.member_number_generated'));
     }
@@ -2148,7 +2147,7 @@ class ClubMembershipController extends Controller
         }
 
         DB::transaction(function () use ($invoice, $data, $request) {
-            \App\Services\ClubInvoiceCreditService::lockClub((int) $invoice->club_id);
+            ClubInvoiceCreditService::lockClub((int) $invoice->club_id);
             $locked = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
             $oldStatus = $locked->status;
             abort_if($locked->status === 'cancelled', 422, __('organization.club.cancelled_invoice_reopen_forbidden'));
@@ -3825,24 +3824,5 @@ XML);
             ->count() + 1;
 
         return 'AIR-'.$club->id.'-'.now()->format('Y').'-'.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
-    }
-
-    private function nextMemberNumber(Club $club): string
-    {
-        $next = DB::table('club_user')
-            ->where('club_id', $club->id)
-            ->whereNotNull('member_number')
-            ->count() + 1;
-
-        do {
-            $number = 'M-'.$club->id.'-'.str_pad((string) $next, 5, '0', STR_PAD_LEFT);
-            $exists = DB::table('club_user')
-                ->where('club_id', $club->id)
-                ->where('member_number', $number)
-                ->exists();
-            $next++;
-        } while ($exists);
-
-        return $number;
     }
 }
