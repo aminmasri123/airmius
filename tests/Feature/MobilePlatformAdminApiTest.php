@@ -397,6 +397,19 @@ class MobilePlatformAdminApiTest extends TestCase
         $this->patchJson("/api/v1/admin/platform/clubs/{$club->id}/approve", [
             'mark_official' => false,
         ])->assertOk()->assertJsonPath('data.verification_status', 'verified');
+
+        $this->patchJson("/api/v1/admin/platform/clubs/{$club->id}/reject", [
+            'verification_notes' => 'Unterlagen fehlen',
+        ])->assertOk()->assertJsonPath('data.verification_status', 'rejected');
+
+        $notifications = $ownerAdmin->appNotifications()
+            ->where('type', 'club.verification_status_updated')
+            ->orderBy('id')
+            ->get();
+        $this->assertSame(['verified', 'rejected'], $notifications->pluck('data.verification_status')->all());
+        $this->assertSame('airmius://clubs/'.$club->id, $notifications[0]->data['mobile_url']);
+        $this->assertSame('Unterlagen fehlen', $notifications[1]->data['verification_notes']);
+        $this->assertFalse($reviewer->appNotifications()->where('type', 'club.verification_status_updated')->exists());
     }
 
     private function systemAdmin(bool $twoFactor): User

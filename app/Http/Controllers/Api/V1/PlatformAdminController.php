@@ -20,6 +20,7 @@ use App\Models\UserSport;
 use App\Notifications\AccountSuspendedNotification;
 use App\Notifications\ClubVerificationStatusUpdated;
 use App\Services\AdminCreatedUserProvisioner;
+use App\Support\AppNotification;
 use App\Support\ModerationAuditLog;
 use App\Support\Roles;
 use Illuminate\Database\Eloquent\Builder;
@@ -429,7 +430,7 @@ class PlatformAdminController extends Controller
             'rejected_at' => null,
             'verified_by' => $request->user()->id,
         ])->save();
-        $club->owner?->notify(new ClubVerificationStatusUpdated($club));
+        $this->notifyClubVerificationDecision($club, 'approved');
 
         return response()->json(['data' => ['id' => $club->id, 'verification_status' => 'verified']]);
     }
@@ -450,9 +451,33 @@ class PlatformAdminController extends Controller
             'rejected_at' => now(),
             'verified_by' => $request->user()->id,
         ])->save();
-        $club->owner?->notify(new ClubVerificationStatusUpdated($club));
+        $this->notifyClubVerificationDecision($club, 'rejected');
 
         return response()->json(['data' => ['id' => $club->id, 'verification_status' => 'rejected']]);
+    }
+
+    private function notifyClubVerificationDecision(Club $club, string $decision): void
+    {
+        $owner = $club->owner;
+        if (! $owner) {
+            return;
+        }
+
+        $owner->notify(new ClubVerificationStatusUpdated($club));
+        AppNotification::sendLocalized(
+            $owner,
+            'club.verification_status_updated',
+            "organization.notifications.verification_{$decision}_title",
+            "organization.notifications.verification_{$decision}_body",
+            ['club' => $club->name],
+            [
+                'url' => route('auth.clubs.show', $club->id),
+                'mobile_url' => 'airmius://clubs/'.$club->id,
+                'club_id' => $club->id,
+                'verification_status' => $club->verification_status,
+                'verification_notes' => $club->verification_notes,
+            ],
+        );
     }
 
     public function storeSport(Request $request)

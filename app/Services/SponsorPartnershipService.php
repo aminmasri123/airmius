@@ -148,6 +148,7 @@ class SponsorPartnershipService
                 && ClubPermissions::allows($club, $candidate, ClubPermissions::SPONSORS_EDIT))
             ->unique('id');
 
+        $mobileUrl = 'airmius://admin/sponsors?partnership_id='.$partnership->id;
         $recipients->each(fn (User $recipient) => AppNotification::sendLocalized(
             $recipient,
             'sponsor.partnership_requested',
@@ -156,8 +157,8 @@ class SponsorPartnershipService
             ['sponsor' => $sponsor->name, 'club' => $club->name],
             [
                 'url' => route('auth.teams.index', ['club_id' => $club->id, 'section' => 'sponsors']),
-                'mobile_url' => 'airmius://admin/sponsors?club_id='.$club->id,
-                'mobile_deep_link' => 'airmius://admin/sponsors?club_id='.$club->id,
+                'mobile_url' => $mobileUrl,
+                'mobile_deep_link' => $mobileUrl,
                 'sponsor_id' => $sponsor->id,
                 'club_id' => $club->id,
                 'partnership_id' => $partnership->id,

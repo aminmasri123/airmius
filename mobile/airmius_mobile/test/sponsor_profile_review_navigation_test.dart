@@ -5,6 +5,15 @@ import 'package:airmius/screens/sponsor_management_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('partnership notification opens the targeted request', () {
+    const resolver = AirmiusDeepLinkResolver();
+    final target = resolver.resolve('airmius://admin/sponsors?partnership_id=42');
+    final screen = AirmiusDeepLinkNavigator.screenFor(target) as SponsorManagementScreen;
+
+    expect(screen.initialPartnershipId, 42);
+    expect(screen.initialSponsorId, isNull);
+  });
+
   test('profile review notification opens the targeted admin sponsor screen', () {
     const resolver = AirmiusDeepLinkResolver();
     final target = resolver.resolve(

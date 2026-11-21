@@ -90,6 +90,8 @@ class SponsorManagementController extends Controller
                 ->with(['sponsor:id,name', 'club:id,name'])
                 ->where('status', SponsorPartnership::STATUS_PENDING)
                 ->when(! $global, fn ($query) => $query->whereIn('club_id', $editableClubIds))
+                ->when($request->integer('partnership_id') > 0, fn ($query) => $query
+                    ->orderByRaw('CASE WHEN id = ? THEN 0 ELSE 1 END', [$request->integer('partnership_id')]))
                 ->latest('id')
                 ->limit(100)
                 ->get()
@@ -102,6 +104,10 @@ class SponsorManagementController extends Controller
                     'package_code' => $partnership->package_code,
                     'rights_package' => $partnership->rights_package ?? [],
                     'individual_offer_terms' => $partnership->individual_offer_terms,
+                    'renewal_deadline' => $partnership->renewal_deadline?->toDateString(),
+                    'renewal_notice_days' => $partnership->renewal_notice_days,
+                    'contract_version' => $partnership->contract_version,
+                    'budget_cents' => $partnership->budget_cents,
                     'created_at' => $partnership->created_at?->toIso8601String(),
                 ])->values(),
             'stats' => $stats,

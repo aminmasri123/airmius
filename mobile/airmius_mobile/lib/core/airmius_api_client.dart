@@ -3920,10 +3920,13 @@ class AirmiusApiClient {
   Future<AirmiusJson> deleteEditorialCategory(int categoryId) =>
       _json('DELETE', '/api/v1/editorial/categories/$categoryId');
 
-  Future<AirmiusJson> sponsorManagement({int? sponsorId}) => _json(
+  Future<AirmiusJson> sponsorManagement({int? sponsorId, int? partnershipId}) => _json(
     'GET',
     '/api/v1/sponsor-management',
-    query: {if (sponsorId != null) 'sponsor_id': sponsorId.toString()},
+    query: {
+      if (sponsorId != null) 'sponsor_id': sponsorId.toString(),
+      if (partnershipId != null) 'partnership_id': partnershipId.toString(),
+    },
   );
 
   Future<AirmiusJson> sponsorInquiries({int? sponsorId}) => _json(

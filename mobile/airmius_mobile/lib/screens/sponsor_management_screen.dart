@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
@@ -11,9 +12,14 @@ import '../widgets/country_field.dart';
 import 'sponsor_profile_review_screen.dart';
 
 class SponsorManagementScreen extends StatefulWidget {
-  const SponsorManagementScreen({super.key, this.initialSponsorId});
+  const SponsorManagementScreen({
+    super.key,
+    this.initialSponsorId,
+    this.initialPartnershipId,
+  });
 
   final int? initialSponsorId;
+  final int? initialPartnershipId;
 
   @override
   State<SponsorManagementScreen> createState() =>
@@ -24,6 +30,7 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
   Future<JsonMap>? _future;
   bool _busy = false;
   bool _openedInitialReview = false;
+  bool _openedInitialPartnership = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -35,12 +42,17 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _future ??= _client.sponsorManagement(sponsorId: widget.initialSponsorId);
+    _future ??= _loadManagement();
   }
+
+  Future<JsonMap> _loadManagement() => _client.sponsorManagement(
+    sponsorId: widget.initialSponsorId,
+    partnershipId: widget.initialPartnershipId,
+  );
 
   void _reload() {
     setState(() {
-      _future = _client.sponsorManagement(sponsorId: widget.initialSponsorId);
+      _future = _loadManagement();
     });
   }
 
@@ -134,6 +146,77 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
       () => _client.deleteManagedSponsor(_adminInt(sponsor['id'])),
       t('sponsorAdmin.deleted'),
     );
+  }
+
+  String _partnershipTitle(JsonMap request) =>
+      '${_adminText(_adminMap(request['sponsor'])['name'])} → ${_adminText(_adminMap(request['club'])['name'])}';
+
+  Future<void> _openPartnership(JsonMap request) async {
+    final locale = Localizations.localeOf(context).languageCode;
+    final material = MaterialLocalizations.of(context);
+    String date(Object? value) {
+      final parsed = DateTime.tryParse(_adminText(value));
+      return parsed == null ? '' : material.formatMediumDate(parsed);
+    }
+
+    final rights = request['rights_package'];
+    final budget = request['budget_cents'];
+    final details = {
+      'sponsorCockpit.packageName': _adminText(request['package_code']),
+      'sponsorCockpit.agreementMessage': _adminText(request['individual_offer_terms']),
+      'sponsorCockpit.rights': rights is List ? rights.whereType<String>().join('\n') : '',
+      'sponsorCockpit.start': date(request['starts_at']),
+      'sponsorCockpit.end': date(request['ends_at']),
+      'sponsorCockpit.renewalDeadline': date(request['renewal_deadline']),
+      'outfitAdmin.noticeDays': _adminText(request['renewal_notice_days']),
+      'sponsorCockpit.budget': budget is num
+          ? NumberFormat.currency(locale: locale, name: 'EUR').format(budget / 100)
+          : '',
+      'sponsorAdmin.contractVersion': _adminText(request['contract_version']),
+    };
+    final decision = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        scrollable: true,
+        title: Text(_partnershipTitle(request)),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (details.values.every((value) => value.isEmpty))
+              Text(t('sponsorAdmin.partnershipNoDetails')),
+            for (final entry in details.entries)
+              if (entry.value.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(t(entry.key), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      SelectableText(entry.value),
+                    ],
+                  ),
+                ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(t('common.close')),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('sponsorAdmin.partnershipReject')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(t('sponsorAdmin.partnershipApprove')),
+          ),
+        ],
+      ),
+    );
+    if (decision != null && mounted) {
+      await _decidePartnership(request, decision);
+    }
   }
 
   Future<void> _decidePartnership(JsonMap request, bool approve) async {
@@ -245,6 +328,22 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
           final partnershipRequests = _adminList(
             snapshot.data?['partnership_requests'],
           );
+          if (!_openedInitialPartnership && widget.initialPartnershipId != null) {
+            _openedInitialPartnership = true;
+            final request = partnershipRequests.where(
+              (item) => _adminInt(item['id']) == widget.initialPartnershipId,
+            ).firstOrNull;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              if (request != null) {
+                _openPartnership(request);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(t('sponsorAdmin.partnershipUnavailable'))),
+                );
+              }
+            });
+          }
           final editableClubs = clubs
               .where((club) => _adminBool(club['can_edit_sponsors']))
               .toList();
@@ -345,71 +444,17 @@ class _SponsorManagementScreenState extends State<SponsorManagementScreen> {
                         ),
                         const SizedBox(height: 10),
                         ...partnershipRequests.map(
-                          (request) => Container(
+                          (request) => Card(
+                            color: airmiusSurfaceSoftColor(context),
                             margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: airmiusSurfaceSoftColor(context),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: airmiusBorderColor(context),
+                            child: ListTile(
+                              title: Text(
+                                _partnershipTitle(request),
+                                style: const TextStyle(fontWeight: FontWeight.w900),
                               ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Text(
-                                  '${_adminText(_adminMap(request['sponsor'])['name'])} → ${_adminText(_adminMap(request['club'])['name'])}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                if (_adminText(
-                                  request['individual_offer_terms'],
-                                ).isNotEmpty) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    _adminText(
-                                      request['individual_offer_terms'],
-                                    ),
-                                    style: TextStyle(
-                                      color: airmiusMutedColor(context),
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: OutlinedButton(
-                                        onPressed: _busy
-                                            ? null
-                                            : () => _decidePartnership(
-                                                request,
-                                                false,
-                                              ),
-                                        child: Text(
-                                          t('sponsorAdmin.partnershipReject'),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: FilledButton(
-                                        onPressed: _busy
-                                            ? null
-                                            : () => _decidePartnership(
-                                                request,
-                                                true,
-                                              ),
-                                        child: Text(
-                                          t('sponsorAdmin.partnershipApprove'),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                              subtitle: Text(t('sponsorAdmin.partnershipDetails')),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: _busy ? null : () => _openPartnership(request),
                             ),
                           ),
                         ),

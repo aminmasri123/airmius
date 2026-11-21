@@ -6114,6 +6114,37 @@ void main() {
     expect(find.text('Löschen'), findsNothing);
   });
 
+  testWidgets('sponsor management opens partnership details before a decision', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(900, 1400));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"partnership_requests":[{"id":42,"sponsor":{"name":"Test Sponsor"},"club":{"name":"Testverein"},"package_code":"Gold","rights_package":["Trikotlogo"],"individual_offer_terms":"Ziel: Jugendförderung","renewal_deadline":"2027-05-31"}]}',
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const SponsorManagementScreen(initialPartnershipId: 42),
+    );
+    await tester.pumpAndSettle();
+
+    expect(transport.requests.first.query, {'partnership_id': '42'});
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('Gold'), findsOneWidget);
+    expect(find.text('Trikotlogo'), findsOneWidget);
+    expect(find.text('Ziel: Jugendförderung'), findsOneWidget);
+    expect(find.text('Verlängerungsfrist'), findsOneWidget);
+    await tester.tap(find.text('Schließen'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Details zur Anfrage'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ziel: Jugendförderung'), findsOneWidget);
+  });
+
   testWidgets('sponsor management respects delete-only capabilities', (
     WidgetTester tester,
   ) async {

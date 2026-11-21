@@ -318,6 +318,11 @@ class SponsorProfileParityTest extends TestCase
             ->assertJsonCount(0, 'data.partners');
 
         Sanctum::actingAs($clubOwner);
+        $this->getJson('/api/v1/sponsor-management?partnership_id='.$partnershipId)
+            ->assertOk()
+            ->assertJsonPath('partnership_requests.0.id', $partnershipId)
+            ->assertJsonPath('partnership_requests.0.renewal_deadline', '2027-08-31')
+            ->assertJsonPath('partnership_requests.0.budget_cents', 250000);
         $this->postJson('/api/v1/sponsor-management/partnerships/'.$partnershipId.'/decision', [
             'decision' => 'approve',
             'note' => 'Wir freuen uns auf die Zusammenarbeit.',

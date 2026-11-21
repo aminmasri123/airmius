@@ -28162,6 +28162,10 @@ final _strings = {
     'sponsorAdmin.open': 'Sponsorverwaltung öffnen',
     'sponsorAdmin.title': 'Sponsorverwaltung',
     'sponsorAdmin.partnershipRequests': 'Offene Partnerschaftsanfragen',
+    'sponsorAdmin.partnershipDetails': 'Details zur Anfrage',
+    'sponsorAdmin.partnershipNoDetails': 'Der Sponsor hat keine weiteren Angaben mitgesendet.',
+    'sponsorAdmin.partnershipUnavailable': 'Diese Anfrage ist nicht mehr offen oder für dich nicht verfügbar.',
+    'sponsorAdmin.contractVersion': 'Vertragsversion',
     'sponsorAdmin.partnershipHelpTitle': 'Was passiert mit einer Anfrage?',
     'sponsorAdmin.partnershipHelpBody':
         'Nur berechtigte Vereinsverantwortliche können das Angebot prüfen. Kontrolliere Laufzeit, Rechte, Leistungen und Nachricht. Mit „Annehmen“ wird die Partnerschaft aktiv; mit „Ablehnen“ wird sie beendet. Deine optionale Rückmeldung wird dem Sponsor angezeigt.',
@@ -30752,6 +30756,10 @@ final _strings = {
     'sponsorAdmin.open': 'Open sponsor management',
     'sponsorAdmin.title': 'Sponsor management',
     'sponsorAdmin.partnershipRequests': 'Open partnership requests',
+    'sponsorAdmin.partnershipDetails': 'Request details',
+    'sponsorAdmin.partnershipNoDetails': 'The sponsor did not send any additional details.',
+    'sponsorAdmin.partnershipUnavailable': 'This request is no longer open or available to you.',
+    'sponsorAdmin.contractVersion': 'Contract version',
     'sponsorAdmin.partnershipHelpTitle': 'What happens to a request?',
     'sponsorAdmin.partnershipHelpBody':
         'Only authorized club managers can review the offer. Check its term, rights, deliverables and message. Approving activates the partnership; rejecting closes it. Your optional response is shown to the sponsor.',
@@ -33292,6 +33300,10 @@ final _strings = {
     'sponsorAdmin.open': 'Ouvrir la gestion des sponsors',
     'sponsorAdmin.title': 'Gestion des sponsors',
     'sponsorAdmin.partnershipRequests': 'Demandes de partenariat ouvertes',
+    'sponsorAdmin.partnershipDetails': 'Détails de la demande',
+    'sponsorAdmin.partnershipNoDetails': 'Le sponsor n’a transmis aucune information supplémentaire.',
+    'sponsorAdmin.partnershipUnavailable': 'Cette demande est close ou indisponible.',
+    'sponsorAdmin.contractVersion': 'Version du contrat',
     'sponsorAdmin.partnershipHelpTitle': 'Que devient une demande ?',
     'sponsorAdmin.partnershipHelpBody':
         'Seuls les responsables autorisés du club peuvent examiner l’offre. Vérifiez la durée, les droits, les prestations et le message. Accepter active le partenariat, refuser le clôture. Votre réponse facultative est visible par le sponsor.',
@@ -35706,6 +35718,10 @@ final _strings = {
     'sponsorAdmin.open': 'فتح إدارة الرعاة',
     'sponsorAdmin.title': 'إدارة الرعاة',
     'sponsorAdmin.partnershipRequests': 'طلبات الشراكة المفتوحة',
+    'sponsorAdmin.partnershipDetails': 'تفاصيل الطلب',
+    'sponsorAdmin.partnershipNoDetails': 'لم يرسل الراعي أي تفاصيل إضافية.',
+    'sponsorAdmin.partnershipUnavailable': 'هذا الطلب مغلق أو غير متاح لك.',
+    'sponsorAdmin.contractVersion': 'نسخة العقد',
     'sponsorAdmin.partnershipHelpTitle': 'ماذا يحدث للطلب؟',
     'sponsorAdmin.partnershipHelpBody':
         'يمكن لمسؤولي النادي المخولين فقط مراجعة العرض. تحقق من المدة والحقوق والخدمات والرسالة. تؤدي الموافقة إلى تفعيل الشراكة، بينما يؤدي الرفض إلى إغلاقها. يظهر ردك الاختياري للراعي.',

@@ -116,7 +116,10 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.adminSponsorApplications =>
         const AdminTrainerApplicationsScreen(sponsor: true),
       AirmiusDeepLinkTargetType.adminSponsorManagement =>
-        SponsorManagementScreen(initialSponsorId: target.id),
+        SponsorManagementScreen(
+          initialSponsorId: target.id,
+          initialPartnershipId: int.tryParse(target.query['partnership_id'] ?? ''),
+        ),
       AirmiusDeepLinkTargetType.club =>
         target.section == 'membership-requests'
             ? ClubRequestInboxScreen(initialClubId: target.id)
