@@ -62,10 +62,12 @@ class MobileProductionModuleNavigationContractTest extends TestCase
         $this->assertStringContainsString("'Trainingsplanung' => const TrainingPlansLogsScreen()", $destination);
         $this->assertStringContainsString("'Recruiting' => const RecruitingPipelineScreen()", $destination);
         $this->assertMatchesRegularExpression(
-            "/'Sponsoren'\\s*=>\\s*user\\?\\.hasAnyRole/",
+            "/'Sponsoren'\\s*=>\\s*user != null && AirmiusPersonaResolver\\.canOpenSponsorWorkspace/",
             $destination,
         );
         $this->assertStringContainsString('? const SponsorCockpitScreen()', $destination);
+        $this->assertStringContainsString('AirmiusPersonaResolver.canManageClubSponsorships(user)', $destination);
+        $this->assertStringContainsString('const SponsorCockpitScreen(clubPartnerships: true)', $destination);
         $this->assertStringContainsString(': const SponsorsCenterScreen()', $destination);
     }
 
