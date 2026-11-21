@@ -4,6 +4,16 @@ import 'package:airmius/core/airmius_module_access.dart';
 import 'package:airmius/core/airmius_persona.dart';
 
 void main() {
+  test('club management can enter partnerships without becoming a sponsor persona', () {
+    const owner = AirmiusUser(id: 1, name: 'Owner', email: 'owner@example.test', role: 'club_owner');
+    const delegated = AirmiusUser(id: 2, name: 'Delegate', email: 'delegate@example.test', role: 'player', permissions: ['sponsors.edit']);
+    const member = AirmiusUser(id: 3, name: 'Member', email: 'member@example.test', role: 'player');
+    expect(AirmiusPersonaResolver.canManageClubSponsorships(owner), isTrue);
+    expect(AirmiusPersonaResolver.canManageClubSponsorships(delegated), isTrue);
+    expect(AirmiusPersonaResolver.canManageClubSponsorships(member), isFalse);
+    expect(AirmiusPersonaResolver.isSponsorAccount(owner), isFalse);
+    expect(AirmiusPersonaResolver.primary(owner), AirmiusPersona.club);
+  });
   AirmiusUser member(String role, String status) => AirmiusUser.fromJson({
     'id': 1, 'name': 'Test', 'email': 'test@example.test', 'role': 'player',
     'clubs': [{'id': 2, 'name': 'Verein', 'membership': {'role': role, 'status': status}}],

@@ -52,7 +52,7 @@ class SponsorWorkspaceService
     {
         $this->organizations->ensureApprovedOrganization($user);
 
-        $clubs = $user->clubs()->get();
+        $clubs = Club::query()->linkedToUser($user)->get();
         $sponsorClubIds = $this->clubIdsFor($clubs, $user, [
             ClubPermissions::SPONSORS_EDIT,
             ClubPermissions::SPONSORS_DELETE,
@@ -86,7 +86,10 @@ class SponsorWorkspaceService
         if ($currentOrganization) {
             $partnershipQuery->where('sponsor_id', $currentOrganization->id);
         } elseif (! $global) {
-            $partnershipQuery->whereIn('sponsor_id', $sponsorIds);
+            $partnershipQuery->where(function ($query) use ($sponsorClubIds, $user): void {
+                $query->whereIn('club_id', $sponsorClubIds)
+                    ->orWhereHas('sponsor', fn ($sponsor) => $sponsor->where('owner_user_id', $user->id));
+            });
         }
         $partnersCount = (clone $partnershipQuery)->count();
         $activePartners = (clone $partnershipQuery)

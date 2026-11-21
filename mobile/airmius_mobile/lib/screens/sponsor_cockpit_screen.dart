@@ -17,10 +17,11 @@ import 'sponsor_application_screen.dart';
 import 'sponsors_center_screen.dart';
 
 class SponsorCockpitScreen extends StatefulWidget {
-  const SponsorCockpitScreen({super.key, this.initialSponsorId, this.initialSection = 0});
+  const SponsorCockpitScreen({super.key, this.initialSponsorId, this.initialSection = 0, this.clubPartnerships = false});
 
   final int? initialSponsorId;
   final int initialSection;
+  final bool clubPartnerships;
 
   @override
   State<SponsorCockpitScreen> createState() => _SponsorCockpitScreenState();
@@ -42,7 +43,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   void initState() {
     super.initState();
     _selectedSponsorId = widget.initialSponsorId;
-    _selectedSection = widget.initialSection;
+    _selectedSection = widget.clubPartnerships ? 2 : widget.initialSection;
   }
 
   @override
@@ -374,7 +375,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          t('sponsorCockpit.title'),
+          t(widget.clubPartnerships ? 'sponsorCockpit.clubTitle' : 'sponsorCockpit.title'),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
@@ -421,8 +422,8 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           final currentId = _int(currentOrganization['id']);
 
           return PageFrame(
-            title: t('sponsorCockpit.title'),
-            subtitle: t('sponsorCockpit.subtitle'),
+            title: t(widget.clubPartnerships ? 'sponsorCockpit.clubTitle' : 'sponsorCockpit.title'),
+            subtitle: widget.clubPartnerships ? t('sponsorCockpit.tabPartnerships') : t('sponsorCockpit.subtitle'),
             onRefresh: () async => _reload(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -434,14 +435,14 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                   _pendingInvitations(invitations),
                 ],
                 if (organizations.isNotEmpty) const SizedBox(height: 14),
-                _hero(profile, capabilities, currentId),
+                if (!widget.clubPartnerships) _hero(profile, capabilities, currentId),
                 if (profile == null && capabilities['edit_own_profile'] == true)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
                     child: _profilePrompt(profile),
                   ),
                 const SizedBox(height: 14),
-                _workspaceTabs(),
+                if (!widget.clubPartnerships) _workspaceTabs(),
                 const SizedBox(height: 16),
                 if (_selectedSection == 0) ...[
                   _metrics(summary),

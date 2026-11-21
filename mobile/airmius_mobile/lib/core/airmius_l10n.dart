@@ -2167,6 +2167,7 @@ final _settingsAr = {
 
 const _sponsorCockpitDe = {
   'sponsorCockpit.title': 'Sponsor-Cockpit',
+  'sponsorCockpit.clubTitle': 'Sponsoring & Partnerschaften',
   'sponsorCockpit.subtitle':
       'Partnerschaften, Kampagnen und Wirkung an einem Ort',
   'sponsorCockpit.eyebrow': 'SPONSORING & REICHWEITE',
@@ -2362,6 +2363,7 @@ const _sponsorCockpitDe = {
 
 const _sponsorCockpitEn = {
   'sponsorCockpit.title': 'Sponsor cockpit',
+  'sponsorCockpit.clubTitle': 'Sponsorship & partnerships',
   'sponsorCockpit.subtitle': 'Partnerships, campaigns and impact in one place',
   'sponsorCockpit.eyebrow': 'SPONSORSHIP & REACH',
   'sponsorCockpit.heroTitle': 'Your brand in the sports community',
@@ -2550,6 +2552,7 @@ const _sponsorCockpitEn = {
 final _sponsorCockpitFr = {
   ..._sponsorCockpitEn,
   'sponsorCockpit.title': 'Espace sponsor',
+  'sponsorCockpit.clubTitle': 'Sponsoring et partenariats',
   'sponsorCockpit.subtitle':
       'Partenariats, campagnes et impact au même endroit',
   'sponsorCockpit.eyebrow': 'SPONSORING ET PORTÉE',
@@ -2617,6 +2620,7 @@ final _sponsorCockpitFr = {
 final _sponsorCockpitAr = {
   ..._sponsorCockpitEn,
   'sponsorCockpit.title': 'مساحة الراعي',
+  'sponsorCockpit.clubTitle': 'الرعاية والشراكات',
   'sponsorCockpit.subtitle': 'الشراكات والحملات والأثر في مكان واحد',
   'sponsorCockpit.eyebrow': 'الرعاية والوصول',
   'sponsorCockpit.heroTitle': 'علامتك داخل المجتمع الرياضي',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/airmius_preferences.dart';
+import '../core/airmius_persona.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_mvp_surface.dart';
 import '../models/club_summary.dart';
@@ -146,8 +147,10 @@ final class AirmiusModuleDestination {
       'Altersfreigaben' => const MaturityCenterScreen(),
       'Kurse' => const LearningScreen(),
       'Sponsoren' =>
-        user?.hasAnyRole(const {'sponsor', 'sponsor_manager'}) == true
+        user != null && AirmiusPersonaResolver.canOpenSponsorWorkspace(user)
             ? const SponsorCockpitScreen()
+            : user != null && AirmiusPersonaResolver.canManageClubSponsorships(user)
+            ? const SponsorCockpitScreen(clubPartnerships: true)
             : const SponsorsCenterScreen(),
       'Recruiting' => const RecruitingPipelineScreen(),
       'Medienrichtlinien' => const MediaGuidelinesScreen(),

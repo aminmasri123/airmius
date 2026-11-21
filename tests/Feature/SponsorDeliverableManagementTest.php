@@ -15,6 +15,32 @@ class SponsorDeliverableManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_club_owner_without_sponsor_role_sees_only_own_platform_partnership_and_can_manage_deliverables(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $otherClub = Club::factory()->create();
+        $sponsor = Sponsor::create(['scope' => 'platform', 'name' => 'Shared sponsor']);
+        $partnership = SponsorPartnership::create([
+            'sponsor_id' => $sponsor->id, 'club_id' => $club->id,
+            'created_by' => $owner->id, 'status' => SponsorPartnership::STATUS_ACTIVE,
+        ]);
+        SponsorPartnership::create([
+            'sponsor_id' => $sponsor->id, 'club_id' => $otherClub->id,
+            'created_by' => $owner->id, 'status' => SponsorPartnership::STATUS_ACTIVE,
+        ]);
+        $this->actingAs($owner, 'sanctum')->getJson('/api/v1/sponsor-workspace')
+            ->assertOk()->assertJsonCount(1, 'data.partners')
+            ->assertJsonPath('data.partners.0.id', $partnership->id)
+            ->assertJsonPath('data.partners.0.can_edit_deliverables', true);
+        $this->postJson('/api/v1/sponsor-management/'.$sponsor->id.'/deliverables', [
+            'club_id' => $club->id, 'title' => 'Logo on club website', 'status' => 'planned',
+        ])->assertCreated();
+        $this->postJson('/api/v1/sponsor-management/'.$sponsor->id.'/deliverables', [
+            'club_id' => $otherClub->id, 'title' => 'Foreign club',
+        ])->assertForbidden();
+    }
+
     public function test_sponsor_owner_can_manage_only_active_partnership_deliverables_with_evidence(): void
     {
         $owner = User::factory()->create();

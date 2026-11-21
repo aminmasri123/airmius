@@ -147,4 +147,11 @@ final class AirmiusPersonaResolver {
 
   static bool canOpenSponsorWorkspace(AirmiusUser user) =>
       isSponsorAccount(user) || user.can('system.manage');
+
+  static bool canManageClubSponsorships(AirmiusUser user) =>
+      AirmiusModuleAccess.canOpenClubCockpit(user) ||
+      user.permissions.any(const {
+        'sponsors.edit',
+        'sponsors.delete',
+      }.contains);
 }
