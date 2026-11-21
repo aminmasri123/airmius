@@ -35,7 +35,6 @@ class ClubPolicyDocumentsScreen extends StatefulWidget {
 
 class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
   Map<String, dynamic> _data = const {};
-  List<Map<String, dynamic>> _files = const [];
   bool _loading = true;
   bool _busy = false;
   String? _error;
@@ -71,7 +70,10 @@ class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  String _safeError(Object error) => error is AirmiusApiException
+  String _safeError(Object error) =>
+      error is AirmiusApiException && error.statusCode == 404
+      ? AirmiusScope.of(context).t('clubPolicyDocuments.unavailable')
+      : error is AirmiusApiException
       ? error.userMessage
       : AirmiusScope.of(context).t('clubPolicyDocuments.error');
 
@@ -99,36 +101,29 @@ class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
       final response = await _client.clubPolicyDocuments(club.id);
       final data = response['data'];
       final parsed = data is Map<String, dynamic> ? data : <String, dynamic>{};
-      var files = const <Map<String, dynamic>>[];
-      final canEdit =
-          parsed['can_edit'] == true ||
-          (!parsed.containsKey('can_edit') && parsed['can_manage'] == true);
-      if (canEdit) {
-        final collected = <Map<String, dynamic>>[];
-        var page = 1;
-        while (true) {
-          final response = await _client.clubPolicyFiles(club.id, page: page);
-          final rows = response['data'];
-          if (rows is List) {
-            collected.addAll(rows.whereType<Map<String, dynamic>>());
-          }
-          final meta = response['meta'];
-          final last = meta is Map ? _int(meta['last_page']) ?? page : page;
-          if (page >= last) break;
-          page++;
-        }
-        files = collected;
-      }
       if (mounted) {
         setState(() {
           _data = parsed;
-          _files = files;
         });
       }
     } catch (error) {
       if (mounted) setState(() => _error = _safeError(error));
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _loadPolicyFiles() async {
+    final files = <Map<String, dynamic>>[];
+    var page = 1;
+    while (true) {
+      final response = await _client.clubPolicyFiles(_club!.id, page: page);
+      final rows = response['data'];
+      if (rows is List) files.addAll(rows.whereType<Map<String, dynamic>>());
+      final meta = response['meta'];
+      final last = meta is Map ? _int(meta['last_page']) ?? page : page;
+      if (page >= last) return files;
+      page++;
     }
   }
 
@@ -152,7 +147,7 @@ class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
       MaterialPageRoute(
         builder: (_) => _PolicyDocumentPage(
           document: document,
-          files: _files,
+          loadFiles: _loadPolicyFiles,
           clubId: _club!.id,
           pickFile: widget.pickFile,
           uploadFile: (type, file) => widget.uploadFile != null
@@ -259,7 +254,7 @@ class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
               const Center(child: CircularProgressIndicator()),
             ] else if (_documents.isEmpty) ...[
               const SizedBox(height: 24),
-              Text(t('clubPolicyDocuments.empty')),
+              if (_error == null) Text(t('clubPolicyDocuments.empty')),
             ] else
               for (final type in const [
                 'statutes',
@@ -371,14 +366,14 @@ class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
 class _PolicyDocumentPage extends StatefulWidget {
   const _PolicyDocumentPage({
     required this.document,
-    required this.files,
+    required this.loadFiles,
     required this.clubId,
     required this.onSave,
     required this.uploadFile,
     this.pickFile,
   });
   final Map<String, dynamic>? document;
-  final List<Map<String, dynamic>> files;
+  final Future<List<Map<String, dynamic>>> Function() loadFiles;
   final int clubId;
   final Future<AirmiusJson> Function(Map<String, dynamic>) onSave;
   final Future<AirmiusJson> Function(String, PlatformFile) uploadFile;
@@ -455,12 +450,15 @@ class _PolicyDocumentPageState extends State<_PolicyDocumentPage> {
   }
 
   Future<void> _pickExisting() async {
-    final files = [...widget.files];
+    final files = <Map<String, dynamic>>[];
     if (_fileId != null && !files.any((f) => _int(f['id']) == _fileId)) {
       files.add({'id': _fileId, 'display_name': _fileName});
     }
     final file = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(builder: (_) => _PolicyFilePage(files: files)),
+      MaterialPageRoute(
+        builder: (_) =>
+            _PolicyFilePage(files: files, loadFiles: widget.loadFiles),
+      ),
     );
     if (mounted && file != null) {
       setState(() {
@@ -753,7 +751,8 @@ class _PolicyDocumentPageState extends State<_PolicyDocumentPage> {
 }
 
 class _PolicyFilePage extends StatefulWidget {
-  const _PolicyFilePage({required this.files});
+  const _PolicyFilePage({required this.files, required this.loadFiles});
+  final Future<List<Map<String, dynamic>>> Function() loadFiles;
   final List<Map<String, dynamic>> files;
   @override
   State<_PolicyFilePage> createState() => _PolicyFilePageState();
@@ -761,10 +760,47 @@ class _PolicyFilePage extends StatefulWidget {
 
 class _PolicyFilePageState extends State<_PolicyFilePage> {
   String _search = '';
+  bool _loading = true;
+  String? _error;
+  late List<Map<String, dynamic>> _files;
+  @override
+  void initState() {
+    super.initState();
+    _files = [...widget.files];
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final files = await widget.loadFiles();
+      if (mounted) {
+        setState(() {
+          _files = files;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = error is AirmiusApiException && error.statusCode == 404
+              ? AirmiusScope.of(
+                  context,
+                ).t('clubPolicyDocuments.filesUnavailable')
+              : formErrorMessage(context, error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    final files = widget.files
+    final files = _files
         .where(
           (f) => '${f['display_name'] ?? ''}'.toLowerCase().contains(
             _search.toLowerCase(),
@@ -788,7 +824,16 @@ class _PolicyFilePageState extends State<_PolicyFilePage> {
           Expanded(
             child: ListView(
               children: [
-                if (files.isEmpty)
+                if (_loading) const LinearProgressIndicator(),
+                if (_error != null)
+                  ListTile(
+                    title: Text(_error!),
+                    trailing: TextButton(
+                      onPressed: _load,
+                      child: Text(t('common.retry')),
+                    ),
+                  ),
+                if (!_loading && _error == null && files.isEmpty)
                   ListTile(title: Text(t('clubPolicyDocuments.noFiles'))),
                 ...files.map(
                   (file) => ListTile(

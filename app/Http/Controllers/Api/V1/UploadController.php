@@ -492,7 +492,9 @@ class UploadController extends Controller
     private function clubScope(Request $request, $clubId = null): array
     {
         $club = Club::query()
-            ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
+            ->where(fn ($query) => $query
+                ->where('owner_id', $request->user()->id)
+                ->orWhereHas('users', fn ($members) => $members->where('users.id', $request->user()->id)))
             ->findOrFail($clubId);
         abort_if(ClubPermissions::explicitlyDeniesForFileScope(
             $request->user(), ClubPermissions::FILES_VIEW, (int) $club->id,

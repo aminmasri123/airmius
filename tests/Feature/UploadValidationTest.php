@@ -20,6 +20,17 @@ class UploadValidationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_club_owner_can_list_files_without_a_duplicate_membership_record(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->detach($owner->id);
+        Sanctum::actingAs($owner);
+        $this->getJson('/api/v1/uploads?scope=club&club_id='.$club->id)->assertOk();
+        Sanctum::actingAs(User::factory()->create());
+        $this->getJson('/api/v1/uploads?scope=club&club_id='.$club->id)->assertNotFound();
+    }
+
     public function test_policy_uploads_are_private_scoped_and_filed_by_type(): void
     {
         Storage::fake(UploadStorage::disk());

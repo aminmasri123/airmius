@@ -257,6 +257,67 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final failPolicy in [false, true]) {
+    testWidgets(
+      'policy list handles lookup failure without raw model output; mainFailure=$failPolicy',
+      (tester) async {
+        final transport = _PolicyDocumentTransport(
+          failFiles: true,
+          failPolicy: failPolicy,
+        );
+        final container = AirmiusServiceContainer(
+          environment: const AirmiusAppEnvironment(
+            apiBaseUrl: 'https://example.test',
+            enableOfflineQueue: false,
+          ),
+          transport: transport,
+        );
+        final club = ClubSummary.fromAirmiusClub(
+          AirmiusClub.fromJson(const {
+            'id': 26,
+            'name': 'Airmius SC',
+            'can_manage': true,
+          }),
+        );
+        await tester.pumpWidget(
+          AirmiusScope(
+            language: AirmiusLanguage.de,
+            setLanguage: (_) {},
+            child: AirmiusServicesScope(
+              container: container,
+              child: MaterialApp(home: ClubPolicyDocumentsScreen(club: club)),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.textContaining('No query results'), findsNothing);
+        expect(find.text('Noch keine Fassungen hinterlegt'), findsNothing);
+        expect(transport.fileCalls, 0);
+        if (!failPolicy) {
+          expect(find.text('Vereinssatzung'), findsOneWidget);
+          await tester.tap(find.byTooltip('Fassung anlegen'));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('Vereinsdatei auswählen'));
+          await tester.pumpAndSettle();
+          expect(transport.fileCalls, 1);
+          expect(
+            find.textContaining('Die Dateibibliothek ist nicht verfügbar'),
+            findsOneWidget,
+          );
+          expect(find.textContaining('No query results'), findsNothing);
+        } else {
+          expect(
+            find.textContaining(
+              'Die Vereinsdokumente sind derzeit nicht verfügbar',
+            ),
+            findsOneWidget,
+          );
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
   test('management payload preserves contribution model versions', () {
     final management = AirmiusClubManagement.fromJson(const {
       'can_manage': true,
@@ -411,11 +472,30 @@ class _ThrowingTransport implements AirmiusApiTransport {
 }
 
 class _PolicyDocumentTransport implements AirmiusApiTransport {
-  _PolicyDocumentTransport({this.failSaveOnce = false});
+  _PolicyDocumentTransport({
+    this.failSaveOnce = false,
+    this.failFiles = false,
+    this.failPolicy = false,
+  });
+  final bool failFiles, failPolicy;
+  int fileCalls = 0;
   bool failSaveOnce;
   final writes = <AirmiusApiRequest>[];
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    if (request.path == '/api/v1/uploads') {
+      fileCalls++;
+      if (failFiles)
+        return const AirmiusApiResponse(
+          statusCode: 404,
+          body: '{"message":"No query results for model [App Models Club] 26"}',
+        );
+    }
+    if (request.path.endsWith('/policy-documents') && failPolicy)
+      return const AirmiusApiResponse(
+        statusCode: 404,
+        body: '{"message":"No query results for model [App Models Club] 26"}',
+      );
     if (request.method == 'POST' &&
         request.path.endsWith('/policy-documents')) {
       writes.add(request);
