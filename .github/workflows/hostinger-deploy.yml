@@ -55,7 +55,17 @@ jobs:
       - name: Test deployment preservation and rollback
         run: bash tests/Deployment/hostingerRelease.test.sh
       - name: Test backend against the complete build
-        run: php artisan test --log-junit backend-results.xml
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: array
+          BROADCAST_CONNECTION: log
+        run: |
+          touch database/database.sqlite
+          php artisan test --log-junit backend-results.xml
       - uses: actions/upload-artifact@v4
         if: always()
         with:
