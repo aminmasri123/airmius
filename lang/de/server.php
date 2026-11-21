@@ -39,6 +39,7 @@ return [
             'fallback_athlete' => 'Sportler',
             'fallback_someone' => 'Jemand',
             'log_saved_title' => 'Training dokumentiert',
+            'assigned_log_saved_body' => ':athlete hat die Einheit „:item“ aus dem Plan „:plan“ dokumentiert.',
             'log_saved_body' => ':actor hat „:log“ für :athlete gespeichert.',
             'item_added_title' => 'Neue Einheit im Trainingsplan',
             'item_added_body' => '„:item“ wurde zu „:plan“ hinzugefügt.',

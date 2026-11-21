@@ -1056,7 +1056,10 @@ class _TrainingPlanApiDetailScreenState
                                     ),
                                   );
                                 } else if (action == 'start') {
-                                  _startItem(item);
+                                  _startItem(
+                                    item,
+                                    canNotifyTrainer: plan.targetType != 'self',
+                                  );
                                 } else if (action == 'edit') {
                                   _editItem(item);
                                 } else if (action == 'duplicate') {
@@ -1144,7 +1147,10 @@ class _TrainingPlanApiDetailScreenState
     if (saved == true && mounted) _reload();
   }
 
-  Future<void> _startItem(_TrainingPlanItem item) async {
+  Future<void> _startItem(
+    _TrainingPlanItem item, {
+    required bool canNotifyTrainer,
+  }) async {
     final userId = AirmiusServicesScope.of(context).authState.user?.id ?? 0;
     final payload = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
@@ -1152,6 +1158,7 @@ class _TrainingPlanApiDetailScreenState
           item: item,
           exercises: _workoutExercisesFromPlanItem(item),
           userId: userId,
+          canNotifyTrainer: canNotifyTrainer,
         ),
       ),
     );
@@ -4200,12 +4207,14 @@ class _LiveWorkoutScreen extends StatefulWidget {
     required this.exercises,
     required this.userId,
     this.enablePersistence = true,
+    this.canNotifyTrainer = false,
   });
 
   final _TrainingPlanItem item;
   final List<_WorkoutExerciseDraft> exercises;
   final int userId;
   final bool enablePersistence;
+  final bool canNotifyTrainer;
 
   @override
   State<_LiveWorkoutScreen> createState() => _LiveWorkoutScreenState();
@@ -4605,6 +4614,7 @@ class _LiveWorkoutScreenState extends State<_LiveWorkoutScreen>
       builder: (_) => _WorkoutCompletionSheet(
         completedSets: _completedCount,
         totalSets: _workoutEntryCount(_actual),
+        canNotifyTrainer: widget.canNotifyTrainer,
       ),
     );
     if (result == null || !mounted) return;
@@ -4629,6 +4639,7 @@ class _LiveWorkoutScreenState extends State<_LiveWorkoutScreen>
           ? 'locker'
           : (result.rpe >= 8 ? 'hart' : 'mittel'),
       'privacy_scope': 'trainer',
+      if (widget.canNotifyTrainer) 'notify_trainer': result.notifyTrainer,
       'notes': result.notes,
       'wellness': {'rpe': result.rpe, 'pain': result.pain},
       'entries': [
@@ -5150,21 +5161,25 @@ class _WorkoutCompletionResult {
     required this.rpe,
     required this.pain,
     required this.notes,
+    required this.notifyTrainer,
   });
 
   final int rpe;
   final int pain;
   final String notes;
+  final bool notifyTrainer;
 }
 
 class _WorkoutCompletionSheet extends StatefulWidget {
   const _WorkoutCompletionSheet({
     required this.completedSets,
     required this.totalSets,
+    required this.canNotifyTrainer,
   });
 
   final int completedSets;
   final int totalSets;
+  final bool canNotifyTrainer;
 
   @override
   State<_WorkoutCompletionSheet> createState() =>
@@ -5175,6 +5190,7 @@ class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
   final _notes = TextEditingController();
   double _rpe = 5;
   double _pain = 0;
+  bool _notifyTrainer = false;
 
   @override
   void dispose() {
@@ -5243,6 +5259,14 @@ class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
               maxLines: 4,
               decoration: InputDecoration(labelText: t('liveWorkout.notes')),
             ),
+            if (widget.canNotifyTrainer)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(t('trainingHub.notifyTrainer')),
+                subtitle: Text(t('trainingHub.notifyTrainerCompletionDetails')),
+                value: _notifyTrainer,
+                onChanged: (value) => setState(() => _notifyTrainer = value),
+              ),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: () => Navigator.pop(
@@ -5251,6 +5275,7 @@ class _WorkoutCompletionSheetState extends State<_WorkoutCompletionSheet> {
                   rpe: _rpe.round(),
                   pain: _pain.round(),
                   notes: _notes.text.trim(),
+                  notifyTrainer: _notifyTrainer,
                 ),
               ),
               icon: const Icon(Icons.flag),

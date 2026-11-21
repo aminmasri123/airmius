@@ -25884,6 +25884,8 @@ final _strings = {
     'trainingHub.missedReason': 'Grund',
     'trainingHub.notifyTrainer': 'Trainer informieren?',
     'trainingHub.notifyTrainerDetails': 'Dein Trainer erhält den Grund und deine optionale Notiz.',
+    'trainingHub.notifyTrainerCompletionDetails':
+        'Dein Trainer erhält eine Nachricht mit einem Link zum Trainingslog.',
     'trainingHub.missed.krank': 'Krank',
     'trainingHub.missed.verletzt': 'Verletzt',
     'trainingHub.missed.keine_zeit': 'Keine Zeit',
@@ -28564,6 +28566,8 @@ final _strings = {
     'trainingHub.missedReason': 'Reason',
     'trainingHub.notifyTrainer': 'Notify your coach?',
     'trainingHub.notifyTrainerDetails': 'Your coach will receive the reason and any note you add.',
+    'trainingHub.notifyTrainerCompletionDetails':
+        'Your coach will receive a notification with a link to the training log.',
     'trainingHub.missed.krank': 'Ill',
     'trainingHub.missed.verletzt': 'Injured',
     'trainingHub.missed.keine_zeit': 'No time',
@@ -31172,6 +31176,8 @@ final _strings = {
     'trainingHub.missedReason': 'Motif',
     'trainingHub.notifyTrainer': 'Prévenir votre entraîneur ?',
     'trainingHub.notifyTrainerDetails': 'Votre entraîneur recevra le motif et votre note éventuelle.',
+    'trainingHub.notifyTrainerCompletionDetails':
+        'Votre entraîneur recevra une notification avec un lien vers le journal.',
     'trainingHub.missed.krank': 'Maladie',
     'trainingHub.missed.verletzt': 'Blessure',
     'trainingHub.missed.keine_zeit': 'Pas de temps',
@@ -33712,6 +33718,8 @@ final _strings = {
     'trainingHub.missedReason': 'السبب',
     'trainingHub.notifyTrainer': 'هل تريد إبلاغ مدربك؟',
     'trainingHub.notifyTrainerDetails': 'سيتلقى مدربك السبب وأي ملاحظة تضيفها.',
+    'trainingHub.notifyTrainerCompletionDetails':
+        'سيتلقى مدربك إشعارًا يتضمن رابطًا إلى سجل التدريب.',
     'trainingHub.missed.krank': 'مرض',
     'trainingHub.missed.verletzt': 'إصابة',
     'trainingHub.missed.keine_zeit': 'لا يوجد وقت',

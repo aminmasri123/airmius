@@ -39,6 +39,7 @@ return [
             'fallback_athlete' => 'الرياضي',
             'fallback_someone' => 'شخص ما',
             'log_saved_title' => 'تم توثيق التدريب',
+            'assigned_log_saved_body' => 'وثّق :athlete الحصة «:item» من الخطة «:plan».',
             'log_saved_body' => 'حفظ :actor التدريب «:log» لصالح :athlete.',
             'item_added_title' => 'حصة جديدة في خطة التدريب',
             'item_added_body' => 'تمت إضافة «:item» إلى «:plan».',

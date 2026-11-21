@@ -510,6 +510,43 @@ class TrainingPlanApiCrudTest extends TestCase
         ]);
     }
 
+    public function test_mobile_api_notifies_only_the_authorized_coach_when_athlete_opts_in_at_completion(): void
+    {
+        [$coach, $athlete, $team] = $this->trainingFixture();
+        $coach->update(['language' => 'de']);
+        $teammate = User::factory()->create();
+        $team->users()->attach($teammate->id, ['role' => TeamRoles::PLAYER]);
+        $plan = $this->createPlan($coach, $team);
+        $item = $plan->items()->create(['title' => 'Tempolauf', 'sport_type' => 'laufen']);
+        $payload = [
+            'title' => $item->title,
+            'training_plan_item_id' => $item->id,
+            'status' => 'completed',
+            'duration_minutes' => 30,
+        ];
+
+        Sanctum::actingAs($athlete);
+        $this->postJson('/api/v1/training/logs', $payload + ['notify_trainer' => false])->assertCreated();
+        $this->postJson('/api/v1/training/logs', $payload + [
+            'notify_trainer' => true,
+            'privacy_scope' => 'private',
+        ])->assertCreated();
+        $this->assertDatabaseMissing('notifications', ['type' => 'training.log.saved']);
+
+        $saved = $this->postJson('/api/v1/training/logs', $payload + [
+            'notify_trainer' => true,
+            'privacy_scope' => 'trainer',
+        ])->assertCreated();
+
+        $notice = Notification::query()->where('type', 'training.log.saved')->sole();
+        $this->assertEquals($coach->id, $notice->user_id);
+        $this->assertSame($saved->json('data.id'), $notice->data['training_log_id']);
+        $this->assertSame(
+            "{$athlete->name} hat die Einheit „Tempolauf“ aus dem Plan „Grundlagenplan“ dokumentiert.",
+            $notice->data['body'],
+        );
+    }
+
     public function test_mobile_api_can_save_and_instantiate_scoped_training_templates(): void
     {
         [$coach, $athlete, $team] = $this->trainingFixture();

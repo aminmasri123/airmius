@@ -39,6 +39,7 @@ return [
             'fallback_athlete' => 'athlete',
             'fallback_someone' => 'Someone',
             'log_saved_title' => 'Training documented',
+            'assigned_log_saved_body' => ':athlete recorded the session “:item” from the plan “:plan”.',
             'log_saved_body' => ':actor saved “:log” for :athlete.',
             'item_added_title' => 'New training-plan session',
             'item_added_body' => '“:item” was added to “:plan”.',

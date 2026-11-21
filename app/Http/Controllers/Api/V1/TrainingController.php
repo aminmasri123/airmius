@@ -19,6 +19,7 @@ use App\Services\Training\TrainingLogService;
 use App\Services\Training\TrainingPlanNotificationService;
 use App\Services\Training\TrainingResourceService;
 use App\Services\Training\TrainingRouteLinkService;
+use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -467,15 +468,31 @@ class TrainingController extends Controller
     {
         $data = $this->validateLogData($request);
         $planItem = $this->resolveVisiblePlanItem($request, $data);
+        $athlete = $request->user();
 
         $log = $this->logs->storeFromPayload(
-            $request->user(),
+            $athlete,
             $data,
-            (int) $request->user()->id,
+            (int) $athlete->id,
             $planItem,
             $request,
             'api_v1_mobile',
         );
+
+        if (($data['notify_trainer'] ?? false) && in_array($log->status, ['completed', 'partial'], true)) {
+            $trainer = $planItem?->plan?->creator;
+            if ($trainer && ! $trainer->is($athlete) && $this->logAccess->canViewProtectedCaseFile($trainer, $log)) {
+                AppNotification::sendLocalized(
+                    $trainer,
+                    'training.log.saved',
+                    'server.training.notifications.log_saved_title',
+                    'server.training.notifications.assigned_log_saved_body',
+                    ['athlete' => $athlete->name, 'item' => $planItem->title, 'plan' => $planItem->plan->title],
+                    ['url' => route('auth.training.logs.show', $log), 'training_log_id' => $log->id],
+                    ['after_commit' => true],
+                );
+            }
+        }
 
         return (new TrainingLogResource($this->loadLogForResource($log)))
             ->response()
@@ -590,6 +607,7 @@ class TrainingController extends Controller
             'intensity' => ['nullable', Rule::in(['locker', 'mittel', 'hart', 'recovery'])],
             'notes' => ['nullable', 'string', 'max:5000'],
             'privacy_scope' => ['nullable', Rule::in(['private', 'trainer', 'team'])],
+            'notify_trainer' => ['sometimes', 'boolean'],
             'wellness' => ['nullable', 'array'],
             'wellness.rpe' => ['nullable', 'integer', 'min:1', 'max:10'],
             'wellness.energy' => ['nullable', 'integer', 'min:1', 'max:10'],
