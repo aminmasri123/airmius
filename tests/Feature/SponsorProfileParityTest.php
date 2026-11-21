@@ -250,7 +250,9 @@ class SponsorProfileParityTest extends TestCase
 
     public function test_partnership_requests_are_real_records_and_are_isolated_between_sponsors(): void
     {
-        $clubOwner = User::factory()->create();
+        $clubOwner = User::factory()->create([
+            'notification_channels' => ['club' => true, 'marketing' => false],
+        ]);
         $club = Club::factory()->create([
             'owner_id' => $clubOwner->id,
             'verification_status' => 'verified',
@@ -294,6 +296,7 @@ class SponsorProfileParityTest extends TestCase
         $this->assertTrue(Notification::query()
             ->where('user_id', $clubOwner->id)
             ->where('type', 'sponsor.partnership_requested')
+            ->where('category', 'club')
             ->exists());
 
         $partnershipId = (int) $response->json('data.id');

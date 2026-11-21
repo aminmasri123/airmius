@@ -163,6 +163,7 @@ class SponsorPartnershipService
                 'partnership_id' => $partnership->id,
                 'status' => $partnership->status,
             ],
+            ['category' => 'club'],
         ));
     }
 }
