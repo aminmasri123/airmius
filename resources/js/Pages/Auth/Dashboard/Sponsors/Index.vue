@@ -814,7 +814,7 @@ const paginationLabel = (label) => String(label || '')
                                 <div v-for="side in [{ label: 'Vorher', value: change.before }, { label: 'Jetzt', value: change.after }]" :key="side.label">
                                     <p class="mb-1 text-secondary">{{ side.label }}</p>
                                     <img v-if="reviewImageUrl(side.value)" :src="reviewImageUrl(side.value)" :alt="`${reviewLabels[change.field]} ${side.label}`" class="h-24 w-32 rounded-lg bg-white object-contain" />
-                                    <p v-else class="text-secondary">Kein Bild</p>
+                                    <p v-else class="text-secondary">{{ t('Kein Bild') }}</p>
                                 </div>
                             </div>
                             <template v-else>
@@ -827,7 +827,7 @@ const paginationLabel = (label) => String(label || '')
                     <dl class="mt-2 grid gap-2 sm:grid-cols-2">
                         <div v-for="(label, field) in reviewLabels" :key="field" class="min-w-0 border-b border-border py-2 text-sm">
                             <dt class="font-semibold text-secondary">{{ label }}</dt>
-                            <dd v-if="isReviewLogo(field)"><img v-if="reviewImageUrl(reviewTarget.profile_fields?.[field])" :src="reviewImageUrl(reviewTarget.profile_fields?.[field])" :alt="label" class="mt-1 h-24 w-32 rounded-lg bg-white object-contain" /><span v-else class="text-secondary">Kein Bild</span></dd>
+                            <dd v-if="isReviewLogo(field)"><img v-if="reviewImageUrl(reviewTarget.profile_fields?.[field])" :src="reviewImageUrl(reviewTarget.profile_fields?.[field])" :alt="label" class="mt-1 h-24 w-32 rounded-lg bg-white object-contain" /><span v-else class="text-secondary">{{ t('Kein Bild') }}</span></dd>
                             <dd v-else class="break-all text-primary">{{ reviewValue(reviewTarget.profile_fields?.[field]) }}</dd>
                         </div>
                     </dl>
