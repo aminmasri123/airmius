@@ -33,7 +33,7 @@ class UserFactory extends Factory
             'name' => $firstName.' '.$lastName,
             'first_name' => $firstName,
             'last_name' => $lastName,
-            'email' => fake()->unique(true)->safeEmail(),
+            'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'country' => 'DE',
             'birth_date' => now()->subYears(18)->toDateString(),
