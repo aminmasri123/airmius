@@ -474,8 +474,11 @@ export function useAdminCommerceProducts() {
         editProductForm.variants = normalizeVariantRows(editVariantRows.value)
 
         editProductForm
-            .transform(transformProductForm)
-            .put(route('admin.commerce.products.update', editProductForm.product.id), {
+            .transform((data) => ({
+                ...transformProductForm(data),
+                _method: 'PUT',
+            }))
+            .post(route('admin.commerce.products.update', editProductForm.product.id), {
                 preserveScroll: true,
                 forceFormData: true,
                 onSuccess: closeEditProduct,

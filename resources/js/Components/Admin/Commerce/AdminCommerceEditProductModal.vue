@@ -1,10 +1,11 @@
 ﻿<script setup>
 import MarketplaceTaxonomyFields from '@/Components/Commerce/MarketplaceTaxonomyFields.vue'
+import { computed, ref, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
 
-defineProps({
+const props = defineProps({
     attributePresets: {
         type: Array,
         default: () => [],
@@ -37,6 +38,35 @@ defineProps({
         type: Array,
         default: () => [],
     },
+})
+
+const mainUploadPreview = ref('')
+const galleryUploadPreviews = ref([])
+
+watchEffect((onCleanup) => {
+    const main = props.form.open && props.form.image_upload
+        ? URL.createObjectURL(props.form.image_upload)
+        : ''
+    const gallery = props.form.open
+        ? (props.form.image_uploads ?? []).map((file) => URL.createObjectURL(file))
+        : []
+
+    mainUploadPreview.value = main
+    galleryUploadPreviews.value = gallery
+
+    onCleanup(() => {
+        if (main) URL.revokeObjectURL(main)
+        gallery.forEach((url) => URL.revokeObjectURL(url))
+    })
+})
+
+const mainImage = computed(() => mainUploadPreview.value || props.form.image_url?.trim())
+const galleryImages = computed(() => {
+    const savedImages = (props.form.image_urls_text ?? '').split(/[\r\n]+/)
+        .map((url) => url.trim())
+        .filter((url) => url && url !== mainImage.value)
+
+    return [...new Set([...savedImages, ...galleryUploadPreviews.value])]
 })
 
 const emit = defineEmits([
@@ -117,6 +147,10 @@ const emit = defineEmits([
                 <input v-model="form.low_stock_threshold" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Warnbestand">
 
                 <div class="md:col-span-2 grid gap-3 rounded-lg border border-border bg-bg p-3 md:grid-cols-2">
+                    <div v-if="mainImage || galleryImages.length" class="flex flex-wrap items-start gap-3 md:col-span-2">
+                        <img v-if="mainImage" :src="mainImage" :alt="form.title ? `Hauptbild: ${form.title}` : 'Hauptbild'" class="h-28 w-28 rounded-lg border border-border object-contain">
+                        <img v-for="(url, index) in galleryImages" :key="url" :src="url" :alt="`Galeriebild ${index + 1}`" class="h-20 w-20 rounded-lg border border-border object-contain">
+                    </div>
                     <div>
                         <label class="text-xs font-semibold uppercase text-secondary">Hauptbild per URL</label>
                         <input v-model="form.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.url_placeholder')">
