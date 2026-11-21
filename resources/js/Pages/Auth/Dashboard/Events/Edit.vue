@@ -147,7 +147,7 @@ const submit = () => {
             <section class="rounded-2xl border border-border bg-card p-5 sm:p-6">
                 <h2 class="text-xl font-semibold text-primary">{{ $t('Ort und Adresse') }}</h2>
                 <div class="mt-5 grid gap-4 md:grid-cols-2">
-                    <label class="md:col-span-2"><span class="field-label">{{ $t('Ort / Treffpunkt') }}</span><input v-model="form.location_name" class="field-input" placeholder="z. B. Sporthalle oder Vereinsheim" /></label>
+                    <label class="md:col-span-2"><span class="field-label">{{ $t('Ort / Treffpunkt') }}</span><input v-model="form.location_name" class="field-input" :placeholder="$t('z. B. Sporthalle oder Vereinsheim')" /></label>
                     <label><span class="field-label">{{ $t('Straße') }}</span><input v-model="form.location_street" class="field-input" /></label>
                     <label><span class="field-label">{{ $t('Nr.') }}</span><input v-model="form.location_house_number" class="field-input" /></label>
                     <label><span class="field-label">{{ $t('PLZ') }}</span><input v-model="form.location_postal_code" class="field-input" /></label>
