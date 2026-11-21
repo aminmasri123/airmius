@@ -6058,6 +6058,16 @@ void main() {
     expect(find.text('Sponsoren'), findsWidgets);
     expect(find.text('Sport Partner'), findsOneWidget);
     expect(find.text('Airmius Partner'), findsOneWidget);
+    expect(find.text('Alle (1)'), findsOneWidget);
+    expect(find.text('Website öffnen'), findsNothing);
+    expect(
+      tester.getTopLeft(find.text('Sponsor werden')).dy,
+      greaterThan(tester.getTopLeft(find.text('Sport Partner')).dy),
+    );
+
+    await tester.tap(find.text('Airmius Partner'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sponsor kontaktieren'), findsOneWidget);
     expect(find.text('Website öffnen'), findsOneWidget);
   });
 
@@ -6117,7 +6127,7 @@ void main() {
   testWidgets('sponsor management opens partnership details before a decision', (
     WidgetTester tester,
   ) async {
-    _setTestViewport(tester, const Size(900, 1400));
+    _setTestViewport(tester, const Size(360, 850));
     final transport = _RecordingTransport(
       const AirmiusApiResponse(
         statusCode: 200,
@@ -6137,7 +6147,13 @@ void main() {
     expect(find.text('Trikotlogo'), findsOneWidget);
     expect(find.text('Ziel: Jugendförderung'), findsOneWidget);
     expect(find.text('Verlängerungsfrist'), findsOneWidget);
-    await tester.tap(find.text('Schließen'));
+    expect(find.text('Schließen'), findsNothing);
+    final reject = tester.getRect(find.widgetWithText(OutlinedButton, 'Ablehnen'));
+    final approve = tester.getRect(find.widgetWithText(FilledButton, 'Annehmen'));
+    expect(reject.center.dy, approve.center.dy);
+    expect(approve.left - reject.right, 12);
+    expect(reject.width, approve.width);
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Details zur Anfrage'));

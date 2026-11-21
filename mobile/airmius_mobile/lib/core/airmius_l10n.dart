@@ -28049,6 +28049,10 @@ final _strings = {
     'sponsors.transparency':
         'Angezeigt werden nur aktive Partnerschaften. Interne Kontakte und Vertragsbeträge bleiben geschützt.',
     'sponsors.all': 'Alle',
+    'sponsors.locationFilters': 'Standortfilter',
+    'sponsors.contact': 'Sponsor kontaktieren',
+    'sponsors.contactClubRequired': 'Für eine Anfrage brauchst du die Sponsoring-Berechtigung in einem Verein.',
+    'sponsors.contactUnavailable': 'Für diesen Sponsor ist kein direkter Kontakt in Airmius verfügbar.',
     'sponsors.platform': 'Plattform',
     'sponsors.clubs': 'Vereine',
     'sponsors.outfit': 'Outfit',
@@ -30645,6 +30649,10 @@ final _strings = {
     'sponsors.transparency':
         'Only active partnerships are shown. Internal contacts and contract amounts stay private.',
     'sponsors.all': 'All',
+    'sponsors.locationFilters': 'Location filters',
+    'sponsors.contact': 'Contact sponsor',
+    'sponsors.contactClubRequired': 'To send an inquiry, you need sponsorship permissions for a club.',
+    'sponsors.contactUnavailable': 'Direct contact with this sponsor is unavailable in Airmius.',
     'sponsors.platform': 'Platform',
     'sponsors.clubs': 'Clubs',
     'sponsors.outfit': 'Outfit',
@@ -33233,6 +33241,10 @@ final _strings = {
     'sponsors.transparency':
         'Seuls les partenariats actifs sont affichés. Les contacts internes et montants contractuels restent privés.',
     'sponsors.all': 'Tous',
+    'sponsors.locationFilters': 'Filtres géographiques',
+    'sponsors.contact': 'Contacter le sponsor',
+    'sponsors.contactClubRequired': 'Pour envoyer une demande, tu dois disposer des droits de sponsoring dans un club.',
+    'sponsors.contactUnavailable': 'Ce sponsor ne peut pas être contacté directement dans Airmius.',
     'sponsors.platform': 'Plateforme',
     'sponsors.clubs': 'Clubs',
     'sponsors.outfit': 'Tenues',
@@ -35655,6 +35667,10 @@ final _strings = {
     'sponsors.transparency':
         'تُعرض الشراكات النشطة فقط. تبقى جهات الاتصال الداخلية ومبالغ العقود خاصة.',
     'sponsors.all': 'الكل',
+    'sponsors.locationFilters': 'عوامل تصفية الموقع',
+    'sponsors.contact': 'تواصل مع الراعي',
+    'sponsors.contactClubRequired': 'لإرسال طلب، تحتاج إلى صلاحية إدارة الرعاية في أحد الأندية.',
+    'sponsors.contactUnavailable': 'لا يمكن التواصل مباشرة مع هذا الراعي عبر Airmius.',
     'sponsors.platform': 'المنصة',
     'sponsors.clubs': 'الأندية',
     'sponsors.outfit': 'الملابس',

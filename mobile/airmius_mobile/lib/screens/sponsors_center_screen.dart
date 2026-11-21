@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
-import '../core/airmius_external_url.dart';
+
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -63,7 +62,9 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
   }
 
   Future<JsonMap> _load() async {
-    final authenticated = AirmiusServicesScope.of(context).authState.isAuthenticated;
+    final authenticated = AirmiusServicesScope.of(
+      context,
+    ).authState.isAuthenticated;
     final public = await _client.publicSponsors();
     if (!authenticated) return public;
     final inquiries = await _client.sponsorInquiries();
@@ -76,28 +77,21 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
     });
   }
 
-  Future<void> _openWebsite(String value) async {
-    final uri = safeExternalHttpUrl(value, httpsOnly: false);
-    if (uri == null) {
-      _toast(t('sponsors.invalidWebsite'));
-      return;
-    }
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
-        mounted) {
-      _toast(t('sponsors.openFailed'));
-    }
-  }
-
-  void _toast(String value) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(value)));
-  }
-
-  Future<void> _openSponsor(JsonMap sponsor, List<JsonMap> clubs, List<JsonMap> outgoing) async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => SponsorDiscoveryDetailScreen(
-      sponsor: sponsor, clubs: clubs, outgoing: outgoing,
-    )));
+  Future<void> _openSponsor(
+    JsonMap sponsor,
+    List<JsonMap> clubs,
+    List<JsonMap> outgoing,
+  ) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SponsorDiscoveryDetailScreen(
+          sponsor: sponsor,
+          clubs: clubs,
+          outgoing: outgoing,
+        ),
+      ),
+    );
     if (mounted) _reload();
   }
 
@@ -146,239 +140,216 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
           final inquiries = _sponsorMap(snapshot.data?['inquiries']);
           final clubs = _sponsorList(inquiries['clubs']);
           final outgoing = _sponsorList(inquiries['outgoing']);
-          final countries = sponsors.map((s) => _sponsorText(s['country_code'])).where((s) => s.isNotEmpty).toSet().toList()..sort();
-          final regions = sponsors.where((s) => _country == 'all' || _sponsorText(s['country_code']) == _country)
-              .map((s) => _sponsorText(s['region'])).where((s) => s.isNotEmpty).toSet().toList()..sort();
-          final nearClub = clubs.where((club) => _sponsorInt(club['id']) == _nearbyClubId).firstOrNull;
+          final countries =
+              sponsors
+                  .map((s) => _sponsorText(s['country_code']))
+                  .where((s) => s.isNotEmpty)
+                  .toSet()
+                  .toList()
+                ..sort();
+          final regions =
+              sponsors
+                  .where(
+                    (s) =>
+                        _country == 'all' ||
+                        _sponsorText(s['country_code']) == _country,
+                  )
+                  .map((s) => _sponsorText(s['region']))
+                  .where((s) => s.isNotEmpty)
+                  .toSet()
+                  .toList()
+                ..sort();
+          final nearClub = clubs
+              .where((club) => _sponsorInt(club['id']) == _nearbyClubId)
+              .firstOrNull;
           final visible = sponsors.where((sponsor) {
-            final haystack = [sponsor['name'], sponsor['city'], sponsor['region'], sponsor['country_code']]
-                .map((value) => _sponsorText(value).toLowerCase()).join(' ');
-            return (_scope == 'all' || _sponsorText(sponsor['scope']) == _scope)
-                && (_country == 'all' || _sponsorText(sponsor['country_code']) == _country)
-                && (_region == 'all' || _sponsorText(sponsor['region']) == _region)
-                && (nearClub == null || (_sponsorText(sponsor['city']).isNotEmpty
-                    && _sponsorText(sponsor['city']).toLowerCase() == _sponsorText(nearClub['city']).toLowerCase()))
-                && haystack.contains(_query.trim().toLowerCase());
+            final haystack = [
+              sponsor['name'],
+              sponsor['city'],
+              sponsor['region'],
+              sponsor['country_code'],
+            ].map((value) => _sponsorText(value).toLowerCase()).join(' ');
+            return (_scope == 'all' ||
+                    _sponsorText(sponsor['scope']) == _scope) &&
+                (_country == 'all' ||
+                    _sponsorText(sponsor['country_code']) == _country) &&
+                (_region == 'all' ||
+                    _sponsorText(sponsor['region']) == _region) &&
+                (nearClub == null ||
+                    (_sponsorText(sponsor['city']).isNotEmpty &&
+                        _sponsorText(sponsor['city']).toLowerCase() ==
+                            _sponsorText(nearClub['city']).toLowerCase())) &&
+                haystack.contains(_query.trim().toLowerCase());
           }).toList();
           if (!_openedInitialSponsor && widget.initialSponsorId != null) {
             _openedInitialSponsor = true;
-            final target = sponsors.where((s) => _sponsorInt(s['id']) == widget.initialSponsorId).firstOrNull;
-            if (target != null) WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _openSponsor(target, clubs, outgoing);
-            });
+            final target = sponsors
+                .where((s) => _sponsorInt(s['id']) == widget.initialSponsorId)
+                .firstOrNull;
+            if (target != null)
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _openSponsor(target, clubs, outgoing);
+              });
           }
 
           return PageFrame(
             title: t('sponsors.title'),
             subtitle: clubs.isEmpty
                 ? t('sponsors.subtitle')
-                : _tx('Finde passende Unternehmen und frage für deinen Verein Sponsoring an.',
-                    'Find suitable companies and request sponsorship for your club.'),
+                : _tx(
+                    'Finde passende Unternehmen und frage für deinen Verein Sponsoring an.',
+                    'Find suitable companies and request sponsorship for your club.',
+                  ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextField(
-                  decoration: InputDecoration(labelText: _tx('Sponsor suchen', 'Search sponsors'), prefixIcon: const Icon(Icons.search)),
+                  decoration: InputDecoration(
+                    labelText: _tx('Sponsor suchen', 'Search sponsors'),
+                    prefixIcon: const Icon(Icons.search),
+                  ),
                   onChanged: (value) => setState(() => _query = value),
                 ),
                 const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(child: DropdownButtonFormField<String>(
-                    initialValue: _country, decoration: InputDecoration(labelText: _tx('Land', 'Country')),
-                    items: ['all', ...countries].map((value) => DropdownMenuItem(value: value, child: Text(value == 'all' ? _tx('Alle', 'All') : value))).toList(),
-                    onChanged: (value) => setState(() { _country = value ?? 'all'; _region = 'all'; }),
-                  )),
-                  const SizedBox(width: 10),
-                  Expanded(child: DropdownButtonFormField<String>(
-                    key: ValueKey(_country), initialValue: regions.contains(_region) ? _region : 'all',
-                    decoration: InputDecoration(labelText: _tx('Region', 'Region')),
-                    items: ['all', ...regions].map((value) => DropdownMenuItem(value: value, child: Text(value == 'all' ? _tx('Alle', 'All') : value))).toList(),
-                    onChanged: (value) => setState(() => _region = value ?? 'all'),
-                  )),
-                ]),
-                if (clubs.any((club) => _sponsorText(club['city']).isNotEmpty)) ...[
-                  const SizedBox(height: 10),
-                  DropdownButtonFormField<int?>(
-                    initialValue: _nearbyClubId,
-                    decoration: InputDecoration(labelText: _tx('In meinem Ort', 'In my city')),
-                    items: [
-                      DropdownMenuItem<int?>(value: null, child: Text(_tx('Überall suchen', 'Search everywhere'))),
-                      ...clubs.where((club) => _sponsorText(club['city']).isNotEmpty).map((club) =>
-                          DropdownMenuItem<int?>(value: _sponsorInt(club['id']), child: Text('${_sponsorText(club['name'])} · ${_sponsorText(club['city'])}'))),
-                    ],
-                    onChanged: (value) => setState(() => _nearbyClubId = value),
-                  ),
-                ],
                 const SizedBox(height: 16),
-                if (clubs.isEmpty) ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: AspectRatio(
-                    aspectRatio: 4 / 5,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.asset(
-                          'assets/images/sponsors/community-impact-hero.png',
-                          fit: BoxFit.cover,
-                          alignment: const Alignment(0.35, 0),
-                        ),
-                        const DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Color(0x66000000),
-                                Color(0xEE000000),
-                              ],
-                              stops: [0, .42, 1],
+                Wrap(
+                  spacing: 6,
+                  children:
+                      [
+                            ('all', 'sponsors.all', 'total'),
+                            ('platform', 'sponsors.platform', 'platform'),
+                            ('club', 'sponsors.clubs', 'club'),
+                            (
+                              'outfit_subscription',
+                              'sponsors.scope.outfit_subscription',
+                              'outfit_subscription',
+                            ),
+                          ]
+                          .map(
+                            (option) => ChoiceChip(
+                              selected: _scope == option.$1,
+                              label: Text(
+                                '${t(option.$2)} (${_sponsorInt(stats[option.$3])})',
+                              ),
+                              visualDensity: VisualDensity.compact,
+                              onSelected: (_) =>
+                                  setState(() => _scope = option.$1),
+                            ),
+                          )
+                          .toList(),
+                ),
+                if (countries.isNotEmpty ||
+                    regions.isNotEmpty ||
+                    clubs.any((club) => _sponsorText(club['city']).isNotEmpty))
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: Text(t('sponsors.locationFilters')),
+                    leading: const Icon(Icons.tune),
+                    subtitle:
+                        _country != 'all' ||
+                            _region != 'all' ||
+                            nearClub != null
+                        ? Text(
+                            [
+                              if (_country != 'all') _country,
+                              if (_region != 'all') _region,
+                              if (nearClub != null)
+                                _sponsorText(nearClub['city']),
+                            ].join(' · '),
+                          )
+                        : null,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              initialValue: _country,
+                              decoration: InputDecoration(
+                                labelText: _tx('Land', 'Country'),
+                              ),
+                              items: ['all', ...countries]
+                                  .map(
+                                    (value) => DropdownMenuItem(
+                                      value: value,
+                                      child: Text(
+                                        value == 'all'
+                                            ? _tx('Alle', 'All')
+                                            : value,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) => setState(() {
+                                _country = value ?? 'all';
+                                _region = 'all';
+                              }),
                             ),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(22),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Eyebrow(
-                                _tx(
-                                  'Partnerschaften mit Wirkung',
-                                  'Partnerships with impact',
-                                ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: DropdownButtonFormField<String>(
+                              key: ValueKey(_country),
+                              initialValue: regions.contains(_region)
+                                  ? _region
+                                  : 'all',
+                              decoration: InputDecoration(
+                                labelText: _tx('Region', 'Region'),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                _tx(
-                                  'Sport fördern. Region stärken. Marke sichtbar machen.',
-                                  'Support sport. Strengthen communities. Build brand visibility.',
-                                ),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 27,
-                                  height: 1.12,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                _tx(
-                                  'Entdecke Vereine und Projekte, die zu deinem Unternehmen passen.',
-                                  'Discover clubs and projects that fit your business.',
-                                ),
-                                style: const TextStyle(
-                                  color: Color(0xFFE5E7EB),
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
+                              items: ['all', ...regions]
+                                  .map(
+                                    (value) => DropdownMenuItem(
+                                      value: value,
+                                      child: Text(
+                                        value == 'all'
+                                            ? _tx('Alle', 'All')
+                                            : value,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (value) =>
+                                  setState(() => _region = value ?? 'all'),
+                            ),
                           ),
+                        ],
+                      ),
+                      if (clubs.any(
+                        (club) => _sponsorText(club['city']).isNotEmpty,
+                      )) ...[
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<int?>(
+                          initialValue: _nearbyClubId,
+                          decoration: InputDecoration(
+                            labelText: _tx('In meinem Ort', 'In my city'),
+                          ),
+                          items: [
+                            DropdownMenuItem<int?>(
+                              value: null,
+                              child: Text(
+                                _tx('Überall suchen', 'Search everywhere'),
+                              ),
+                            ),
+                            ...clubs
+                                .where(
+                                  (club) =>
+                                      _sponsorText(club['city']).isNotEmpty,
+                                )
+                                .map(
+                                  (club) => DropdownMenuItem<int?>(
+                                    value: _sponsorInt(club['id']),
+                                    child: Text(
+                                      '${_sponsorText(club['name'])} · ${_sponsorText(club['city'])}',
+                                    ),
+                                  ),
+                                ),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _nearbyClubId = value),
                         ),
                       ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                if (clubs.isEmpty) _SponsorBenefits(text: _tx),
-                const SizedBox(height: 14),
-                if (clubs.isEmpty) AirmiusPanel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        t('sponsorApplication.title'),
-                        style: TextStyle(
-                          color: airmiusTextColor(context),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        t('sponsorApplication.intro'),
-                        style: TextStyle(
-                          color: airmiusMutedColor(context),
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      AirmiusButton(
-                        label: t('sponsorApplication.open'),
-                        icon: Icons.handshake_outlined,
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SponsorApplicationScreen(),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: MetricCard(
-                        value: '${_sponsorInt(stats['total'])}',
-                        label: t('sponsors.all'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: MetricCard(
-                        value: '${_sponsorInt(stats['platform'])}',
-                        label: t('sponsors.platform'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: MetricCard(
-                        value: '${_sponsorInt(stats['club'])}',
-                        label: t('sponsors.clubs'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                AirmiusPanel(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children:
-                        [
-                          ('all', 'sponsors.all'),
-                          ('platform', 'sponsors.platform'),
-                          ('club', 'sponsors.clubs'),
-                          ('outfit_subscription', 'sponsors.outfit'),
-                        ].map((option) {
-                          final selected = _scope == option.$1;
-                          return ChoiceChip(
-                            selected: selected,
-                            label: Text(t(option.$2)),
-                            onSelected: (_) =>
-                                setState(() => _scope = option.$1),
-                            selectedColor: airmiusAccentColor(
-                              context,
-                            ).withValues(alpha: 0.22),
-                            backgroundColor: airmiusSurfaceSoftColor(context),
-                            side: BorderSide(
-                              color: selected
-                                  ? airmiusAccentColor(context)
-                                  : airmiusBorderColor(context),
-                            ),
-                            labelStyle: TextStyle(
-                              color: selected
-                                  ? airmiusAccentColor(context)
-                                  : airmiusMutedColor(context),
-                              fontWeight: FontWeight.w900,
-                            ),
-                          );
-                        }).toList(),
-                  ),
-                ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 if (visible.isEmpty)
                   AirmiusPanel(
                     child: Text(
@@ -397,11 +368,119 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
                       child: _SponsorCard(
                         sponsor: sponsor,
                         onOpen: () => _openSponsor(sponsor, clubs, outgoing),
-                        onWebsite: () =>
-                            _openWebsite(_sponsorText(sponsor['website'])),
                       ),
                     ),
                   ),
+                if (clubs.isEmpty) const SizedBox(height: 12),
+                if (clubs.isEmpty)
+                  AirmiusPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          t('sponsorApplication.title'),
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          t('sponsorApplication.intro'),
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        AirmiusButton(
+                          label: t('sponsorApplication.open'),
+                          icon: Icons.handshake_outlined,
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SponsorApplicationScreen(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (clubs.isEmpty) const SizedBox(height: 14),
+                if (clubs.isEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: AspectRatio(
+                      aspectRatio: 4 / 5,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.asset(
+                            'assets/images/sponsors/community-impact-hero.png',
+                            fit: BoxFit.cover,
+                            alignment: const Alignment(0.35, 0),
+                          ),
+                          const DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Color(0x66000000),
+                                  Color(0xEE000000),
+                                ],
+                                stops: [0, .42, 1],
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(22),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Eyebrow(
+                                  _tx(
+                                    'Partnerschaften mit Wirkung',
+                                    'Partnerships with impact',
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _tx(
+                                    'Sport fördern. Region stärken. Marke sichtbar machen.',
+                                    'Support sport. Strengthen communities. Build brand visibility.',
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 27,
+                                    height: 1.12,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  _tx(
+                                    'Entdecke Vereine und Projekte, die zu deinem Unternehmen passen.',
+                                    'Discover clubs and projects that fit your business.',
+                                  ),
+                                  style: const TextStyle(
+                                    color: Color(0xFFE5E7EB),
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 14),
+                if (clubs.isEmpty) _SponsorBenefits(text: _tx),
+                const SizedBox(height: 14),
               ],
             ),
           );
@@ -509,22 +588,21 @@ class _SponsorBenefits extends StatelessWidget {
 }
 
 class _SponsorCard extends StatelessWidget {
-  const _SponsorCard({required this.sponsor, required this.onWebsite, required this.onOpen});
+  const _SponsorCard({required this.sponsor, required this.onOpen});
 
   final JsonMap sponsor;
-  final VoidCallback onWebsite;
   final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
     final logo = resolveAirmiusImageUrl(_sponsorText(sponsor['logo_url']));
-    final website = _sponsorText(sponsor['website']);
     final club = _sponsorText(_sponsorMap(sponsor['club'])['name']);
     final scope = _sponsorText(sponsor['scope'], fallback: 'platform');
     return AirmiusPanel(
+      onTap: onOpen,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 72,
@@ -566,8 +644,14 @@ class _SponsorCard extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                if (_sponsorText(sponsor['city']).isNotEmpty || _sponsorText(sponsor['region']).isNotEmpty)
-                  Text([sponsor['city'], sponsor['region']].map(_sponsorText).where((value) => value.isNotEmpty).join(' · ')),
+                if (_sponsorText(sponsor['city']).isNotEmpty ||
+                    _sponsorText(sponsor['region']).isNotEmpty)
+                  Text(
+                    [sponsor['city'], sponsor['region']]
+                        .map(_sponsorText)
+                        .where((value) => value.isNotEmpty)
+                        .join(' · '),
+                  ),
                 const SizedBox(height: 7),
                 Wrap(
                   spacing: 8,
@@ -581,20 +665,11 @@ class _SponsorCard extends StatelessWidget {
                       ),
                   ],
                 ),
-                if (website.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  AirmiusButton(
-                    label: t('sponsors.website'),
-                    icon: Icons.open_in_new_outlined,
-                    secondary: true,
-                    onPressed: onWebsite,
-                  ),
-                ],
-                const SizedBox(height: 8),
-                TextButton.icon(onPressed: onOpen, icon: const Icon(Icons.arrow_forward), label: Text(Localizations.localeOf(context).languageCode == 'de' ? 'Profil ansehen' : 'View profile')),
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          const Icon(Icons.chevron_right),
         ],
       ),
     );
