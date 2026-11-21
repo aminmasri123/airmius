@@ -1115,6 +1115,7 @@ class TrainingController extends Controller
             'user_id' => ['nullable', 'integer', Rule::in($allowedUserIds)],
             'reason' => ['required', Rule::in(['krank', 'verletzt', 'keine_zeit', 'verschoben', 'bewusst_ausgelassen', 'anderes'])],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'notify_trainer' => ['sometimes', 'boolean'],
         ]);
 
         $athleteId = (int) ($data['user_id'] ?? $user->id);
@@ -1143,14 +1144,36 @@ class TrainingController extends Controller
             ],
         );
 
-        $this->planNotifications->notifyRecipients(
-            $plan->fresh(['assignments.user', 'assignments.team.users', 'creator']),
-            $user,
-            'server.training.notifications.item_missed_title',
-            'server.training.notifications.item_missed_body',
-            ['item' => $item->title],
-            route('auth.training.logs.show', $missedLog),
-        );
+        $url = route('auth.training.logs.show', $missedLog);
+        if (! array_key_exists('notify_trainer', $data)) {
+            $this->planNotifications->notifyRecipients(
+                $plan,
+                $user,
+                'server.training.notifications.item_missed_title',
+                'server.training.notifications.item_missed_body',
+                ['item' => $item->title],
+                $url,
+            );
+        } elseif ($data['notify_trainer'] && $athleteId === (int) $user->id
+            && $plan->creator && (int) $plan->creator->id !== $athleteId
+            && $this->logAccess->canViewProtectedCaseFile($plan->creator, $missedLog)) {
+            $notes = $missedLog->notes;
+            $this->planNotifications->notifyRecipients(
+                $plan,
+                $user,
+                'server.training.notifications.item_missed_title',
+                'server.training.notifications.item_missed_details'.($notes !== null && $notes !== '' ? '_with_notes' : ''),
+                [
+                    'athlete' => $user->name,
+                    'plan' => $plan->title,
+                    'item' => $item->title,
+                    'reason' => ['translation_key' => 'server.training.notifications.missed_reasons.'.$data['reason']],
+                    'notes' => $notes ?? '',
+                ],
+                $url,
+                [(int) $plan->creator->id],
+            );
+        }
 
         return back()->with('success', __('server.training.item_missed'));
     }

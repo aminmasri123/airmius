@@ -3068,6 +3068,7 @@ class AirmiusApiClient {
     int planId,
     int itemId, {
     required String reason,
+    required bool notifyTrainer,
     String? notes,
     int? userId,
   }) => _json(
@@ -3075,6 +3076,7 @@ class AirmiusApiClient {
     '/api/v1/training/plans/$planId/items/$itemId/missed',
     body: {
       'reason': reason,
+      'notify_trainer': notifyTrainer,
       if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
       'user_id': ?userId,
     },

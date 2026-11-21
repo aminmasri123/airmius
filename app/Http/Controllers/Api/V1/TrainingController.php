@@ -418,6 +418,10 @@ class TrainingController extends Controller
         TrainingPlan $trainingPlan,
         TrainingPlanItem $trainingPlanItem,
     ) {
+        if (! $request->has('notify_trainer')) {
+            $request->merge(['notify_trainer' => false]);
+        }
+
         app(WebTrainingController::class)->markPlanItemMissed(
             $request,
             $trainingPlan,
@@ -442,6 +446,7 @@ class TrainingController extends Controller
         $logs = $this->visibleLogs($request)
             ->with(['athlete', 'trainer', 'team', 'plan', 'planItem', 'entries', ...$this->logRouteRelations($request)])
             ->latest('performed_at')
+            ->latest('id')
             ->paginate($this->perPage($request));
 
         return TrainingLogResource::collection($logs);

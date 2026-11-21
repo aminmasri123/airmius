@@ -178,7 +178,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
   Future<_TrainingData> _load() async {
     final responses = await Future.wait([
       loadTrainingPlanCatalog((page)=>_client.trainingPlans(page:page,perPage:100)),
-      _client.trainingLogs(),
+      loadTrainingCatalog((page) => _client.trainingLogs(page: page)),
     ]);
     final capabilities = responses[0]['capabilities'];
     final canManagePlans =
@@ -516,6 +516,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
               subtitle: Text(
                 [
                   _shortDate(log.performedAt),
+                  if (log.status == 'missed') _translatedStatus(t, log.status),
                   if (log.durationMinutes != null)
                     '${log.durationMinutes} ${t('trainingHub.minutes')}',
                   if (log.distanceMeters != null)
@@ -1061,7 +1062,10 @@ class _TrainingPlanApiDetailScreenState
                                 } else if (action == 'duplicate') {
                                   _duplicateItem(item.id);
                                 } else if (action == 'missed') {
-                                  _markMissed(item.id);
+                                  _markMissed(
+                                    item.id,
+                                    canNotifyTrainer: plan.targetType != 'self',
+                                  );
                                 } else if (action == 'delete') {
                                   _deleteItem(item.id);
                                 }
@@ -1226,18 +1230,28 @@ class _TrainingPlanApiDetailScreenState
     await _run(() => _client.duplicateTrainingPlanItem(widget.planId, itemId));
   }
 
-  Future<void> _markMissed(int itemId) async {
-    final payload = await showDialog<Map<String, String>>(
+  Future<void> _markMissed(int itemId, {required bool canNotifyTrainer}) async {
+    final payload = await showDialog<_MissedTrainingInput>(
       context: context,
-      builder: (_) => const _MissedTrainingDialog(),
+      builder: (_) => _MissedTrainingDialog(canNotifyTrainer: canNotifyTrainer),
     );
-    if (payload == null) return;
-    await _run(
-      () => _client.markTrainingPlanItemMissed(
+    if (payload == null || !mounted) return;
+    var logId = 0;
+    final saved = await _run(() async {
+      final response = await _client.markTrainingPlanItemMissed(
         widget.planId,
         itemId,
-        reason: payload['reason']!,
-        notes: payload['notes'],
+        reason: payload.reason,
+        notes: payload.notes,
+        notifyTrainer: payload.notifyTrainer,
+      );
+      logId = _asInt(_singleData(response)['id']);
+      return response;
+    });
+    if (!saved || !mounted || logId <= 0) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TrainingLogApiDetailScreen(logId: logId),
       ),
     );
   }
@@ -1408,6 +1422,13 @@ class _TrainingLogApiDetailScreenState
                             StatusPill(log.intensity!),
                         ],
                       ),
+                      if (log.status == 'missed' && log.missedReason != null) ...[
+                        const SizedBox(height: 14),
+                        Text(
+                          '${t('trainingHub.missedReason')}: '
+                          '${t('trainingHub.missed.${log.missedReason}')}',
+                        ),
+                      ],
                       if (log.notes?.isNotEmpty == true) ...[
                         const SizedBox(height: 14),
                         Text(log.notes!),
@@ -6981,8 +7002,13 @@ class _WorkoutSetResult extends StatelessWidget {
   }
 }
 
+typedef _MissedTrainingInput =
+    ({String reason, String notes, bool notifyTrainer});
+
 class _MissedTrainingDialog extends StatefulWidget {
-  const _MissedTrainingDialog();
+  const _MissedTrainingDialog({required this.canNotifyTrainer});
+
+  final bool canNotifyTrainer;
 
   @override
   State<_MissedTrainingDialog> createState() => _MissedTrainingDialogState();
@@ -6991,6 +7017,7 @@ class _MissedTrainingDialog extends StatefulWidget {
 class _MissedTrainingDialogState extends State<_MissedTrainingDialog> {
   final _notes = TextEditingController();
   String _reason = 'krank';
+  bool _notifyTrainer = false;
 
   @override
   void dispose() {
@@ -7034,8 +7061,17 @@ class _MissedTrainingDialogState extends State<_MissedTrainingDialog> {
             TextField(
               controller: _notes,
               maxLines: 3,
+              maxLength: 2000,
               decoration: InputDecoration(labelText: t('trainingHub.notes')),
             ),
+            if (widget.canNotifyTrainer)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(t('trainingHub.notifyTrainer')),
+                subtitle: Text(t('trainingHub.notifyTrainerDetails')),
+                value: _notifyTrainer,
+                onChanged: (value) => setState(() => _notifyTrainer = value),
+              ),
           ],
         ),
       ),
@@ -7045,10 +7081,11 @@ class _MissedTrainingDialogState extends State<_MissedTrainingDialog> {
           child: Text(t('auth2fa.cancel')),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(context, {
-            'reason': _reason,
-            'notes': _notes.text.trim(),
-          }),
+          onPressed: () => Navigator.pop(context, (
+            reason: _reason,
+            notes: _notes.text.trim(),
+            notifyTrainer: _notifyTrainer,
+          )),
           child: Text(t('trainingHub.save')),
         ),
       ],
@@ -7630,6 +7667,7 @@ class _TrainingLog {
     this.intensity,
     this.notes,
     this.trainerFeedback,
+    this.missedReason,
     this.feedbacks = const [],
     this.privacyScope,
     this.rpe,
@@ -7670,6 +7708,7 @@ class _TrainingLog {
       intensity: json['intensity']?.toString(),
       notes: json['notes']?.toString(),
       trainerFeedback: json['trainer_feedback']?.toString(),
+      missedReason: metrics['missed_reason']?.toString(),
       feedbacks: _mapList(
         json['feedbacks'],
       ).map(_TrainingFeedback.fromJson).toList(),
@@ -7704,6 +7743,7 @@ class _TrainingLog {
   final String? intensity;
   final String? notes;
   final String? trainerFeedback;
+  final String? missedReason;
   final List<_TrainingFeedback> feedbacks;
   final String? privacyScope;
   final int? rpe;

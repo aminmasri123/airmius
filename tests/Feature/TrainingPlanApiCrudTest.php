@@ -459,7 +459,7 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.items.1.title', 'Tempolauf Kopie');
 
         Sanctum::actingAs($athlete);
-        $this->postJson("/api/v1/training/plans/{$plan->id}/items/{$item->id}/missed", [
+        $missed = $this->postJson("/api/v1/training/plans/{$plan->id}/items/{$item->id}/missed", [
             'reason' => 'krank',
             'notes' => 'Heute ist Erholung sicherer.',
         ])
@@ -467,6 +467,47 @@ class TrainingPlanApiCrudTest extends TestCase
             ->assertJsonPath('data.status', 'missed')
             ->assertJsonPath('data.user_id', $athlete->id)
             ->assertJsonPath('data.metrics.missed_reason', 'krank');
+
+        $this->getJson('/api/v1/training/logs')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $missed->json('data.id'))
+            ->assertJsonPath('data.0.status', 'missed');
+
+        $this->getJson('/api/v1/training/logs/'.$missed->json('data.id'))
+            ->assertOk()
+            ->assertJsonPath('data.metrics.missed_reason', 'krank');
+
+        $teammate = User::factory()->create();
+        $team->users()->attach($teammate->id, ['role' => TeamRoles::PLAYER]);
+        $coach->update(['language' => 'de']);
+
+        $missedUrl = "/api/v1/training/plans/{$plan->id}/items/{$item->id}/missed";
+        $this->postJson($missedUrl, ['reason' => 'krank', 'notify_trainer' => false])
+            ->assertCreated();
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $coach->id,
+            'type' => 'training.plan.changed',
+        ]);
+
+        $this->postJson($missedUrl, [
+            'reason' => 'krank',
+            'notes' => 'Heute ist Erholung sicherer.',
+            'notify_trainer' => true,
+        ])->assertCreated();
+
+        $notification = Notification::query()
+            ->where('user_id', $coach->id)
+            ->where('type', 'training.plan.changed')
+            ->sole();
+        $this->assertSame(
+            "{$athlete->name} hat „Tempolauf“ im Plan „Grundlagenplan“ als nicht gemacht markiert. Grund: Krank. Notiz: Heute ist Erholung sicherer.",
+            $notification->data['body'],
+        );
+        $this->assertSame(route('auth.training.logs.show', $missed->json('data.id')), $notification->data['url']);
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $teammate->id,
+            'type' => 'training.plan.changed',
+        ]);
     }
 
     public function test_mobile_api_can_save_and_instantiate_scoped_training_templates(): void

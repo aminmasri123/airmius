@@ -1,16 +1,19 @@
 import 'airmius_api_models.dart';
 
 /// Read every authorized page so local search/status filters never stop at 30 plans.
-Future<JsonMap> loadTrainingPlanCatalog(
+Future<JsonMap> loadTrainingPlanCatalog(Future<JsonMap> Function(int page) fetch) =>
+    loadTrainingCatalog(fetch);
+
+Future<JsonMap> loadTrainingCatalog(
   Future<JsonMap> Function(int page) fetch,
 ) async {
   JsonMap result = {};
-  final plans = <dynamic>[];
+  final items = <dynamic>[];
   var page = 1;
   while (true) {
     final response = await fetch(page);
     result = {...response};
-    plans.addAll(
+    items.addAll(
       response['data'] is List ? response['data'] as List : const [],
     );
     final meta = response['meta'];
@@ -20,5 +23,5 @@ Future<JsonMap> loadTrainingPlanCatalog(
     if (page >= last) break;
     page++;
   }
-  return {...result, 'data': plans};
+  return {...result, 'data': items};
 }
