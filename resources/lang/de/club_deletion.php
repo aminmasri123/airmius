@@ -24,5 +24,6 @@ return [
     'wrong_identity' => 'Das Passwort oder die Konto-E-Mail-Adresse ist nicht korrekt.',
     'wrong_code' => 'Der Bestätigungscode ist ungültig oder abgelaufen.',
     'code_sent' => 'Der Bestätigungscode wurde per E-Mail gesendet.',
+    'code_delivery_failed' => 'Der Bestätigungscode konnte gerade nicht per E-Mail versendet werden. Bitte versuche es später erneut.',
     'export_required' => 'Bitte lade die aktuellen Finanzdaten erneut herunter und prüfe die fehlenden Belege.',
 ];

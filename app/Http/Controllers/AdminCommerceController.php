@@ -38,6 +38,7 @@ use App\Services\WebsiteRequestService;
 use App\Support\AppNotification;
 use App\Support\CarrierTracking;
 use App\Support\MarketplaceProductInput;
+use App\Support\MarketplaceTaxonomy;
 use App\Support\MarketplaceProductQualityGate;
 use App\Support\MarketplaceSellerReadiness;
 use App\Support\UploadStorage;
@@ -224,6 +225,109 @@ class AdminCommerceController extends Controller
 
     public function destroyProduct(Request $request, MarketplaceProduct $product)
     {
+        $result = $this->deleteOrArchiveProduct($product);
+
+        return back()->with('success', $result === 'archived'
+            ? 'Produkt hat bereits Bestellungen und wurde deshalb archiviert.'
+            : 'Marketplace-Produkt wurde gelöscht.');
+    }
+
+    public function bulkProducts(Request $request)
+    {
+        $result = $this->applyBulkProducts($request);
+
+        return back()->with('success', $result['message']);
+    }
+
+    public function applyBulkProducts(Request $request): array
+    {
+        $data = $request->validate([
+            'product_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'product_ids.*' => ['required', 'integer', 'min:1', 'distinct'],
+            'action' => ['required', Rule::in(['discount', 'status', 'archive', 'delete'])],
+            'discount_percent' => ['exclude_unless:action,discount', 'required', 'integer', 'between:1,100'],
+            'status' => ['exclude_unless:action,status', 'required', Rule::in(['draft', 'review', 'published', 'rejected'])],
+            'rejection_reason' => [
+                Rule::excludeIf(fn () => $request->input('action') !== 'status' || $request->input('status') !== 'rejected'),
+                'required', 'string', 'max:2000',
+            ],
+        ]);
+
+        return DB::transaction(function () use ($data): array {
+            $products = MarketplaceProduct::query()
+                ->whereKey($data['product_ids'])->orderBy('id')->lockForUpdate()->get();
+
+            if ($products->count() !== count($data['product_ids'])) {
+                throw ValidationException::withMessages([
+                    'product_ids' => 'Mindestens ein ausgewähltes Produkt existiert nicht mehr.',
+                ]);
+            }
+
+            $counts = ['updated' => 0, 'archived' => 0, 'deleted' => 0, 'review' => 0];
+            $action = $data['action'];
+            foreach ($products as $product) {
+                if ($action === 'delete') {
+                    $counts[$this->deleteOrArchiveProduct($product)]++;
+
+                    continue;
+                }
+
+                $fields = ['price_cents', 'variants', 'status', 'moderation_status', 'rejection_reason'];
+                $before = $product->only($fields);
+                $outcome = 'updated';
+                if ($action === 'discount') {
+                    $discount = fn (int $cents): int => intdiv($cents * (100 - $data['discount_percent']) + 50, 100);
+                    $product->price_cents = $discount($product->price_cents);
+                    if (is_array($product->variants)) {
+                        $product->variants = array_map(function (array $variant) use ($discount): array {
+                            if (isset($variant['price_cents'])) {
+                                $variant['price_cents'] = $discount($variant['price_cents']);
+                            }
+
+                            return $variant;
+                        }, $product->variants);
+                    }
+                } elseif ($action === 'archive') {
+                    $product->status = 'archived';
+                    $outcome = 'archived';
+                } else {
+                    $product->status = $data['status'];
+                    $product->moderation_status = match ($data['status']) {
+                        'published' => 'approved',
+                        'rejected' => 'rejected',
+                        default => 'pending',
+                    };
+                    $product->rejection_reason = $data['rejection_reason'] ?? null;
+                }
+                $product->save();
+
+                if ($action === 'status' && $data['status'] === 'published') {
+                    $product = MarketplaceProductQualityGate::applyPublicationGate(
+                        $product->fresh(['user.approvedSellerApplications', 'club', 'inventories'])
+                    );
+                    if ($product->status === 'review') {
+                        $outcome = 'review';
+                    }
+                }
+
+                $this->audit->log('product.bulk_'.$action, $product, $before, $product->only($fields));
+                $counts[$outcome]++;
+            }
+
+            $message = match ($action) {
+                'delete' => "{$counts['deleted']} gelöscht, {$counts['archived']} wegen bestehender Bestellungen archiviert.",
+                'archive' => "{$counts['archived']} Produkte archiviert.",
+                'discount' => "{$counts['updated']} Produktpreise aktualisiert.",
+                default => "{$counts['updated']} Produkte aktualisiert."
+                    .($counts['review'] ? " {$counts['review']} Produkte bleiben zur Qualitätsprüfung vorgemerkt." : ''),
+            };
+
+            return [...$counts, 'message' => $message];
+        });
+    }
+
+    private function deleteOrArchiveProduct(MarketplaceProduct $product): string
+    {
         $before = $product->only(['title', 'price_cents', 'status', 'moderation_status', 'stock_quantity', 'tax_class']);
         $hasOrders = CommerceOrder::query()
             ->where('orderable_type', MarketplaceProduct::class)
@@ -238,13 +342,13 @@ class AdminCommerceController extends Controller
             $product->update(['status' => 'archived']);
             $this->audit->log('product.archived_after_delete_request', $product, $before, $product->fresh()->only(['title', 'price_cents', 'status', 'moderation_status', 'stock_quantity', 'tax_class']));
 
-            return back()->with('success', 'Produkt hat bereits Bestellungen und wurde deshalb archiviert.');
+            return 'archived';
         }
 
         $this->audit->log('product.deleted', $product, $before, [], 'Admin hat das Marketplace-Produkt gelöscht.');
         $product->delete();
 
-        return back()->with('success', 'Marketplace-Produkt wurde gelöscht.');
+        return 'deleted';
     }
 
     public function updateSellerApplication(Request $request, MarketplaceSellerApplication $sellerApplication)
@@ -1176,6 +1280,7 @@ class AdminCommerceController extends Controller
             'image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'image_uploads' => ['nullable', 'array', 'max:8'],
             'image_uploads.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            ...MarketplaceTaxonomy::productRules($request),
             'category' => ['required', 'string', 'max:50'],
             'product_type' => ['nullable', Rule::in(['single', 'variable', 'digital'])],
             'sku' => ['nullable', 'string', 'max:80'],
@@ -1529,6 +1634,7 @@ class AdminCommerceController extends Controller
                 ])
                 ->values()
                 ->all(),
+            ...MarketplaceTaxonomy::productFields($product),
             'quality_score' => $qualityGate['score'],
             'quality_issues' => $qualityGate['issues'],
             'quality_gate' => $qualityGate,

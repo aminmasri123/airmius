@@ -38,6 +38,7 @@ use App\Http\Controllers\PostHelpfulController;
 use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ProfileGamificationController;
 use App\Http\Controllers\PublicLearningController;
+use App\Http\Controllers\PublicMarketplaceController;
 use App\Http\Controllers\RecruitingPipelineController;
 use App\Http\Controllers\RideController;
 use App\Http\Controllers\RideLocationController;
@@ -285,6 +286,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/card', [CommerceCheckoutController::class, 'cart'])->name('auth.commerce.cart.index');
     Route::get('/cart', fn () => redirect()->route('auth.commerce.cart.index'))->name('auth.commerce.cart.redirect');
     Route::get('/commerce/products/{product}', [CommerceCheckoutController::class, 'showProduct'])->name('auth.commerce.products.show');
+    Route::get('/marketplace/wishlist', [PublicMarketplaceController::class, 'wishlist'])->name('auth.commerce.wishlist.index');
+    Route::post('/marketplace/products/{product}/wishlist', [PublicMarketplaceController::class, 'storeWishlist'])->name('auth.commerce.products.wishlist.store');
+    Route::delete('/marketplace/products/{product}/wishlist', [PublicMarketplaceController::class, 'destroyWishlist'])->name('auth.commerce.products.wishlist.destroy');
     Route::post('/commerce/addons/{addon}', [CommerceCheckoutController::class, 'storeAddon'])->middleware(['throttle:payment-actions', EnsureIdempotentApiRequest::class])->name('auth.commerce.addons.checkout');
     Route::post('/commerce/products/{product}', [CommerceCheckoutController::class, 'storeProduct'])->middleware(['throttle:payment-actions', EnsureIdempotentApiRequest::class])->name('auth.commerce.products.checkout');
     Route::post('/commerce/cart/items/{product}', [CommerceCheckoutController::class, 'addCartItem'])->name('auth.commerce.cart.items.store');

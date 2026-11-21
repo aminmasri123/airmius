@@ -15,6 +15,9 @@ const defaultProductForm = () => ({
     image_upload: null,
     image_uploads: [],
     category: 'product',
+    catalog_group: '',
+    catalog_subcategory: '',
+    sports: [],
     product_type: 'single',
     sku: '',
     is_shippable: true,
@@ -219,6 +222,16 @@ export function useAdminCommerceProducts() {
         editProductForm.image_uploads = Array.from(event.target.files || [])
     }
 
+    const transformProductForm = (data) => {
+        const classify = !['course', 'camp', 'service'].includes(data.category)
+        return transformMoneyFields({
+            ...data,
+            catalog_group: classify ? data.catalog_group : null,
+            catalog_subcategory: classify ? data.catalog_subcategory : null,
+            sports: classify && data.sports.length ? data.sports : null,
+        }, ['price_cents'])
+    }
+
     const storeProduct = () => {
         productForm.attributes_text = rowsToAttributeText(productAttributeRows.value)
         productForm.features_text = rowsToFeatureText(productFeatureRows.value)
@@ -226,12 +239,12 @@ export function useAdminCommerceProducts() {
         productForm.variants = normalizeVariantRows(productVariantRows.value)
 
         productForm
-            .transform((data) => transformMoneyFields(data, ['price_cents']))
+            .transform(transformProductForm)
             .post(route('admin.commerce.products.store'), {
                 preserveScroll: true,
                 forceFormData: true,
                 onSuccess: () => {
-                    productForm.reset('title', 'description', 'features_text', 'attributes_text', 'attribute_options', 'variants', 'image_url', 'image_urls_text', 'image_upload', 'image_uploads', 'sku', 'digital_delivery_note')
+                    productForm.reset('catalog_group', 'catalog_subcategory', 'sports', 'title', 'description', 'features_text', 'attributes_text', 'attribute_options', 'variants', 'image_url', 'image_urls_text', 'image_upload', 'image_uploads', 'sku', 'digital_delivery_note')
                     productAttributeRows.value = [{ name: '', values: [] }]
                     productFeatureRows.value = ['']
                     productVariantRows.value = []
@@ -412,6 +425,9 @@ export function useAdminCommerceProducts() {
         editProductForm.image_upload = null
         editProductForm.image_uploads = []
         editProductForm.category = product.category || 'product'
+        editProductForm.catalog_group = product.catalog_group || ''
+        editProductForm.catalog_subcategory = product.catalog_subcategory || ''
+        editProductForm.sports = [...(product.sports || [])]
         editProductForm.product_type = product.product_type || 'single'
         editProductForm.sku = product.sku || ''
         editProductForm.is_shippable = Boolean(product.is_shippable)
@@ -458,7 +474,7 @@ export function useAdminCommerceProducts() {
         editProductForm.variants = normalizeVariantRows(editVariantRows.value)
 
         editProductForm
-            .transform((data) => transformMoneyFields(data, ['price_cents']))
+            .transform(transformProductForm)
             .put(route('admin.commerce.products.update', editProductForm.product.id), {
                 preserveScroll: true,
                 forceFormData: true,

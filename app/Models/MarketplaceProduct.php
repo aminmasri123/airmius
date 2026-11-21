@@ -25,6 +25,9 @@ class MarketplaceProduct extends Model
         'image_url',
         'gallery_images',
         'category',
+        'catalog_group',
+        'catalog_subcategory',
+        'sports',
         'offer_type',
         'product_type',
         'sku',
@@ -53,6 +56,7 @@ class MarketplaceProduct extends Model
     protected function casts(): array
     {
         return [
+            'sports' => 'array',
             'is_shippable' => 'boolean',
             'features' => 'array',
             'product_attributes' => 'array',

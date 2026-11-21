@@ -2051,22 +2051,25 @@ void main() {
     },
   );
 
-  test('sponsor management passes the notification sponsor ID as a query parameter', () async {
-    final transport = _RecordingTransport(
-      const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}'),
-    );
-    final client = AirmiusApiClient(
-      transport: transport,
-      baseUrl: 'https://airmius.test',
-    );
+  test(
+    'sponsor management passes the notification sponsor ID as a query parameter',
+    () async {
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}'),
+      );
+      final client = AirmiusApiClient(
+        transport: transport,
+        baseUrl: 'https://airmius.test',
+      );
 
-    await client.sponsorManagement(sponsorId: 2);
+      await client.sponsorManagement(sponsorId: 2);
 
-    final request = transport.requests.single;
-    expect(request.method, 'GET');
-    expect(request.path, '/api/v1/sponsor-management');
-    expect(request.query, {'sponsor_id': '2'});
-  });
+      final request = transport.requests.single;
+      expect(request.method, 'GET');
+      expect(request.path, '/api/v1/sponsor-management');
+      expect(request.query, {'sponsor_id': '2'});
+    },
+  );
 
   test('user model preserves effective roles and permissions', () {
     final user = AirmiusUser.fromJson({
@@ -5398,42 +5401,48 @@ void main() {
       'membership_status': 'active',
       'member_number': null,
     };
-    final transport = _SequencedTransport([
-      const AirmiusApiResponse(
-        statusCode: 200,
-        body: '{"data":[{"id":4,"name":"Testclub","can_manage":true}]}',
-      ),
-      AirmiusApiResponse(
-        statusCode: 200,
-        body: jsonEncode({
-          'data': {
-            'id': 4,
-            'name': 'Testclub',
-            'can_manage': true,
-            'permissions': {'can_manage_members': true},
-            'management': {
+    final transport = _SequencedTransport(
+      [
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":[{"id":4,"name":"Testclub","can_manage":true}]}',
+        ),
+        AirmiusApiResponse(
+          statusCode: 200,
+          body: jsonEncode({
+            'data': {
+              'id': 4,
+              'name': 'Testclub',
               'can_manage': true,
-            'permissions': {'can_manage_members': true},
-              'external_members': [external],
+              'permissions': {'can_manage_members': true},
+              'management': {
+                'can_manage': true,
+                'permissions': {'can_manage_members': true},
+                'external_members': [external],
+              },
             },
-          },
-        }),
-      ),
-      AirmiusApiResponse(
-        statusCode: 200,
-        body: jsonEncode({
-          'data': {
-            'can_manage': true,
-            'permissions': {'can_manage_members': true},
-            'external_members': [
-              {...external, 'member_number': 'M-4-00001'},
-            ],
-          },
-        }),
-      ),
-    ], responsesByPath: {
-      '/api/v1/saved-views': const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
-    });
+          }),
+        ),
+        AirmiusApiResponse(
+          statusCode: 200,
+          body: jsonEncode({
+            'data': {
+              'can_manage': true,
+              'permissions': {'can_manage_members': true},
+              'external_members': [
+                {...external, 'member_number': 'M-4-00001'},
+              ],
+            },
+          }),
+        ),
+      ],
+      responsesByPath: {
+        '/api/v1/saved-views': const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":[]}',
+        ),
+      },
+    );
     await _pumpAirmiusWidget(
       tester,
       _widgetTestContainer(transport: transport),
@@ -6131,7 +6140,8 @@ void main() {
     final transport = _RecordingTransport(
       const AirmiusApiResponse(
         statusCode: 200,
-        body: '{"partnership_requests":[{"id":42,"sponsor":{"name":"Test Sponsor"},"club":{"name":"Testverein"},"package_code":"Gold","rights_package":["Trikotlogo"],"individual_offer_terms":"Ziel: Jugendförderung","renewal_deadline":"2027-05-31"}]}',
+        body:
+            '{"partnership_requests":[{"id":42,"sponsor":{"name":"Test Sponsor"},"club":{"name":"Testverein"},"package_code":"Gold","rights_package":["Trikotlogo"],"individual_offer_terms":"Ziel: Jugendförderung","renewal_deadline":"2027-05-31"}]}',
       ),
     );
     await _pumpAirmiusWidget(
@@ -6148,8 +6158,12 @@ void main() {
     expect(find.text('Ziel: Jugendförderung'), findsOneWidget);
     expect(find.text('Verlängerungsfrist'), findsOneWidget);
     expect(find.text('Schließen'), findsNothing);
-    final reject = tester.getRect(find.widgetWithText(OutlinedButton, 'Ablehnen'));
-    final approve = tester.getRect(find.widgetWithText(FilledButton, 'Annehmen'));
+    final reject = tester.getRect(
+      find.widgetWithText(OutlinedButton, 'Ablehnen'),
+    );
+    final approve = tester.getRect(
+      find.widgetWithText(FilledButton, 'Annehmen'),
+    );
     expect(reject.center.dy, approve.center.dy);
     expect(approve.left - reject.right, 12);
     expect(reject.width, approve.width);
@@ -6367,6 +6381,62 @@ void main() {
     expect(find.text('Marketplace'), findsWidgets);
     expect(find.text('Aucun produit correspondant.'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('marketplace wishlist stays in sync between cards and details', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(900, 1400));
+    const product = '{"id":4,"title":"Airmius Shirt","price_cents":3900}';
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[$product]}'),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":{"cart":{}}}'),
+      const AirmiusApiResponse(
+        statusCode: 201,
+        body: '{"data":{"is_wishlisted":true,"wishlist_count":1}}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":4,"title":"Airmius Shirt","viewer":{"is_wishlisted":true}}}',
+      ),
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":{"is_wishlisted":false,"wishlist_count":0}}',
+      ),
+    ]);
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const MarketplaceScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    final add = find.byTooltip('Zur Wunschliste hinzufügen');
+    final remove = find.byTooltip('Von der Wunschliste entfernen');
+    await tester.tap(add.first);
+    await tester.pumpAndSettle();
+    expect(remove, findsWidgets);
+    expect(add, findsNothing);
+
+    await tester.tap(find.text('Airmius Shirt').first);
+    await tester.pumpAndSettle();
+    final details = find.byType(DraggableScrollableSheet);
+    await tester.tap(find.descendant(of: details, matching: remove));
+    await tester.pumpAndSettle();
+    expect(find.descendant(of: details, matching: add), findsOneWidget);
+    expect(remove, findsNothing);
+    expect(
+      transport.requests
+          .where(
+            (request) => request.path == '/api/v1/commerce/products/4/wishlist',
+          )
+          .map((request) => request.method),
+      ['POST', 'DELETE'],
+    );
   });
 
   testWidgets('marketplace screen exposes ergonomic cart and checkout entry', (

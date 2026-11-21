@@ -24,5 +24,6 @@ return [
     'wrong_identity' => 'The password or account email is incorrect.',
     'wrong_code' => 'The confirmation code is invalid or has expired.',
     'code_sent' => 'The confirmation code was sent by email.',
+    'code_delivery_failed' => 'The confirmation code could not be sent by email. Please try again later.',
     'export_required' => 'Please download the current financial data again and check any missing receipts.',
 ];

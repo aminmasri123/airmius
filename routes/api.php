@@ -1379,6 +1379,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('/admin/commerce/shipping-rates', [MobileAdminCommerceController::class, 'storeShippingRate'])->name('admin.commerce.shipping-rates.store');
             Route::patch('/admin/commerce/shipping-rates/{shippingRate}', [MobileAdminCommerceController::class, 'updateShippingRate'])->name('admin.commerce.shipping-rates.update');
             Route::post('/admin/commerce/products', [MobileAdminCommerceController::class, 'storeProduct'])->name('admin.commerce.products.store');
+            Route::post('/admin/commerce/products/bulk', [MobileAdminCommerceController::class, 'bulkProducts'])->name('admin.commerce.products.bulk');
             Route::put('/admin/commerce/products/{product}', [MobileAdminCommerceController::class, 'updateProduct'])->name('admin.commerce.products.update');
             Route::delete('/admin/commerce/products/{product}', [MobileAdminCommerceController::class, 'destroyProduct'])->name('admin.commerce.products.destroy');
             Route::post('/admin/commerce/products/{product}/stock', [MobileAdminCommerceController::class, 'adjustProductStock'])->name('admin.commerce.products.stock');

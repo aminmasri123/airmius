@@ -60,6 +60,7 @@ use App\Support\ClubPermissions;
 use App\Support\CommerceOrderNotifier;
 use App\Support\CommerceOrderSupport;
 use App\Support\MarketplaceProductInput;
+use App\Support\MarketplaceTaxonomy;
 use App\Support\MarketplaceProductQualityGate;
 use App\Support\MarketplaceSellerReadiness;
 use App\Support\Roles;
@@ -1094,6 +1095,7 @@ class CommerceCheckoutController extends Controller
             'image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'image_uploads' => ['nullable', 'array', 'max:8'],
             'image_uploads.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            ...MarketplaceTaxonomy::productRules($request),
             'category' => ['required', 'string', 'max:80'],
             'offer_type' => ['nullable', Rule::in(['physical_product', 'online_course', 'training_plan', 'camp', 'service'])],
             'product_type' => ['nullable', Rule::in(['single', 'variable', 'digital'])],
@@ -1469,6 +1471,7 @@ class CommerceCheckoutController extends Controller
         $this->authorizeOwnProduct($request, $product);
 
         $data = $request->validate([
+            ...MarketplaceTaxonomy::productRules($request),
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'image_url' => ['nullable', 'url', 'max:2048'],

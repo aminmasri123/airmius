@@ -9,6 +9,7 @@ use App\Models\CommerceShippingAddress;
 use App\Models\LearningCoupon;
 use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductInventory;
+use App\Models\MarketplaceProductWishlist;
 use App\Models\MarketplaceProviderLocation;
 use App\Models\MarketplaceProviderProfile;
 use App\Models\Setting;
@@ -20,6 +21,7 @@ use App\Support\EuVatId;
 use App\Support\UploadStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Support\MarketplaceTaxonomy;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -42,6 +44,7 @@ class PublicMarketplaceController extends Controller
     public function indexJson(Request $request): JsonResponse
     {
         $filters = $request->validate([
+            ...MarketplaceTaxonomy::filterRules($request),
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'in:product,course,camp,service'],
             'segment' => ['nullable', 'in:shoes,apparel,equipment,recovery,analysis,nutrition,plans,camps,team'],
@@ -83,6 +86,7 @@ class PublicMarketplaceController extends Controller
                 'last_page' => $products->lastPage(),
                 'per_page' => $products->perPage(),
                 'total' => $products->total(),
+                'taxonomy' => MarketplaceTaxonomy::facets($this->marketplaceProductQuery([], $country)),
             ],
         ]);
     }
@@ -90,6 +94,7 @@ class PublicMarketplaceController extends Controller
     public function index(Request $request)
     {
         $filters = $request->validate([
+            ...MarketplaceTaxonomy::filterRules($request),
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'in:product,course,camp,service,outfit_subscription'],
             'segment' => ['nullable', 'in:shoes,apparel,equipment,recovery,analysis,nutrition,plans,camps,team'],
@@ -157,7 +162,9 @@ class PublicMarketplaceController extends Controller
             'authUser' => fn () => $this->authUser($request),
             'cart' => fn () => $this->cartBadge($request),
             'filters' => $filters,
+            'taxonomy' => fn () => MarketplaceTaxonomy::facets($this->marketplaceProductQuery([], $country)),
             'products' => $products,
+            'wishlistProductIds' => fn () => $this->wishlistProductIds($request),
             'featuredProducts' => $featuredProducts,
             'flashDeals' => $flashDeals,
             'essentialDeals' => $essentialDeals,
@@ -181,6 +188,58 @@ class PublicMarketplaceController extends Controller
             'pricingCountries' => fn () => $this->pricingCountries(),
             'marketplaceVisuals' => fn () => $this->marketplaceVisuals(),
         ]);
+    }
+
+    public function wishlist(Request $request)
+    {
+        $country = strtoupper($request->user()->country ?: 'DE');
+
+        return Inertia::render('Guest/MarketplaceWishlist', [
+            'authUser' => fn () => $this->authUser($request),
+            'cart' => fn () => $this->cartBadge($request),
+            'marketplaceVisuals' => fn () => $this->marketplaceVisuals(),
+            'products' => fn () => MarketplaceProduct::query()
+                ->with(['user:id,name,city,country', 'club:id,name,logo,city,country,verification_status', 'inventories'])
+                ->where('status', 'published')
+                ->where('moderation_status', 'approved')
+                ->whereHas('wishlists', fn ($query) => $query->where('user_id', $request->user()->id))
+                ->latest()
+                ->get()
+                ->map(fn (MarketplaceProduct $product) => [
+                    ...$this->productCard($product, $request, $country),
+                    'show_url' => $this->hasSellableStock($product, $country)
+                        ? route('guest.marketplace.products.show', $product)
+                        : null,
+                ]),
+        ]);
+    }
+
+    public function storeWishlist(Request $request, MarketplaceProduct $product)
+    {
+        abort_unless($product->status === 'published' && $product->moderation_status === 'approved', 404);
+
+        $product->wishlists()->firstOrCreate(['user_id' => $request->user()->id]);
+
+        return back();
+    }
+
+    public function destroyWishlist(Request $request, MarketplaceProduct $product)
+    {
+        $product->wishlists()->where('user_id', $request->user()->id)->delete();
+
+        return back();
+    }
+
+    private function wishlistProductIds(Request $request): array
+    {
+        if (! $request->user()) {
+            return [];
+        }
+
+        return MarketplaceProductWishlist::query()
+            ->where('user_id', $request->user()->id)
+            ->pluck('marketplace_product_id')
+            ->all();
     }
 
     public function learning(Request $request)
@@ -247,7 +306,7 @@ class PublicMarketplaceController extends Controller
     {
         $country = strtoupper((string) ($country ?: ($filters['country'] ?? 'DE')));
 
-        return MarketplaceProduct::query()
+        return MarketplaceTaxonomy::applyFilters(MarketplaceProduct::query(), $filters)
             ->with([
                 'user:id,name,city,country',
                 'club:id,name,logo,city,country,verification_status',
@@ -320,6 +379,7 @@ class PublicMarketplaceController extends Controller
             'canRegister' => Route::has('register'),
             'authUser' => $this->authUser($request),
             'cart' => $this->cartBadge($request),
+            'wishlistProductIds' => fn () => $this->wishlistProductIds($request),
             'product' => [
                 'id' => $product->id,
                 'title' => $product->title,

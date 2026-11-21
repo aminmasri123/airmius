@@ -11,6 +11,7 @@ use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductReview;
 use App\Models\MarketplaceProductWishlist;
 use Illuminate\Http\Request;
+use App\Support\MarketplaceTaxonomy;
 use Illuminate\Validation\Rule;
 
 class CommerceController extends Controller
@@ -18,6 +19,7 @@ class CommerceController extends Controller
     public function products(Request $request)
     {
         $data = $request->validate([
+            ...MarketplaceTaxonomy::filterRules($request),
             'search' => ['nullable', 'string', 'max:200'],
             'category' => ['nullable', 'string', 'max:160'],
             'country' => ['nullable', 'string', 'size:2'],
@@ -37,7 +39,7 @@ class CommerceController extends Controller
         // Facets cover the visible catalog, not just the current page or category.
         $categories = (clone $catalog)->whereNotNull('category')->where('category', '!=', '')
             ->distinct()->orderBy('category')->pluck('category')->values();
-        $query = (clone $catalog)->with(['user.approvedSellerApplications', 'club', 'inventories'])
+        $query = MarketplaceTaxonomy::applyFilters(clone $catalog, $data)->with(['user.approvedSellerApplications', 'club', 'inventories'])
             ->withAvg('publishedReviews as reviews_avg_rating', 'rating')
             ->withCount(['publishedReviews as reviews_count',
                 'publishedReviews as verified_purchase_reviews_count' => fn ($reviews) => $reviews->where('verified_purchase', true)])
@@ -66,7 +68,7 @@ class CommerceController extends Controller
         $products = $query->paginate($this->perPage($request))->withQueryString();
 
         return MarketplaceProductResource::collection($products)->additional([
-            'meta' => ['filters' => ['categories' => $categories]],
+            'meta' => ['filters' => ['categories' => $categories, 'taxonomy' => MarketplaceTaxonomy::facets($catalog)]],
         ]);
     }
 

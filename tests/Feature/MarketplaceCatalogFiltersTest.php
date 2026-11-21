@@ -69,6 +69,35 @@ class MarketplaceCatalogFiltersTest extends TestCase
         }
     }
 
+    public function test_taxonomy_filters_keep_legacy_products_and_hide_unpublished_subcategories(): void
+    {
+        $legacy = $this->product('product', 2000, ['manages_stock' => true, 'stock_quantity' => 5]);
+        $shorts = $this->product('product', 2500, [
+            'manages_stock' => true, 'stock_quantity' => 5,
+            'catalog_group' => 'apparel', 'catalog_subcategory' => 'shorts',
+            'sports' => ['running', 'fitness'],
+        ]);
+        $this->product('product', 2000, [
+            'manages_stock' => true, 'stock_quantity' => 5,
+            'catalog_group' => 'apparel', 'catalog_subcategory' => 'pants_leggings',
+            'sports' => ['running'], 'status' => 'draft',
+        ]);
+
+        $this->getJson('/api/v1/public/marketplace')
+            ->assertOk()->assertJsonPath('meta.total', 2)->assertJsonFragment(['id' => $legacy->id])
+            ->assertJsonPath('meta.taxonomy.groups.apparel.children', ['shorts' => 'Shorts']);
+
+        Sanctum::actingAs(User::factory()->create());
+        foreach (['public/marketplace', 'commerce/products'] as $endpoint) {
+            foreach (['running', 'fitness'] as $sport) {
+                $this->getJson("/api/v1/{$endpoint}?catalog_group=apparel&catalog_subcategory=shorts&sport={$sport}")
+                    ->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $shorts->id);
+            }
+            $this->getJson("/api/v1/{$endpoint}?catalog_group=shoes&catalog_subcategory=shorts")
+                ->assertUnprocessable()->assertJsonValidationErrors('catalog_subcategory');
+        }
+    }
+
     private function product(string $category, int $price, array $overrides = []): MarketplaceProduct
     {
         return MarketplaceProduct::query()->create(array_merge([

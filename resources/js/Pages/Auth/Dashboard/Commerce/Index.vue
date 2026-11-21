@@ -1,4 +1,5 @@
 <script setup>
+import MarketplaceTaxonomyFields from '@/Components/Commerce/MarketplaceTaxonomyFields.vue'
 import AppLayout from "@/Components/Auth/Layouts/AppLayout.vue"
 import AppButton from "@/Components/UI/AppButton.vue"
 import AppLoadingState from "@/Components/UI/AppLoadingState.vue"
@@ -8,6 +9,7 @@ import { useCommerceWorkspace } from "@/composables/useCommerceWorkspace"
 import commerceCriticalCheckoutCopy from "./commerceCriticalCheckoutCopy.json"
 import { Head, Link } from "@inertiajs/vue3"
 import { useI18n } from "vue-i18n"
+import { ref } from "vue"
 
 defineOptions({ layout: AppLayout })
 
@@ -41,6 +43,8 @@ const props = defineProps({
 })
 
 const { t, locale } = useI18n()
+const campaignImageSource = ref('link')
+const editCampaignImageSource = ref('link')
 const tx = (key, fallback, values = {}) => {
     const translated = t(key, values)
     return translated === key ? fallback : translated
@@ -718,6 +722,7 @@ const {
                         </select>
                         <span class="text-xs text-secondary">Die Kategorie bestimmt die externe Marketplace-Provision. Dienstleistungen werden intern von Airmius angelegt.</span>
                     </label>
+                    <MarketplaceTaxonomyFields v-if="productForm.offer_type === 'physical_product'" :form="productForm" class="md:col-span-2" />
                     <p v-if="productForm.errors.category" class="text-sm text-error">{{ productForm.errors.category }}</p>
                     <input v-model="productForm.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
                     <p v-if="productForm.errors.sku" class="text-sm text-error">{{ productForm.errors.sku }}</p>
@@ -1310,9 +1315,9 @@ const {
                         <input v-model="campaignForm.headline" maxlength="120" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurze Botschaft der Anzeige">
                     </label>
                     <label>
-                        <span class="text-xs font-semibold uppercase text-secondary">Ziel-URL</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">Link beim Klick auf die Anzeige</span>
                         <input v-model="campaignForm.target_url" type="url" inputmode="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://example.de/aktion">
-                        <span class="mt-1 block text-xs text-secondary">Nur sichere HTTP- oder HTTPS-Links sind zulässig.</span>
+                        <span class="mt-1 block text-xs text-secondary">Diese Seite öffnet sich, wenn jemand auf die Anzeige klickt. Nur HTTP- oder HTTPS-Links sind zulässig.</span>
                     </label>
                     <label>
                         <span class="text-xs font-semibold uppercase text-secondary">Anzeigentext</span>
@@ -1353,11 +1358,18 @@ const {
                             Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhältnis der Anzeige.
                         </p>
                     </div>
-                    <label>
+                    <fieldset class="rounded-lg border border-border bg-bg p-3">
+                        <legend class="px-1 text-xs font-semibold uppercase text-secondary">Anzeigenbild wählen</legend>
+                        <div class="flex flex-wrap gap-4 text-sm text-primary">
+                            <label class="flex items-center gap-2"><input v-model="campaignImageSource" type="radio" value="link" @change="campaignForm.creative_image_upload = null"> Bild-Link verwenden</label>
+                            <label class="flex items-center gap-2"><input v-model="campaignImageSource" type="radio" value="upload"> Bild hochladen</label>
+                        </div>
+                    </fieldset>
+                    <label v-if="campaignImageSource === 'link'">
                         <span class="text-xs font-semibold uppercase text-secondary">Bild-URL (optional)</span>
                         <input v-model="campaignForm.creative_image_url" type="url" inputmode="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://example.de/motiv.webp">
                     </label>
-                    <div class="rounded-lg border border-border bg-bg p-3">
+                    <div v-else class="rounded-lg border border-border bg-bg p-3">
                         <label class="text-xs font-semibold uppercase text-secondary">Bild hochladen</label>
                         <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setCampaignCreativeUpload">
                         <p class="mt-1 text-xs text-secondary">JPG, PNG oder WebP bis 8 MB. Empfohlen: {{ selectedAdFormat.size }}.</p>
@@ -1836,6 +1848,7 @@ const {
                     <input v-if="editProductForm.manages_stock" v-model="editProductForm.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
                     <textarea v-model="editProductForm.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" :placeholder="t('commerce.ui.description_placeholder')"></textarea>
                 </div>
+                <MarketplaceTaxonomyFields v-if="!editProductModal.product?.offer_type || editProductModal.product.offer_type === 'physical_product'" :form="editProductForm" class="mt-4" />
                 <div v-if="editProductForm.manages_stock" class="mt-4 rounded-lg border border-border bg-bg p-3">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -2103,7 +2116,10 @@ const {
                     <input v-model="editCampaignForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kampagnenname">
                     <p v-if="editCampaignForm.errors.name" class="text-sm text-error">{{ editCampaignForm.errors.name }}</p>
                     <input v-model="editCampaignForm.headline" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline, max. 120 Zeichen">
-                    <input v-model="editCampaignForm.target_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ziel-URL">
+                    <label class="text-xs font-semibold uppercase text-secondary">Link beim Klick auf die Anzeige
+                        <input v-model="editCampaignForm.target_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://example.de/aktion">
+                        <span class="mt-1 block text-xs font-normal normal-case text-secondary">Diese Seite öffnet sich, wenn jemand auf die Anzeige klickt.</span>
+                    </label>
                     <p v-if="editCampaignForm.errors.target_url" class="text-sm text-error">{{ editCampaignForm.errors.target_url }}</p>
                     <textarea v-model="editCampaignForm.primary_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anzeigentext / Primary Text"></textarea>
                     <textarea v-model="editCampaignForm.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interne Beschreibung"></textarea>
@@ -2138,7 +2154,14 @@ const {
                             Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhältnis der Anzeige.
                         </p>
                     </div>
-                    <input v-model="editCampaignForm.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL optional">
+                    <fieldset class="rounded-lg border border-border bg-bg p-3">
+                        <legend class="px-1 text-xs font-semibold uppercase text-secondary">Anzeigenbild ändern</legend>
+                        <div class="flex flex-wrap gap-4 text-sm text-primary">
+                            <label class="flex items-center gap-2"><input v-model="editCampaignImageSource" type="radio" value="link" @change="editCampaignForm.creative_image_upload = null"> Bild-Link verwenden</label>
+                            <label class="flex items-center gap-2"><input v-model="editCampaignImageSource" type="radio" value="upload"> Bild hochladen</label>
+                        </div>
+                    </fieldset>
+                    <input v-if="editCampaignImageSource === 'link'" v-model="editCampaignForm.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL optional">
                     <div class="overflow-hidden rounded-lg border border-border bg-bg">
                         <div class="flex items-center justify-between gap-3 border-b border-border px-3 py-2">
                             <span class="text-xs font-semibold uppercase text-secondary">Aktuelles Anzeigenbild</span>
@@ -2158,7 +2181,7 @@ const {
                             Noch kein Anzeigenbild hinterlegt.
                         </div>
                     </div>
-                    <div class="rounded-lg border border-border bg-bg p-3">
+                    <div v-if="editCampaignImageSource === 'upload'" class="rounded-lg border border-border bg-bg p-3">
                         <label for="edit-campaign-image-upload" class="text-xs font-semibold uppercase text-secondary">Neues Hauptbild hochladen</label>
                         <input id="edit-campaign-image-upload" type="file" accept="image/jpeg,image/png,image/webp" class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setEditCampaignCreativeUpload">
                     </div>

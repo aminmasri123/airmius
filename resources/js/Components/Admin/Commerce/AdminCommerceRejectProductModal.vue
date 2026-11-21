@@ -31,7 +31,12 @@ const emit = defineEmits(['close', 'select-reason', 'submit'])
                 <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="emit('close')">
                     Abbrechen
                 </button>
-                <button type="button" class="rounded-lg bg-warning px-4 py-2 text-sm font-semibold text-white" :disabled="!form.reason.trim()" @click="emit('submit')">
+                <button
+                    type="button"
+                    class="rounded-lg border border-transparent bg-amber-800 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-primary"
+                    :disabled="!form.reason.trim()"
+                    @click="emit('submit')"
+                >
                     Ablehnen
                 </button>
             </div>

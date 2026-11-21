@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import '../widgets/marketplace_taxonomy_fields.dart';
+import 'package:file_picker/file_picker.dart';
 import '../widgets/airmius_form.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/airmius_api_client.dart';
+import '../core/commerce_campaign_upload_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -824,17 +827,29 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
       ),
     );
     if (payload == null || !mounted) return;
+    final image = payload.remove('creative_image_upload') as PlatformFile?;
     await _run(
       () async {
         if (campaign == null) {
           final sponsorId = _int(_map(data['current_sponsor'])['id']);
           if (sponsorId > 0) payload['sponsor_id'] = sponsorId;
-          final response = await _client.createCommerceCampaign(payload);
+          final response = image == null
+              ? await _client.createCommerceCampaign(payload)
+              : await saveCommerceCampaignWithImage(_client, payload, image);
           if (payload['start_payment'] == true && mounted) {
             await _showCampaignPaymentResult(response);
           }
         } else {
-          await _client.updateCommerceCampaign(_int(campaign['id']), payload);
+          if (image == null) {
+            await _client.updateCommerceCampaign(_int(campaign['id']), payload);
+          } else {
+            await saveCommerceCampaignWithImage(
+              _client,
+              payload,
+              image,
+              campaignId: _int(campaign['id']),
+            );
+          }
         }
       },
       success: AirmiusScope.of(context).t(
@@ -884,13 +899,18 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     final order = _map(response['data']);
     final bank = _map(order['bank_transfer']);
     final provider = _text(order['provider']);
-    final url = _text(response['redirect_url'], fallback: _text(order['checkout_url']));
+    final url = _text(
+      response['redirect_url'],
+      fallback: _text(order['checkout_url']),
+    );
     final uri = Uri.tryParse(url);
     if (!mounted) return;
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(provider == 'bank_transfer' ? 'Überweisung' : 'Zahlung fortsetzen'),
+        title: Text(
+          provider == 'bank_transfer' ? 'Überweisung' : 'Zahlung fortsetzen',
+        ),
         content: SingleChildScrollView(
           child: provider == 'bank_transfer'
               ? SelectableText(
@@ -901,14 +921,18 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
                   'Verwendungszweck: ${_text(bank['reference'])}\n\n'
                   'Die Kampagne wird erst nach Zahlung und Freigabe ausgespielt.',
                 )
-              : const Text('Öffne die sichere Zahlungsseite. Die Kampagne wird erst nach Zahlung und Freigabe ausgespielt.'),
+              : const Text(
+                  'Öffne die sichere Zahlungsseite. Die Kampagne wird erst nach Zahlung und Freigabe ausgespielt.',
+                ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(AirmiusScope.of(context).t('common.cancel')),
           ),
-          if (provider != 'bank_transfer' && uri != null && (uri.scheme == 'https' || uri.scheme == 'http'))
+          if (provider != 'bank_transfer' &&
+              uri != null &&
+              (uri.scheme == 'https' || uri.scheme == 'http'))
             FilledButton.icon(
               onPressed: () async {
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -1780,7 +1804,8 @@ class _CampaignCard extends StatelessWidget {
                 icon: Icon(Icons.edit_outlined),
                 label: Text(t('common.edit')),
               ),
-              if (canManage && (status == 'draft' || status == 'pending_payment'))
+              if (canManage &&
+                  (status == 'draft' || status == 'pending_payment'))
                 OutlinedButton.icon(
                   onPressed: onPay,
                   icon: const Icon(Icons.payments_outlined),
@@ -1895,10 +1920,12 @@ class _CampaignPaymentChoiceSheet extends StatefulWidget {
   const _CampaignPaymentChoiceSheet();
 
   @override
-  State<_CampaignPaymentChoiceSheet> createState() => _CampaignPaymentChoiceSheetState();
+  State<_CampaignPaymentChoiceSheet> createState() =>
+      _CampaignPaymentChoiceSheetState();
 }
 
-class _CampaignPaymentChoiceSheetState extends State<_CampaignPaymentChoiceSheet> {
+class _CampaignPaymentChoiceSheetState
+    extends State<_CampaignPaymentChoiceSheet> {
   String _provider = 'bank_transfer';
   bool _accepted = false;
 
@@ -1916,7 +1943,8 @@ class _CampaignPaymentChoiceSheetState extends State<_CampaignPaymentChoiceSheet
               ButtonSegment(value: 'stripe', label: Text('Karte')),
             ],
             selected: {_provider},
-            onSelectionChanged: (value) => setState(() => _provider = value.first),
+            onSelectionChanged: (value) =>
+                setState(() => _provider = value.first),
           ),
           const SizedBox(height: 12),
           CheckboxListTile(
@@ -2028,6 +2056,8 @@ class _CampaignSheetState extends State<_CampaignSheet> {
   late final TextEditingController _description;
   late final TextEditingController _targetUrl;
   late final TextEditingController _imageUrl;
+  PlatformFile? _imageFile;
+  bool _useImageUpload = false;
   late final TextEditingController _budget;
   late final TextEditingController _dailyBudget;
   late final TextEditingController _interests;
@@ -2158,16 +2188,62 @@ class _CampaignSheetState extends State<_CampaignSheet> {
               keyboardType: TextInputType.url,
               decoration: InputDecoration(
                 labelText: t('commerceAdv.targetUrl'),
+                helperText: t('commerceAdv.targetUrlHint'),
               ),
               validator: (value) => _optionalHttpUrlValidator(context, value),
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _imageUrl,
-              keyboardType: TextInputType.url,
-              decoration: InputDecoration(labelText: t('commerceAdv.imageUrl')),
-              validator: (value) => _optionalHttpUrlValidator(context, value),
+            Text(t('commerceAdv.imageSource')),
+            SegmentedButton<bool>(
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  label: Text(t('commerceAdv.imageLink')),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text(t('commerceAdv.imageUpload')),
+                ),
+              ],
+              selected: {_useImageUpload},
+              onSelectionChanged: (value) => setState(() {
+                _useImageUpload = value.first;
+                if (!_useImageUpload) _imageFile = null;
+              }),
             ),
+            const SizedBox(height: 12),
+            if (!_useImageUpload)
+              TextFormField(
+                controller: _imageUrl,
+                keyboardType: TextInputType.url,
+                decoration: InputDecoration(
+                  labelText: t('commerceAdv.imageUrl'),
+                ),
+                validator: (value) => _optionalHttpUrlValidator(context, value),
+              )
+            else
+              OutlinedButton.icon(
+                icon: const Icon(Icons.upload_file_outlined),
+                label: Text(_imageFile?.name ?? t('commerceAdv.chooseImage')),
+                onPressed: () async {
+                  final result = await FilePicker.platform.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
+                    withData: true,
+                  );
+                  if (result != null && mounted) {
+                    final file = result.files.single;
+                    if (file.size > 8 * 1024 * 1024) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(t('commerceAdv.imageTooLarge'))),
+                      );
+                    } else {
+                      setState(() => _imageFile = file);
+                    }
+                  }
+                },
+              ),
+            if (_useImageUpload) Text(t('commerceAdv.imageUploadHint')),
             const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2341,11 +2417,15 @@ class _CampaignSheetState extends State<_CampaignSheet> {
                   initialValue: _provider,
                   decoration: const InputDecoration(labelText: 'Zahlungsart'),
                   items: const [
-                    DropdownMenuItem(value: 'bank_transfer', child: Text('Überweisung')),
+                    DropdownMenuItem(
+                      value: 'bank_transfer',
+                      child: Text('Überweisung'),
+                    ),
                     DropdownMenuItem(value: 'paypal', child: Text('PayPal')),
                     DropdownMenuItem(value: 'stripe', child: Text('Karte')),
                   ],
-                  onChanged: (value) => setState(() => _provider = value ?? 'bank_transfer'),
+                  onChanged: (value) =>
+                      setState(() => _provider = value ?? 'bank_transfer'),
                 ),
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
@@ -2361,7 +2441,9 @@ class _CampaignSheetState extends State<_CampaignSheet> {
             AirmiusButton(
               label: _editing
                   ? t('common.save')
-                  : (_startPayment ? 'Zahlung starten' : 'Als Entwurf speichern'),
+                  : (_startPayment
+                        ? 'Zahlung starten'
+                        : 'Als Entwurf speichern'),
               icon: Icons.save_outlined,
               onPressed: _submit,
             ),
@@ -2385,7 +2467,9 @@ class _CampaignSheetState extends State<_CampaignSheet> {
       'headline': _headline.text.trim(),
       'description': _description.text.trim(),
       'target_url': _targetUrl.text.trim(),
-      'creative_image_url': _imageUrl.text.trim(),
+      'creative_image_url': _useImageUpload && _imageFile != null
+          ? ''
+          : _imageUrl.text.trim(),
       'objective': _objective,
       'placement': _placement,
       'creative_format': _format,
@@ -2403,6 +2487,9 @@ class _CampaignSheetState extends State<_CampaignSheet> {
         ..['accepted_terms'] = _acceptedTerms
         ..['client_reference'] =
             'mobile-${DateTime.now().microsecondsSinceEpoch}';
+    }
+    if (_useImageUpload && _imageFile != null) {
+      payload['creative_image_upload'] = _imageFile;
     }
     Navigator.pop(context, payload);
   }
@@ -2651,6 +2738,7 @@ class _ProductSheetState extends State<_ProductSheet> {
   late final TextEditingController _sku;
   late final TextEditingController _image;
   String _category = 'equipment';
+  late MarketplaceClassification _classification;
   String _offerType = 'physical_product';
   bool _managesStock = true;
   bool _shippable = true;
@@ -2676,6 +2764,7 @@ class _ProductSheetState extends State<_ProductSheet> {
     _sku = TextEditingController(text: _text(product['sku']));
     _image = TextEditingController(text: _text(product['image_url']));
     _category = _text(product['category'], fallback: 'equipment');
+    _classification = MarketplaceClassification.fromProduct(product);
     _offerType = _text(product['offer_type'], fallback: 'physical_product');
     _managesStock = product.isEmpty || product['manages_stock'] == true;
     _shippable = product.isEmpty || product['is_shippable'] == true;
@@ -2831,6 +2920,13 @@ class _ProductSheetState extends State<_ProductSheet> {
                   },
                 ),
             ],
+            if (_offerType == 'physical_product') ...[
+              const SizedBox(height: 12),
+              MarketplaceTaxonomyFields(
+                value: _classification,
+                onChanged: (value) => setState(() => _classification = value),
+              ),
+            ],
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: () {
@@ -2848,6 +2944,8 @@ class _ProductSheetState extends State<_ProductSheet> {
                   'stock_quantity': _managesStock
                       ? int.parse(_stock.text.trim())
                       : null,
+                  if (_offerType == 'physical_product')
+                    ..._classification.toJson(),
                   if (!_editing) ...{
                     'category': _category,
                     'offer_type': _offerType,

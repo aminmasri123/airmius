@@ -1,6 +1,9 @@
 class MarketplaceFilters {
   const MarketplaceFilters({
     this.category = '',
+    this.catalogGroup = '',
+    this.catalogSubcategory = '',
+    this.sport = '',
     this.minPriceCents,
     this.maxPriceCents,
     this.minRating = 0,
@@ -8,6 +11,9 @@ class MarketplaceFilters {
   });
 
   final String category;
+  final String catalogGroup;
+  final String catalogSubcategory;
+  final String sport;
   final int? minPriceCents;
   final int? maxPriceCents;
   final double minRating;
@@ -15,17 +21,24 @@ class MarketplaceFilters {
 
   int get activeCount =>
       (category.isEmpty ? 0 : 1) +
+      (catalogGroup.isEmpty ? 0 : 1) +
+      (catalogSubcategory.isEmpty ? 0 : 1) +
+      (sport.isEmpty ? 0 : 1) +
       (minPriceCents != null || maxPriceCents != null ? 1 : 0) +
       (minRating > 0 ? 1 : 0) +
       (sort == 'newest' ? 0 : 1);
 
   MarketplaceFilters copyWith({
     String? category,
+    bool clearTaxonomy = false,
     bool clearPrice = false,
     double? minRating,
     String? sort,
   }) => MarketplaceFilters(
     category: category ?? this.category,
+    catalogGroup: clearTaxonomy ? '' : catalogGroup,
+    catalogSubcategory: clearTaxonomy ? '' : catalogSubcategory,
+    sport: clearTaxonomy ? '' : sport,
     minPriceCents: clearPrice ? null : minPriceCents,
     maxPriceCents: clearPrice ? null : maxPriceCents,
     minRating: minRating ?? this.minRating,
@@ -54,11 +67,22 @@ class MarketplaceFilters {
   bool operator ==(Object other) =>
       other is MarketplaceFilters &&
       category == other.category &&
+      catalogGroup == other.catalogGroup &&
+      catalogSubcategory == other.catalogSubcategory &&
+      sport == other.sport &&
       minPriceCents == other.minPriceCents &&
       maxPriceCents == other.maxPriceCents &&
       minRating == other.minRating &&
       sort == other.sort;
   @override
-  int get hashCode =>
-      Object.hash(category, minPriceCents, maxPriceCents, minRating, sort);
+  int get hashCode => Object.hash(
+    category,
+    catalogGroup,
+    catalogSubcategory,
+    sport,
+    minPriceCents,
+    maxPriceCents,
+    minRating,
+    sort,
+  );
 }

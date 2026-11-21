@@ -3,15 +3,18 @@ import 'package:intl/intl.dart';
 import '../core/airmius_l10n.dart';
 import '../core/marketplace_filters.dart';
 import '../core/marketplace_filter_labels.dart';
+import 'marketplace_taxonomy_fields.dart';
 
 class MarketplaceFiltersSheet extends StatefulWidget {
   const MarketplaceFiltersSheet({
     super.key,
     required this.initial,
     required this.categories,
+    this.taxonomy = const {},
   });
   final MarketplaceFilters initial;
   final List<String> categories;
+  final Map<String, dynamic> taxonomy;
 
   @override
   State<MarketplaceFiltersSheet> createState() =>
@@ -21,6 +24,7 @@ class MarketplaceFiltersSheet extends StatefulWidget {
 class _MarketplaceFiltersSheetState extends State<MarketplaceFiltersSheet> {
   final _form = GlobalKey<FormState>();
   late String _category;
+  late MarketplaceClassification _taxonomy;
   late String _sort;
   late double _rating;
   late final TextEditingController _min;
@@ -33,6 +37,11 @@ class _MarketplaceFiltersSheetState extends State<MarketplaceFiltersSheet> {
     if (_initialized) return;
     _initialized = true;
     _category = widget.initial.category;
+    _taxonomy = MarketplaceClassification(
+      group: widget.initial.catalogGroup,
+      subcategory: widget.initial.catalogSubcategory,
+      sports: {if (widget.initial.sport.isNotEmpty) widget.initial.sport},
+    );
     _sort = widget.initial.sort;
     _rating = widget.initial.minRating;
     final language = AirmiusScope.of(context).language.locale.languageCode;
@@ -89,6 +98,9 @@ class _MarketplaceFiltersSheetState extends State<MarketplaceFiltersSheet> {
       context,
       MarketplaceFilters(
         category: _category,
+        catalogGroup: _taxonomy.group,
+        catalogSubcategory: _taxonomy.subcategory,
+        sport: _taxonomy.sports.firstOrNull ?? '',
         minPriceCents: MarketplaceFilters.parsePrice(_min.text),
         maxPriceCents: MarketplaceFilters.parsePrice(_max.text),
         minRating: _rating,
@@ -103,6 +115,7 @@ class _MarketplaceFiltersSheetState extends State<MarketplaceFiltersSheet> {
     _max.clear();
     setState(() {
       _category = '';
+      _taxonomy = const MarketplaceClassification();
       _sort = 'newest';
       _rating = 0;
     });
@@ -218,6 +231,14 @@ class _MarketplaceFiltersSheetState extends State<MarketplaceFiltersSheet> {
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w800,
                                   ),
+                                ),
+                                const SizedBox(height: 14),
+                                MarketplaceTaxonomyFields(
+                                  buyer: true,
+                                  facets: widget.taxonomy,
+                                  value: _taxonomy,
+                                  onChanged: (value) =>
+                                      setState(() => _taxonomy = value),
                                 ),
                                 const SizedBox(height: 14),
                                 LayoutBuilder(

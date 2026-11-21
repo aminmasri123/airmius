@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
+use Symfony\Component\Mailer\Exception\TransportException;
 use Tests\TestCase;
 
 class ClubDeletionLifecycleTest extends TestCase
@@ -95,6 +96,22 @@ class ClubDeletionLifecycleTest extends TestCase
         $this->deleteJson('/api/v1/clubs/'.$club->id, [
             'confirmation' => __('club_deletion.confirmation'), 'code' => $code,
         ])->assertUnprocessable();
+    }
+
+    public function test_mail_transport_failure_is_reported_without_replacing_the_previous_code(): void
+    {
+        $club = $this->ownedClub();
+        $key = "club_deletion_code:{$club->id}:{$club->owner_id}";
+        $previous = Hash::make('123456');
+        Cache::put($key, $previous, now()->addMinutes(15));
+        Notification::shouldReceive('send')->once()->andThrow(new TransportException('Test mail transport unavailable.'));
+
+        $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-code', ['identity' => 'password'], ['X-Locale' => 'de'])
+            ->assertServiceUnavailable()
+            ->assertJsonPath('message', 'Der Bestätigungscode konnte gerade nicht per E-Mail versendet werden. Bitte versuche es später erneut.');
+
+        $this->assertSame($previous, Cache::get($key));
+        $this->assertNull($club->fresh()->deletion_requested_at);
     }
 
     public function test_legacy_review_endpoint_returns_status_without_creating_a_support_ticket(): void

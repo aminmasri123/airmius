@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -70,9 +70,13 @@ const availabilityLabel = (product) => {
     return stock <= 5 ? t('Nur {count} verfügbar', { count: stock }) : t('Auf Lager')
 }
 
+const removingProductId = ref(null)
 const removeFromWishlist = (product) => {
     router.delete(route('auth.commerce.products.wishlist.destroy', product.id), {
+        only: ['products'],
         preserveScroll: true,
+        onStart: () => { removingProductId.value = product.id },
+        onFinish: () => { removingProductId.value = null },
     })
 }
 </script>
@@ -166,7 +170,7 @@ const removeFromWishlist = (product) => {
                             :key="product.id"
                             class="flex h-full flex-col overflow-hidden rounded border border-border bg-bg transition hover:border-borderHover"
                         >
-                            <Link :href="product.show_url" class="group block">
+                            <component :is="product.show_url ? Link : 'div'" :href="product.show_url || undefined" class="group block">
                                 <div class="relative aspect-[4/3] overflow-hidden bg-inputBg">
                                     <img v-if="product.image_url" :src="product.image_url" :alt="product.title" loading="lazy" decoding="async" class="h-full w-full object-cover transition group-hover:scale-105" />
                                     <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-6xl text-buttonPrimary']"></i>
@@ -174,15 +178,15 @@ const removeFromWishlist = (product) => {
                                         {{ product.badge }}
                                     </span>
                                 </div>
-                            </Link>
+                            </component>
 
                             <div class="flex flex-1 flex-col p-3">
                                 <p class="text-[11px] font-bold uppercase tracking-wide text-secondary">
                                     {{ categoryLabels[product.category] || product.category }}
                                 </p>
-                                <Link :href="product.show_url" class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-black text-primary hover:text-buttonPrimary">
+                                <component :is="product.show_url ? Link : 'p'" :href="product.show_url || undefined" class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-black text-primary hover:text-buttonPrimary">
                                     {{ product.title }}
-                                </Link>
+                                </component>
 
                                 <div class="mt-auto pt-4">
                                     <p class="text-lg font-black text-primary">
@@ -201,7 +205,7 @@ const removeFromWishlist = (product) => {
                                 </div>
 
                                 <div class="mt-3 flex gap-2">
-                                    <Link :href="product.show_url" class="inline-flex flex-1 items-center justify-center gap-2 rounded bg-buttonPrimary px-3 py-2 text-xs font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover">
+                                    <Link v-if="product.show_url" :href="product.show_url" class="inline-flex flex-1 items-center justify-center gap-2 rounded bg-buttonPrimary px-3 py-2 text-xs font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover">
                                         {{ $t("Details ansehen") }}
                                         <i class="las la-arrow-right text-base"></i>
                                     </Link>
@@ -210,6 +214,7 @@ const removeFromWishlist = (product) => {
                                         class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded border border-error/30 bg-error/10 text-error transition hover:bg-error/15"
                                         :aria-label="$t('Aus Wunschliste entfernen')"
                                         :title="$t('Aus Wunschliste entfernen')"
+                                        :disabled="removingProductId !== null"
                                         @click="removeFromWishlist(product)"
                                     >
                                         <i class="las la-heart-broken text-lg"></i>

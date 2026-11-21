@@ -5,6 +5,7 @@ import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/marketplace_taxonomy_fields.dart';
 import 'public_interest_screen.dart';
 
 /// Guest-safe marketplace catalogue. Checkout, wishlist and orders stay in
@@ -22,6 +23,8 @@ class _GuestMarketplaceParityScreenState
   Future<List<JsonMap>>? _future;
   String _query = '';
   String _category = '';
+  MarketplaceClassification _classification = const MarketplaceClassification();
+  JsonMap _taxonomy = const {};
 
   String t(String key) => AirmiusScope.of(context).t(key);
 
@@ -37,7 +40,14 @@ class _GuestMarketplaceParityScreenState
   }
 
   Future<List<JsonMap>> _load() async {
-    final response = await _client.publicMarketplace();
+    final response = await _client.publicMarketplace(
+      catalogGroup: _classification.group,
+      catalogSubcategory: _classification.subcategory,
+      sport: _classification.sports.firstOrNull ?? '',
+    );
+    final meta = response['meta'];
+    final taxonomy = meta is Map ? meta['taxonomy'] : null;
+    if (taxonomy is Map<String, dynamic>) _taxonomy = taxonomy;
     final data = response['data'];
     if (data is! List) return const <JsonMap>[];
     return data
@@ -122,6 +132,17 @@ class _GuestMarketplaceParityScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      MarketplaceTaxonomyFields(
+                        buyer: true,
+                        facets: _taxonomy,
+                        value: _classification,
+                        onChanged: (value) {
+                          _classification = value;
+                          _category = '';
+                          _reload();
+                        },
+                      ),
+                      const SizedBox(height: 12),
                       Eyebrow(t('guestMarket.eyebrow')),
                       const SizedBox(height: 8),
                       Text(

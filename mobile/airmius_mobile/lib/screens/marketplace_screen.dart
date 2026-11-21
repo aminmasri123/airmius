@@ -39,6 +39,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   late String _section;
   String _query = '';
   MarketplaceFilters _filters = const MarketplaceFilters();
+  JsonMap _taxonomy = const {};
   List<String> _categories = [];
   Timer? _searchDebounce;
   int _catalogRequest = 0;
@@ -139,6 +140,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     perPage: 24,
     search: _query,
     category: _filters.category,
+    catalogGroup: _filters.catalogGroup,
+    catalogSubcategory: _filters.catalogSubcategory,
+    sport: _filters.sport,
     minPriceCents: _filters.minPriceCents,
     maxPriceCents: _filters.maxPriceCents,
     minRating: _filters.minRating,
@@ -150,6 +154,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     _productPage = page;
     _lastProductPage = _marketInt(meta['last_page']).clamp(1, 1000000);
     final facets = _marketMap(meta['filters']);
+    _taxonomy = _marketMap(facets['taxonomy']);
     if (facets['categories'] is List) {
       _categories =
           (facets['categories'] as List)
@@ -229,8 +234,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
       useSafeArea: true,
       backgroundColor: Colors.transparent,
       constraints: const BoxConstraints(maxWidth: 640),
-      builder: (_) =>
-          MarketplaceFiltersSheet(initial: _filters, categories: _categories),
+      builder: (_) => MarketplaceFiltersSheet(
+        initial: _filters,
+        categories: _categories,
+        taxonomy: _taxonomy,
+      ),
     );
     if (!mounted || selected == null || selected == _filters) return;
     _setFilters(selected);
@@ -268,6 +276,18 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         marketplaceCategoryLabel(context, _filters.category),
         _filters.copyWith(category: ''),
       );
+    }
+    if (_filters.catalogGroup.isNotEmpty || _filters.sport.isNotEmpty) {
+      final group = _marketMap(
+        _marketMap(_taxonomy['groups'])[_filters.catalogGroup],
+      );
+      final labels = [
+        _marketText(group['label']),
+        _marketText(_marketMap(group['children'])[_filters.catalogSubcategory]),
+        _marketText(_marketMap(_taxonomy['sports'])[_filters.sport]),
+      ].where((label) => label.isNotEmpty);
+      if (labels.isNotEmpty)
+        chip(labels.join(' · '), _filters.copyWith(clearTaxonomy: true));
     }
     if (_filters.minPriceCents != null || _filters.maxPriceCents != null) {
       final min = _filters.minPriceCents == null

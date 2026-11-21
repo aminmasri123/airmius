@@ -1,11 +1,41 @@
 ﻿<script setup>
-defineProps({
+import { computed, ref } from 'vue'
+import { useForm } from '@inertiajs/vue3'
+
+const props = defineProps({
     products: { type: Array, default: () => [] },
     warehouses: { type: Array, default: () => [] },
     stockAdjustments: { type: Object, default: () => ({}) },
     formatMoney: { type: Function, required: true },
     inventoryAdjustment: { type: Function, required: true },
 })
+
+const selected = ref([])
+const dialog = ref(null)
+const visibleIds = computed(() => props.products.map(({ id }) => id))
+const selectedIds = computed(() => selected.value.filter((id) => visibleIds.value.includes(id)))
+const form = useForm({ product_ids: [], action: 'discount', discount_percent: null, status: 'draft', rejection_reason: '' })
+const confirmed = ref(false)
+
+function openBulkActions() {
+    form.reset()
+    form.clearErrors()
+    form.product_ids = [...selectedIds.value]
+    confirmed.value = false
+    dialog.value.showModal()
+}
+
+function applyBulkAction() {
+    if (form.processing || (form.action === 'delete' && !confirmed.value)) return
+
+    form.post(route('admin.commerce.products.bulk'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            selected.value = []
+            dialog.value.close()
+        },
+    })
+}
 
 const emit = defineEmits([
     'set-inventory-adjustment',
@@ -35,8 +65,24 @@ const emit = defineEmits([
     </div>
 
     <div class="mt-5 space-y-3">
+        <div v-if="products.length" class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3 text-sm">
+            <label class="flex items-center gap-2">
+                <input type="checkbox" :checked="selectedIds.length === products.length"
+                    :indeterminate.prop="selectedIds.length > 0 && selectedIds.length < products.length"
+                    @change="selected = $event.target.checked ? [...visibleIds] : []">
+                Alle auf dieser Seite auswählen
+            </label>
+            <span class="text-secondary" aria-live="polite">{{ selectedIds.length }} ausgewählt</span>
+            <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 font-semibold text-buttonTextPrimary disabled:opacity-50"
+                :disabled="!selectedIds.length || selectedIds.length > 100" @click="openBulkActions">
+                Sammelaktion
+            </button>
+            <span v-if="selectedIds.length > 100" class="text-warning">Maximal 100 Produkte pro Aktion.</span>
+        </div>
         <div v-for="product in products" :key="product.id" class="rounded-lg border border-border p-3">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <input v-model="selected" type="checkbox" :value="product.id"
+                    :aria-label="product.title + ' auswählen'" class="shrink-0 self-start md:self-center">
                 <div class="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-inputBg">
                     <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
                     <div v-else class="flex h-full items-center justify-center">
@@ -144,6 +190,56 @@ const emit = defineEmits([
         </div>
         <p v-if="!products.length" class="text-sm text-secondary">Noch keine Produkte vorbereitet.</p>
     </div>
+    <dialog ref="dialog" aria-labelledby="product-bulk-title" class="m-auto w-[calc(100%-2rem)] max-w-lg rounded-xl border border-border bg-card p-5 text-primary shadow-xl backdrop:bg-black/60" @cancel.prevent="!form.processing && dialog.close()">
+        <form class="space-y-4" @submit.prevent="applyBulkAction">
+            <h2 id="product-bulk-title" class="text-lg font-semibold">Sammelaktion für {{ form.product_ids.length }} Produkte</h2>
+            <label class="grid gap-1 text-sm">
+                Aktion
+                <select v-model="form.action" :disabled="form.processing" class="rounded-lg border-border bg-inputBg" @change="form.clearErrors(); confirmed = false">
+                    <option value="discount">Rabatt anwenden</option>
+                    <option value="status">Status ändern</option>
+                    <option value="archive">Archivieren</option>
+                    <option value="delete">Löschen</option>
+                </select>
+            </label>
+            <template v-if="form.action === 'discount'">
+                <label class="grid gap-1 text-sm">
+                    Rabatt in Prozent
+                    <input v-model.number="form.discount_percent" type="number" min="1" max="100" required :disabled="form.processing" class="rounded-lg border-border bg-inputBg">
+                </label>
+                <p class="text-sm text-secondary">Senkt die aktuellen Produktpreise und expliziten Variantenpreise dauerhaft.</p>
+            </template>
+            <template v-if="form.action === 'status'">
+                <label class="grid gap-1 text-sm">
+                    Neuer Status
+                    <select v-model="form.status" :disabled="form.processing" class="rounded-lg border-border bg-inputBg">
+                        <option value="draft">Entwurf</option>
+                        <option value="review">Zur Prüfung</option>
+                        <option value="published">Freigeben</option>
+                        <option value="rejected">Ablehnen</option>
+                    </select>
+                </label>
+                <label v-if="form.status === 'rejected'" class="grid gap-1 text-sm">
+                    Ablehnungsgrund
+                    <textarea v-model="form.rejection_reason" required maxlength="2000" :disabled="form.processing" class="rounded-lg border-border bg-inputBg" />
+                </label>
+            </template>
+            <label v-if="form.action === 'delete'" class="flex items-start gap-2 text-sm">
+                <input v-model="confirmed" type="checkbox" :disabled="form.processing" class="mt-0.5">
+                Produkte ohne Bestellungen endgültig löschen. Produkte mit Bestellungen werden archiviert.
+            </label>
+            <ul v-if="form.hasErrors" role="alert" class="space-y-1 text-sm text-danger">
+                <li v-for="(error, field) in form.errors" :key="field">{{ error }}</li>
+            </ul>
+            <div class="flex flex-wrap justify-end gap-2">
+                <button type="button" :disabled="form.processing" class="rounded-lg border border-border px-3 py-2 text-sm" @click="dialog.close()">Abbrechen</button>
+                <button type="submit" :disabled="form.processing || (form.action === 'delete' && !confirmed)"
+                    class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
+                    {{ form.action === 'delete' ? 'Produkte löschen' : 'Anwenden' }}
+                </button>
+            </div>
+        </form>
+    </dialog>
 </template>
 
 

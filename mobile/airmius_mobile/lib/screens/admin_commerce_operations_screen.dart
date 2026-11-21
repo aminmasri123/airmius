@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/marketplace_taxonomy_fields.dart';
 import '../widgets/airmius_form.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -28,6 +29,7 @@ class _AdminCommerceOperationsScreenState
   final Map<String, String> _queries = {};
   final Map<String, TextEditingController> _searches = {};
   final Set<String> _invalidSearches = {};
+  final Set<int> _selectedProducts = {};
   bool _busy = false;
 
   AirmiusApiClient get _client {
@@ -204,16 +206,20 @@ class _AdminCommerceOperationsScreenState
 
   Future<void> _run(
     Future<dynamic> Function() action, {
-    required String success,
+    String? success,
   }) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await action();
+      final response = await action();
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(success)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success ?? _text(_map(_map(response)['data'])['message']),
+          ),
+        ),
+      );
       _reload();
     } on AirmiusApiException catch (error) {
       if (mounted) {
@@ -477,6 +483,8 @@ class _AdminCommerceOperationsScreenState
 
   Widget _catalog(_CommerceOpsData data) {
     final products = _paged(data.dashboard['products']);
+    final visibleIds = products.map((product) => _int(product['id'])).toSet();
+    final selected = _selectedProducts.intersection(visibleIds);
     final coupons = _list(data.catalog['coupons']);
     final addons = _list(data.catalog['addons']);
     final taxRates = _list(data.catalog['tax_rates']);
@@ -492,6 +500,44 @@ class _AdminCommerceOperationsScreenState
           onAdd: () => _editProduct(),
         ),
         _listControls('products', data),
+        if (products.isNotEmpty)
+          Wrap(
+            spacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              FilterChip(
+                label: Text(
+                  _bulkText('Alle auf dieser Seite', 'All on this page'),
+                ),
+                selected: selected.length == visibleIds.length,
+                onSelected: _busy
+                    ? null
+                    : (checked) => setState(() {
+                        _selectedProducts.clear();
+                        if (checked) _selectedProducts.addAll(visibleIds);
+                      }),
+              ),
+              Text(
+                _bulkText(
+                  '${selected.length} ausgewählt',
+                  '${selected.length} selected',
+                ),
+              ),
+              FilledButton.tonal(
+                onPressed: _busy || selected.isEmpty || selected.length > 100
+                    ? null
+                    : () => _bulkProductAction(selected),
+                child: Text(_bulkText('Sammelaktion', 'Bulk action')),
+              ),
+              if (selected.length > 100)
+                Text(
+                  _bulkText(
+                    'Maximal 100 Produkte pro Aktion.',
+                    'Up to 100 products per action.',
+                  ),
+                ),
+            ],
+          ),
         if (products.isEmpty)
           _empty(Icons.inventory_2_outlined, t('commerceOps.noEntries')),
         ...products.map(_productCard),
@@ -656,16 +702,39 @@ class _AdminCommerceOperationsScreenState
   }
 
   Widget _productCard(Map<String, dynamic> product) {
+    final productId = _int(product['id']);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: AirmiusPanel(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _cardHeader(
-              Icons.inventory_2_outlined,
-              _text(product['title'], fallback: t('adminHub.product')),
-              _text(product['status'], fallback: 'draft'),
+            Row(
+              children: [
+                Checkbox(
+                  value: _selectedProducts.contains(productId),
+                  semanticLabel: _bulkText(
+                    "${_text(product['title'])} auswählen",
+                    "Select ${_text(product['title'])}",
+                  ),
+                  onChanged: _busy
+                      ? null
+                      : (checked) => setState(() {
+                          if (checked == true) {
+                            _selectedProducts.add(productId);
+                          } else {
+                            _selectedProducts.remove(productId);
+                          }
+                        }),
+                ),
+                Expanded(
+                  child: _cardHeader(
+                    Icons.inventory_2_outlined,
+                    _text(product['title'], fallback: t('adminHub.product')),
+                    _text(product['status'], fallback: 'draft'),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(
@@ -1348,10 +1417,18 @@ class _AdminCommerceOperationsScreenState
     ),
   );
 
-  Future<Map<String, dynamic>?> _form(String title, List<_Field> fields) {
+  Future<Map<String, dynamic>?> _form(
+    String title,
+    List<_Field> fields, {
+    MarketplaceClassification? classification,
+  }) {
     return showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => _CommerceFormDialog(title: title, fields: fields),
+      builder: (_) => _CommerceFormDialog(
+        title: title,
+        fields: fields,
+        classification: classification,
+      ),
     );
   }
 
@@ -1378,6 +1455,7 @@ class _AdminCommerceOperationsScreenState
 
   Future<void> _editProduct([Map<String, dynamic>? product]) async {
     final creating = product == null;
+    final category = _text(product?['category'], fallback: 'product');
     final values = await _form(
       creating ? t('commerceOps.createProduct') : t('commerceOps.editProduct'),
       [
@@ -1397,11 +1475,24 @@ class _AdminCommerceOperationsScreenState
           t('commerceOps.features'),
           initial: _stringList(product?['features']).join('\n'),
         ),
-        _Field.text(
+        _Field.choice(
           'category',
-          t('commerceOps.category'),
-          initial: _text(product?['category'], fallback: 'product'),
-          required: true,
+          'Angebotsart',
+          initial: category,
+          choices: [
+            'product',
+            'course',
+            'camp',
+            'service',
+            if (!['product', 'course', 'camp', 'service'].contains(category))
+              category,
+          ],
+          choiceLabels: const {
+            'product': 'Produkt',
+            'course': 'Kurs',
+            'camp': 'Camp',
+            'service': 'Dienstleistung',
+          },
         ),
         _Field.choice(
           'product_type',
@@ -1496,6 +1587,7 @@ class _AdminCommerceOperationsScreenState
           initial: '${_int(product?['commission_percent'])}',
         ),
       ],
+      classification: MarketplaceClassification.fromProduct(product),
     );
     if (values == null) return;
     final payload = <String, dynamic>{
@@ -1508,6 +1600,9 @@ class _AdminCommerceOperationsScreenState
       'image_url': _nullable(values['image_url']),
       'image_urls_text': values['gallery'],
       'category': values['category'],
+      'catalog_group': values['catalog_group'],
+      'catalog_subcategory': values['catalog_subcategory'],
+      'sports': values['sports'],
       'product_type': values['product_type'],
       'sku': _nullable(values['sku']),
       'is_shippable': values['is_shippable'],
@@ -1547,6 +1642,163 @@ class _AdminCommerceOperationsScreenState
       }),
       success: t('commerceOps.stockSaved'),
     );
+  }
+
+  String _bulkText(String german, String english) =>
+      Localizations.localeOf(context).languageCode == 'de' ? german : english;
+
+  Future<void> _bulkProductAction(Set<int> selected) async {
+    final actions = {
+      'discount': _bulkText('Rabatt anwenden', 'Apply discount'),
+      'status': _bulkText('Status ändern', 'Change status'),
+      'archive': _bulkText('Archivieren', 'Archive'),
+      'delete': t('common.delete'),
+    };
+    final statuses = {
+      'draft': _bulkText('Entwurf', 'Draft'),
+      'review': _bulkText('Zur Prüfung', 'In review'),
+      'published': _bulkText('Freigeben', 'Publish'),
+      'rejected': _bulkText('Ablehnen', 'Reject'),
+    };
+    var action = 'discount';
+    var status = 'draft';
+    var percent = 0;
+    var reason = '';
+    var confirmed = false;
+    final payload = await showDialog<AirmiusJson>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
+          title: Text(
+            _bulkText(
+              'Sammelaktion für ${selected.length} Produkte',
+              'Bulk action for ${selected.length} products',
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: action,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: _bulkText('Aktion', 'Action'),
+                  ),
+                  items: [
+                    for (final item in actions.entries)
+                      DropdownMenuItem(
+                        value: item.key,
+                        child: Text(item.value),
+                      ),
+                  ],
+                  onChanged: (value) => update(() {
+                    action = value!;
+                    confirmed = false;
+                  }),
+                ),
+                if (action == 'discount') ...[
+                  TextFormField(
+                    initialValue: percent == 0 ? '' : '$percent',
+                    decoration: InputDecoration(
+                      labelText: _bulkText(
+                        'Rabatt in Prozent (1–100)',
+                        'Discount percent (1–100)',
+                      ),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (value) =>
+                        update(() => percent = int.tryParse(value) ?? 0),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _bulkText(
+                      'Senkt die aktuellen Produktpreise und expliziten Variantenpreise dauerhaft.',
+                      'Permanently reduces current product prices and explicit variant prices.',
+                    ),
+                  ),
+                ],
+                if (action == 'status')
+                  DropdownButtonFormField<String>(
+                    initialValue: status,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: _bulkText('Neuer Status', 'New status'),
+                    ),
+                    items: [
+                      for (final item in statuses.entries)
+                        DropdownMenuItem(
+                          value: item.key,
+                          child: Text(item.value),
+                        ),
+                    ],
+                    onChanged: (value) => update(() => status = value!),
+                  ),
+                if (action == 'status' && status == 'rejected')
+                  TextFormField(
+                    initialValue: reason,
+                    maxLength: 2000,
+                    decoration: InputDecoration(
+                      labelText: _bulkText(
+                        'Ablehnungsgrund',
+                        'Rejection reason',
+                      ),
+                    ),
+                    onChanged: (value) => update(() => reason = value.trim()),
+                  ),
+                if (action == 'delete')
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: confirmed,
+                    title: Text(
+                      _bulkText(
+                        'Produkte ohne Bestellungen endgültig löschen. Produkte mit Bestellungen werden archiviert.',
+                        'Permanently delete products without orders. Products with orders will be archived.',
+                      ),
+                    ),
+                    onChanged: (value) =>
+                        update(() => confirmed = value == true),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              onPressed:
+                  (action == 'discount' && (percent < 1 || percent > 100)) ||
+                      (action == 'status' &&
+                          status == 'rejected' &&
+                          reason.isEmpty) ||
+                      (action == 'delete' && !confirmed)
+                  ? null
+                  : () => Navigator.pop(dialogContext, <String, dynamic>{
+                      'product_ids': selected.toList(),
+                      'action': action,
+                      if (action == 'discount') 'discount_percent': percent,
+                      if (action == 'status') 'status': status,
+                      if (action == 'status' && status == 'rejected')
+                        'rejection_reason': reason,
+                    }),
+              child: Text(
+                action == 'delete' ? t('common.delete') : t('common.confirm'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || payload == null) return;
+    await _run(() async {
+      final result = await _client.adminBulkCommerceProducts(payload);
+      _selectedProducts.removeAll(selected);
+      return result;
+    });
   }
 
   Future<void> _deleteProduct(Map<String, dynamic> product) async {
@@ -2518,7 +2770,13 @@ class _AdminCommerceOperationsScreenState
 }
 
 class _CommerceFormDialog extends StatefulWidget {
-  const _CommerceFormDialog({required this.title, required this.fields});
+  const _CommerceFormDialog({
+    required this.title,
+    required this.fields,
+    this.classification,
+  });
+
+  final MarketplaceClassification? classification;
 
   final String title;
   final List<_Field> fields;
@@ -2532,6 +2790,11 @@ class _CommerceFormDialogState extends State<_CommerceFormDialog> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, bool> _toggles = {};
   final Map<String, String> _choices = {};
+  late MarketplaceClassification? _classification = widget.classification;
+
+  bool get _showClassification =>
+      _classification != null &&
+      !const ['course', 'camp', 'service'].contains(_choices['category']);
 
   @override
   void initState() {
@@ -2595,7 +2858,7 @@ class _CommerceFormDialogState extends State<_CommerceFormDialog> {
                         );
                       }
                       if (field.kind == _FieldKind.choice) {
-                        return DropdownButtonFormField<String>(
+                        final dropdown = DropdownButtonFormField<String>(
                           initialValue: _choices[field.key],
                           isExpanded: true,
                           decoration: InputDecoration(labelText: field.label),
@@ -2614,6 +2877,20 @@ class _CommerceFormDialogState extends State<_CommerceFormDialog> {
                               .toList(),
                           onChanged: (value) =>
                               setState(() => _choices[field.key] = value ?? ''),
+                        );
+                        if (field.key != 'category' || !_showClassification)
+                          return dropdown;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            dropdown,
+                            const SizedBox(height: 12),
+                            MarketplaceTaxonomyFields(
+                              value: _classification!,
+                              onChanged: (value) =>
+                                  setState(() => _classification = value),
+                            ),
+                          ],
                         );
                       }
                       return TextFormField(
@@ -2649,7 +2926,20 @@ class _CommerceFormDialogState extends State<_CommerceFormDialog> {
                   FilledButton.icon(
                     onPressed: () {
                       if (!(_formKey.currentState?.validate() ?? false)) return;
+                      if (_showClassification && !_classification!.complete) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Bitte Unterkategorie wählen'),
+                          ),
+                        );
+                        return;
+                      }
                       Navigator.pop(context, {
+                        if (_classification != null)
+                          ...(_showClassification
+                                  ? _classification!
+                                  : const MarketplaceClassification())
+                              .toJson(),
                         for (final entry in _controllers.entries)
                           entry.key: entry.value.text.trim(),
                         ..._toggles,

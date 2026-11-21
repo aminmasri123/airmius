@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Support\MarketplaceProviderSummary;
+use App\Support\MarketplaceTaxonomy;
 use App\Support\MarketplacePurchaseConfidence;
 use App\Support\MarketplaceReviewSummary;
 use App\Support\MarketplaceTrustPresentation;
@@ -54,6 +55,7 @@ class MarketplaceProductResource extends JsonResource
             'image_url' => $this->image_url,
             'gallery_images' => $this->gallery_images,
             'category' => $this->category,
+            ...MarketplaceTaxonomy::productFields($this->resource),
             'offer_type' => $this->offer_type,
             'product_type' => $this->product_type,
             'sku' => $this->sku,

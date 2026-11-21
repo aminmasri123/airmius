@@ -1,10 +1,12 @@
 <script setup>
+import MarketplaceTaxonomyFields from '@/Components/Commerce/MarketplaceTaxonomyFields.vue'
 import { computed, ref } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import SkipLink from '@/Components/Guest/SkipLink.vue'
+import MarketplaceWishlistButton from '@/Components/Commerce/MarketplaceWishlistButton.vue'
 import AdSlot from '@/Components/Ads/AdSlot.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
@@ -33,6 +35,7 @@ const props = defineProps({
     pricingCountries: { type: Array, default: () => [] },
     marketplaceVisuals: { type: Object, default: () => ({}) },
     filters: { type: Object, default: () => ({}) },
+    taxonomy: { type: Object, default: () => ({}) },
 })
 
 const page = usePage()
@@ -51,11 +54,19 @@ const loginHref = computed(() => route('login', { redirect: marketplaceReturnTo 
 const registerHref = computed(() => route('register', { redirect: marketplaceReturnTo }))
 const form = ref({
     search: props.filters.search || '',
+    catalog_group: props.filters.catalog_group || '',
+    catalog_subcategory: props.filters.catalog_subcategory || '',
+    sport: props.filters.sport || '',
     category: props.filters.category || '',
     segment: props.filters.segment || '',
     country: props.filters.country || '',
     sort: props.filters.sort || 'recommended',
     availability: props.filters.availability || '',
+})
+const taxonomyFilterActive = computed(() => !!(props.filters.catalog_group || props.filters.sport))
+const activeTaxonomyLabels = computed(() => {
+    const group = props.taxonomy.groups?.[props.filters.catalog_group]
+    return [group?.label, group?.children?.[props.filters.catalog_subcategory], props.taxonomy.sports?.[props.filters.sport]].filter(Boolean)
 })
 const mobileFilterOpen = ref(false)
 const advancedFilterOpen = ref(false)
@@ -252,7 +263,7 @@ const productItems = computed(() => props.products?.data || [])
 const catalogItems = computed(() => props.commerceCatalog?.data || [])
 const catalogLabels = computed(() => props.commerceCatalog?.meta?.labels || {})
 const catalogFallbackItems = computed(() => {
-    if (!['course', 'outfit_subscription'].includes(form.value.category)) return []
+    if (form.value.catalog_group || form.value.sport || !['course', 'outfit_subscription'].includes(form.value.category)) return []
 
     const representedCourseIds = new Set(productItems.value
         .map((product) => Number(product.learning_course_id || 0))
@@ -447,6 +458,9 @@ const shortDescription = (text, length = 92) => {
 const search = () => {
     router.get(route('guest.marketplace'), {
         search: form.value.search || undefined,
+        catalog_group: form.value.catalog_group || undefined,
+        catalog_subcategory: form.value.catalog_subcategory || undefined,
+        sport: form.value.sport || undefined,
         category: form.value.category || undefined,
         segment: form.value.segment || undefined,
         country: form.value.country || undefined,
@@ -456,11 +470,18 @@ const search = () => {
         preserveScroll: true,
         preserveState: true,
         replace: true,
-        only: ['products', 'commerceCatalog', 'filters'],
+        only: ['products', 'commerceCatalog', 'filters', 'taxonomy'],
     })
 }
 
+const resetTaxonomy = () => {
+    form.value.catalog_group = ''
+    form.value.catalog_subcategory = ''
+    form.value.sport = ''
+}
+
 const reset = () => {
+    resetTaxonomy()
     form.value.search = ''
     form.value.category = ''
     form.value.segment = ''
@@ -471,6 +492,7 @@ const reset = () => {
 }
 
 const searchCategory = (category) => {
+    resetTaxonomy()
     form.value.search = category.query || ''
     form.value.category = category.category || ''
     form.value.segment = category.segment || ''
@@ -478,6 +500,7 @@ const searchCategory = (category) => {
 }
 
 const selectQuickTile = (tile) => {
+    resetTaxonomy()
     form.value.search = tile.search || ''
     form.value.category = tile.category || ''
     form.value.segment = tile.segment || ''
@@ -529,6 +552,15 @@ const selectSegment = (segment) => {
                         </div>
                     </div>
                     <div class="flex shrink-0 items-center justify-end gap-1.5 text-xs font-black sm:gap-2 sm:text-sm">
+                        <Link
+                            :href="route('auth.commerce.wishlist.index')"
+                            class="inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-card px-2.5 text-primary hover:text-error sm:px-3"
+                            :aria-label="$t('Wunschliste')"
+                            :title="$t('Wunschliste')"
+                        >
+                            <i class="lar la-heart text-xl" aria-hidden="true"></i>
+                            <span class="hidden sm:inline">{{ $t('Wunschliste') }}</span>
+                        </Link>
                         <Link
                             v-if="currentUser"
                             :href="route('auth.commerce.cart.index')"
@@ -630,6 +662,7 @@ const selectSegment = (segment) => {
                         v-if="advancedFilterOpen"
                         class="order-4 col-span-3 hidden grid-cols-4 gap-3 rounded-xl border border-border bg-card p-3 lg:grid"
                     >
+                        <MarketplaceTaxonomyFields buyer :form="form" :taxonomy="taxonomy" :translate="mt" class="col-span-4" />
                         <label class="relative block">
                             <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ mt("Bereich") }}</span>
                             <select v-model="form.segment" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" :aria-label="mt('Bereich')">
@@ -693,6 +726,8 @@ const selectSegment = (segment) => {
                                 </select>
                             </label>
                         </div>
+
+                        <MarketplaceTaxonomyFields buyer :form="form" :taxonomy="taxonomy" :translate="mt" />
 
                         <section>
                             <div class="mb-2 flex items-center justify-between gap-3">
@@ -763,12 +798,16 @@ const selectSegment = (segment) => {
                     <span class="shrink-0 rounded bg-buttonPrimary/15 px-2 py-1 text-buttonPrimary">{{ mt('{count} Treffer', { count: totalProducts }) }}</span>
                     <span v-if="form.category" class="rounded bg-muted px-2 py-1">{{ activeCategoryLabel }}</span>
                     <span v-if="form.segment" class="rounded bg-muted px-2 py-1">{{ activeSegmentLabel }}</span>
+                    <button v-if="activeTaxonomyLabels.length" type="button" class="rounded bg-muted px-2 py-1" @click="resetTaxonomy(); search()">
+                        {{ activeTaxonomyLabels.map((label) => mt(label)).join(' · ') }} <span aria-hidden="true">×</span>
+                    </button>
                     <span v-if="form.availability" class="hidden rounded bg-muted px-2 py-1 sm:inline">{{ activeAvailabilityLabel }}</span>
                     <span v-if="form.country" class="hidden rounded bg-muted px-2 py-1 sm:inline">{{ form.country }}</span>
                     <span v-if="form.sort && form.sort !== 'recommended'" class="hidden rounded bg-muted px-2 py-1 sm:inline">{{ localizedSortOptions.find((option) => option.value === form.sort)?.label }}</span>
                 </div>
             </section>
 
+            <template v-if="!taxonomyFilterActive">
             <section class="mx-auto max-w-7xl px-3 py-3 md:hidden">
                 <div class="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     <Link
@@ -1178,6 +1217,8 @@ const selectSegment = (segment) => {
 
             </section>
 
+            </template>
+
             <section class="mx-auto mt-3 max-w-7xl px-3 sm:mt-4 sm:px-4">
                 <div class="rounded bg-card shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-3 sm:px-4">
@@ -1206,7 +1247,7 @@ const selectSegment = (segment) => {
                                 <article
                                     v-for="product in group.items"
                                     :key="product.catalog_key || product.id"
-                                    class="group flex h-full overflow-hidden rounded border border-border bg-card transition hover:border-borderHover"
+                                    class="group relative flex h-full overflow-hidden rounded border border-border bg-card transition hover:border-borderHover"
                                 >
                                     <Link :href="product.show_url" class="flex w-full flex-col">
                                         <div class="relative h-36 shrink-0 overflow-hidden bg-inputBg sm:h-auto sm:aspect-square">
@@ -1256,6 +1297,13 @@ const selectSegment = (segment) => {
                                             </span>
                                         </div>
                                     </Link>
+                                    <MarketplaceWishlistButton
+                                        v-if="!product.catalog_contract"
+                                        :product-id="product.id"
+                                        :authenticated="Boolean(currentUser)"
+                                        :can-login="canLogin"
+                                        class="absolute end-2 top-2"
+                                    />
                                 </article>
                             </div>
                         </div>
@@ -1290,7 +1338,7 @@ const selectSegment = (segment) => {
                             v-for="link in paginationLinks"
                             :key="`${link.label}-${link.url}`"
                             :href="link.url"
-                            :only="['products', 'commerceCatalog', 'filters']"
+                            :only="['products', 'commerceCatalog', 'filters', 'taxonomy']"
                             preserve-state
                             preserve-scroll
                             class="rounded border px-3 py-2 text-sm font-bold"

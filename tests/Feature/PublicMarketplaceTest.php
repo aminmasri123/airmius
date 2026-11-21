@@ -43,6 +43,41 @@ class PublicMarketplaceTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page->component('Guest/MarketplaceProductShow'));
     }
 
+    public function test_marketplace_wishlist_is_private_and_shared_with_the_mobile_api(): void
+    {
+        $product = $this->createPublishedProduct();
+        $buyer = User::factory()->create();
+        $otherBuyer = User::factory()->create();
+        $marketplace = route('guest.marketplace');
+        $wishlist = route('auth.commerce.wishlist.index');
+        $save = route('auth.commerce.products.wishlist.store', $product);
+        $remove = route('auth.commerce.products.wishlist.destroy', $product);
+        $mobileWishlist = '/api/v1/commerce/wishlist';
+
+        $this->get($wishlist)->assertRedirect(route('login'));
+        $this->post($save)->assertRedirect(route('login'));
+
+        $this->actingAs($buyer)->from($marketplace)->post($save)->assertRedirect($marketplace);
+        $this->get($marketplace)->assertInertia(fn (Assert $page) => $page
+            ->where('wishlistProductIds', [$product->id]));
+        $this->get($wishlist)->assertInertia(fn (Assert $page) => $page
+            ->component('Guest/MarketplaceWishlist')
+            ->where('products.0.id', $product->id));
+        $this->getJson($mobileWishlist)->assertOk()->assertJsonPath('data.0.id', $product->id);
+
+        $this->actingAs($otherBuyer)->get($wishlist)->assertInertia(fn (Assert $page) => $page
+            ->has('products', 0));
+        $this->from($wishlist)->delete($remove)->assertRedirect($wishlist);
+
+        $this->actingAs($buyer)->getJson($mobileWishlist)->assertOk()->assertJsonCount(1, 'data');
+        $this->from($wishlist)->delete($remove)->assertRedirect($wishlist);
+        $this->getJson($mobileWishlist)->assertOk()->assertJsonCount(0, 'data');
+
+        $this->postJson("/api/v1/commerce/products/{$product->id}/wishlist")->assertCreated();
+        $this->get(route('guest.marketplace.products.show', $product))->assertInertia(fn (Assert $page) => $page
+            ->where('wishlistProductIds', [$product->id]));
+    }
+
     public function test_unapproved_product_cannot_be_opened_or_checked_out_directly(): void
     {
         $product = $this->createPublishedProduct(['moderation_status' => 'pending']);

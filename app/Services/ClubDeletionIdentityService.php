@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 class ClubDeletionIdentityService
 {
@@ -31,8 +32,14 @@ class ClubDeletionIdentityService
         }
 
         $code = (string) random_int(100000, 999999);
-        Cache::put($this->key($club, $actor), Hash::make($code), now()->addMinutes(15));
-        $actor->notify(new ClubDeletionCodeRequested($code, $club->name));
+        $hash = Hash::make($code);
+        try {
+            $actor->notify(new ClubDeletionCodeRequested($code, $club->name));
+        } catch (TransportExceptionInterface $exception) {
+            report($exception);
+            abort(503, __('club_deletion.code_delivery_failed'));
+        }
+        Cache::put($this->key($club, $actor), $hash, now()->addMinutes(15));
     }
 
     public function consumeCode(Club $club, User $actor, string $code): void

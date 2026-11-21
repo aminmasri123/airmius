@@ -1,4 +1,5 @@
 ﻿<script setup>
+import MarketplaceTaxonomyFields from '@/Components/Commerce/MarketplaceTaxonomyFields.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -66,12 +67,16 @@ const emit = defineEmits([
             </div>
         </div>
 
-        <select v-model="productForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-            <option value="product">{{ t('commerce.ui.product') }}</option>
-            <option value="course">{{ t('commerce.ui.course') }}</option>
-            <option value="camp">{{ t('commerce.ui.camp') }}</option>
-            <option value="service">Dienstleistung</option>
-        </select>
+        <label class="grid gap-1 text-sm font-semibold text-primary">
+            Angebotsart
+            <select v-model="productForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                <option value="product">{{ t('commerce.ui.product') }}</option>
+                <option value="course">{{ t('commerce.ui.course') }}</option>
+                <option value="camp">{{ t('commerce.ui.camp') }}</option>
+                <option value="service">Dienstleistung</option>
+            </select>
+        </label>
+        <MarketplaceTaxonomyFields v-if="!['course', 'camp', 'service'].includes(productForm.category)" :form="productForm" class="md:col-span-2" />
         <input v-model="productForm.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
         <select v-model="productForm.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
             <option value="standard">Standardsteuer</option>

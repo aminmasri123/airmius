@@ -19,6 +19,60 @@ class MobileAdminCommerceParityApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_bulk_product_actions_share_validation_and_preserve_order_history(): void
+    {
+        $admin = $this->admin();
+        $admin->givePermissionTo(Permission::findOrCreate('subscriptions.manage'));
+        $products = collect(['With orders', 'Without orders'])->map(fn (string $title) => MarketplaceProduct::query()->create([
+            'title' => $title,
+            'category' => 'product',
+            'price_cents' => 1999,
+            'currency' => 'EUR',
+            'status' => 'draft',
+            'variants' => [['sku' => 'standard', 'price_cents' => 2599], ['sku' => 'inherit']],
+        ]));
+        [$withOrders, $withoutOrders] = $products->all();
+        CommerceOrder::query()->create([
+            'user_id' => $admin->id,
+            'orderable_type' => MarketplaceProduct::class,
+            'orderable_id' => $withOrders->id,
+            'type' => 'marketplace_product',
+            'provider' => 'bank_transfer',
+            'amount_cents' => 1999,
+            'currency' => 'EUR',
+            'status' => 'completed',
+        ]);
+        $selection = ['product_ids' => $products->pluck('id')->all()];
+        $api = '/api/v1/admin/commerce/products/bulk';
+
+        Sanctum::actingAs($admin);
+        $this->postJson($api, ['product_ids' => [$withOrders->id, 99999], 'action' => 'archive'])
+            ->assertUnprocessable()->assertJsonValidationErrors('product_ids');
+        $this->assertSame('draft', $withOrders->fresh()->status);
+
+        $this->actingAs($admin)
+            ->from('/admin/commerce')
+            ->post(route('admin.commerce.products.bulk'), $selection + ['action' => 'discount', 'discount_percent' => 10])
+            ->assertRedirect('/admin/commerce')->assertSessionHasNoErrors();
+        foreach ($products as $product) {
+            $this->assertSame(1799, $product->fresh()->price_cents);
+            $this->assertSame([['sku' => 'standard', 'price_cents' => 2339], ['sku' => 'inherit']], $product->fresh()->variants);
+        }
+
+        Sanctum::actingAs($admin);
+        $this->postJson($api, $selection + ['action' => 'status', 'status' => 'rejected'])
+            ->assertUnprocessable()->assertJsonValidationErrors('rejection_reason');
+        $this->postJson($api, $selection + ['action' => 'status', 'status' => 'review'])
+            ->assertOk()->assertJsonPath('data.updated', 2);
+        $this->assertSame('review', $withOrders->fresh()->status);
+        $this->postJson($api, $selection + ['action' => 'archive'])
+            ->assertOk()->assertJsonPath('data.archived', 2);
+        $this->postJson($api, $selection + ['action' => 'delete'])
+            ->assertOk()->assertJsonPath('data.deleted', 1)->assertJsonPath('data.archived', 1);
+        $this->assertSame('archived', $withOrders->fresh()->status);
+        $this->assertNull($withoutOrders->fresh());
+    }
+
     public function test_mobile_admin_can_manage_products_campaigns_and_marketplace_configuration(): void
     {
         $admin = $this->admin();
@@ -31,6 +85,9 @@ class MobileAdminCommerceParityApiTest extends TestCase
             'attributes_text' => 'Color: Blue',
             'image_urls_text' => '',
             'category' => 'equipment',
+            'catalog_group' => 'equipment',
+            'catalog_subcategory' => 'balls',
+            'sports' => ['football', 'team_sport'],
             'product_type' => 'single',
             'is_shippable' => true,
             'manages_stock' => true,
@@ -46,6 +103,9 @@ class MobileAdminCommerceParityApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.title', 'Ergonomic training ball')
             ->assertJsonPath('data.stock_quantity', 4)
+            ->assertJsonPath('data.catalog_group', 'equipment')
+            ->assertJsonPath('data.catalog_subcategory', 'balls')
+            ->assertJsonPath('data.sports', ['football', 'team_sport'])
             ->json('data.id');
 
         $this->postJson("/api/v1/admin/commerce/products/{$productId}/stock", [
@@ -76,7 +136,9 @@ class MobileAdminCommerceParityApiTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.title', 'Ergonomic training ball Plus')
-            ->assertJsonPath('data.status', 'review');
+            ->assertJsonPath('data.status', 'review')
+            ->assertJsonPath('data.catalog_subcategory', 'balls')
+            ->assertJsonPath('data.sports', ['football', 'team_sport']);
 
         $campaignId = $this->postJson('/api/v1/admin/commerce/campaigns', [
             'is_internal' => true,

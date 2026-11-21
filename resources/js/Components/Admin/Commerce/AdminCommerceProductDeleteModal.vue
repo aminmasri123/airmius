@@ -41,7 +41,7 @@ const confirmationModel = computed({
                 </button>
                 <button
                     type="button"
-                    class="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    class="rounded-lg border border-transparent bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-primary"
                     :disabled="confirmationModel !== 'delete' || modal.processing"
                     @click="emit('confirm')"
                 >

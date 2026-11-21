@@ -1,4 +1,5 @@
 ﻿<script setup>
+import MarketplaceTaxonomyFields from '@/Components/Commerce/MarketplaceTaxonomyFields.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -80,12 +81,17 @@ const emit = defineEmits([
                     class="rounded-lg border-border bg-inputBg text-sm text-primary"
                     placeholder="Lieferinfo, z. B. Versand per E-Mail"
                 ></textarea>
-                <select v-model="form.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                    <option value="product">{{ t('commerce.ui.product') }}</option>
-                    <option value="course">{{ t('commerce.ui.course') }}</option>
-                    <option value="camp">{{ t('commerce.ui.camp') }}</option>
-                    <option value="service">Dienstleistung</option>
-                </select>
+                <label class="grid gap-1 text-sm font-semibold text-primary">
+                    Angebotsart
+                    <select v-model="form.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option v-if="form.category && !['product', 'course', 'camp', 'service'].includes(form.category)" :value="form.category">{{ form.category }}</option>
+                        <option value="product">{{ t('commerce.ui.product') }}</option>
+                        <option value="course">{{ t('commerce.ui.course') }}</option>
+                        <option value="camp">{{ t('commerce.ui.camp') }}</option>
+                        <option value="service">Dienstleistung</option>
+                    </select>
+                </label>
+                <MarketplaceTaxonomyFields v-if="!['course', 'camp', 'service'].includes(form.category)" :form="form" class="md:col-span-2" />
                 <input v-model="form.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
                 <select v-model="form.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                     <option value="standard">Standardsteuer</option>

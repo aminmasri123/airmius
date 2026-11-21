@@ -52,6 +52,9 @@ export function useCommerceProducts({
         learning_course_id: '',
         offer_type: 'physical_product',
         category: 'equipment',
+        catalog_group: '',
+        catalog_subcategory: '',
+        sports: [],
         product_type: 'single',
         sku: '',
         is_shippable: true,
@@ -80,6 +83,9 @@ export function useCommerceProducts({
         rule_data_privacy: false,
     })
     const editProductForm = useForm({
+        catalog_group: '',
+        catalog_subcategory: '',
+        sports: [],
         title: '',
         description: '',
         image_url: '',
@@ -316,12 +322,17 @@ export function useCommerceProducts({
         }
 
         productForm
-            .transform((data) => transformMoneyFields(data, ['price_cents']))
+            .transform((data) => transformMoneyFields({
+                ...data,
+                catalog_group: data.offer_type === 'physical_product' ? data.catalog_group : null,
+                catalog_subcategory: data.offer_type === 'physical_product' ? data.catalog_subcategory : null,
+                sports: data.offer_type === 'physical_product' && data.sports.length ? data.sports : null,
+            }, ['price_cents']))
             .post(route('auth.commerce.products.store'), {
                 preserveScroll: true,
                 forceFormData: true,
                 onSuccess: () => {
-                    productForm.reset('title', 'description', 'attributes_text', 'attribute_options', 'variants', 'image_url', 'image_urls_text', 'image_upload', 'image_uploads', 'learning_course_id', 'sku', 'digital_delivery_note', 'course_outline_text', 'learning_goals_text', 'coach_feedback_instructions')
+                    productForm.reset('catalog_group', 'catalog_subcategory', 'sports', 'title', 'description', 'attributes_text', 'attribute_options', 'variants', 'image_url', 'image_urls_text', 'image_upload', 'image_uploads', 'learning_course_id', 'sku', 'digital_delivery_note', 'course_outline_text', 'learning_goals_text', 'coach_feedback_instructions')
                     productForm.offer_type = 'physical_product'
                     productForm.category = sellerMarketplaceCategories.value[0]?.category || 'equipment'
                     productForm.product_type = 'single'
@@ -352,6 +363,9 @@ export function useCommerceProducts({
     }
 
     const openEditProductModal = (product) => {
+        editProductForm.catalog_group = product.catalog_group || ''
+        editProductForm.catalog_subcategory = product.catalog_subcategory || ''
+        editProductForm.sports = [...(product.sports || [])]
         editProductForm.title = product.title || ''
         editProductForm.description = product.description || ''
         editProductForm.image_url = product.image_url || ''
@@ -393,7 +407,7 @@ export function useCommerceProducts({
         }
 
         editProductForm
-            .transform((data) => transformMoneyFields(data, ['price_cents']))
+            .transform((data) => transformMoneyFields({ ...data, sports: data.sports.length ? data.sports : null }, ['price_cents']))
             .post(route('auth.commerce.my-products.update', product.id), {
                 preserveScroll: true,
                 forceFormData: true,

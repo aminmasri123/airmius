@@ -1,0 +1,67 @@
+{
+    "groups": {
+        "apparel": {
+            "label": "Sportbekleidung",
+            "children": {
+                "shorts": "Shorts",
+                "pants_leggings": "Hosen & Leggings",
+                "shirts_tops": "Shirts & Tops",
+                "jerseys": "Trikots",
+                "jackets_vests": "Jacken & Westen",
+                "sports_socks": "Sportsocken"
+            }
+        },
+        "shoes": {
+            "label": "Sportschuhe",
+            "children": {
+                "running_shoes": "Laufschuhe",
+                "trail_shoes": "Trailrunning-Schuhe",
+                "football_shoes": "Fußballschuhe",
+                "training_shoes": "Fitness- & Trainingsschuhe",
+                "indoor_shoes": "Hallenschuhe"
+            }
+        },
+        "accessories": {
+            "label": "Sportzubehör",
+            "children": {
+                "bags": "Taschen & Rucksäcke",
+                "bottles": "Trinkflaschen & Trinksysteme",
+                "headwear": "Caps & Stirnbänder",
+                "running_belts": "Laufgürtel",
+                "protection": "Schutzausrüstung"
+            }
+        },
+        "equipment": {
+            "label": "Sportausrüstung",
+            "children": {
+                "balls": "Bälle",
+                "strength": "Krafttraining",
+                "coordination": "Lauf- & Koordinationstraining",
+                "club_equipment": "Vereins- & Trainingsmaterial"
+            }
+        },
+        "recovery": {
+            "label": "Regeneration",
+            "children": {
+                "foam_rollers": "Faszienrollen & Massagebälle",
+                "massagers": "Massagegeräte",
+                "hot_cold": "Kühl- & Wärmeprodukte"
+            }
+        },
+        "nutrition": {
+            "label": "Sporternährung",
+            "children": {
+                "gels_bars": "Energiegels & Riegel",
+                "electrolytes": "Elektrolyte & Sportgetränke",
+                "protein": "Proteinprodukte"
+            }
+        }
+    },
+    "sports": {
+        "running": "Laufen",
+        "trailrunning": "Trailrunning",
+        "football": "Fußball",
+        "fitness": "Fitness",
+        "team_sport": "Teamsport"
+    }
+}

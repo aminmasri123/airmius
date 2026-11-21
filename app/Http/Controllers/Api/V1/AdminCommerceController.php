@@ -180,6 +180,13 @@ class AdminCommerceController extends Controller
         return new MarketplaceProductResource($product->fresh(['user', 'club']));
     }
 
+    public function bulkProducts(Request $request)
+    {
+        $this->authorizeCommerceAdmin($request);
+
+        return response()->json(['data' => app(WebAdminCommerceController::class)->applyBulkProducts($request)]);
+    }
+
     public function destroyProduct(Request $request, MarketplaceProduct $product)
     {
         $this->authorizeCommerceAdmin($request);

@@ -4,6 +4,7 @@ import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import SkipLink from '@/Components/Guest/SkipLink.vue'
+import MarketplaceWishlistButton from '@/Components/Commerce/MarketplaceWishlistButton.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
 import { applyLogoFallback, logoWordmark } from '@/services/logoAssets'
@@ -492,6 +493,15 @@ const updateCountry = () => {
                     </Link>
                     <div class="flex shrink-0 items-center justify-end gap-2 text-sm font-black">
                         <Link
+                            :href="route('auth.commerce.wishlist.index')"
+                            class="inline-flex h-10 items-center gap-1.5 rounded-full border border-border bg-card px-2.5 text-primary hover:text-error sm:px-3"
+                            :aria-label="$t('Wunschliste')"
+                            :title="$t('Wunschliste')"
+                        >
+                            <i class="lar la-heart text-xl" aria-hidden="true"></i>
+                            <span class="hidden sm:inline">{{ $t('Wunschliste') }}</span>
+                        </Link>
+                        <Link
                             v-if="currentUser"
                             :href="route('auth.commerce.cart.index')"
                             class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary"
@@ -747,8 +757,17 @@ const updateCountry = () => {
                         <div v-if="page.props.flash?.success" class="mb-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
                             {{ page.props.flash.success }}
                         </div>
-                        <p class="text-xs uppercase text-secondary">{{ $t("Preis") }}</p>
-                        <p class="mt-2 text-3xl font-bold text-primary">{{ formatMoney(visiblePriceCents, price.currency) }}</p>
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs uppercase text-secondary">{{ $t("Preis") }}</p>
+                                <p class="mt-2 text-3xl font-bold text-primary">{{ formatMoney(visiblePriceCents, price.currency) }}</p>
+                            </div>
+                            <MarketplaceWishlistButton
+                                :product-id="product.id"
+                                :authenticated="isAuthenticated"
+                                :can-login="canLogin"
+                            />
+                        </div>
                         <div class="mt-2 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                             <p>
                                 {{ formatMoney(price.net_cents, price.currency) }} {{ $t('netto') }}

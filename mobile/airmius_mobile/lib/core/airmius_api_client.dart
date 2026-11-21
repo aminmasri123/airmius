@@ -3842,12 +3842,19 @@ class AirmiusApiClient {
   Future<AirmiusJson> publicMarketplace({
     String? query,
     String? category,
+    String catalogGroup = '',
+    String catalogSubcategory = '',
+    String sport = '',
     String? sort,
     int page = 1,
   }) => _json(
     'GET',
     '/api/v1/public/marketplace',
     query: {
+      if (catalogGroup.isNotEmpty) 'catalog_group': catalogGroup,
+      if (catalogSubcategory.isNotEmpty)
+        'catalog_subcategory': catalogSubcategory,
+      if (sport.isNotEmpty) 'sport': sport,
       'page': '$page',
       if (query != null && query.trim().isNotEmpty) 'search': query.trim(),
       if (category != null && category.trim().isNotEmpty)
@@ -4102,6 +4109,9 @@ class AirmiusApiClient {
     int perPage = 50,
     String? search,
     String? category,
+    String catalogGroup = '',
+    String catalogSubcategory = '',
+    String sport = '',
     int? minPriceCents,
     int? maxPriceCents,
     double? minRating,
@@ -4110,6 +4120,10 @@ class AirmiusApiClient {
     'GET',
     '/api/v1/commerce/products',
     query: {
+      if (catalogGroup.isNotEmpty) 'catalog_group': catalogGroup,
+      if (catalogSubcategory.isNotEmpty)
+        'catalog_subcategory': catalogSubcategory,
+      if (sport.isNotEmpty) 'sport': sport,
       'page': '$page',
       'per_page': '$perPage',
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
@@ -4744,6 +4758,9 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> adminCreateCommerceProduct(AirmiusJson body) =>
       _json('POST', '/api/v1/admin/commerce/products', body: body);
+
+  Future<AirmiusJson> adminBulkCommerceProducts(AirmiusJson body) =>
+      _json('POST', '/api/v1/admin/commerce/products/bulk', body: body);
 
   Future<AirmiusJson> adminEditCommerceProduct(
     int productId,
