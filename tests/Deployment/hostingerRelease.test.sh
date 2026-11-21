@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Exercise the real rsync publication/recovery against disposable fixtures only.
+# Exercise direct publication/finalization against disposable fixtures only.
 set -Eeuo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
 fixture=$(mktemp -d "$HOME/airmius-deployment-test-XXXXXXXX")
@@ -25,13 +25,11 @@ SH
 cat > "$fixture/bin/curl" <<'SH'
 #!/usr/bin/env bash
 set -e
-if test -f "$FAIL_HTTP"; then exit 22; fi
+test ! -f "$FAIL_HTTP"
 for arg in "$@"; do
     case "$arg" in
         https://example.com/deployment.json*) cat "$LIVE_ROOT/public/deployment.json" ;;
-        https://example.com/build/*)
-            file="$LIVE_ROOT/public/${arg#https://example.com/}"
-            test -f "$file" && test "$(stat -c %a "$file")" = 644 ;;
+        https://example.com/build/*) test -f "$LIVE_ROOT/public/${arg#https://example.com/}" ;;
     esac
 done
 SH
@@ -41,93 +39,43 @@ printf 'persistent-upload' > "$LIVE_ROOT/storage/upload.txt"
 printf 'old-code' > "$LIVE_ROOT/old-only.php"
 printf '<?php' > "$LIVE_ROOT/artisan"
 printf '<?php' > "$LIVE_ROOT/vendor/autoload.php"
-printf '{"commit":"%040d"}' 1 > "$LIVE_ROOT/public/deployment.json"
-printf 'old-asset' > "$LIVE_ROOT/public/build/assets/old.js"
-chmod 644 "$LIVE_ROOT/public/build/assets/old.js"
-printf 'old-asset' > "$fixture/deploy/shared/assets/old.js"
-make_release() {
-    local sha=$1
-    local payload="$fixture/payload-$sha"
-    mkdir -p "$payload/"{vendor,public/build/assets,bootstrap/cache}
-    printf '<?php' > "$payload/vendor/autoload.php"
-    printf '<?php' > "$payload/artisan"
-    printf '%s' "$sha" > "$payload/new-code.php"
-    printf '{"commit":"%s"}' "$sha" > "$payload/public/deployment.json"
-    printf '{"resources/js/app.js":{"file":"assets/app.js"}}' > "$payload/public/build/manifest.json"
-    printf 'new-asset' > "$payload/public/build/assets/app.js"
-    tar -czf "$fixture/deploy/incoming/$sha.tar.gz" -C "$payload" .
-}
-publish() {
-    local sha=$1
-    local archive="$fixture/deploy/incoming/$sha.tar.gz"
-    local checksum
-    if test -f "$archive"; then
-        checksum=$(sha256sum "$archive" | cut -d ' ' -f 1)
-    else
-        # An already active commit exits after its health checks. Its archive
-        # was deliberately removed by the successful first publication.
-        checksum=$(printf '%064d' 0)
-    fi
-    bash ${DEPLOY_TEST_TRACE:+-x} "$root/scripts/deploy/hostinger-release.sh" "$fixture/deploy" "$LIVE_ROOT" https://example.com "$sha" "$checksum"
-}
+printf 'stale' > "$fixture/deploy/releases/stale"
+printf 'stale' > "$fixture/deploy/backups/code-stale"
+printf 'stale' > "$fixture/deploy/incoming/stale"
+printf 'stale' > "$fixture/deploy/shared/assets/stale.js"
+
 sha=$(printf '%040d' 2)
-make_release "$sha"
-mkdir -p "$fixture/deploy/releases/stale-release" "$fixture/deploy/backups/code-stale-release"
-touch "$fixture/deploy/incoming/old-release.tar.gz" "$fixture/deploy/incoming/old-release-routes.json"
-publish "$sha"
-test -d "$LIVE_ROOT" && test ! -L "$LIVE_ROOT"
+payload="$fixture/payload"
+mkdir -p "$payload/"{vendor,public/build/assets,bootstrap/cache}
+printf '<?php' > "$payload/vendor/autoload.php"
+printf '<?php' > "$payload/artisan"
+printf '%s' "$sha" > "$payload/new-code.php"
+printf '{"commit":"%s"}' "$sha" > "$payload/public/deployment.json"
+printf '{"resources/js/app.js":{"file":"assets/app.js"}}' > "$payload/public/build/manifest.json"
+printf 'new-asset' > "$payload/public/build/assets/app.js"
+
+(cd "$LIVE_ROOT" && php artisan down --retry=30)
+rsync -a --checksum --delete --delay-updates \
+    --exclude=/.env --exclude=/storage --exclude=/public/storage --exclude=/bootstrap/cache \
+    "$payload/" "$LIVE_ROOT/"
+bash "$root/scripts/deploy/hostinger-release.sh" "$fixture/deploy" "$LIVE_ROOT" https://example.com "$sha"
 test "$(cat "$LIVE_ROOT/.env")" = production-secret
 test "$(cat "$LIVE_ROOT/storage/upload.txt")" = persistent-upload
 test ! -e "$LIVE_ROOT/old-only.php"
-test ! -L "$LIVE_ROOT/public/build/assets"
 test ! -e "$LIVE_ROOT/storage/maintenance-test"
-test "$(find "$fixture/deploy/releases" -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 1
-test -d "$fixture/deploy/releases/$sha"
-test "$(find "$fixture/deploy/backups" -mindepth 1 -maxdepth 1 -type d -name 'code-*' | wc -l)" -eq 1
-test ! -e "$fixture/deploy/incoming/$sha.tar.gz"
-test ! -e "$fixture/deploy/incoming/$sha-routes.json"
-test ! -e "$fixture/deploy/incoming/$sha-assets.txt"
-test ! -e "$fixture/deploy/incoming/old-release.tar.gz"
-test ! -e "$fixture/deploy/incoming/old-release-routes.json"
-test -f "$fixture/deploy/shared/assets/app.js"
-test ! -e "$fixture/deploy/shared/assets/old.js"
-test ! -e "$LIVE_ROOT/public/build/assets/old.js"
-publish "$sha" # Retry of the active commit is harmless.
-sha=$(printf '%040d' 3)
-make_release "$sha"
+test -f "$LIVE_ROOT/public/build/assets/app.js"
+test ! -e "$fixture/deploy/releases"
+test ! -e "$fixture/deploy/backups"
+test ! -e "$fixture/deploy/incoming"
+test ! -e "$fixture/deploy/shared/assets"
+
+# Failed public verification cannot roll code back without a server-side copy,
+# but the application must still leave maintenance mode.
 touch "$FAIL_HTTP"
-if publish "$sha"; then echo 'Expected HTTP verification to fail' >&2; exit 1; fi
-test "$(cat "$LIVE_ROOT/new-code.php")" = "$(printf '%040d' 2)"
-test "$(cat "$LIVE_ROOT/.env")" = production-secret
-test "$(cat "$LIVE_ROOT/storage/upload.txt")" = persistent-upload
-test ! -e "$LIVE_ROOT/storage/maintenance-test"
-rm "$FAIL_HTTP"
-legacy="$fixture/legacy"
-old_live="$LIVE_ROOT"
-export LIVE_ROOT="$legacy/site"
-mkdir -p "$legacy/deploy/"{incoming,releases/initial,backups,shared/assets}
-rsync -a --exclude=/.env --exclude=/storage --exclude=/public/storage --exclude=/public/build/assets "$old_live/" "$legacy/deploy/releases/initial/"
-cp "$old_live/.env" "$legacy/deploy/shared/.env"
-cp -a "$old_live/storage" "$legacy/deploy/shared/storage"
-cp -a "$old_live/public/build/assets/." "$legacy/deploy/shared/assets/"
-ln -s "$legacy/deploy/shared/.env" "$legacy/deploy/releases/initial/.env"
-ln -s "$legacy/deploy/shared/storage" "$legacy/deploy/releases/initial/storage"
-ln -s "$legacy/deploy/shared/assets" "$legacy/deploy/releases/initial/public/build/assets"
-ln -s "$legacy/deploy/releases/initial" "$LIVE_ROOT"
-ln -s "$legacy/deploy/releases/initial" "$legacy/deploy/current"
-touch "$FAIL_HTTP"
-if bash "$root/scripts/deploy/hostinger-file-manager-layout.sh" "$legacy/deploy" "$LIVE_ROOT" https://example.com; then
-    echo 'Expected layout verification to fail' >&2; exit 1
+(cd "$LIVE_ROOT" && php artisan down --retry=30)
+if bash "$root/scripts/deploy/hostinger-release.sh" "$fixture/deploy" "$LIVE_ROOT" https://example.com "$sha"; then
+    echo 'Expected HTTP verification to fail' >&2
+    exit 1
 fi
-test -L "$LIVE_ROOT"
-test "$(cat "$LIVE_ROOT/storage/upload.txt")" = persistent-upload
 test ! -e "$LIVE_ROOT/storage/maintenance-test"
-rm "$FAIL_HTTP"
-bash "$root/scripts/deploy/hostinger-file-manager-layout.sh" "$legacy/deploy" "$LIVE_ROOT" https://example.com
-test -d "$LIVE_ROOT" && test ! -L "$LIVE_ROOT"
-test -f "$LIVE_ROOT/.env" && test ! -L "$LIVE_ROOT/.env"
-test -d "$LIVE_ROOT/storage" && test ! -L "$LIVE_ROOT/storage"
-test -d "$LIVE_ROOT/public/build/assets" && test ! -L "$LIVE_ROOT/public/build/assets"
-test "$(cat "$LIVE_ROOT/storage/upload.txt")" = persistent-upload
-test "$(readlink -f "$legacy/deploy/current")" = "$LIVE_ROOT"
-echo 'PASS: real directory, preserved environment/uploads/assets, idempotence and failed-release recovery.'
+echo 'PASS: direct update preserves environment/uploads and creates no code copies.'

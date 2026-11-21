@@ -52,7 +52,7 @@ jobs:
           npm run build
           node --test tests/Deployment/buildManifest.test.mjs
           php scripts/deploy/verify-build.php public/build/manifest.json
-      - name: Test deployment preservation and rollback
+      - name: Test direct deployment preservation
         run: bash tests/Deployment/hostingerRelease.test.sh
       - name: Test backend against the complete build
         env:
@@ -87,16 +87,6 @@ jobs:
           rm -rf release/public/storage
           find release/bootstrap/cache -maxdepth 1 -type f ! -name '.gitignore' -delete
           printf '{"commit":"%s"}\n' "$RELEASE_SHA" > release/public/deployment.json
-          tar -czf release.tar.gz -C release .
-          sha256sum release.tar.gz > release.tar.gz.sha256
-      - uses: actions/upload-artifact@v4
-        with:
-          name: hostinger-${{ github.sha }}
-          overwrite: true
-          path: |
-            release.tar.gz
-            release.tar.gz.sha256
-          retention-days: 14
       - name: Connect and publish release
         env:
           SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
@@ -123,9 +113,20 @@ jobs:
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          trap 'rm -f ~/.ssh/deploy_key' EXIT
           SSH=(ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes)
-          SCP=(scp -i ~/.ssh/deploy_key -P "$SSH_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes)
-          "${SSH[@]}" "$SSH_USER@$SSH_HOST" "test -d '$DEPLOY_BASE/incoming'"
-          "${SCP[@]}" release.tar.gz "$SSH_USER@$SSH_HOST:$DEPLOY_BASE/incoming/$RELEASE_SHA.tar.gz"
-          "${SSH[@]}" "$SSH_USER@$SSH_HOST" "bash -s -- '$DEPLOY_BASE' '$WEB_ROOT' '$SITE_URL' '$RELEASE_SHA' '$(cut -d ' ' -f1 release.tar.gz.sha256)'" < scripts/deploy/hostinger-release.sh
+          cleanup() {
+            "${SSH[@]}" "$SSH_USER@$SSH_HOST" "cd '$WEB_ROOT' && php artisan up" || true
+            rm -f ~/.ssh/deploy_key
+          }
+          trap cleanup EXIT
+          "${SSH[@]}" "$SSH_USER@$SSH_HOST" "test -d '$DEPLOY_BASE' && test -f '$WEB_ROOT/artisan' && cd '$WEB_ROOT' && php artisan down --retry=30"
+          # rsync compares both trees and transfers only changed/new files.
+          # Production configuration and runtime data never come from GitHub.
+          rsync -az --checksum --delete --delay-updates \
+            -e "ssh -i $HOME/.ssh/deploy_key -p $SSH_PORT -o BatchMode=yes -o StrictHostKeyChecking=yes" \
+            --exclude=/.env \
+            --exclude=/storage \
+            --exclude=/public/storage \
+            --exclude=/bootstrap/cache \
+            release/ "$SSH_USER@$SSH_HOST:$WEB_ROOT/"
+          "${SSH[@]}" "$SSH_USER@$SSH_HOST" "bash -s -- '$DEPLOY_BASE' '$WEB_ROOT' '$SITE_URL' '$RELEASE_SHA'" < scripts/deploy/hostinger-release.sh
