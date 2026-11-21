@@ -428,37 +428,13 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (organizations.isNotEmpty)
-                  _organizationSwitcher(organizations, currentOrganization),
+                  _organizationSwitcher(organizations, currentOrganization, profile),
                 if (invitations.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _pendingInvitations(invitations),
                 ],
                 if (organizations.isNotEmpty) const SizedBox(height: 14),
                 _hero(profile, capabilities, currentId),
-                if (profile != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: AirmiusPanel(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _text(profile['name']),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(_profileCopy(context, 'verification_title')),
-                          Text(
-                            _profileCopy(
-                              context,
-                              'verification_${_text(profile['verification_status'], fallback: 'pending_review')}',
-                            ),
-                          ),
-                          if (_text(profile['verification_note']).isNotEmpty)
-                            Text(_text(profile['verification_note'])),
-                        ],
-                      ),
-                    ),
-                  ),
                 if (profile == null && capabilities['edit_own_profile'] == true)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
@@ -541,6 +517,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   Widget _organizationSwitcher(
     List<Map<String, dynamic>> organizations,
     Map<String, dynamic> current,
+    Map<String, dynamic>? profile,
   ) {
     final currentId = _int(current['id']);
     return AirmiusPanel(
@@ -552,7 +529,14 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Eyebrow(t('sponsorCockpit.organization')),
+                Row(children: [
+                  Expanded(child: Eyebrow(t('sponsorCockpit.organization'))),
+                  if (profile != null)
+                    Text(
+                      _profileCopy(context, 'status_${_text(profile['verification_status'], fallback: 'pending_review')}'),
+                      style: TextStyle(color: airmiusAccentColor(context), fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                ]),
                 const SizedBox(height: 3),
                 if (organizations.length == 1)
                   Text(
@@ -2512,6 +2496,7 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
                 label: _profileCopy(context, 'country'),
                 required: true,
               ),
+              const SizedBox(height: 12),
               _field('region', _profileCopy(context, 'region'), max: 120),
               _field('city', _profileCopy(context, 'city'), max: 120),
               const SizedBox(height: 12),
@@ -2665,6 +2650,9 @@ const _profileMessages = <AirmiusLanguage, Map<String, String>>{
     'data_privacy':
         'Ich nutze Kontakt- und Kampagnendaten nur zweckgebunden und beachte die Datenschutzregeln.',
     'verification_title': 'Öffentliche Verifizierung',
+    'status_pending_review': 'In Prüfung',
+    'status_verified': 'Verifiziert',
+    'status_rejected': 'Korrektur nötig',
     'verification_pending_review':
         'Deine Angaben werden geprüft und sind bis zur Freigabe nicht öffentlich sichtbar.',
     'verification_verified':
@@ -2689,6 +2677,9 @@ const _profileMessages = <AirmiusLanguage, Map<String, String>>{
     'data_privacy':
         'I use contact and campaign data only for its intended purpose and follow privacy rules.',
     'verification_title': 'Public verification',
+    'status_pending_review': 'Under review',
+    'status_verified': 'Verified',
+    'status_rejected': 'Changes needed',
     'verification_pending_review':
         'Your details are under review and remain private until approved.',
     'verification_verified':
@@ -2711,6 +2702,9 @@ const _profileMessages = <AirmiusLanguage, Map<String, String>>{
     'data_privacy':
         'J’utilise les données de contact et de campagne uniquement aux fins prévues et respecte les règles de confidentialité.',
     'verification_title': 'Vérification publique',
+    'status_pending_review': 'En cours d’examen',
+    'status_verified': 'Vérifié',
+    'status_rejected': 'Correction requise',
     'verification_pending_review':
         'Vos informations sont en cours de vérification et restent privées jusqu’à leur approbation.',
     'verification_verified':
@@ -2734,6 +2728,9 @@ const _profileMessages = <AirmiusLanguage, Map<String, String>>{
     'data_privacy':
         'أستخدم بيانات الاتصال والحملات للغرض المحدد فقط وألتزم بقواعد الخصوصية.',
     'verification_title': 'التحقق العلني',
+    'status_pending_review': 'قيد المراجعة',
+    'status_verified': 'تم التحقق',
+    'status_rejected': 'يلزم التصحيح',
     'verification_pending_review':
         'بياناتك قيد المراجعة وستبقى غير علنية حتى الموافقة.',
     'verification_verified': 'ملف الراعي الموثّق ظاهر للعامة.',
