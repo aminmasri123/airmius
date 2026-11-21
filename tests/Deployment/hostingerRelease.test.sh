@@ -68,9 +68,16 @@ test -d "$LIVE_ROOT" && test ! -L "$LIVE_ROOT"
 test "$(cat "$LIVE_ROOT/.env")" = production-secret
 test "$(cat "$LIVE_ROOT/storage/upload.txt")" = persistent-upload
 test ! -e "$LIVE_ROOT/old-only.php"
-test -f "$LIVE_ROOT/public/build/assets/old.js"
 test ! -L "$LIVE_ROOT/public/build/assets"
 test ! -e "$LIVE_ROOT/storage/maintenance-test"
+test -z "$(find "$fixture/deploy/releases" -mindepth 1 -maxdepth 1 -print -quit)"
+test -z "$(find "$fixture/deploy/backups" -mindepth 1 -maxdepth 1 -type d -name 'code-*' -print -quit)"
+test ! -e "$fixture/deploy/incoming/$sha.tar.gz"
+test ! -e "$fixture/deploy/incoming/$sha-routes.json"
+test ! -e "$fixture/deploy/incoming/$sha-assets.txt"
+test -f "$fixture/deploy/shared/assets/app.js"
+test ! -e "$fixture/deploy/shared/assets/old.js"
+test ! -e "$LIVE_ROOT/public/build/assets/old.js"
 publish "$sha" # Retry of the active commit is harmless.
 sha=$(printf '%040d' 3)
 make_release "$sha"

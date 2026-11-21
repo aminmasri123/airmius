@@ -123,4 +123,26 @@ done < "$base/incoming/$sha-assets.txt"
 php artisan queue:restart
 maintenance=false
 trap - ERR
+
+# The live application is a real directory, so private release trees and code
+# backups are needed only while a deployment is running. Keeping them after a
+# verified publication duplicates vendor/ and quickly exhausts hosting inodes.
+asset_keep_list="$base/incoming/$sha-asset-basenames.txt"
+while IFS= read -r asset; do basename "$asset"; done < "$base/incoming/$sha-assets.txt" \
+    | sort -u > "$asset_keep_list"
+for asset_root in "$base/shared/assets" "$web_root/public/build/assets"; do
+    test -d "$asset_root"
+    while IFS= read -r -d '' asset; do
+        grep -Fqx "$(basename "$asset")" "$asset_keep_list" || rm -f -- "$asset"
+    done < <(find "$asset_root" -maxdepth 1 -type f -print0)
+done
+
+# Retain runtime data snapshots such as storage-before-hpanel-* because GitHub
+# contains application code, not production uploads. Remove code-only rollback
+# copies and staging metadata after the new commit has passed every health check.
+find "$base/releases" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+find "$base/backups" -mindepth 1 -maxdepth 1 -type d -name 'code-*' -exec rm -rf -- {} +
+find "$base/incoming" -mindepth 1 -maxdepth 1 -type f \
+    \( -name '*.tar.gz' -o -name '*-routes.json' -o -name '*-assets.txt' -o -name '*-asset-basenames.txt' \) \
+    -delete
 echo "Published and verified commit $sha"
