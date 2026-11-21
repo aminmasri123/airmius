@@ -15680,7 +15680,14 @@ const _clubHubDe = {
   'clubHub.chooseClub': 'Verein auswählen',
   'clubHub.createAnotherClub': 'Weiteren Verein anlegen',
   'clubDeletion.title': 'Verein löschen',
-  'clubDeletion.pending': 'Löschung vorgemerkt',
+  'clubDeletion.settingsTitle': 'Verein aus Airmius löschen',
+  'clubDeletion.pending': 'Löschung beantragt',
+  'clubDeletion.reviewStatus': 'Prüfstatus',
+  'clubDeletion.reviewNotRequired': 'Keine Finanzprüfung erforderlich',
+  'clubDeletion.reviewExportRequired': 'Aktueller Finanzexport erforderlich',
+  'clubDeletion.reviewArchiveRequired': 'Archivbestätigung ausstehend',
+  'clubDeletion.reviewPassed': 'Finanzprüfung bestanden',
+  'clubDeletion.datePending': 'Löschtermin steht noch aus.',
   'clubDeletion.details': 'Löschantrag verwalten',
   'clubDeletion.warning':
       'Der Verein wird frühestens 30 Tage nach deiner Bestätigung endgültig gelöscht. Bis zur Ausführung kannst du den Antrag hier zurücknehmen. Der Verein bleibt in dieser Zeit nutzbar.',
@@ -15696,12 +15703,8 @@ const _clubHubDe = {
   'clubDeletion.code': 'Sechsstelliger E-Mail-Code',
   'clubDeletion.codeSent': 'Der Code wurde an deine Konto-E-Mail gesendet.',
   'clubDeletion.guide': 'Informationen zur Vereinslöschung',
-  'clubDeletion.supportReview': 'Support zur Prüfung kontaktieren',
-  'clubDeletion.requestReview': 'Prüfung beim Support anfordern',
-  'clubDeletion.reviewRequested':
-      'Prüfung angefordert. Der Verein wird dadurch noch nicht gelöscht.',
   'clubDeletion.archiveNotice':
-      'Für Finanzunterlagen ist der Verein selbst verantwortlich. Sichere die erforderlichen Originale in einem geeigneten eigenen Archiv. Das Airmius-ZIP allein ist kein revisionssicheres Archiv. Die Löschung erfolgt erst nach Supportfreigabe.',
+      'Für Finanzunterlagen ist der Verein selbst verantwortlich. Sichere die erforderlichen Originale in einem geeigneten eigenen Archiv. Das Airmius-ZIP allein ist kein revisionssicheres Archiv. Airmius prüft automatisch, ob der Export nach deiner Archivbestätigung noch aktuell ist.',
   'clubDeletion.downloadFinance': 'Finanzdaten und Belege herunterladen',
   'clubDeletion.exportReady':
       'Export erstellt. Bitte Inhalt und Belege prüfen.',
@@ -15713,21 +15716,17 @@ const _clubHubDe = {
       'Ich habe die benötigten Originalunterlagen vollständig und gesetzeskonform außerhalb von Airmius archiviert.',
   'clubDeletion.confirmArchive': 'Eigene Archivierung bestätigen',
   'clubDeletion.archiveConfirmed': 'Eigene Archivierung bestätigt.',
-  'clubDeletion.financeApproved':
-      'Support hat die Finanzdatenlöschung freigegeben.',
   'legalHub.accountDeletionBody':
       'Ablauf, Folgen, Aufbewahrung und Rechtsgrundlagen der Kontolöschung.',
   'legalHub.clubDeletionBody':
       'Berechtigung, Bedenkzeit, Finanzsperren und Löschfolgen für Vereine.',
   'clubDeletion.confirm': 'Bestätigung',
-  'clubDeletion.request': 'Löschung in 30 Tagen vormerken',
-  'clubDeletion.cancel': 'Löschung zurücknehmen',
+  'clubDeletion.request': 'Löschung beantragen',
+  'clubDeletion.cancel': 'Antrag zurücknehmen',
   'clubDeletion.cancelled':
       'Löschung zurückgenommen. Dein Verein bleibt erhalten.',
   'clubDeletion.requested':
       'Löschung vorgemerkt. Du kannst den Antrag zurücknehmen.',
-  'clubDeletion.blocked':
-      'Die Löschung wurde angehalten. Bitte kontaktiere den Support oder nimm den Antrag zurück.',
   'clubHub.eyebrow': 'Dein Verwaltungsbereich',
   'clubHub.verified': 'Verifiziert',
   'clubHub.managed': 'Verwaltet',
@@ -15873,7 +15872,14 @@ final _clubHubEn = {
   'clubHub.chooseClub': 'Choose club',
   'clubHub.createAnotherClub': 'Register another club',
   'clubDeletion.title': 'Delete club',
-  'clubDeletion.pending': 'Deletion scheduled',
+  'clubDeletion.settingsTitle': 'Delete club from Airmius',
+  'clubDeletion.pending': 'Deletion requested',
+  'clubDeletion.reviewStatus': 'Review status',
+  'clubDeletion.reviewNotRequired': 'No financial review required',
+  'clubDeletion.reviewExportRequired': 'Current financial export required',
+  'clubDeletion.reviewArchiveRequired': 'Waiting for archive confirmation',
+  'clubDeletion.reviewPassed': 'Financial review passed',
+  'clubDeletion.datePending': 'Deletion date pending.',
   'clubDeletion.details': 'Manage deletion request',
   'clubDeletion.warning':
       'The club will be permanently deleted no earlier than 30 days after your confirmation. You can cancel the request here until deletion takes place. The club remains available during this period.',
@@ -15889,12 +15895,8 @@ final _clubHubEn = {
   'clubDeletion.code': 'Six-digit email code',
   'clubDeletion.codeSent': 'The code was sent to your account email.',
   'clubDeletion.guide': 'About club deletion',
-  'clubDeletion.supportReview': 'Contact support for review',
-  'clubDeletion.requestReview': 'Request support review',
-  'clubDeletion.reviewRequested':
-      'Review requested. This does not delete the club.',
   'clubDeletion.archiveNotice':
-      'The club is responsible for its financial records. Preserve the required originals in your own suitable archive. The Airmius ZIP alone is not a compliant long-term archive. Deletion requires support approval.',
+      'The club is responsible for its financial records. Preserve the required originals in your own suitable archive. The Airmius ZIP alone is not a compliant long-term archive. Airmius automatically checks whether the export is still current after you confirm archiving.',
   'clubDeletion.downloadFinance': 'Download financial data and receipts',
   'clubDeletion.exportReady':
       'Export created. Please check contents and receipts.',
@@ -15906,18 +15908,15 @@ final _clubHubEn = {
       'I have completely preserved the required original records outside Airmius in a legally compliant archive.',
   'clubDeletion.confirmArchive': 'Confirm external archive',
   'clubDeletion.archiveConfirmed': 'External archive confirmed.',
-  'clubDeletion.financeApproved': 'Support approved financial data deletion.',
   'legalHub.accountDeletionBody':
       'Steps, effects, retention and legal grounds for account deletion.',
   'legalHub.clubDeletionBody':
       'Permissions, grace period, financial blockers and effects of club deletion.',
   'clubDeletion.confirm': 'Confirmation',
-  'clubDeletion.request': 'Schedule deletion in 30 days',
-  'clubDeletion.cancel': 'Cancel deletion',
+  'clubDeletion.request': 'Request deletion',
+  'clubDeletion.cancel': 'Cancel request',
   'clubDeletion.cancelled': 'Deletion cancelled. Your club will be kept.',
   'clubDeletion.requested': 'Deletion scheduled. You can cancel the request.',
-  'clubDeletion.blocked':
-      'Deletion has been paused. Please contact support or cancel the request.',
   'clubHub.eyebrow': 'Your management area',
   'clubHub.verified': 'Verified',
   'clubHub.managed': 'Managed',

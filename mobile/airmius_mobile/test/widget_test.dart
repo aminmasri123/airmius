@@ -2051,6 +2051,23 @@ void main() {
     },
   );
 
+  test('sponsor management passes the notification sponsor ID as a query parameter', () async {
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(statusCode: 200, body: '{"data":{}}'),
+    );
+    final client = AirmiusApiClient(
+      transport: transport,
+      baseUrl: 'https://airmius.test',
+    );
+
+    await client.sponsorManagement(sponsorId: 2);
+
+    final request = transport.requests.single;
+    expect(request.method, 'GET');
+    expect(request.path, '/api/v1/sponsor-management');
+    expect(request.query, {'sponsor_id': '2'});
+  });
+
   test('user model preserves effective roles and permissions', () {
     final user = AirmiusUser.fromJson({
       'id': 7,

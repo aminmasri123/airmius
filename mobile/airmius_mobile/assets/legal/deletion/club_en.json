@@ -18,7 +18,7 @@
     {
       "title": "Grace period, notice and cancellation",
       "body": [
-        "For an eligible request, the earliest deletion date is set 30 days ahead. The club remains usable until execution, and the owner can cancel the request in the same settings. Repeating a request does not extend the existing deadline.",
+        "The grace period begins when the request is confirmed and lasts at least 30 days. The club remains usable and its owner can cancel in the same settings until deletion begins. Repeating the request does not restart the period.",
         "The owner and registered board members are notified. A pending request does not continue under a new owner after ownership changes. Actual deletion runs after the period and only if no blocker applies."
       ]
     },
@@ -34,9 +34,9 @@
     {
       "title": "Why automatic deletion may be blocked",
       "body": [
-        "Existing club invoices, payments, bank transactions, finance entries or SEPA batches currently block automatic club deletion. An active payment-provider subscription may also block it. This does not mean the entire club must remain visible and active forever; support must review retention and handover.",
-        "Before a manual resolution, support must determine which records the club must receive, which data Airmius must keep for its own legal duties, and which club data must be returned or deleted on the club's instruction. Airmius does not promise to automatically archive all club accounting records.",
-        "For financial records, the owner can download a data package, confirm that the required original documents have been archived independently, and request support review. They can then start the 30-day deletion period. Deletion remains blocked until a platform administrator records approval. Changes to financial data or missing linked receipts require a new export and review. Airmius's own invoices may be retained separately for its legal obligations.",
+        "Airmius automatically checks for a current export with linked receipts and the owner’s archive confirmation. An active payment-provider subscription also pauses deletion.",
+        "The owner downloads the package, preserves the required originals in a suitable external archive and confirms this in Airmius. Airmius may retain its own invoices to meet its obligations.",
+        "If financial data changes or linked receipts are missing, export again and reconfirm archiving. Airmius shows the earliest deletion date once the checks pass. If a restriction clears shortly before or after the deadline, Airmius gives at least seven days’ notice.",
         "Some uploaded files scheduled for deletion are removed in a subsequent cleanup run; failed deletion attempts are retried.",
         "Deletion removes data from the active system and associated file storage. Older database or hosting backups may still contain it until their separate backup cycle expires. Immediate individual erasure from every backup is not promised; completed deletions must be reapplied after a restore. The actual backup retention period in production must be verified before release."
       ]
@@ -51,14 +51,14 @@
       ]
     },
     {
-      "title": "Help and manual review",
+      "title": "Status and help",
       "body": [
-        "If records or contractual duties block the request, first secure available exports and contact support through /kontakt-und-melden with the club name and contact details. Support reviews identity, authority and the required retention or handover. Automatic deletion is not promised while review is pending.",
+        "Club settings show the review status and next steps. You can cancel the request there until deletion starts.",
         "If you only want to delete your personal account, use the separate account-deletion page instead. For erasure or access requests, Airmius reviews the individual case under GDPR Articles 12 and 15 to 18."
       ]
     }
   ],
-  "note": "Updated: 15.10.2026. This describes the current product flow; individual legal assessments and the processing agreement require professional review before a production archive or support process is offered.",
+  "note": "Updated 21.11.2026. This page describes how club deletion works in Airmius.",
   "contentLocale": "en",
   "translationComplete": true
 }

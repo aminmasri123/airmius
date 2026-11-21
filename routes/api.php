@@ -1291,8 +1291,6 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('/admin/support/tickets', [SupportTicketController::class, 'adminIndex'])->name('admin.support.tickets.index');
             Route::post('/admin/support/safety-operators', [SupportTicketController::class, 'assignSafetyOperator'])->name('admin.support.safety-operators.store');
             Route::patch('/admin/support/tickets/{supportTicket}', [SupportTicketController::class, 'adminUpdate'])->name('admin.support.tickets.update');
-            Route::post('/admin/clubs/{club}/deletion-finance-review', [ClubDeletionController::class, 'decideReview'])->middleware('throttle:3,1')->name('admin.clubs.deletion-finance-review');
-            Route::get('/admin/clubs/{club}/deletion-finance-review', [ClubDeletionController::class, 'reviewStatus'])->name('admin.clubs.deletion-finance-review.show');
             Route::get('/admin/outfits', [AdminOutfitController::class, 'dashboard'])->name('admin.outfits.dashboard');
             Route::post('/admin/outfits/plans', [AdminOutfitController::class, 'storePlan'])->name('admin.outfits.plans.store');
             Route::put('/admin/outfits/plans/{outfitSubscriptionPlan}', [AdminOutfitController::class, 'updatePlan'])->name('admin.outfits.plans.update');

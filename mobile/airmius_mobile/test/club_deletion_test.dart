@@ -124,7 +124,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(transport.requests.last.path, '/api/v1/clubs/7/deletion-code');
 
-      final buttonText = find.text('Löschung in 30 Tagen vormerken');
+      final buttonText = find.text('Löschung beantragen');
       await tester.scrollUntilVisible(
         buttonText,
         180,
@@ -150,8 +150,9 @@ void main() {
         transport.requests.where((r) => r.method == 'DELETE').single.path,
         '/api/v1/clubs/7',
       );
-      expect(find.text('Löschung vorgemerkt'), findsOneWidget);
-      final cancel = find.text('Löschung zurücknehmen');
+      expect(find.text('Löschung beantragt'), findsOneWidget);
+      expect(find.textContaining('Frühester Löschtermin'), findsOneWidget);
+      final cancel = find.text('Antrag zurücknehmen');
       await tester.scrollUntilVisible(
         cancel,
         180,
@@ -160,7 +161,11 @@ void main() {
       await tester.tap(cancel);
       await tester.pumpAndSettle();
       expect(transport.requests.last.path, '/api/v1/clubs/7/deletion');
-      expect(find.byType(TextField), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Passwort bestätigen'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -185,10 +190,6 @@ void main() {
         throwsA(isA<AirmiusApiException>()),
       );
       await expectLater(
-        client.requestClubDeletionReview(7),
-        throwsA(isA<AirmiusApiException>()),
-      );
-      await expectLater(
         client.confirmClubDeletionArchive(7),
         throwsA(isA<AirmiusApiException>()),
       );
@@ -200,55 +201,51 @@ void main() {
     },
   );
 
-  testWidgets('blocked owner can request one visible support review', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(360, 740);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final transport = _DeletionTransport()..blocker = 'Buchhaltungsunterlagen';
-    final container = AirmiusServiceContainer(
-      environment: const AirmiusAppEnvironment(
-        apiBaseUrl: 'https://example.test',
-        enableOfflineQueue: false,
-      ),
-      transport: transport,
-    );
-    await tester.pumpWidget(
-      AirmiusScope(
-        language: AirmiusLanguage.de,
-        setLanguage: (_) {},
-        child: AirmiusServicesScope(
-          container: container,
-          child: const MaterialApp(
-            home: ClubDeletionScreen(
-              clubId: 7,
-              clubName: 'Sportverein Beispiel',
+  testWidgets(
+    'pending owner sees automated review and can cancel without a date',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 740);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final transport = _DeletionTransport()
+        ..blocker = 'Buchhaltungsunterlagen'
+        ..requested = true;
+      final container = AirmiusServiceContainer(
+        environment: const AirmiusAppEnvironment(
+          apiBaseUrl: 'https://example.test',
+          enableOfflineQueue: false,
+        ),
+        transport: transport,
+      );
+      await tester.pumpWidget(
+        AirmiusScope(
+          language: AirmiusLanguage.de,
+          setLanguage: (_) {},
+          child: AirmiusServicesScope(
+            container: container,
+            child: const MaterialApp(
+              home: ClubDeletionScreen(
+                clubId: 7,
+                clubName: 'Sportverein Beispiel',
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final review = find.text('Prüfung beim Support anfordern');
-    await tester.scrollUntilVisible(
-      review,
-      180,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(review);
-    await tester.pumpAndSettle();
-    expect(transport.requests.last.path, '/api/v1/clubs/7/deletion-review');
-    expect(
-      find.text(
-        'Prüfung angefordert. Der Verein wird dadurch noch nicht gelöscht.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Prüfung beim Support anfordern'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Aktueller Finanzexport erforderlich'), findsOneWidget);
+      expect(find.text('Löschtermin steht noch aus.'), findsOneWidget);
+      await tester.tap(find.text('Antrag zurücknehmen'));
+      await tester.pumpAndSettle();
+      expect(transport.requests.last.path, '/api/v1/clubs/7/deletion');
+      expect(
+        transport.requests.any((r) => r.path.endsWith('/deletion-review')),
+        isFalse,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('deletion guides render for guests without a session', (
     tester,
@@ -697,7 +694,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final link = find.text('Informationen zur Vereinslöschung');
-    await tester.ensureVisible(link);
+    await tester.scrollUntilVisible(
+      link,
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(link);
     await tester.pumpAndSettle();
     expect(find.byType(DeletionGuideScreen), findsOneWidget);
@@ -751,15 +752,15 @@ class _DeletionTransport implements AirmiusApiTransport {
   final requests = <AirmiusApiRequest>[];
   String? date;
   String? blocker;
-  int? reviewTicketId;
+  bool requested = false;
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     requests.add(request);
     if (request.method == 'DELETE') {
-      date = request.path.endsWith('/deletion') ? null : '2026-10-27T12:00:00Z';
+      requested = !request.path.endsWith('/deletion');
+      date = requested ? '2026-10-27T12:00:00Z' : null;
     }
-    if (request.path.endsWith('/deletion-review')) reviewTicketId = 12;
     return AirmiusApiResponse(
       statusCode: 200,
       body: jsonEncode({
@@ -767,10 +768,11 @@ class _DeletionTransport implements AirmiusApiTransport {
           'scheduled_at': date,
           'confirmation': 'Ja, ich bin mir sicher',
           'blocker': blocker,
-          'can_request': blocker == null,
+          'can_request': !requested,
           'blocked': false,
           'requires_password': true,
-          'review_ticket_id': reviewTicketId,
+          'requested_at': requested ? '2026-09-27T12:00:00Z' : null,
+          'review_status': blocker == null ? 'not_required' : 'export_required',
         },
       }),
     );

@@ -236,7 +236,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                 if (club.deletionScheduledAt != null) ...[
                   const SizedBox(height: 12),
                   Text(
-                    '${t('clubDeletion.pending')}: ${DateFormat.yMMMd().format(club.deletionScheduledAt!.toLocal())}',
+                    t('clubDeletion.pending'),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                       fontWeight: FontWeight.bold,

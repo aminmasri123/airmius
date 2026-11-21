@@ -95,13 +95,8 @@ class ClubDeletionController extends Controller
 
     public function requestReview(Request $request, Club $club, ClubDeletionService $service)
     {
-        $ticket = $service->requestReview($club, $request->user());
-
-        return response()->json([
-            'message' => __('club_deletion.review_requested'),
-            'data' => $service->status($club, $request->user()),
-            'ticket_id' => $ticket->id,
-        ]);
+        // Previously released clients can still refresh status through this endpoint.
+        return $this->show($request, $club, $service);
     }
 
     public function confirmArchive(Request $request, Club $club, ClubDeletionService $service)
@@ -110,27 +105,6 @@ class ClubDeletionController extends Controller
         $service->confirmExternalArchive($club, $request->user());
 
         return response()->json(['data' => $service->status($club, $request->user())]);
-    }
-
-    public function decideReview(Request $request, Club $club, ClubDeletionService $service)
-    {
-        abort_unless($request->user()->hasRole('super_admin'), 403);
-        $data = $request->validate([
-            'decision' => ['required', 'in:approve,reject'],
-            'note' => ['required', 'string', 'min:20', 'max:2000'],
-            'reviewed_contract_and_retention' => ['required', 'accepted'],
-            'reviewed_authority' => ['required', 'accepted'],
-        ]);
-        $service->decideFinancialReview($club, $request->user(), $data['decision'] === 'approve', $data['note']);
-
-        return response()->json(['data' => $service->status($club)]);
-    }
-
-    public function reviewStatus(Request $request, Club $club, ClubDeletionService $service)
-    {
-        abort_unless($request->user()->hasRole('super_admin'), 403);
-
-        return response()->json(['data' => $service->status($club)]);
     }
 
     public function requestDeletion(Request $request, Club $club, ClubDeletionService $service)
@@ -142,7 +116,7 @@ class ClubDeletionController extends Controller
         $club = $service->request($club, $request->user(), $data['confirmation'], $data['code']);
 
         return response()->json([
-            'message' => __('club_deletion.requested_title'),
+            'message' => __('club_deletion.requested_pending_title'),
             'data' => $service->status($club, $request->user()),
         ], 202);
     }

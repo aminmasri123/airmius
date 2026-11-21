@@ -18,7 +18,7 @@
     {
       "title": "Frist, Nachricht und Rücknahme",
       "body": [
-        "Bei einem zulässigen Antrag wird der früheste Löschtermin 30 Tage in der Zukunft gesetzt. Bis zur Ausführung bleibt der Verein nutzbar und der Besitzer kann den Antrag in denselben Einstellungen zurücknehmen. Ein wiederholter Antrag verschiebt die laufende Frist nicht.",
+        "Die Bedenkzeit beginnt mit dem bestätigten Antrag und dauert mindestens 30 Tage. Bis zur Ausführung bleibt der Verein nutzbar und der Besitzer kann den Antrag in denselben Einstellungen zurücknehmen. Ein wiederholter Antrag startet die Frist nicht neu.",
         "Besitzer und eingetragene Vorstandsmitglieder werden benachrichtigt. Bei einem Besitzerwechsel wird ein offener Antrag nicht unter dem neuen Besitzer fortgeführt. Der tatsächliche Löschlauf erfolgt nach Fristablauf und nur, wenn keine Sperre besteht."
       ]
     },
@@ -34,9 +34,9 @@
     {
       "title": "Warum die automatische Löschung gesperrt sein kann",
       "body": [
-        "Vorhandene Vereinsrechnungen, Zahlungen, Banktransaktionen, Finanzbuchungen oder SEPA-Stapel sperren derzeit die automatische Vereinslöschung. Auch ein aktives Abo beim Zahlungsanbieter kann sperren. Das ist keine dauerhafte Pflicht, den ganzen Verein sichtbar und aktiv zu halten, sondern ein Prüf- und Übergabefall für den Support.",
-        "Der Support muss vor einer manuellen Lösung klären, welche Unterlagen der Verein erhalten muss, welche Daten Airmius aus eigenen gesetzlichen Pflichten behalten muss und welche vereinseigenen Daten nach Weisung des Vereins zurückzugeben oder zu löschen sind. Eine automatische Archivierung der gesamten Vereinsbuchhaltung durch Airmius wird nicht zugesagt.",
-        "Bei Finanzdaten kann der Besitzer ein Datenpaket herunterladen, die eigenständige Archivierung der erforderlichen Originalunterlagen bestätigen und eine Supportprüfung anfordern. Danach kann er die 30-tägige Löschfrist beantragen. Der Löschlauf bleibt bis zur dokumentierten Freigabe durch einen Plattform-Admin gesperrt. Ändern sich Finanzdaten oder fehlt ein verknüpfter Beleg, ist ein neuer Export und eine erneute Prüfung nötig. Airmius-eigene Rechnungen können aufgrund eigener Pflichten getrennt aufbewahrt werden.",
+        "Bei Finanzunterlagen prüft Airmius automatisch, ob ein aktueller Export mit den verknüpften Belegen vorliegt und der Besitzer die externe Archivierung bestätigt hat. Ein aktives Abo beim Zahlungsanbieter hält die Löschung ebenfalls an.",
+        "Der Besitzer lädt das Datenpaket herunter, sichert die erforderlichen Originalunterlagen in einem geeigneten eigenen Archiv und bestätigt das in Airmius. Airmius-eigene Rechnungen können aufgrund eigener Pflichten aufbewahrt werden.",
+        "Ändern sich Finanzdaten oder fehlen verknüpfte Belege, muss der Besitzer die Daten erneut exportieren und die Archivierung neu bestätigen. Sobald alle Voraussetzungen erfüllt sind, zeigt Airmius den frühesten Löschtermin an. Wird eine Sperre erst kurz vor oder nach Ablauf der Frist aufgehoben, gibt Airmius mindestens sieben Tage Vorlauf.",
         "Die zu löschenden hochgeladenen Dateien werden teilweise in einem nachgelagerten Bereinigungslauf entfernt; fehlgeschlagene Löschversuche werden erneut verarbeitet.",
         "Die Löschung entfernt Daten aus dem aktiven System und den zugeordneten Dateiablagen. Ältere Datenbank- oder Hosting-Sicherungen können die Daten bis zum Ablauf ihres gesonderten Sicherungszyklus noch enthalten. Eine sofortige Einzel-Löschung aus jeder Sicherung wird nicht zugesagt; bei einer Wiederherstellung müssen bereits ausgeführte Löschungen erneut berücksichtigt werden. Die konkrete Backup-Frist der Produktionsumgebung ist vor der Freigabe zu überprüfen."
       ]
@@ -51,14 +51,14 @@
       ]
     },
     {
-      "title": "Hilfe und manuelle Prüfung",
+      "title": "Status und Hilfe",
       "body": [
-        "Ist der Antrag wegen Unterlagen oder Vertragspflichten gesperrt, sichere zunächst die verfügbaren Exporte und kontaktiere den Support über /kontakt-und-melden mit Vereinsname und Kontaktdaten. Der Support prüft Identität, Berechtigung und die erforderliche Aufbewahrung beziehungsweise Übergabe. Bis dahin wird keine automatische Löschung zugesagt.",
+        "In den Vereinseinstellungen siehst du den Prüfstatus und die nächsten Schritte. Dort kannst du den Antrag bis zum Start der Löschung zurücknehmen.",
         "Wenn du lediglich dein persönliches Konto löschen willst, nutze stattdessen die separate Kontolöschseite. Bei einem Löschungs- oder Auskunftsersuchen prüft Airmius den konkreten Einzelfall nach Art. 12 und 15 bis 18 DSGVO."
       ]
     }
   ],
-  "note": "Stand: 15.10.2026. Die Darstellung beschreibt den derzeitigen Produktablauf; die rechtliche Bewertung im Einzelfall und die Auftragsverarbeitungsvereinbarung müssen vor einem produktiven Archiv-/Supportprozess fachlich geprüft werden.",
+  "note": "Stand: 21.11.2026. Diese Seite beschreibt den Ablauf der Vereinslöschung in Airmius.",
   "contentLocale": "de",
   "translationComplete": true
 }

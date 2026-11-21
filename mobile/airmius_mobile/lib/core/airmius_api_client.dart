@@ -529,8 +529,6 @@ class AirmiusApiClient {
         '/api/v1/clubs/$clubId/deletion-code',
         body: {'identity': identity},
       );
-  Future<AirmiusJson> requestClubDeletionReview(int clubId) =>
-      _json('POST', '/api/v1/clubs/$clubId/deletion-review');
   Future<AirmiusJson> confirmClubDeletionArchive(int clubId) => _json(
     'POST',
     '/api/v1/clubs/$clubId/deletion-archive-confirmation',
@@ -3924,7 +3922,8 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> sponsorManagement({int? sponsorId}) => _json(
     'GET',
-    '/api/v1/sponsor-management${sponsorId == null ? '' : '?sponsor_id=$sponsorId'}',
+    '/api/v1/sponsor-management',
+    query: {if (sponsorId != null) 'sponsor_id': sponsorId.toString()},
   );
 
   Future<AirmiusJson> sponsorInquiries({int? sponsorId}) => _json(

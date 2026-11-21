@@ -18,7 +18,7 @@
     {
       "title": "Délai, notification et annulation",
       "body": [
-        "Pour une demande recevable, la première date de suppression possible est fixée 30 jours plus tard. Le club reste utilisable et le propriétaire peut annuler la demande dans les mêmes paramètres. Une demande répétée ne prolonge pas le délai en cours.",
+        "Le délai commence à la confirmation de la demande et dure au moins 30 jours. Le club reste accessible et son propriétaire peut retirer la demande dans les mêmes paramètres jusqu’au début de la suppression. Une demande répétée ne relance pas le délai.",
         "Le propriétaire et les membres du conseil enregistrés sont informés. Une demande en cours n'est pas poursuivie sous un nouveau propriétaire en cas de transfert. La suppression effective intervient après le délai et uniquement en l'absence de blocage."
       ]
     },
@@ -34,9 +34,9 @@
     {
       "title": "Pourquoi la suppression automatique peut être bloquée",
       "body": [
-        "Les factures, paiements, opérations bancaires, écritures financières ou lots SEPA existants bloquent actuellement la suppression automatique du club. Un abonnement actif auprès du prestataire de paiement peut aussi la bloquer. Cela n'impose pas de maintenir le club visible et actif indéfiniment : le support doit examiner la conservation et la restitution.",
-        "Avant une solution manuelle, le support doit déterminer quels documents remettre au club, quelles données Airmius doit garder au titre de ses propres obligations légales et quelles données du club doivent être restituées ou supprimées selon ses instructions. Airmius ne promet pas d'archiver automatiquement toute la comptabilité du club.",
-        "Pour les données financières, le propriétaire peut télécharger un paquet de données, confirmer l'archivage indépendant des pièces originales requises et demander un examen au support. Il peut ensuite lancer le délai de suppression de 30 jours. La suppression reste bloquée jusqu'à l'approbation documentée d'un administrateur de la plateforme. Toute modification des données financières ou pièce liée manquante impose un nouvel export et un nouvel examen. Les factures propres à Airmius peuvent être conservées séparément pour ses obligations légales.",
+        "Airmius vérifie automatiquement que l’export est à jour, contient les justificatifs liés et que le propriétaire a confirmé l’archivage. Un abonnement actif auprès du prestataire de paiement suspend également la suppression.",
+        "Le propriétaire télécharge le dossier, conserve les originaux requis dans une archive externe adaptée et le confirme dans Airmius. Airmius peut conserver ses propres factures pour respecter ses obligations.",
+        "Si les données financières changent ou si des justificatifs liés manquent, il faut refaire l’export et reconfirmer l’archivage. Airmius affiche la première date possible après validation. Si un blocage est levé peu avant ou après l’échéance, Airmius accorde un préavis d’au moins sept jours.",
         "Certains fichiers téléversés destinés à être supprimés sont retirés lors d'une opération de nettoyage ultérieure ; les tentatives de suppression échouées sont relancées.",
         "La suppression retire les données du système actif et des fichiers associés. Des sauvegardes plus anciennes de la base de données ou de l'hébergement peuvent encore les contenir jusqu'à la fin de leur cycle distinct. La suppression immédiate de chaque sauvegarde n'est pas garantie ; après restauration, les suppressions déjà effectuées doivent être réappliquées. La durée réelle de conservation des sauvegardes en production doit être vérifiée avant la mise en service."
       ]
@@ -51,14 +51,14 @@
       ]
     },
     {
-      "title": "Aide et examen manuel",
+      "title": "Statut et aide",
       "body": [
-        "Si des documents ou obligations contractuelles bloquent la demande, sauvegardez d'abord les exports disponibles puis contactez le support via /kontakt-und-melden en indiquant le nom du club et vos coordonnées. Le support vérifie l'identité, l'autorisation et la conservation ou restitution requise. Aucune suppression automatique n'est promise pendant cet examen.",
+        "Les paramètres du club affichent le statut et les prochaines étapes. Tu peux y retirer la demande jusqu’au début de la suppression.",
         "Si vous souhaitez seulement supprimer votre compte personnel, utilisez la page distincte consacrée à la suppression du compte. Pour une demande d'effacement ou d'accès, Airmius examine le cas particulier conformément aux articles 12 et 15 à 18 du RGPD."
       ]
     }
   ],
-  "note": "Mise à jour : 15.10.2026. Cette page décrit le fonctionnement actuel ; une évaluation juridique individuelle et l'accord de sous-traitance doivent être examinés par des spécialistes avant toute procédure de support ou d'archivage en production.",
+  "note": "Mis à jour le 21.11.2026. Cette page décrit la suppression d’un club dans Airmius.",
   "contentLocale": "fr",
   "translationComplete": true
 }

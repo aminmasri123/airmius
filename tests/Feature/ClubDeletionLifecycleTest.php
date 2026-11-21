@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Http\Middleware\EnsurePlatformAdminTwoFactor;
 use App\Models\Club;
 use App\Models\ClubFinanceEntry;
 use App\Models\ClubGovernanceAssignment;
@@ -13,7 +12,6 @@ use App\Models\ClubTask;
 use App\Models\Event;
 use App\Models\File;
 use App\Models\Post;
-use App\Models\Role;
 use App\Models\SubscriptionInvoice;
 use App\Models\SubscriptionPlan;
 use App\Models\SupportTicket;
@@ -99,7 +97,7 @@ class ClubDeletionLifecycleTest extends TestCase
         ])->assertUnprocessable();
     }
 
-    public function test_financial_blocker_allows_owner_only_idempotent_support_review_without_deletion(): void
+    public function test_legacy_review_endpoint_returns_status_without_creating_a_support_ticket(): void
     {
         $club = $this->ownedClub();
         ClubFinanceEntry::create([
@@ -109,23 +107,19 @@ class ClubDeletionLifecycleTest extends TestCase
         ]);
         $url = '/api/v1/clubs/'.$club->id.'/deletion-review';
 
-        $first = $this->postJson($url)->assertOk();
-        $ticketId = $first->json('ticket_id');
-        $this->assertIsInt($ticketId);
-        $this->assertSame($ticketId, $first->json('data.review_ticket_id'));
-        $this->postJson($url)->assertOk()->assertJsonPath('ticket_id', $ticketId);
-        $this->assertSame(1, SupportTicket::query()->where('report_source', 'club_deletion_review')->count());
+        $this->postJson($url)->assertOk()
+            ->assertJsonPath('data.review_status', 'export_required')
+            ->assertJsonPath('data.requested_at', null);
         $this->assertNull($club->fresh()->deletion_scheduled_at);
-        $this->assertNull(SupportTicket::query()->findOrFail($ticketId)->club_id);
 
         $manager = User::factory()->create();
         $club->users()->attach($manager, ['role' => 'admin', 'roles' => ['admin']]);
         Sanctum::actingAs($manager);
         $this->postJson($url)->assertForbidden();
-        $this->assertSame(1, SupportTicket::query()->where('report_source', 'club_deletion_review')->count());
+        $this->assertFalse(SupportTicket::query()->where('report_source', 'club_deletion_review')->exists());
     }
 
-    public function test_financial_club_requires_export_external_archive_and_support_approval_before_purge(): void
+    public function test_financial_club_requires_a_current_export_and_archive_confirmation_before_automatic_purge(): void
     {
         $this->withoutMiddleware(ThrottleRequests::class);
         $club = $this->ownedClub();
@@ -163,47 +157,29 @@ class ClubDeletionLifecycleTest extends TestCase
             'number' => 'PLATFORM-1', 'title' => 'Airmius Starter',
             'amount_cents' => 900, 'currency' => 'EUR', 'status' => 'paid', 'issued_at' => now(),
         ]);
-        $this->requestDeletion($club)->assertUnprocessable();
+        $this->requestDeletion($club)->assertAccepted()
+            ->assertJsonPath('data.review_status', 'export_required')
+            ->assertJsonPath('data.scheduled_at', null);
         $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-archive-confirmation', ['archive_confirmed' => true])
             ->assertUnprocessable();
-        $this->get('/api/v1/clubs/'.$club->id.'/deletion-financial-export')->assertOk();
-        $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-archive-confirmation', ['archive_confirmed' => true])
-            ->assertOk()->assertJsonPath('data.can_request', false);
-        $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-review')->assertOk()
-            ->assertJsonPath('data.can_request', true);
-        $this->requestDeletion($club)->assertAccepted();
         $this->travel(30)->days();
-        app(ClubDeletionService::class)->process($club->id);
+        $service = app(ClubDeletionService::class);
+        $service->process($club->id);
         $this->assertDatabaseHas('clubs', ['id' => $club->id]);
-        $this->assertNotNull($club->fresh()->deletion_blocked_at);
 
-        $manager = User::factory()->create();
-        Sanctum::actingAs($manager);
-        $reviewUrl = '/api/v1/admin/clubs/'.$club->id.'/deletion-finance-review';
-        $this->getJson($reviewUrl)->assertForbidden();
-        $this->postJson($reviewUrl, [
-            'decision' => 'approve', 'note' => 'Not authorized to approve deletion.',
-            'reviewed_contract_and_retention' => true,
-        ])->assertForbidden();
+        $this->get('/api/v1/clubs/'.$club->id.'/deletion-financial-export')->assertOk();
+        $this->getJson('/api/v1/clubs/'.$club->id.'/deletion')
+            ->assertJsonPath('data.review_status', 'archive_required');
+        $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-archive-confirmation', ['archive_confirmed' => true])
+            ->assertOk()->assertJsonPath('data.review_status', 'passed');
+        $service->process($club->id);
+        $this->getJson('/api/v1/clubs/'.$club->id.'/deletion')
+            ->assertJsonPath('data.scheduled_at', now()->addDays(7)->toIso8601String());
+        $this->assertDatabaseHas('clubs', ['id' => $club->id]);
+        $this->assertFalse(SupportTicket::query()->where('report_source', 'club_deletion_review')->exists());
 
-        $admin = User::factory()->create();
-        Role::findOrCreate('super_admin', 'web');
-        $admin->assignRole('super_admin');
-        Sanctum::actingAs($admin);
-        $this->postJson($reviewUrl, [
-            'decision' => 'approve', 'note' => 'Export and external archive checked by support.',
-            'reviewed_contract_and_retention' => true,
-        ])->assertForbidden();
-        $this->withoutMiddleware(EnsurePlatformAdminTwoFactor::class);
-        $this->postJson($reviewUrl, [
-            'decision' => 'approve', 'note' => 'Export and external archive checked by support.',
-            'reviewed_contract_and_retention' => true,
-        ])->assertUnprocessable();
-        $this->postJson($reviewUrl, [
-            'decision' => 'approve', 'note' => 'Export, authority and external archive checked; no active provider contract.',
-            'reviewed_contract_and_retention' => true, 'reviewed_authority' => true,
-        ])->assertOk();
-        app(ClubDeletionService::class)->process($club->id);
+        $this->travel(7)->days();
+        $service->process($club->id);
         $this->assertDatabaseMissing('clubs', ['id' => $club->id]);
         $this->assertDatabaseMissing('club_finance_entries', ['id' => $entry->id]);
         $this->assertDatabaseMissing('club_sepa_batches', ['id' => $batchId]);
@@ -215,7 +191,7 @@ class ClubDeletionLifecycleTest extends TestCase
         $this->assertDatabaseHas('club_finance_entries', ['id' => $foreign->id]);
         $this->assertDatabaseHas('users', ['id' => $club->owner_id]);
         $this->assertDatabaseHas('club_deletion_financial_reviews', [
-            'club_id' => null, 'club_id_snapshot' => $club->id, 'approved_by' => $admin->id,
+            'club_id' => null, 'club_id_snapshot' => $club->id, 'approved_by' => null,
         ]);
         foreach (Schema::getTableListing(schemaQualified: false) as $table) {
             if (in_array('club_id', Schema::getColumnListing($table), true)) {
@@ -272,21 +248,22 @@ class ClubDeletionLifecycleTest extends TestCase
         ]);
         $this->get('/api/v1/clubs/'.$club->id.'/deletion-financial-export')->assertOk();
         $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-archive-confirmation', ['archive_confirmed' => true])->assertOk();
-        $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-review')->assertOk();
-        $admin = User::factory()->create();
-        Role::findOrCreate('super_admin', 'web');
-        $admin->assignRole('super_admin');
-        app(ClubDeletionService::class)->decideFinancialReview($club, $admin, true, 'Current records and external archive verified by support.');
+        $this->requestDeletion($club)->assertAccepted()->assertJsonPath('data.review_status', 'passed');
         ClubFinanceEntry::create([
             'club_id' => $club->id, 'booked_on' => today(), 'type' => 'expense',
             'category' => 'other', 'title' => 'Late expense', 'amount' => 5, 'account' => 'cash',
         ]);
-        $this->getJson('/api/v1/clubs/'.$club->id.'/deletion')->assertJsonPath('data.can_request', false);
-        $this->requestDeletion($club)->assertUnprocessable();
+        $this->getJson('/api/v1/clubs/'.$club->id.'/deletion')
+            ->assertJsonPath('data.review_status', 'export_required')
+            ->assertJsonPath('data.financial_exported_at', null)
+            ->assertJsonPath('data.scheduled_at', null);
+        $this->travel(30)->days();
+        app(ClubDeletionService::class)->process($club->id);
+        $this->assertDatabaseHas('clubs', ['id' => $club->id]);
         $this->assertNotNull(app(ClubDeletionService::class)->blocker($club));
     }
 
-    public function test_cancellation_revokes_a_financial_approval_for_future_requests(): void
+    public function test_cancellation_revokes_the_archive_confirmation_for_future_requests(): void
     {
         $this->withoutMiddleware(ThrottleRequests::class);
         $club = $this->ownedClub();
@@ -296,16 +273,12 @@ class ClubDeletionLifecycleTest extends TestCase
         ]);
         $this->get('/api/v1/clubs/'.$club->id.'/deletion-financial-export')->assertOk();
         $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-archive-confirmation', ['archive_confirmed' => true])->assertOk();
-        $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-review')->assertOk();
-        $admin = User::factory()->create();
-        Role::findOrCreate('super_admin', 'web');
-        $admin->assignRole('super_admin');
-        app(ClubDeletionService::class)->decideFinancialReview($club, $admin, true, 'Current records and external archive verified by support.');
         $this->requestDeletion($club)->assertAccepted();
         $this->deleteJson('/api/v1/clubs/'.$club->id.'/deletion')->assertOk()
             ->assertJsonPath('data.financial_revoked_at', now()->toIso8601String())
-            ->assertJsonPath('data.can_request', false);
-        $this->requestDeletion($club)->assertUnprocessable();
+            ->assertJsonPath('data.can_request', true)
+            ->assertJsonPath('data.review_status', 'export_required');
+        $this->requestDeletion($club)->assertAccepted()->assertJsonPath('data.scheduled_at', null);
         $this->assertDatabaseHas('clubs', ['id' => $club->id]);
     }
 
@@ -495,14 +468,18 @@ class ClubDeletionLifecycleTest extends TestCase
         $this->assertDatabaseHas('clubs', ['id' => $club->id]);
     }
 
-    public function test_accounting_records_block_scheduling_and_cannot_be_bypassed(): void
+    public function test_accounting_records_block_scheduling_but_the_pending_request_can_be_cancelled(): void
     {
         $club = $this->ownedClub();
         ClubFinanceEntry::create([
             'club_id' => $club->id, 'booked_on' => today(), 'type' => 'income',
             'category' => 'other', 'title' => 'Beleg', 'amount' => 25, 'account' => 'cash',
         ]);
-        $this->requestDeletion($club)->assertUnprocessable();
+        $this->requestDeletion($club)->assertAccepted()
+            ->assertJsonPath('data.blocked', true)
+            ->assertJsonPath('data.scheduled_at', null);
+        $this->deleteJson('/api/v1/clubs/'.$club->id.'/deletion')->assertOk()
+            ->assertJsonPath('data.requested_at', null);
         $this->assertNull($club->fresh()->deletion_scheduled_at);
     }
 

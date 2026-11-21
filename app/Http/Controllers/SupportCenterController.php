@@ -51,7 +51,6 @@ class SupportCenterController extends Controller
                 'configure_safety' => $user->hasRole('super_admin'),
                 'admin_alerts_configurable' => $user->hasAnyRole(Roles::FULL_ACCESS),
                 'cross_tenant' => $scope['global'],
-                'approve_club_deletion' => $user->hasRole('super_admin'),
             ],
             'currentUser' => $user->only(['id', 'name']),
             'copy' => __('support.web'),

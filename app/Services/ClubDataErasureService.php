@@ -68,9 +68,8 @@ class ClubDataErasureService
         if (DB::transactionLevel() === 0) {
             throw new RuntimeException('Club deletion requires a transaction.');
         }
-        if (app(ClubFinancialClosingExportService::class)->hasFinancialRecords($club)
-            && (! $club->deletion_scheduled_at || $club->deletion_scheduled_at->isFuture())) {
-            throw ValidationException::withMessages(['club' => __('club_deletion.finance_retention')]);
+        if (app(ClubFinancialClosingExportService::class)->hasFinancialRecords($club)) {
+            throw ValidationException::withMessages(['club' => __('club_deletion.use_scheduled_deletion')]);
         }
         $this->eraseRecords($club);
     }

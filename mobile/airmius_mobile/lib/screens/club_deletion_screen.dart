@@ -9,7 +9,6 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import 'deletion_guide_screen.dart';
-import 'support_helpdesk_screen.dart';
 
 class ClubDeletionScreen extends StatefulWidget {
   const ClubDeletionScreen({
@@ -26,6 +25,7 @@ class ClubDeletionScreen extends StatefulWidget {
 }
 
 class _ClubDeletionScreenState extends State<ClubDeletionScreen> {
+  final _scroll = ScrollController();
   final _identity = TextEditingController();
   final _code = TextEditingController();
   final _confirmation = TextEditingController();
@@ -82,11 +82,14 @@ class _ClubDeletionScreenState extends State<ClubDeletionScreen> {
               code: _code.text.trim(),
             );
       if (!mounted) return;
+      FocusScope.of(context).unfocus();
+      if (_scroll.hasClients) _scroll.jumpTo(0);
       setState(() {
         _status = Map<String, dynamic>.from(result['data'] as Map);
         _confirmation.clear();
         _code.clear();
         _codeSent = false;
+        _archiveConfirmed = false;
       });
       if (cancel) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -143,30 +146,6 @@ class _ClubDeletionScreenState extends State<ClubDeletionScreen> {
     }
   }
 
-  Future<void> _requestReview() async {
-    if (_busy) return;
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      final result = await _client.requestClubDeletionReview(widget.clubId);
-      if (!mounted) return;
-      setState(
-        () => _status = Map<String, dynamic>.from(result['data'] as Map),
-      );
-    } catch (error) {
-      if (!mounted) return;
-      setState(
-        () => _error = error is AirmiusApiException
-            ? error.userMessage
-            : AirmiusScope.of(context).t('clubs.deleteFailed'),
-      );
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
   Future<void> _downloadFinancialExport() async {
     if (_busy) return;
     setState(() {
@@ -203,8 +182,10 @@ class _ClubDeletionScreenState extends State<ClubDeletionScreen> {
         allowedExtensions: const ['zip'],
         bytes: Uint8List.fromList(response.bodyBytes),
       );
-      if (saved == null || !mounted) return;
+      if (!mounted) return;
+      setState(() => _archiveConfirmed = false);
       await _load();
+      if (saved == null) return;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -256,6 +237,7 @@ class _ClubDeletionScreenState extends State<ClubDeletionScreen> {
 
   @override
   void dispose() {
+    _scroll.dispose();
     _identity.dispose();
     _code.dispose();
     _confirmation.dispose();
@@ -270,10 +252,18 @@ class _ClubDeletionScreenState extends State<ClubDeletionScreen> {
     final scheduled = DateTime.tryParse('${_status?['scheduled_at'] ?? ''}');
     final phrase = '${_status?['confirmation'] ?? ''}';
     final blocker = _status?['blocker'] as String?;
+    final pending = _status?['requested_at'] != null || scheduled != null;
+    final review = switch (_status?['review_status']) {
+      'not_required' => t('clubDeletion.reviewNotRequired'),
+      'export_required' => t('clubDeletion.reviewExportRequired'),
+      'archive_required' => t('clubDeletion.reviewArchiveRequired'),
+      'passed' => t('clubDeletion.reviewPassed'),
+      _ => null,
+    };
     return PopScope(
       canPop: !_busy,
       child: Scaffold(
-        appBar: AppBar(title: Text(t('clubDeletion.title'))),
+        appBar: AppBar(title: Text(t('clubDeletion.settingsTitle'))),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : Align(
@@ -281,6 +271,7 @@ class _ClubDeletionScreenState extends State<ClubDeletionScreen> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 640),
                   child: ListView(
+                    controller: _scroll,
                     padding: const EdgeInsets.all(24),
                     children: [
                       Text(
@@ -288,6 +279,36 @@ class _ClubDeletionScreenState extends State<ClubDeletionScreen> {
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 20),
+                      if (_status != null) ...[
+                        Text(
+                          t(
+                            pending
+                                ? 'clubDeletion.pending'
+                                : 'clubDeletion.reviewStatus',
+                          ),
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        if (review != null) Text(review),
+                        if (scheduled != null)
+                          Text(
+                            '${t('clubDeletion.date')}: ${DateFormat.yMMMd(scope.language.locale.toLanguageTag()).add_Hm().format(scheduled.toLocal())}',
+                          )
+                        else if (pending)
+                          Text(t('clubDeletion.datePending')),
+                        if (blocker != null) Text(blocker),
+                        if (pending)
+                          OutlinedButton.icon(
+                            onPressed: _busy ? null : () => _submit(true),
+                            icon: const Icon(Icons.undo),
+                            label: Text(t('clubDeletion.cancel')),
+                          ),
+                        TextButton.icon(
+                          onPressed: _busy ? null : _load,
+                          icon: const Icon(Icons.refresh),
+                          label: Text(t('common.refresh')),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
                       Text(t('clubDeletion.warning')),
                       const SizedBox(height: 16),
                       Text(t('clubDeletion.data')),
@@ -337,36 +358,6 @@ class _ClubDeletionScreenState extends State<ClubDeletionScreen> {
                         ],
                         if (_status?['archive_confirmed_at'] != null)
                           Text(t('clubDeletion.archiveConfirmed')),
-                        if (_status?['financial_approved_at'] != null)
-                          Text(t('clubDeletion.financeApproved')),
-                        const SizedBox(height: 16),
-                      ],
-                      if (_status?['blocked'] == true) ...[
-                        Text(
-                          t('clubDeletion.blocked'),
-                          style: TextStyle(color: scheme.error),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      if (blocker != null) ...[
-                        Text(blocker, style: TextStyle(color: scheme.error)),
-                        if (_status?['review_ticket_id'] != null)
-                          Text(t('clubDeletion.reviewRequested'))
-                        else
-                          OutlinedButton.icon(
-                            onPressed: _busy ? null : _requestReview,
-                            icon: const Icon(Icons.mark_email_read_outlined),
-                            label: Text(t('clubDeletion.requestReview')),
-                          ),
-                        TextButton.icon(
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const SupportHelpdeskScreen(),
-                            ),
-                          ),
-                          icon: const Icon(Icons.support_agent_outlined),
-                          label: Text(t('clubDeletion.supportReview')),
-                        ),
                         const SizedBox(height: 16),
                       ],
                       if (_error != null) ...[
@@ -379,26 +370,7 @@ class _ClubDeletionScreenState extends State<ClubDeletionScreen> {
                             label: Text(t('common.refresh')),
                           ),
                       ],
-                      if (scheduled != null) ...[
-                        Text(
-                          t('clubDeletion.pending'),
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${t('clubDeletion.date')}: ${DateFormat.yMMMd(scope.language.locale.toLanguageTag()).add_Hm().format(scheduled.toLocal())}',
-                        ),
-                        const SizedBox(height: 24),
-                        FilledButton.icon(
-                          onPressed: _busy ? null : () => _submit(true),
-                          icon: const Icon(Icons.undo),
-                          label: Text(
-                            t('clubDeletion.cancel'),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ] else if (_status != null &&
-                          _status?['can_request'] == true) ...[
+                      if (!pending && _status?['can_request'] == true) ...[
                         TextField(
                           controller: _identity,
                           enabled: !_busy,

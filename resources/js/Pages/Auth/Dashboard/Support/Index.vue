@@ -78,8 +78,6 @@ const openTicketId = ref(null)
 const ticketDetails = ref({})
 const replyBodies = ref({})
 const conversationBusyIds = ref([])
-const reviewBusyIds = ref([])
-const deletionCopy = (de, en) => String(page.props.locale || 'de').startsWith('de') ? de : en
 let ticketsController = null
 let operationsController = null
 let createController = null
@@ -154,9 +152,6 @@ const requestMessage = (requestError, fallback = 'error_generic') => requestErro
 
 const normalizeOperationTicket = (ticket) => ({
     ...ticket,
-    deletionReview: null,
-    deletionNote: '',
-    deletionChecked: false,
     form: {
         status: ticket.status,
         priority: ticket.priority,
@@ -165,46 +160,6 @@ const normalizeOperationTicket = (ticket) => ({
         escalated: Boolean(ticket.escalated_at),
     },
 })
-
-const deletionClubId = (ticket) => ticket.report_source === 'club_deletion_review'
-    ? Number(/^club:(\d+)$/.exec(ticket.affected_person_reference || '')?.[1] || 0)
-    : 0
-
-const loadDeletionReview = async (ticket) => {
-    const clubId = deletionClubId(ticket)
-    if (!clubId || reviewBusyIds.value.includes(ticket.id)) return
-    reviewBusyIds.value = [...reviewBusyIds.value, ticket.id]
-    error.value = ''
-    try {
-        const response = await window.axios.get(route('api.v1.admin.clubs.deletion-finance-review.show', clubId))
-        ticket.deletionReview = response.data.data
-    } catch (failure) {
-        error.value = failure.response?.data?.message || deletionCopy('Prüfstatus konnte nicht geladen werden.', 'Could not load review status.')
-    } finally {
-        reviewBusyIds.value = reviewBusyIds.value.filter((id) => id !== ticket.id)
-    }
-}
-
-const decideDeletionReview = async (ticket, decision) => {
-    const clubId = deletionClubId(ticket)
-    if (!clubId || reviewBusyIds.value.includes(ticket.id) || !ticket.deletionChecked || ticket.deletionNote.trim().length < 20) return
-    reviewBusyIds.value = [...reviewBusyIds.value, ticket.id]
-    error.value = ''
-    try {
-        const response = await window.axios.post(route('api.v1.admin.clubs.deletion-finance-review', clubId), {
-            decision, note: ticket.deletionNote.trim(), reviewed_contract_and_retention: true,
-            reviewed_authority: true,
-        })
-        ticket.deletionReview = response.data.data
-        ticket.deletionChecked = false
-        ticket.deletionNote = ''
-        notice.value = deletionCopy('Prüfentscheidung dokumentiert.', 'Review decision recorded.')
-    } catch (failure) {
-        error.value = failure.response?.data?.message || deletionCopy('Prüfentscheidung fehlgeschlagen.', 'Review decision failed.')
-    } finally {
-        reviewBusyIds.value = reviewBusyIds.value.filter((id) => id !== ticket.id)
-    }
-}
 
 const loadTickets = async () => {
     ticketsController?.abort()
@@ -747,24 +702,6 @@ onBeforeUnmount(() => {
                                     </template>
                                 </section>
                             </div>
-                            <section v-if="abilities.approve_club_deletion && deletionClubId(ticket)" class="mt-5 border-t border-border pt-5 text-sm text-primary">
-                                <h5 class="font-bold">{{ deletionCopy('Vereinslöschung: Finanzprüfung', 'Club deletion: financial review') }}</h5>
-                                <p class="mt-1 text-secondary">{{ deletionCopy('Die Ticketbearbeitung allein gibt keine Löschung frei. Prüfe Export, externe Archivierung, Verträge und Aufbewahrung vor der Entscheidung.', 'Updating this ticket alone does not authorize deletion. Check export, external archive, contracts and retention before deciding.') }}</p>
-                                <button type="button" :disabled="reviewBusyIds.includes(ticket.id)" class="mt-3 rounded border border-border px-3 py-2 font-semibold disabled:opacity-50" @click="loadDeletionReview(ticket)">{{ deletionCopy('Prüfstatus laden', 'Load review status') }}</button>
-                                <div v-if="ticket.deletionReview" class="mt-3 space-y-2">
-                                    <p>{{ deletionCopy('Export:', 'Export:') }} {{ formatDate(ticket.deletionReview.financial_exported_at) }}</p>
-                                    <p>{{ deletionCopy('Eigenes Archiv bestätigt:', 'External archive confirmed:') }} {{ formatDate(ticket.deletionReview.archive_confirmed_at) }}</p>
-                                    <p>{{ deletionCopy('Freigegeben:', 'Approved:') }} {{ formatDate(ticket.deletionReview.financial_approved_at) }}</p>
-                                    <p v-if="ticket.deletionReview.scheduled_at">{{ deletionCopy('Frühester Löschtermin:', 'Earliest deletion date:') }} {{ formatDate(ticket.deletionReview.scheduled_at) }}</p>
-                                    <p v-if="ticket.deletionReview.blocker" class="text-error">{{ ticket.deletionReview.blocker }}</p>
-                                    <label class="block font-semibold">{{ deletionCopy('Prüfvermerk (mind. 20 Zeichen)', 'Review note (at least 20 characters)') }}<textarea v-model.trim="ticket.deletionNote" rows="3" maxlength="2000" class="mt-1 w-full rounded border border-border bg-inputBg p-2 text-primary"></textarea></label>
-                                    <label class="flex items-start gap-2"><input v-model="ticket.deletionChecked" type="checkbox" class="mt-1" /><span>{{ deletionCopy('Ich habe Vertretungsbefugnis, Export, Archivbestätigung, Vertragslage und Aufbewahrung geprüft.', 'I have reviewed legal authority, the export, archive confirmation, contracts and retention.') }}</span></label>
-                                    <div class="flex flex-wrap gap-2">
-                                        <button type="button" :disabled="reviewBusyIds.includes(ticket.id) || !ticket.deletionChecked || ticket.deletionNote.trim().length < 20" class="rounded border border-error px-3 py-2 font-semibold text-error disabled:opacity-50" @click="decideDeletionReview(ticket, 'reject')">{{ deletionCopy('Ablehnen', 'Reject') }}</button>
-                                        <button type="button" :disabled="reviewBusyIds.includes(ticket.id) || !ticket.deletionChecked || ticket.deletionNote.trim().length < 20 || !ticket.deletionReview.archive_confirmed_at" class="rounded bg-buttonPrimary px-3 py-2 font-semibold text-buttonTextPrimary disabled:opacity-50" @click="decideDeletionReview(ticket, 'approve')">{{ deletionCopy('Freigeben', 'Approve') }}</button>
-                                    </div>
-                                </div>
-                            </section>
                         </article>
                     </div>
                     <p v-else class="mt-4 surface-card p-8 text-center text-sm text-secondary">{{ text('no_operation_tickets') }}</p>
