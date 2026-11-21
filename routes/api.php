@@ -1128,6 +1128,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/events/{event}/attendance/corrections', [EventController::class, 'attendanceCorrections'])->name('events.attendance.corrections.index');
         Route::post('/events/{event}/check-in-tokens', [EventController::class, 'issueCheckInToken'])->middleware('throttle:payment-actions')->name('events.check-in-tokens.store');
         Route::post('/events/{event}/check-in', [EventController::class, 'checkIn'])->middleware('throttle:payment-actions')->name('events.check-in.store');
+        Route::get('/events/{event}/calendar.ics', [EventCompetitivenessController::class, 'exportIcs'])->name('events.calendar');
         Route::get('/events/{event}/decisions', [EventCompetitivenessController::class, 'decisions'])->name('events.decisions.index');
         Route::post('/events/{event}/decisions', [EventCompetitivenessController::class, 'createDecision'])->name('events.decisions.store');
         Route::post('/events/{event}/decisions/{decision}/close', [EventCompetitivenessController::class, 'closeDecision'])->name('events.decisions.close');

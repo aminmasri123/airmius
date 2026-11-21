@@ -2085,6 +2085,8 @@ class _CampaignSheetState extends State<_CampaignSheet> {
     _imageUrl = TextEditingController(
       text: _text(campaign['creative_image_url']),
     );
+    _useImageUpload = _text(campaign['creative_image_path']).isNotEmpty &&
+        _imageUrl.text.isEmpty;
     _budget = TextEditingController(
       text: _int(campaign['budget_cents']) > 0
           ? (_int(campaign['budget_cents']) / 100).toStringAsFixed(2)
@@ -2244,6 +2246,55 @@ class _CampaignSheetState extends State<_CampaignSheet> {
                 },
               ),
             if (_useImageUpload) Text(t('commerceAdv.imageUploadHint')),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _imageUrl,
+              builder: (context, value, _) {
+                final bytes = _useImageUpload ? _imageFile?.bytes : null;
+                final campaign = widget.campaign;
+                final savedPreview = _text(campaign?['preview_image_url']);
+                final hasSavedUpload =
+                    _text(campaign?['creative_image_path']).isNotEmpty ||
+                    _text(campaign?['creative_image_url']).isEmpty;
+                final link = value.text.trim();
+                final showSavedUpload = hasSavedUpload &&
+                    (_useImageUpload || link.isEmpty);
+                final previewUrl = resolveAirmiusImageUrl(
+                  showSavedUpload ? savedPreview : link,
+                );
+                if (bytes == null && previewUrl == null) {
+                  return const SizedBox.shrink();
+                }
+                Widget imageError(
+                  BuildContext context,
+                  Object error,
+                  StackTrace? stack,
+                ) => const Center(child: Icon(Icons.broken_image_outlined));
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: ColoredBox(
+                      color: airmiusSurfaceSoftColor(context),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 160,
+                        child: bytes == null
+                            ? Image.network(
+                                previewUrl!,
+                                fit: BoxFit.contain,
+                                errorBuilder: imageError,
+                              )
+                            : Image.memory(
+                                bytes,
+                                fit: BoxFit.contain,
+                                errorBuilder: imageError,
+                              ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,

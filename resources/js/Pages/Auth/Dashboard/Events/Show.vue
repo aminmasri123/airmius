@@ -603,6 +603,14 @@ onMounted(() => {
             </div>
 
             <div class="flex flex-wrap gap-2">
+                <a
+                    :href="route('auth.events.calendar', event.id)"
+                    class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                    download
+                >
+                    <i class="las la-calendar-plus mr-1"></i>
+                    {{ $t('events.add_to_calendar') }}
+                </a>
                 <ClubMetadataSubjectEditor v-if="can.manage_metadata && metadataClubId" :club-id="metadataClubId" subject-type="event" :subject-id="event.id" :subject-label="event.title" />
                 <Link
                     v-if="event.type === 'training' && event.status !== 'cancelled'"

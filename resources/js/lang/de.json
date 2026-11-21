@@ -1240,6 +1240,7 @@
     },
     "training_days": "Trainingstage",
     "next_occurrence": "Nächster Termin",
+    "add_to_calendar": "Zum Kalender hinzufügen",
     "rsvp": {
       "yes": "Zusagen",
       "maybe": "Eventuell",

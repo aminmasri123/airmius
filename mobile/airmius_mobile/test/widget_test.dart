@@ -1357,6 +1357,40 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('event detail shows the saved street address', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final payload = {
+      'id': 9,
+      'title': 'Teamabend',
+      'starts_at': '2026-07-24T18:00:00Z',
+      'location_name': 'Sporthalle',
+      'location_street': 'Vereinsweg',
+      'location_house_number': '12a',
+      'location_postal_code': '10115',
+      'location_city': 'Berlin',
+      'location_country': 'DE',
+    };
+    final event = AirmiusEvent.fromJson(payload).copyWith(commentsCount: 1);
+    final transport = _RecordingTransport(
+      AirmiusApiResponse(statusCode: 200, body: jsonEncode({'data': payload})),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      TrainingEventDetailScreen(event: event, fallbackBody: ''),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Sporthalle\nVereinsweg 12a\n10115 Berlin\nDE'),
+      findsOneWidget,
+    );
+    expect(find.text('Zum Kalender hinzufügen'), findsOneWidget);
+  });
+
   testWidgets('event detail renders management attendance and comments', (
     WidgetTester tester,
   ) async {
@@ -6650,6 +6684,42 @@ void main() {
     expect(
       tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
       false,
+    );
+  });
+
+  testWidgets('campaign editor previews the uploaded image of a saved draft', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1200));
+    const imageUrl = 'https://airmius.test/storage/ads/creatives/draft.webp';
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"ads_can_manage":true,"campaigns":[{"id":12,"name":"Testentwurf","status":"draft","creative_image_path":"ads/creatives/draft.webp","creative_image_url":null,"preview_image_url":"$imageUrl"}]}}',
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const CommerceCenterScreen(initialSection: 'ads'),
+    );
+    await tester.pumpAndSettle();
+
+    final edit = find.text('Bearbeiten');
+    await tester.ensureVisible(edit);
+    await tester.tap(edit);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kampagne bearbeiten'), findsOneWidget);
+    expect(find.text('Bild auswählen'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate((widget) {
+        return widget is Image &&
+            widget.image is NetworkImage &&
+            (widget.image as NetworkImage).url == imageUrl;
+      }),
+      findsOneWidget,
     );
   });
 

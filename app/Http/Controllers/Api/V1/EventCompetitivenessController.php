@@ -219,6 +219,7 @@ class EventCompetitivenessController extends Controller
 
     public function exportIcs(Event $event)
     {
+        $this->authorize('view', $event);
         $payload = $this->formatIcs($event);
 
         return response($payload, 200, [
@@ -998,13 +999,34 @@ class EventCompetitivenessController extends Controller
             'DTSTART:'.$this->icalDate($event->start_time),
             $event->end_time ? 'DTEND:'.$this->icalDate($event->end_time) : '',
             'SUMMARY:'.str_replace(["\n", "\r", ','], ['\\n', '', '\,'], (string) $event->title),
-            $event->location_name ? 'LOCATION:'.$this->icsEscape((string) $event->location_name) : '',
+            $this->eventLocation($event) !== ''
+                ? 'LOCATION:'.$this->icsEscape($this->eventLocation($event))
+                : '',
             $event->notes ? 'DESCRIPTION:'.$this->icsEscape((string) $event->notes) : '',
             'END:VEVENT',
             'END:VCALENDAR',
         ];
 
         return implode("\r\n", array_filter($rows));
+    }
+
+    private function eventLocation(Event $event): string
+    {
+        $street = trim(implode(' ', array_filter([
+            $event->location_street,
+            $event->location_house_number,
+        ])));
+        $locality = trim(implode(' ', array_filter([
+            $event->location_postal_code,
+            $event->location_city,
+        ])));
+
+        return implode(', ', array_filter([
+            $event->location_name ?: $event->location,
+            $street,
+            $locality,
+            $event->location_country,
+        ]));
     }
 
     private function icalDate(?\Illuminate\Support\Carbon $date): string

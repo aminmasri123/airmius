@@ -1286,6 +1286,7 @@
     },
     "training_days": "Jours d'entraînement",
     "next_occurrence": "Prochaine session",
+    "add_to_calendar": "Ajouter au calendrier",
     "rsvp": {
       "yes": "Présent",
       "maybe": "Peut-être",

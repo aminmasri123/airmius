@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../widgets/airmius_form.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../core/airmius_api_client.dart';
@@ -40,6 +44,7 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
   bool _commentSending = false;
   List<AirmiusEventComment> _comments = const [];
   bool _attendanceLoading = false;
+  bool _calendarSaving = false;
   List<AirmiusEventAttendanceMember> _attendanceMembers = const [];
   bool _attendanceCorrectionsLoading = false;
   List<AirmiusEventAttendanceCorrection> _attendanceCorrections = const [];
@@ -86,6 +91,62 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
     _penaltyNoteController.dispose();
     _commentController.dispose();
     super.dispose();
+  }
+
+  Future<void> _addToCalendar() async {
+    if (_calendarSaving) return;
+    setState(() => _calendarSaving = true);
+    final services = AirmiusServicesScope.of(context);
+    final base = Uri.parse(services.environment.apiBaseUrl);
+    final prefix = base.path.endsWith('/') ? base.path : '${base.path}/';
+    final path = '/api/v1/events/${_event.id}/calendar.ics';
+    final uri = base.replace(
+      path: '$prefix${path.substring(1)}',
+      query: null,
+      fragment: null,
+    );
+    try {
+      final response = await http.get(
+        uri,
+        headers: {
+          'Accept': 'text/calendar',
+          'X-Airmius-Locale': services.environment.locale,
+          if (services.authState.session?.token.isNotEmpty == true)
+            'Authorization': 'Bearer ${services.authState.session!.token}',
+        },
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AirmiusApiException(
+          statusCode: response.statusCode,
+          body: response.body,
+          path: path,
+        );
+      }
+      final saved = await FilePicker.platform.saveFile(
+        dialogTitle: AirmiusScope.of(context).t('events.addToCalendar'),
+        fileName: 'event-${_event.id}.ics',
+        type: FileType.custom,
+        allowedExtensions: const ['ics'],
+        bytes: Uint8List.fromList(response.bodyBytes),
+      );
+      if (mounted && saved != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AirmiusScope.of(context).t('events.calendarSaved')),
+          ),
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is AirmiusApiException
+          ? error.userMessage
+          : AirmiusScope.of(context).t('events.calendarSaveFailed');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _calendarSaving = false);
+    }
   }
 
   Future<void> _refresh() async {
@@ -855,7 +916,10 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
-    final location = _event.location ?? scope.t('events.locationMissing');
+    final address = _event.locationAddress;
+    final location = address == null
+        ? _event.location ?? scope.t('events.locationMissing')
+        : [_event.locationName, address].whereType<String>().join('\n');
     final body = _event.notes?.isNotEmpty == true
         ? _event.notes!
         : widget.fallbackBody;
@@ -1036,6 +1100,17 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _calendarSaving ? null : _addToCalendar,
+              icon: _calendarSaving
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.calendar_month_outlined),
+              label: Text(scope.t('events.addToCalendar')),
             ),
             const SizedBox(height: 14),
             AirmiusPanel(

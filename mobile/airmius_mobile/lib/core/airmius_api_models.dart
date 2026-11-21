@@ -2655,6 +2655,7 @@ class AirmiusEvent {
     this.location,
     this.locationName,
     this.locationCity,
+    this.locationAddress,
     this.maxParticipants,
     this.myParticipationStatus,
     this.cancellationReason,
@@ -2678,6 +2679,7 @@ class AirmiusEvent {
   final String? location;
   final String? locationName;
   final String? locationCity;
+  final String? locationAddress;
   final int? maxParticipants;
   final int participantsCount;
   final int commentsCount;
@@ -2720,6 +2722,7 @@ class AirmiusEvent {
     String? location,
     String? locationName,
     String? locationCity,
+    String? locationAddress,
     int? maxParticipants,
     int? participantsCount,
     int? commentsCount,
@@ -2761,6 +2764,7 @@ class AirmiusEvent {
     location: location ?? this.location,
     locationName: locationName ?? this.locationName,
     locationCity: locationCity ?? this.locationCity,
+    locationAddress: locationAddress ?? this.locationAddress,
     maxParticipants: maxParticipants ?? this.maxParticipants,
     participantsCount: participantsCount ?? this.participantsCount,
     commentsCount: commentsCount ?? this.commentsCount,
@@ -2791,6 +2795,19 @@ class AirmiusEvent {
     final club = json['club'];
     final team = json['team'];
     final sportYearPeriod = json['sport_year_period'];
+    final street = [
+      _nullableString(json['location_street']),
+      _nullableString(json['location_house_number']),
+    ].whereType<String>().join(' ');
+    final postalCode = _nullableString(json['location_postal_code']);
+    final city = _nullableString(json['location_city']);
+    final country = _nullableString(json['location_country']);
+    final locality = [postalCode, city].whereType<String>().join(' ');
+    final address = [
+      street,
+      locality,
+      if (country != null) country,
+    ].where((line) => line.isNotEmpty).join('\n');
     final locationParts = [
       _nullableString(json['location_name']),
       _nullableString(json['location']),
@@ -2821,7 +2838,11 @@ class AirmiusEvent {
       notes: _nullableString(json['notes']),
       location: locationParts.isEmpty ? null : locationParts.join(' - '),
       locationName: _nullableString(json['location_name']),
-      locationCity: _nullableString(json['location_city']),
+      locationCity: city,
+      locationAddress:
+          street.isNotEmpty || postalCode != null || country != null
+          ? address
+          : null,
       maxParticipants: json['max_participants'] == null
           ? null
           : _int(json['max_participants']),

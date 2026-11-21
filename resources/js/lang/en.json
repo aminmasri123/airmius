@@ -1241,6 +1241,7 @@
     },
     "training_days": "Training days",
     "next_occurrence": "Next session",
+    "add_to_calendar": "Add to calendar",
     "rsvp": {
       "yes": "Going",
       "maybe": "Maybe",

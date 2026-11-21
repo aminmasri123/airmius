@@ -1187,6 +1187,7 @@
     },
     "training_days": "أيام التدريب",
     "next_occurrence": "الموعد التالي",
+    "add_to_calendar": "إضافة إلى التقويم",
     "rsvp": {
       "yes": "سأحضر",
       "maybe": "ربما",
