@@ -923,12 +923,35 @@ class AirmiusApiClient {
       _json('GET', '/api/v1/clubs/$clubId/service-hours/periods');
 
   Future<AirmiusJson> writeClubServiceHours(
-    int clubId, String resource, AirmiusJson payload,
+    int clubId,
+    String resource,
+    AirmiusJson payload,
   ) {
-    if (!RegExp(r'^(service-hour-requirements|service-hour-records|service-hour-exemptions|service-hour-requirements/\d+/lock|service-hour-records/\d+/(confirm|corrections))$').hasMatch(resource)) {
+    late final String path;
+    if (resource == 'service-hour-requirements') {
+      path = '/api/v1/clubs/$clubId/service-hour-requirements';
+    } else if (resource == 'service-hour-records') {
+      path = '/api/v1/clubs/$clubId/service-hour-records';
+    } else if (resource == 'service-hour-exemptions') {
+      path = '/api/v1/clubs/$clubId/service-hour-exemptions';
+    } else if (RegExp(r'^service-hour-requirements/\d+/lock$')
+        .hasMatch(resource)) {
+      final requirementId = resource.split('/')[1];
+      path =
+          '/api/v1/clubs/$clubId/service-hour-requirements/$requirementId/lock';
+    } else if (RegExp(r'^service-hour-records/\d+/confirm$')
+        .hasMatch(resource)) {
+      final recordId = resource.split('/')[1];
+      path = '/api/v1/clubs/$clubId/service-hour-records/$recordId/confirm';
+    } else if (RegExp(r'^service-hour-records/\d+/corrections$')
+        .hasMatch(resource)) {
+      final recordId = resource.split('/')[1];
+      path =
+          '/api/v1/clubs/$clubId/service-hour-records/$recordId/corrections';
+    } else {
       throw ArgumentError.value(resource);
     }
-    return _json('POST', '/api/v1/clubs/$clubId/$resource', body: payload);
+    return _json('POST', path, body: payload);
   }
 
   Future<AirmiusJson> clubFinanceWorkspace(int clubId) =>

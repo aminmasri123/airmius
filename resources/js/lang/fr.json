@@ -6612,6 +6612,23 @@
       "events_title": "Prochains événements",
       "contribution_on_request": "Cotisation sur demande"
     },
+    "newsletter": {
+      "eyebrow": "Newsletter",
+      "title": "Les actualités du club par e-mail",
+      "description": "Après votre inscription, vous recevrez un e-mail de confirmation. Le club ne pourra vous envoyer sa newsletter qu'après votre clic. Vous pouvez vous désabonner à tout moment en un clic.",
+      "double_opt_in": "Aucune inscription sans confirmation",
+      "private_recipients": "Votre adresse e-mail reste invisible pour les autres destinataires",
+      "unsubscribe_note": "Chaque newsletter contient un lien de désabonnement",
+      "success_title": "Demande d'inscription traitée",
+      "success_description": "Si l'adresse n'est pas encore confirmée, vous recevrez un e-mail. Ouvrez-le et cliquez sur le lien de confirmation dans les 24 heures. Vérifiez également votre dossier spam si nécessaire.",
+      "use_another_email": "Utiliser une autre adresse e-mail",
+      "name": "Nom (facultatif)",
+      "email": "Adresse e-mail",
+      "website_honeypot": "Site web",
+      "consent": "Je souhaite recevoir la newsletter de ce club et j'accepte que mon adresse e-mail soit traitée à cette fin. Je peux retirer mon consentement à tout moment.",
+      "sending": "Envoi en cours…",
+      "submit": "Demander l'e-mail de confirmation"
+    },
     "event": {
       "eyebrow": "Événement sportif public",
       "subtitle": "{sport} à {city} – date et organisateur présentés dans le respect de la vie privée."

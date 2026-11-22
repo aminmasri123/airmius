@@ -6643,6 +6643,23 @@
       "events_title": "Upcoming events",
       "contribution_on_request": "Fee on request"
     },
+    "newsletter": {
+      "eyebrow": "Newsletter",
+      "title": "Club news by email",
+      "description": "After signing up, you will receive a confirmation email. The club may only send you newsletters after you click the link. You can unsubscribe at any time with one click.",
+      "double_opt_in": "No subscription without confirmation",
+      "private_recipients": "Your email address remains hidden from other recipients",
+      "unsubscribe_note": "Every newsletter contains an unsubscribe link",
+      "success_title": "Newsletter request processed",
+      "success_description": "If the address has not been confirmed yet, you will receive an email. Open it and click the confirmation link within 24 hours. Check your spam folder if necessary.",
+      "use_another_email": "Use another email address",
+      "name": "Name (optional)",
+      "email": "Email address",
+      "website_honeypot": "Website",
+      "consent": "I would like to receive this club's newsletter and consent to the processing of my email address for this purpose. I may withdraw my consent at any time.",
+      "sending": "Sending …",
+      "submit": "Request confirmation email"
+    },
     "event": {
       "eyebrow": "Public sports event",
       "subtitle": "{sport} in {city} – date and organiser at a privacy-conscious glance."

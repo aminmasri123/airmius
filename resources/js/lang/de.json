@@ -6643,6 +6643,23 @@
       "events_title": "Kommende Events",
       "contribution_on_request": "Beitrag auf Anfrage"
     },
+    "newsletter": {
+      "eyebrow": "Newsletter",
+      "title": "Neuigkeiten dieses Vereins per E-Mail",
+      "description": "Nach der Anmeldung erhältst du eine Bestätigungsmail. Erst nach deinem Klick darf der Verein dir Newsletter senden. Du kannst dich jederzeit mit einem Klick abmelden.",
+      "double_opt_in": "Keine Anmeldung ohne Bestätigung",
+      "private_recipients": "E-Mail-Adresse bleibt für andere Empfänger unsichtbar",
+      "unsubscribe_note": "Jeder Newsletter enthält einen Abmeldelink",
+      "success_title": "Newsletter-Anfrage wurde verarbeitet",
+      "success_description": "Falls die Adresse noch nicht bestätigt ist, erhältst du eine E-Mail. Öffne sie und klicke innerhalb von 24 Stunden auf den Bestätigungslink. Prüfe bei Bedarf auch den Spam-Ordner.",
+      "use_another_email": "Andere E-Mail-Adresse verwenden",
+      "name": "Name (optional)",
+      "email": "E-Mail-Adresse",
+      "website_honeypot": "Website",
+      "consent": "Ich möchte den Newsletter dieses Vereins erhalten und stimme der Verarbeitung meiner E-Mail-Adresse dafür zu. Die Einwilligung kann ich jederzeit widerrufen.",
+      "sending": "Wird gesendet …",
+      "submit": "Bestätigungsmail anfordern"
+    },
     "event": {
       "eyebrow": "Öffentliches Sportevent",
       "subtitle": "{sport} in {city} – Termin und Veranstalter datensparsam auf einen Blick."
