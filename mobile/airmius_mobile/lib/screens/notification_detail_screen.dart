@@ -367,7 +367,13 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                 if (!isRemovalObjectionNotification(widget.notification.type) &&
                     notificationHasContextTarget(widget.notification.actionUrl))
                   AirmiusButton(
-                    label: scope.t('notifications.openContext'),
+                    label:
+                        widget.notification.type ==
+                                'club.service_hour.member_accepted' ||
+                            widget.notification.type ==
+                                'club.service_hour.member_disputed'
+                        ? 'Dienststunde öffnen'
+                        : scope.t('notifications.openContext'),
                     icon: Icons.open_in_new_outlined,
                     onPressed: _openContext,
                   ),

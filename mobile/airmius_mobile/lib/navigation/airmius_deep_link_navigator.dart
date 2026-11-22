@@ -30,6 +30,7 @@ import '../screens/feed_post_detail_screen.dart';
 import '../screens/friend_invitation_response_screen.dart';
 import '../screens/club_external_invitation_response_screen.dart';
 import '../screens/club_request_inbox_screen.dart';
+import '../screens/club_service_hours_screen.dart';
 import '../screens/club_tasks_screen.dart';
 import '../screens/email_verification_screen.dart';
 import '../screens/membership_request_status_screen.dart';
@@ -132,6 +133,12 @@ class AirmiusDeepLinkNavigator {
               )
             : target.section == 'staff-scheduling'
             ? VolunteerShiftTaskPlannerSuiteScreen(initialClubId: target.id)
+            : target.section == 'service-hours'
+            ? AirmiusDeepLinkedClubServiceHoursScreen(
+                clubId: target.id ?? 0,
+                periodId: int.tryParse(target.query['period'] ?? ''),
+                recordId: int.tryParse(target.query['record'] ?? ''),
+              )
             : target.section == 'announcements'
             ? ClubAnnouncementDeepLinkScreen(
                 clubId: target.id ?? 0,
@@ -358,6 +365,67 @@ class AirmiusDeepLinkedClubProfileScreen extends StatefulWidget {
   @override
   State<AirmiusDeepLinkedClubProfileScreen> createState() =>
       _AirmiusDeepLinkedClubProfileScreenState();
+}
+
+class AirmiusDeepLinkedClubServiceHoursScreen extends StatefulWidget {
+  const AirmiusDeepLinkedClubServiceHoursScreen({
+    super.key,
+    required this.clubId,
+    this.periodId,
+    this.recordId,
+  });
+
+  final int clubId;
+  final int? periodId;
+  final int? recordId;
+
+  @override
+  State<AirmiusDeepLinkedClubServiceHoursScreen> createState() =>
+      _AirmiusDeepLinkedClubServiceHoursScreenState();
+}
+
+class _AirmiusDeepLinkedClubServiceHoursScreenState
+    extends State<AirmiusDeepLinkedClubServiceHoursScreen> {
+  Future<ClubSummary>? _clubFuture;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _clubFuture ??= AirmiusServicesScope.of(context)
+        .repositories
+        .clubs
+        .club(widget.clubId)
+        .then(ClubSummary.fromAirmiusClub);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<ClubSummary>(
+      future: _clubFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return AirmiusDeepLinkFallbackScreen(
+            target: AirmiusDeepLinkTarget(
+              type: AirmiusDeepLinkTargetType.club,
+              path: '/clubs/${widget.clubId}/service-hours',
+              id: widget.clubId,
+              section: 'service-hours',
+            ),
+          );
+        }
+        return ClubServiceHoursScreen(
+          club: snapshot.data!,
+          initialPeriodId: widget.periodId,
+          highlightedRecordId: widget.recordId,
+        );
+      },
+    );
+  }
 }
 
 class _AirmiusDeepLinkedClubProfileScreenState

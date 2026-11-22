@@ -447,6 +447,7 @@ class ClubServiceHourController extends Controller
                     [
                         'club_id' => (int) $club->id,
                         'service_hour_record_id' => (int) $record->id,
+                        'period_id' => (int) $record->club_year_period_id,
                         'member_id' => (int) $member->id,
                         'member_name' => $member->name,
                         'activity' => $record->title,
@@ -454,7 +455,12 @@ class ClubServiceHourController extends Controller
                         'minutes' => (int) $record->minutes,
                         'member_response_status' => $record->member_response_status,
                         'member_response_reason' => $record->member_response_reason,
-                        'mobile_url' => 'airmius://notifications',
+                        'mobile_url' => sprintf(
+                            'airmius://clubs/%d/service-hours?period=%d&record=%d',
+                            $club->id,
+                            $record->club_year_period_id,
+                            $record->id,
+                        ),
                     ],
                     ['category' => 'club', 'priority' => $disputed ? 'high' : 'normal'],
                 );

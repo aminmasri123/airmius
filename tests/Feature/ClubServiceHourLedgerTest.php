@@ -7,6 +7,7 @@ use App\Models\ClubRoleAssignment;
 use App\Models\ClubRoleDefinition;
 use App\Models\ClubServiceHourRecord;
 use App\Models\ClubYearPeriod;
+use App\Models\Notification;
 use App\Models\User;
 use App\Notifications\ServiceHourRecorded;
 use App\Support\ClubPermissions;
@@ -56,6 +57,16 @@ class ClubServiceHourLedgerTest extends TestCase
             'user_id' => $manager->id,
             'type' => 'club.service_hour.member_accepted',
         ]);
+        $managerNotification = Notification::query()
+            ->where('user_id', $manager->id)
+            ->where('type', 'club.service_hour.member_accepted')
+            ->latest('id')
+            ->firstOrFail();
+        $this->assertSame($period->id, $managerNotification->data['period_id']);
+        $this->assertSame(
+            "airmius://clubs/{$club->id}/service-hours?period={$period->id}&record={$recordId}",
+            $managerNotification->data['mobile_url'],
+        );
         Sanctum::actingAs($manager);
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/confirm")
             ->assertOk()

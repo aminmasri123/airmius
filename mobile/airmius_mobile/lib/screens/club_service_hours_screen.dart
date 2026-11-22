@@ -88,8 +88,15 @@ class ServiceHourDateInputFormatter extends TextInputFormatter {
 }
 
 class ClubServiceHoursScreen extends StatefulWidget {
-  const ClubServiceHoursScreen({super.key, required this.club});
+  const ClubServiceHoursScreen({
+    super.key,
+    required this.club,
+    this.initialPeriodId,
+    this.highlightedRecordId,
+  });
   final ClubSummary club;
+  final int? initialPeriodId;
+  final int? highlightedRecordId;
 
   @override
   State<ClubServiceHoursScreen> createState() => _ClubServiceHoursScreenState();
@@ -102,6 +109,8 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
   int? periodId;
   bool busy = true;
   String? error;
+  final GlobalKey _highlightedRecordKey = GlobalKey();
+  bool _didRevealHighlightedRecord = false;
 
   AirmiusApiClient get client {
     final services = AirmiusServicesScope.of(context);
@@ -114,6 +123,7 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
   @override
   void initState() {
     super.initState();
+    periodId = widget.initialPeriodId;
     WidgetsBinding.instance.addPostFrameCallback((_) => load());
   }
 
@@ -156,8 +166,29 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+        _revealHighlightedRecord();
+      }
     }
+  }
+
+  void _revealHighlightedRecord() {
+    if (_didRevealHighlightedRecord || widget.highlightedRecordId == null) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _didRevealHighlightedRecord) return;
+      final target = _highlightedRecordKey.currentContext;
+      if (target == null) return;
+      _didRevealHighlightedRecord = true;
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeOutCubic,
+        alignment: .15,
+      );
+    });
   }
 
   String nameFor(Object? id) =>
@@ -681,6 +712,12 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
             const Text('Noch keine Dienste erfasst.'),
           for (final record in items('records'))
             Card(
+              key: record['id'] == widget.highlightedRecordId
+                  ? _highlightedRecordKey
+                  : null,
+              color: record['id'] == widget.highlightedRecordId
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : null,
               child: Column(
                 children: [
                   ListTile(

@@ -3256,6 +3256,26 @@ String? _mobileNotificationActionUrl(String type, JsonMap data) {
       ).toString();
     }
   }
+  if (type == 'club.service_hour.member_accepted' ||
+      type == 'club.service_hour.member_disputed') {
+    final clubId = int.tryParse('${data['club_id'] ?? ''}');
+    if (clubId != null && clubId > 0) {
+      final periodId = int.tryParse('${data['period_id'] ?? ''}');
+      final recordId = int.tryParse(
+        '${data['service_hour_record_id'] ?? ''}',
+      );
+      final query = <String, String>{
+        if (periodId != null) 'period': '$periodId',
+        if (recordId != null) 'record': '$recordId',
+      };
+      return Uri(
+        scheme: 'airmius',
+        host: 'clubs',
+        path: '/$clubId/service-hours',
+        queryParameters: query.isEmpty ? null : query,
+      ).toString();
+    }
+  }
   final explicit = data['mobile_url']?.toString().trim();
   if (explicit != null && explicit.isNotEmpty) return explicit;
 
