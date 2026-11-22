@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../widgets/airmius_form.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
@@ -1360,6 +1361,11 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
               style: TextStyle(color: airmiusMutedColor(context), fontSize: 12),
             ),
           ],
+          for (final image in (deliverable['evidence_images'] as List? ?? []))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Image.memory(base64Decode((image as String).split(',').last), height: 180),
+            ),
         ],
       ),
     );
@@ -1864,6 +1870,22 @@ class _SponsorDeliverableEditor extends StatefulWidget {
 }
 
 class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
+  final List<String> _images = [];
+
+  Future<void> _pickEvidenceImages() async {
+    try {
+      final picked = await ImagePicker().pickMultiImage(maxWidth: 1600, maxHeight: 1600, imageQuality: 75);
+      final additions = <String>[];
+      for (final file in picked.take(10 - _images.length)) {
+        final bytes = await file.readAsBytes();
+        if (bytes.length > 1100000) throw StateError('Image too large');
+        additions.add('data:image/jpeg;base64,${base64Encode(bytes)}');
+      }
+      if (mounted) setState(() => _images.addAll(additions));
+    } catch (_) {
+      if (mounted) setState(() => _error = t('sponsorCockpit.deliverableSaveFailed'));
+    }
+  }
   static const _statuses = [
     'planned',
     'in_progress',
@@ -1887,6 +1909,7 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
   void initState() {
     super.initState();
     final deliverable = widget.deliverable ?? const <String, dynamic>{};
+    _images.addAll((deliverable['evidence_images'] as List? ?? []).cast<String>());
     _title = TextEditingController(text: _text(deliverable['title']));
     _location = TextEditingController(text: _text(deliverable['location']));
     _evidence = TextEditingController(
@@ -1917,7 +1940,7 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
 
   Future<void> _save() async {
     if (_busy || !_form.currentState!.validate()) return;
-    if (_status == 'fulfilled' && _evidence.text.trim().isEmpty) {
+    if (_status == 'fulfilled' && _evidence.text.trim().isEmpty && _images.isEmpty) {
       setState(() => _error = t('sponsorCockpit.deliverableEvidence'));
       return;
     }
@@ -1927,6 +1950,7 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
     });
     final payload = <String, dynamic>{
       'club_id': widget.clubId,
+      'evidence_images': _images,
       'title': _title.text.trim(),
       'location': _location.text.trim().isEmpty ? null : _location.text.trim(),
       'due_at': _dueAt == null
@@ -2087,6 +2111,20 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
                   labelText: t('sponsorCockpit.deliverableEvidence'),
                   alignLabelWithHint: true,
                 ),
+              ),
+              Wrap(
+                children: [
+                  for (final image in _images)
+                    Stack(children: [
+                      Padding(padding: const EdgeInsets.all(6), child: Image.memory(base64Decode(image.split(',').last), width: 100, height: 100, fit: BoxFit.cover)),
+                      IconButton(onPressed: _busy ? null : () => setState(() => _images.remove(image)), icon: const Icon(Icons.close)),
+                    ]),
+                ],
+              ),
+              OutlinedButton.icon(
+                onPressed: _busy || _images.length >= 10 ? null : _pickEvidenceImages,
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                label: Text('${t('sponsorCockpit.deliverableEvidence')} (${_images.length}/10)'),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 10),

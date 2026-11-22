@@ -29,6 +29,7 @@ class SponsorDeliverable extends Model
         'due_at',
         'status',
         'fulfillment_evidence',
+        'evidence_images',
         'fulfilled_at',
         'fulfilled_by',
     ];
@@ -36,6 +37,7 @@ class SponsorDeliverable extends Model
     protected function casts(): array
     {
         return [
+            'evidence_images' => 'array',
             'starts_at' => 'date',
             'ends_at' => 'date',
             'due_at' => 'date',

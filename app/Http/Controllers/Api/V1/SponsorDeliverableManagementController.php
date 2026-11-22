@@ -93,12 +93,22 @@ class SponsorDeliverableManagementController extends Controller
             'responsible_user_id' => $responsibleRule,
             'status' => ['nullable', Rule::in(SponsorDeliverable::STATUSES)],
             'fulfillment_evidence' => ['nullable', 'string', 'max:5000'],
+            'evidence_images' => ['sometimes', 'array', 'max:10'],
+            'evidence_images.*' => ['string', 'max:1500000'],
         ]);
+        foreach ($data['evidence_images'] ?? [] as $image) {
+            $bytes = str_starts_with($image, 'data:image/jpeg;base64,')
+                ? base64_decode(substr($image, 23), true) : false;
+            $size = $bytes ? @getimagesizefromstring($bytes) : false;
+            if (! $size || $size[2] !== IMAGETYPE_JPEG || $size[0] > 2000 || $size[1] > 2000) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['evidence_images' => 'Invalid JPEG image.']);
+            }
+        }
         $status = $data['status'] ?? $deliverable?->status ?? 'planned';
         $evidence = array_key_exists('fulfillment_evidence', $data)
             ? $data['fulfillment_evidence']
             : $deliverable?->fulfillment_evidence;
-        if ($status === 'fulfilled' && blank($evidence)) {
+        if ($status === 'fulfilled' && blank($evidence) && empty($data['evidence_images'] ?? $deliverable?->evidence_images)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'fulfillment_evidence' => __('validation.required', ['attribute' => 'fulfillment_evidence']),
             ]);
@@ -145,6 +155,7 @@ class SponsorDeliverableManagementController extends Controller
             ] : null,
             'status' => $deliverable->status,
             'fulfillment_evidence' => $deliverable->fulfillment_evidence,
+            'evidence_images' => $deliverable->evidence_images ?? [],
             'fulfilled_at' => $deliverable->fulfilled_at?->toIso8601String(),
             'fulfilled_by' => $deliverable->fulfilled_by,
             'is_overdue' => $deliverable->isOverdue(),

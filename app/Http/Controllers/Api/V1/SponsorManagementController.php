@@ -385,6 +385,7 @@ class SponsorManagementController extends Controller
             ] : null,
             'status' => $deliverable->status,
             'fulfillment_evidence' => $deliverable->fulfillment_evidence,
+            'evidence_images' => $deliverable->evidence_images ?? [],
             'fulfilled_at' => $deliverable->fulfilled_at?->toIso8601String(),
             'fulfilled_by' => $deliverable->fulfilled_by,
             'is_overdue' => $deliverable->isOverdue(),
