@@ -52,6 +52,10 @@ class ClubServiceHourLedgerTest extends TestCase
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/member-response", [
             'decision' => 'accepted',
         ])->assertOk()->assertJsonPath('data.member_response_status', 'accepted');
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $manager->id,
+            'type' => 'club.service_hour.member_accepted',
+        ]);
         Sanctum::actingAs($manager);
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/confirm")
             ->assertOk()
@@ -242,6 +246,10 @@ class ClubServiceHourLedgerTest extends TestCase
         ])->assertOk()
             ->assertJsonPath('data.member_response_status', 'disputed')
             ->assertJsonPath('data.member_response_reason', 'Ich war nur 45 Minuten am Bierstand.');
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $manager->id,
+            'type' => 'club.service_hour.member_disputed',
+        ]);
 
         Sanctum::actingAs($manager);
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/confirm")

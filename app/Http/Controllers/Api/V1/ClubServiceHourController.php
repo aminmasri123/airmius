@@ -190,6 +190,7 @@ class ClubServiceHourController extends Controller
             $record,
             ['reason' => $record->member_response_reason],
         );
+        $this->notifyManagersOfMemberResponse($club, $record, $request->user());
 
         return response()->json(['data' => $this->recordPayload($record->refresh())]);
     }
@@ -411,6 +412,53 @@ class ClubServiceHourController extends Controller
         if ($channel !== 'none') {
             $record->forceFill(['notified_at' => now()])->save();
         }
+    }
+
+    private function notifyManagersOfMemberResponse(Club $club, ClubServiceHourRecord $record, User $member): void
+    {
+        $disputed = $record->member_response_status === 'disputed';
+        User::query()
+            ->whereKey($club->owner_id)
+            ->orWhereIn('id', $club->users()->pluck('users.id'))
+            ->get(['id', 'language'])
+            ->filter(fn (User $manager) =>
+                (int) $manager->id !== (int) $member->id
+                && ClubPermissions::allows($club, $manager, ClubPermissions::MEMBERS_MANAGE))
+            ->unique('id')
+            ->each(function (User $manager) use ($club, $record, $member, $disputed): void {
+                AppNotification::sendLocalized(
+                    $manager,
+                    $disputed
+                        ? 'club.service_hour.member_disputed'
+                        : 'club.service_hour.member_accepted',
+                    $disputed
+                        ? 'organization.notifications.service_hour_member_disputed_title'
+                        : 'organization.notifications.service_hour_member_accepted_title',
+                    $disputed
+                        ? 'organization.notifications.service_hour_member_disputed_body'
+                        : 'organization.notifications.service_hour_member_accepted_body',
+                    [
+                        'member' => $member->name,
+                        'activity' => $record->title,
+                        'date' => LocalizedMail::for($manager)->date($record->served_on),
+                        'minutes' => (int) $record->minutes,
+                        'reason' => $record->member_response_reason,
+                    ],
+                    [
+                        'club_id' => (int) $club->id,
+                        'service_hour_record_id' => (int) $record->id,
+                        'member_id' => (int) $member->id,
+                        'member_name' => $member->name,
+                        'activity' => $record->title,
+                        'served_on' => $record->served_on->format('Y-m-d'),
+                        'minutes' => (int) $record->minutes,
+                        'member_response_status' => $record->member_response_status,
+                        'member_response_reason' => $record->member_response_reason,
+                        'mobile_url' => 'airmius://notifications',
+                    ],
+                    ['category' => 'club', 'priority' => $disputed ? 'high' : 'normal'],
+                );
+            });
     }
 
     private function recordPayload(ClubServiceHourRecord $record): array
