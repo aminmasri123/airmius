@@ -24,7 +24,7 @@ class PublicClubNewsletterSubscriptionTest extends TestCase
         ]);
 
         $this->postJson("/api/v1/public/clubs/{$club->id}/newsletter", [
-            'email' => 'reader@example.org',
+            'email' => 'reader@gmail.com',
             'name' => 'Reader',
             'privacy_consent' => true,
             'website' => '',
@@ -34,7 +34,7 @@ class PublicClubNewsletterSubscriptionTest extends TestCase
 
         $this->assertDatabaseHas('club_newsletter_subscriptions', [
             'club_id' => $club->id,
-            'email' => 'reader@example.org',
+            'email' => 'reader@gmail.com',
             'status' => 'pending',
         ]);
     }
@@ -51,7 +51,7 @@ class PublicClubNewsletterSubscriptionTest extends TestCase
         ]);
 
         $this->postJson("/api/v1/public/clubs/{$club->id}/newsletter", [
-            'email' => 'reader@example.org',
+            'email' => 'reader@gmail.com',
             'privacy_consent' => true,
             'website' => '',
         ])->assertNotFound();
