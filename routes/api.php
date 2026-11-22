@@ -302,6 +302,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->name('clubs.members.invite.token');
 
     Route::middleware(['auth:sanctum', EnsureGuardianConsentResolved::class, EnsureIdempotentApiRequest::class, EnsureApiProcessingPurpose::class])->group(function () {
+        Route::get('/clubs/{club}/newsletter/status', [ClubNewsletterController::class, 'status'])
+            ->name('clubs.newsletter.status');
         Route::middleware(PlanningNoStore::class)->group(function () {
             require __DIR__.'/planning-api.php';
         });

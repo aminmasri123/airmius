@@ -3946,6 +3946,9 @@ class AirmiusApiClient {
         query: {'subscribers_page': '$page'},
       );
 
+  Future<AirmiusJson> clubNewsletterStatus(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/newsletter/status');
+
   Future<AirmiusJson> subscribeClubNewsletter({
     required int clubId,
     required String email,

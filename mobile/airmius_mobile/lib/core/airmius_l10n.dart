@@ -22906,6 +22906,12 @@ final _guestClubLabelsEn = {
   'guestClubs.newsletterSending': 'Sending…',
   'guestClubs.newsletterSent':
       'Request processed. If confirmation is required, you will receive an email. Please also check your spam folder.',
+  'guestClubs.newsletterPendingTitle': 'Confirmation pending',
+  'guestClubs.newsletterPendingBody':
+      'A confirmation email has already been requested. Open the link in your inbox. Another tap will not immediately send another email.',
+  'guestClubs.newsletterConfirmedTitle': 'Newsletter subscribed ✓',
+  'guestClubs.newsletterConfirmedBody':
+      'Your email address is confirmed. You will receive this club newsletter and can unsubscribe from any message.',
   'guestClubs.newsletterError':
       'The subscription could not be started. Please try again.',
   'guestClubs.newsletterEmailError': 'Enter a valid email address.',
@@ -22947,6 +22953,12 @@ final _guestClubLabelsDe = {
   'guestClubs.newsletterSending': 'Wird gesendet…',
   'guestClubs.newsletterSent':
       'Anfrage verarbeitet. Falls eine Bestätigung nötig ist, erhältst du eine E-Mail. Bitte prüfe auch den Spam-Ordner.',
+  'guestClubs.newsletterPendingTitle': 'Bestätigung ausstehend',
+  'guestClubs.newsletterPendingBody':
+      'Die Bestätigungsmail wurde bereits angefordert. Öffne den Link in deinem E-Mail-Postfach. Ein weiterer Klick versendet nicht sofort eine neue E-Mail.',
+  'guestClubs.newsletterConfirmedTitle': 'Newsletter abonniert ✓',
+  'guestClubs.newsletterConfirmedBody':
+      'Deine E-Mail-Adresse ist bestätigt. Du erhältst den Newsletter dieses Vereins und kannst dich in jeder Nachricht wieder abmelden.',
   'guestClubs.newsletterError':
       'Die Anmeldung konnte nicht gestartet werden. Bitte versuche es erneut.',
   'guestClubs.newsletterEmailError': 'Gib eine gültige E-Mail-Adresse ein.',
@@ -22987,6 +22999,12 @@ final _guestClubLabelsFr = {
   'guestClubs.newsletterSending': 'Envoi…',
   'guestClubs.newsletterSent':
       'Demande traitée. Si une confirmation est nécessaire, vous recevrez un e-mail. Vérifiez aussi les courriers indésirables.',
+  'guestClubs.newsletterPendingTitle': 'Confirmation en attente',
+  'guestClubs.newsletterPendingBody':
+      'Un e-mail de confirmation a déjà été demandé. Ouvrez le lien reçu. Un nouveau clic n’envoie pas immédiatement un autre e-mail.',
+  'guestClubs.newsletterConfirmedTitle': 'Newsletter confirmée ✓',
+  'guestClubs.newsletterConfirmedBody':
+      'Votre adresse e-mail est confirmée. Vous recevrez la newsletter de ce club et pourrez vous désabonner depuis chaque message.',
   'guestClubs.newsletterError':
       'Impossible de démarrer l’inscription. Veuillez réessayer.',
   'guestClubs.newsletterEmailError': 'Saisissez une adresse e-mail valide.',
@@ -23027,6 +23045,12 @@ final _guestClubLabelsAr = {
   'guestClubs.newsletterSending': 'جارٍ الإرسال…',
   'guestClubs.newsletterSent':
       'تمت معالجة الطلب. إذا كان التأكيد مطلوباً فستصلك رسالة. تحقق أيضاً من مجلد الرسائل غير المرغوب فيها.',
+  'guestClubs.newsletterPendingTitle': 'التأكيد قيد الانتظار',
+  'guestClubs.newsletterPendingBody':
+      'تم طلب رسالة تأكيد بالفعل. افتح الرابط في بريدك الإلكتروني. لن يؤدي النقر مرة أخرى إلى إرسال رسالة جديدة فورًا.',
+  'guestClubs.newsletterConfirmedTitle': 'تم الاشتراك في النشرة ✓',
+  'guestClubs.newsletterConfirmedBody':
+      'تم تأكيد بريدك الإلكتروني. ستتلقى نشرة هذا النادي ويمكنك إلغاء الاشتراك من أي رسالة.',
   'guestClubs.newsletterError': 'تعذر بدء الاشتراك. حاول مرة أخرى.',
   'guestClubs.newsletterEmailError': 'أدخل بريداً إلكترونياً صالحاً.',
 };

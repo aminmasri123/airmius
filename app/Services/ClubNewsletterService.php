@@ -16,6 +16,8 @@ use Illuminate\Support\Str;
 
 class ClubNewsletterService
 {
+    public const CONFIRMATION_RESEND_MINUTES = 10;
+
     public function subscribers(Club $club): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         return ClubNewsletterSubscription::query()
@@ -39,6 +41,14 @@ class ClubNewsletterService
         // A third party must not be able to move an already confirmed address
         // back to "pending" simply by submitting the public form again.
         if ($existing?->status === 'confirmed' && ! $isSuppressed) {
+            return [$existing, null];
+        }
+
+        if (
+            $existing?->status === 'pending'
+            && ! $isSuppressed
+            && $existing->confirmation_sent_at?->gt(now()->subMinutes(self::CONFIRMATION_RESEND_MINUTES))
+        ) {
             return [$existing, null];
         }
 
@@ -69,6 +79,26 @@ class ClubNewsletterService
         );
 
         return [$subscription, $token];
+    }
+
+    public function statusFor(Club $club, User $user): array
+    {
+        $subscription = ClubNewsletterSubscription::query()
+            ->where('club_id', $club->id)
+            ->where(function ($query) use ($user): void {
+                $query->where('user_id', $user->id)
+                    ->orWhere('email', Str::lower(trim($user->email)));
+            })
+            ->latest('id')
+            ->first();
+
+        return [
+            'status' => $subscription?->status ?? 'none',
+            'confirmation_sent_at' => $subscription?->confirmation_sent_at?->toJSON(),
+            'can_resend_at' => $subscription?->status === 'pending' && $subscription->confirmation_sent_at
+                ? $subscription->confirmation_sent_at->copy()->addMinutes(self::CONFIRMATION_RESEND_MINUTES)->toJSON()
+                : null,
+        ];
     }
 
     public function confirm(string $token): ?ClubNewsletterSubscription

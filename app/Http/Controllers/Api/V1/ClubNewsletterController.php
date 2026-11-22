@@ -25,12 +25,33 @@ class ClubNewsletterController extends Controller
             'website' => ['nullable', 'max:0'],
         ]);
 
-        [$subscription] = $this->newsletters->requestOptIn($club, $data['email'], $data['name'] ?? null, $request->user());
+        [$subscription, $token] = $this->newsletters->requestOptIn($club, $data['email'], $data['name'] ?? null, $request->user());
+
+        $message = match ($subscription->status) {
+            'confirmed' => 'newsletter_already_subscribed',
+            'pending' => $token === null ? 'newsletter_confirmation_pending' : 'newsletter_confirmation_required',
+            default => 'newsletter_confirmation_required',
+        };
 
         return response()->json([
-            'message' => 'newsletter_confirmation_required',
-            'data' => ['status' => 'pending'],
+            'message' => $message,
+            'data' => [
+                'status' => $subscription->status,
+                'confirmation_sent' => $token !== null,
+                'can_resend_at' => $subscription->status === 'pending' && $subscription->confirmation_sent_at
+                    ? $subscription->confirmation_sent_at->copy()
+                        ->addMinutes(ClubNewsletterService::CONFIRMATION_RESEND_MINUTES)
+                        ->toJSON()
+                    : null,
+            ],
         ], 202);
+    }
+
+    public function status(Request $request, Club $club)
+    {
+        abort_unless($club->verification_status === 'verified' && $club->is_listed, 404);
+
+        return response()->json(['data' => $this->newsletters->statusFor($club, $request->user())]);
     }
 
     public function subscribers(Request $request, Club $club)

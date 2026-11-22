@@ -4,7 +4,7 @@ import Nav from '@/Components/Guest/Nav.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
@@ -17,6 +17,7 @@ const props = defineProps({
     teams: { type: Array, default: () => [] },
     events: { type: Array, default: () => [] },
     membership_types: { type: Array, default: () => [] },
+    newsletterStatus: { type: String, default: null },
     seo: { type: Object, default: () => ({}) },
 })
 
@@ -64,14 +65,25 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
 }).format(Number(value || 0))
 
 const intervalLabel = (interval) => t(`public_discovery.intervals.${interval || 'none'}`)
-const newsletterSent = ref(false)
+const newsletterStatus = ref(props.newsletterStatus || 'none')
+const newsletterStorageKey = computed(() => `airmius.newsletter-status.v1.${props.entity.id}`)
 const newsletterForm = useForm({ name: '', email: '', privacy_consent: false, website: '' })
 const subscribeNewsletter = () => newsletterForm.post(route('guest.newsletter.subscribe', props.entity.id), {
     preserveScroll: true,
-    onSuccess: () => {
-        newsletterSent.value = true
+    onSuccess: (page) => {
+        newsletterStatus.value = page.props.newsletterStatus || 'pending'
+        window.localStorage.setItem(newsletterStorageKey.value, newsletterStatus.value)
         newsletterForm.reset()
     },
+})
+const useAnotherNewsletterEmail = () => {
+    newsletterStatus.value = 'none'
+    window.localStorage.removeItem(newsletterStorageKey.value)
+}
+onMounted(() => {
+    if (props.kind !== 'club' || props.newsletterStatus) return
+    const stored = window.localStorage.getItem(newsletterStorageKey.value)
+    if (['pending', 'confirmed'].includes(stored)) newsletterStatus.value = stored
 })
 </script>
 
@@ -141,10 +153,14 @@ const subscribeNewsletter = () => newsletterForm.post(route('guest.newsletter.su
                             <li class="flex gap-2"><i class="las la-check text-success" aria-hidden="true"></i>{{ t('public_discovery.newsletter.unsubscribe_note') }}</li>
                         </ul>
                     </div>
-                    <div v-if="newsletterSent" class="rounded-2xl border border-success/30 bg-success/10 p-5" role="status">
-                        <p class="font-black text-success">{{ t('public_discovery.newsletter.success_title') }}</p>
-                        <p class="mt-2 text-sm leading-6 text-secondary">{{ t('public_discovery.newsletter.success_description') }}</p>
-                        <button type="button" class="mt-4 text-sm font-bold text-air-blue hover:underline" @click="newsletterSent = false">{{ t('public_discovery.newsletter.use_another_email') }}</button>
+                    <div v-if="newsletterStatus === 'confirmed'" class="rounded-2xl border border-success/30 bg-success/10 p-5" role="status">
+                        <p class="font-black text-success">{{ t('public_discovery.newsletter.confirmed_title') }}</p>
+                        <p class="mt-2 text-sm leading-6 text-secondary">{{ t('public_discovery.newsletter.confirmed_description') }}</p>
+                    </div>
+                    <div v-else-if="newsletterStatus === 'pending'" class="rounded-2xl border border-air-blue/30 bg-air-blue/10 p-5" role="status">
+                        <p class="font-black text-air-blue">{{ t('public_discovery.newsletter.pending_title') }}</p>
+                        <p class="mt-2 text-sm leading-6 text-secondary">{{ t('public_discovery.newsletter.pending_description') }}</p>
+                        <button type="button" class="mt-4 text-sm font-bold text-air-blue hover:underline" @click="useAnotherNewsletterEmail">{{ t('public_discovery.newsletter.use_another_email') }}</button>
                     </div>
                     <form v-else class="space-y-3 rounded-2xl border border-border bg-bg p-5" @submit.prevent="subscribeNewsletter">
                         <div>

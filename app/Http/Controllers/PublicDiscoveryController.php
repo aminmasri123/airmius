@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\Sport;
+use App\Services\ClubNewsletterService;
 use App\Services\PublicDiscoveryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -13,7 +14,10 @@ use Inertia\Response;
 
 class PublicDiscoveryController extends Controller
 {
-    public function __construct(private readonly PublicDiscoveryService $discovery) {}
+    public function __construct(
+        private readonly PublicDiscoveryService $discovery,
+        private readonly ClubNewsletterService $newsletters,
+    ) {}
 
     public function events(Request $request): Response
     {
@@ -83,7 +87,7 @@ class PublicDiscoveryController extends Controller
         ]);
     }
 
-    public function club(Club $club): Response
+    public function club(Request $request, Club $club): Response
     {
         $payload = $this->discovery->club($club);
         abort_if($payload === null, 404);
@@ -97,6 +101,11 @@ class PublicDiscoveryController extends Controller
         return Inertia::render('Guest/Discovery/Show', [
             ...$this->commonProps(),
             'kind' => 'club',
+            'newsletterStatus' => $request->user()
+                ? $this->newsletters->statusFor($club, $request->user())['status']
+                : ((int) $request->session()->get('newsletter_club_id') === (int) $club->id
+                    ? $request->session()->get('newsletter_status')
+                    : null),
             ...$payload,
             'seo' => [
                 'title' => __('public_discovery.club.meta_title', ['name' => $entity['name']]),

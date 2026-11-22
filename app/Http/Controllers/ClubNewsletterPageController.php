@@ -27,9 +27,22 @@ class ClubNewsletterPageController extends Controller
             'website' => ['nullable', 'max:0'],
         ]);
 
-        $this->newsletters->requestOptIn($club, $data['email'], $data['name'] ?? null, $request->user());
+        [$subscription, $token] = $this->newsletters->requestOptIn(
+            $club,
+            $data['email'],
+            $data['name'] ?? null,
+            $request->user(),
+        );
 
-        return back()->with('success', 'Anfrage verarbeitet. Falls eine Bestätigung erforderlich ist, erhältst du gleich eine E-Mail.');
+        $request->session()->flash('newsletter_club_id', $club->id);
+        $request->session()->flash('newsletter_status', $subscription->status);
+        $request->session()->flash('newsletter_confirmation_sent', $token !== null);
+
+        return back()->with('success', $subscription->status === 'confirmed'
+            ? 'Der Newsletter ist bereits abonniert.'
+            : ($token === null
+                ? 'Die Bestätigung steht bereits aus. Bitte prüfe dein E-Mail-Postfach.'
+                : 'Bestätigungsmail wurde gesendet. Bitte öffne den Link in der E-Mail.'));
     }
 
     public function confirm(string $token)
