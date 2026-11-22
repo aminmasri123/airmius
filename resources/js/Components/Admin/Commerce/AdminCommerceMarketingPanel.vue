@@ -46,9 +46,9 @@ defineProps({
             <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCoupon">
                 <input v-model="couponForm.code" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.code')">
                 <input v-model="couponForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.name')">
-                <select v-model="couponForm.scope" class="rounded-lg border-border bg-inputBg text-sm text-primary" aria-label="Gutscheinbereich">
-                    <option value="subscription">Abonnement</option>
-                    <option value="marketplace">Marketplace</option>
+                <select v-model="couponForm.scope" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('auto.Gutscheinbereich')">
+                    <option value="subscription">{{ t('auto.Abo') }}</option>
+                    <option value="marketplace">{{ t('auto.Marketplace') }}</option>
                 </select>
                 <select v-model="couponForm.type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                     <option value="percent">Prozent</option>
@@ -71,7 +71,7 @@ defineProps({
                             <td class="py-3 font-semibold text-primary">
                                 {{ coupon.code }}
                                 <span class="block text-xs font-normal text-secondary">
-                                    {{ coupon.scope === 'marketplace' ? 'Marketplace' : 'Abonnement' }}
+                                    {{ t(coupon.scope === 'marketplace' ? 'auto.Marketplace' : 'auto.Abo') }}
                                 </span>
                             </td>
                             <td class="py-3 text-secondary">{{ coupon.type === 'percent' ? `${coupon.percent_off}%` : formatMoney(coupon.value_cents) }}</td>
