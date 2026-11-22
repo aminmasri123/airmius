@@ -128,6 +128,30 @@ String _value(WidgetTester tester, String key) =>
 
 void main() {
   testWidgets(
+    'verified sponsors no longer see the application and verification action',
+    (tester) async {
+      await _mount(tester, _Transport(profile: {..._profile}));
+
+      expect(find.text('Application & verification'), findsNothing);
+      expect(find.text('Verified'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'sponsors awaiting verification can still open their application',
+    (tester) async {
+      await _mount(
+        tester,
+        _Transport(
+          profile: {..._profile, 'verification_status': 'pending_review'},
+        ),
+      );
+
+      expect(find.text('Application & verification'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'create requires legal details and explicit consents, then reloads',
     (tester) async {
       final transport = _Transport();

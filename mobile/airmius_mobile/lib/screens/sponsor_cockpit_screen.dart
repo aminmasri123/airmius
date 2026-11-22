@@ -876,11 +876,12 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                         : t('sponsorCockpit.editProfile'),
                   ),
                 ),
-              OutlinedButton.icon(
-                onPressed: () => _open(const SponsorApplicationScreen()),
-                icon: const Icon(Icons.fact_check_outlined),
-                label: Text(t('sponsorCockpit.applicationHistory')),
-              ),
+              if (_text(profile?['verification_status']) != 'verified')
+                OutlinedButton.icon(
+                  onPressed: () => _open(const SponsorApplicationScreen()),
+                  icon: const Icon(Icons.fact_check_outlined),
+                  label: Text(t('sponsorCockpit.applicationHistory')),
+                ),
             ],
           ),
         ],
