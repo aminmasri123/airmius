@@ -289,7 +289,7 @@ final class CrossDeviceReadinessTest extends TestCase
     private function deviceValidator(string $android, string $ios): Process
     {
         $process = new Process([
-            'bash',
+            $this->bashExecutable(),
             base_path('mobile/airmius_mobile/scripts/assert_real_device_smoke_evidence.sh'),
             '--android',
             $android,
@@ -299,6 +299,24 @@ final class CrossDeviceReadinessTest extends TestCase
         $process->run();
 
         return $process;
+    }
+
+    private function bashExecutable(): string
+    {
+        if (PHP_OS_FAMILY !== 'Windows') {
+            return 'bash';
+        }
+
+        foreach ([
+            'C:\\Program Files\\Git\\bin\\bash.exe',
+            'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
+        ] as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return 'bash';
     }
 
     /** @param array<string, mixed> $data */
