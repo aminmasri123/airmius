@@ -1,9 +1,10 @@
 ﻿<script setup>
 import { useI18n } from 'vue-i18n'
+import { nextTick, ref } from 'vue'
 
 const { t } = useI18n()
 
-defineProps({
+const props = defineProps({
     couponForm: {
         type: Object,
         required: true,
@@ -32,19 +33,32 @@ defineProps({
         type: Function,
         required: true,
     },
+    editingCoupon: { type: Object, default: null },
+    deletingCoupon: { type: Object, required: true },
+    editCoupon: { type: Function, required: true },
+    cancelCouponEdit: { type: Function, required: true },
+    deleteCoupon: { type: Function, required: true },
     storeAddon: {
         type: Function,
         required: true,
     },
 })
+
+const couponCodeInput = ref(null)
+
+const openCouponEditor = async (coupon) => {
+    props.editCoupon(coupon)
+    await nextTick()
+    couponCodeInput.value?.focus()
+}
 </script>
 
 <template>
     <section class="grid gap-6 xl:grid-cols-2">
         <article class="surface-card p-5">
-            <h2 class="text-lg font-semibold text-primary">Rabattcode erstellen</h2>
+            <h2 class="text-lg font-semibold text-primary">{{ editingCoupon ? 'Rabattcode bearbeiten' : 'Rabattcode erstellen' }}</h2>
             <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCoupon">
-                <input v-model="couponForm.code" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.code')">
+                <input ref="couponCodeInput" v-model="couponForm.code" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.code')">
                 <input v-model="couponForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.name')">
                 <select v-model="couponForm.scope" class="rounded-lg border-border bg-inputBg text-sm text-primary" :aria-label="t('auto.Gutscheinbereich')">
                     <option value="subscription">{{ t('auto.Abo') }}</option>
@@ -57,11 +71,21 @@ defineProps({
                 <input v-if="couponForm.type === 'percent'" v-model="couponForm.percent_off" type="number" min="1" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Prozent">
                 <input v-else v-model="couponForm.value_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Betrag in EUR">
                 <input v-model="couponForm.max_redemptions" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Max. Nutzungen">
+                <label class="grid gap-1 text-sm text-primary">
+                    Gültig bis (optional)
+                    <input v-model="couponForm.ends_at" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                </label>
                 <label class="flex items-center gap-2 text-sm text-primary">
                     <input v-model="couponForm.is_active" type="checkbox" class="rounded border-border bg-inputBg">
                     Aktiv
                 </label>
-                <button class="md:col-span-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
+                <ul v-if="couponForm.hasErrors" class="space-y-1 text-sm text-error md:col-span-2" role="alert">
+                    <li v-for="(error, field) in couponForm.errors" :key="field">{{ error }}</li>
+                </ul>
+                <div class="flex gap-2 md:col-span-2">
+                    <button v-if="editingCoupon" type="button" class="rounded-lg border border-border px-4 py-2 text-sm text-primary" :disabled="couponForm.processing" @click="cancelCouponEdit">Abbrechen</button>
+                    <button class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="couponForm.processing || deletingCoupon.processing">Speichern</button>
+                </div>
             </form>
 
             <div class="mt-5 overflow-x-auto">
@@ -76,7 +100,14 @@ defineProps({
                             </td>
                             <td class="py-3 text-secondary">{{ coupon.type === 'percent' ? `${coupon.percent_off}%` : formatMoney(coupon.value_cents) }}</td>
                             <td class="py-3 text-secondary">{{ coupon.redeemed_count }} genutzt</td>
+                            <td class="px-2 py-3 text-secondary">{{ coupon.ends_on || 'Kein Ablaufdatum' }}</td>
                             <td class="py-3 text-end" :class="coupon.is_active ? 'text-success' : 'text-secondary'">{{ coupon.is_active ? 'Aktiv' : 'Inaktiv' }}</td>
+                            <td class="py-3 ps-2">
+                                <div class="flex flex-wrap justify-end gap-2">
+                                    <button type="button" class="rounded-lg border border-border px-3 py-1 text-primary" :disabled="couponForm.processing || deletingCoupon.processing" @click="openCouponEditor(coupon)">Bearbeiten</button>
+                                    <button type="button" class="rounded-lg border border-error/40 px-3 py-1 text-error" :disabled="couponForm.processing || deletingCoupon.processing" @click="deleteCoupon(coupon)">Löschen</button>
+                                </div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>

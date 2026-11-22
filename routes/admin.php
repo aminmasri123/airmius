@@ -143,6 +143,7 @@ Route::middleware([
     Route::get('/admin/commerce', [AdminCommerceController::class, 'index'])->middleware('can:subscriptions.manage')->name('admin.commerce.index');
     Route::post('/admin/commerce/coupons', [AdminCommerceController::class, 'storeCoupon'])->middleware('can:subscriptions.manage')->name('admin.commerce.coupons.store');
     Route::put('/admin/commerce/coupons/{coupon}', [AdminCommerceController::class, 'updateCoupon'])->middleware('can:subscriptions.manage')->name('admin.commerce.coupons.update');
+    Route::delete('/admin/commerce/coupons/{coupon}', [AdminCommerceController::class, 'destroyCoupon'])->middleware('can:subscriptions.manage')->name('admin.commerce.coupons.destroy');
     Route::post('/admin/commerce/addons', [AdminCommerceController::class, 'storeAddon'])->middleware('can:subscriptions.manage')->name('admin.commerce.addons.store');
     Route::put('/admin/commerce/addons/{addon}', [AdminCommerceController::class, 'updateAddon'])->middleware('can:subscriptions.manage')->name('admin.commerce.addons.update');
     Route::post('/admin/commerce/products', [AdminCommerceController::class, 'storeProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.store');

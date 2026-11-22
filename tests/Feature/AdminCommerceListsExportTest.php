@@ -38,6 +38,59 @@ class AdminCommerceListsExportTest extends TestCase
         return $admin;
     }
 
+    public function test_coupon_can_be_created_edited_and_deleted_across_web_and_mobile(): void
+    {
+        $admin = User::factory()->create();
+        $admin->givePermissionTo(Permission::findOrCreate('subscriptions.manage'));
+        $this->actingAs($admin);
+
+        $web = '/admin/commerce/coupons';
+        $api = '/api/v1/admin/commerce/coupons';
+        $payload = [
+            'code' => ' autumn-test ',
+            'name' => 'Autumn Test',
+            'scope' => 'marketplace',
+            'type' => 'percent',
+            'percent_off' => 20,
+            'max_redemptions' => 3,
+            'ends_at' => '2029-10-31',
+            'is_active' => true,
+        ];
+
+        $this->post($web, $payload)->assertRedirect()->assertSessionHasNoErrors();
+        $coupon = SubscriptionCoupon::query()->where('code', 'AUTUMN-TEST')->firstOrFail();
+        $this->assertSame('2029-10-31 23:59:59', $coupon->ends_at->toDateTimeString());
+        $this->travelTo($coupon->ends_at->copy()->subMinute());
+        $this->assertTrue($coupon->isRedeemable());
+        $coupon->redeemed_count = 3;
+        $this->assertFalse($coupon->isRedeemable());
+        $coupon->redeemed_count = 0;
+        $this->travelTo($coupon->ends_at->copy()->addSecond());
+        $this->assertFalse($coupon->isRedeemable());
+        $this->travelBack();
+
+        Sanctum::actingAs($admin);
+        $this->postJson($api, $payload)->assertUnprocessable()->assertJsonValidationErrors('code');
+        $this->patchJson("$api/$coupon->id", [...$payload, 'ends_at' => '2029-11-15'])
+            ->assertOk()
+            ->assertJsonPath('data.ends_on', '2029-11-15')
+            ->assertJsonPath('data.scope', 'marketplace');
+
+        $this->put("$web/$coupon->id", [...$payload, 'ends_at' => null])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertNull($coupon->fresh()->ends_at);
+
+        Sanctum::actingAs(User::factory()->create());
+        $this->deleteJson("$api/$coupon->id")->assertForbidden();
+        Sanctum::actingAs($admin);
+        $this->deleteJson("$api/$coupon->id")->assertOk();
+        $this->assertModelMissing($coupon);
+
+        $id = $this->postJson($api, $payload)->assertCreated()->json('data.id');
+        $this->delete("$web/$id")->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertDatabaseMissing('subscription_coupons', ['id' => $id]);
+    }
+
     public function test_every_list_search_column_relation_status_and_page_with_nonempty_data(): void
     {
         $this->admin();

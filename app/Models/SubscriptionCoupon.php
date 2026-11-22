@@ -9,6 +9,13 @@ class SubscriptionCoupon extends Model
 {
     use HasFactory;
 
+    protected $appends = ['ends_on'];
+
+    public function getEndsOnAttribute(): ?string
+    {
+        return $this->ends_at?->toDateString();
+    }
+
     protected $fillable = [
         'code',
         'scope',

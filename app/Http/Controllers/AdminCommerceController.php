@@ -22,6 +22,7 @@ use App\Models\PayoutProfile;
 use App\Models\Setting;
 use App\Models\SubscriptionAddon;
 use App\Models\SubscriptionCoupon;
+use App\Support\SubscriptionCouponInput;
 use App\Models\User;
 use App\Models\WebsiteRequest;
 use App\Notifications\CommerceReturnStatusUpdated;
@@ -164,16 +165,23 @@ class AdminCommerceController extends Controller
 
     public function storeCoupon(Request $request)
     {
-        SubscriptionCoupon::create($this->couponData($request));
+        SubscriptionCoupon::create(SubscriptionCouponInput::validate($request));
 
         return back()->with('success', 'Rabattcode erstellt.');
     }
 
     public function updateCoupon(Request $request, SubscriptionCoupon $coupon)
     {
-        $coupon->update($this->couponData($request));
+        $coupon->update(SubscriptionCouponInput::validate($request, $coupon));
 
         return back()->with('success', 'Rabattcode aktualisiert.');
+    }
+
+    public function destroyCoupon(SubscriptionCoupon $coupon)
+    {
+        $coupon->delete();
+
+        return back()->with('success', 'Rabattcode gelöscht.');
     }
 
     public function storeAddon(Request $request)
@@ -1178,26 +1186,6 @@ class AdminCommerceController extends Controller
         $shippingRate->update($this->shippingRateData($request));
 
         return back()->with('success', 'Versandkosten wurden aktualisiert.');
-    }
-
-    private function couponData(Request $request): array
-    {
-        $data = $request->validate([
-            'scope' => ['sometimes', Rule::in(['subscription', 'marketplace'])],
-            'code' => ['required', 'string', 'max:80'],
-            'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', Rule::in(['percent', 'fixed'])],
-            'value_cents' => ['nullable', 'integer', 'min:0'],
-            'percent_off' => ['nullable', 'integer', 'min:1', 'max:100'],
-            'max_redemptions' => ['nullable', 'integer', 'min:1'],
-            'starts_at' => ['nullable', 'date'],
-            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
-            'is_active' => ['boolean'],
-        ]);
-        $data['code'] = strtoupper(trim($data['code']));
-        $data['is_active'] = (bool) ($data['is_active'] ?? false);
-
-        return $data;
     }
 
     private function addonData(Request $request): array

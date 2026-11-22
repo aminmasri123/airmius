@@ -555,8 +555,10 @@ class _AdminCommerceOperationsScreenState
                 ? t('commerceOps.active')
                 : t('commerceOps.inactive'),
             subtitle:
-                '${_text(item['code'])} · ${_text(item['type']) == 'percent' ? '${_int(item['percent_off'])}%' : _money(_int(item['value_cents']))}',
+                '${_text(item['code'])} · ${_text(item['type']) == 'percent' ? '${_int(item['percent_off'])}%' : _money(_int(item['value_cents']))}'
+                '\n${t('commerceOps.validUntil')} ${_text(item['ends_on'], fallback: '—')}',
             onEdit: () => _editCoupon(item),
+            onDelete: () => _deleteCoupon(item),
           ),
         ),
         _entityGroup(
@@ -1300,6 +1302,7 @@ class _AdminCommerceOperationsScreenState
     required String status,
     required String subtitle,
     VoidCallback? onEdit,
+    VoidCallback? onDelete,
     String? actionLabel,
   }) {
     return Container(
@@ -1317,19 +1320,32 @@ class _AdminCommerceOperationsScreenState
             const SizedBox(height: 7),
             Text(subtitle),
           ],
-          if (onEdit != null) ...[
+          if (onEdit != null || onDelete != null) ...[
             const SizedBox(height: 9),
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: FilledButton.tonalIcon(
-                onPressed: _busy ? null : onEdit,
-                icon: Icon(
-                  actionLabel == null
-                      ? Icons.edit_outlined
-                      : Icons.arrow_forward_outlined,
-                ),
-                label: Text(actionLabel ?? t('common.edit')),
-              ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                if (onEdit != null)
+                  FilledButton.tonalIcon(
+                    onPressed: _busy ? null : onEdit,
+                    icon: Icon(
+                      actionLabel == null
+                          ? Icons.edit_outlined
+                          : Icons.arrow_forward_outlined,
+                    ),
+                    label: Text(actionLabel ?? t('common.edit')),
+                  ),
+                if (onDelete != null)
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    onPressed: _busy ? null : onDelete,
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(t('common.delete')),
+                  ),
+              ],
             ),
           ],
         ],
@@ -1432,7 +1448,11 @@ class _AdminCommerceOperationsScreenState
     );
   }
 
-  Future<bool> _confirm(String title, String body) async {
+  Future<bool> _confirm(
+    String title,
+    String body, {
+    String? confirmLabel,
+  }) async {
     return await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -1445,7 +1465,7 @@ class _AdminCommerceOperationsScreenState
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(dialogContext, true),
-                child: Text(t('common.confirm')),
+                child: Text(confirmLabel ?? t('common.confirm')),
               ),
             ],
           ),
@@ -1815,6 +1835,7 @@ class _AdminCommerceOperationsScreenState
 
   Future<void> _editCoupon([Map<String, dynamic>? item]) async {
     final creating = item == null;
+    final endDate = _text(item?['ends_on']);
     final values = await _form(t('commerceOps.coupon'), [
       _Field.text(
         'code',
@@ -1827,6 +1848,16 @@ class _AdminCommerceOperationsScreenState
         t('commerceOps.name'),
         initial: _text(item?['name']),
         required: true,
+      ),
+      _Field.choice(
+        'scope',
+        t('commerceOps.couponScope'),
+        initial: _text(item?['scope'], fallback: 'subscription'),
+        choices: const ['subscription', 'marketplace'],
+        choiceLabels: {
+          'subscription': t('commerceOps.couponSubscription'),
+          'marketplace': 'Marketplace',
+        },
       ),
       _Field.choice(
         'type',
@@ -1854,27 +1885,28 @@ class _AdminCommerceOperationsScreenState
         t('commerceOps.startsAt'),
         initial: _text(item?['starts_at']),
       ),
-      _Field.text(
-        'ends_at',
-        t('commerceOps.endsAt'),
-        initial: _text(item?['ends_at']),
-      ),
+      _Field.date('ends_at', t('commerceOps.validUntil'), initial: endDate),
       _Field.toggle(
         'is_active',
         t('commerceOps.active'),
         initial: item == null || _bool(item['is_active']),
       ),
     ]);
-    if (values == null) return;
+    if (values == null || !mounted) return;
+    final type = values['type'];
     final payload = {
       'code': values['code'],
       'name': values['name'],
-      'type': values['type'],
-      'value_cents': _optionalCents(values['value']),
-      'percent_off': _optionalParsedInt(values['percent_off']),
+      'scope': values['scope'],
+      'type': type,
+      'value_cents': type == 'fixed' ? _optionalCents(values['value']) : null,
+      'percent_off': type == 'percent'
+          ? _optionalParsedInt(values['percent_off'])
+          : null,
       'max_redemptions': _optionalParsedInt(values['max_redemptions']),
       'starts_at': _nullable(values['starts_at']),
-      'ends_at': _nullable(values['ends_at']),
+      if (creating || values['ends_at'] != endDate)
+        'ends_at': _nullable(values['ends_at']),
       'is_active': values['is_active'],
     };
     await _run(
@@ -1882,6 +1914,19 @@ class _AdminCommerceOperationsScreenState
           ? _client.adminCreateCommerceCoupon(payload)
           : _client.adminUpdateCommerceCoupon(_int(item['id']), payload),
       success: t('commerceOps.saved'),
+    );
+  }
+
+  Future<void> _deleteCoupon(Map<String, dynamic> item) async {
+    final confirmed = await _confirm(
+      t('commerceOps.deleteCoupon'),
+      '${_text(item['code'])}\n\n${t('commerceOps.deleteCouponBody')}',
+      confirmLabel: t('common.delete'),
+    );
+    if (!confirmed || !mounted) return;
+    await _run(
+      () => _client.adminDeleteCommerceCoupon(_int(item['id'])),
+      success: t('commerceOps.couponDeleted'),
     );
   }
 
@@ -2894,6 +2939,49 @@ class _CommerceFormDialogState extends State<_CommerceFormDialog> {
                           ],
                         );
                       }
+                      if (field.kind == _FieldKind.date) {
+                        final controller = _controllers[field.key]!;
+                        return TextFormField(
+                          controller: controller,
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            labelText: field.label,
+                            prefixIcon: const Icon(
+                              Icons.calendar_today_outlined,
+                            ),
+                            suffixIcon: controller.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: t('commerceOps.clearDate'),
+                                    icon: const Icon(Icons.clear),
+                                    onPressed: () => setState(controller.clear),
+                                  ),
+                          ),
+                          onTap: () async {
+                            final firstDate = DateTime(1900);
+                            final lastDate = DateTime(2100, 12, 31);
+                            final current = DateTime.tryParse(controller.text);
+                            final date = await showDatePicker(
+                              context: context,
+                              firstDate: firstDate,
+                              lastDate: lastDate,
+                              initialDate:
+                                  current != null &&
+                                      !current.isBefore(firstDate) &&
+                                      !current.isAfter(lastDate)
+                                  ? current
+                                  : DateTime.now(),
+                            );
+                            if (date != null && mounted) {
+                              setState(() {
+                                controller.text = DateFormat(
+                                  'yyyy-MM-dd',
+                                ).format(date);
+                              });
+                            }
+                          },
+                        );
+                      }
                       return TextFormField(
                         controller: _controllers[field.key],
                         minLines: field.kind == _FieldKind.multiline ? 3 : 1,
@@ -2960,7 +3048,7 @@ class _CommerceFormDialogState extends State<_CommerceFormDialog> {
   }
 }
 
-enum _FieldKind { text, multiline, number, toggle, choice }
+enum _FieldKind { text, multiline, number, toggle, choice, date }
 
 class _Field {
   const _Field._({
@@ -2999,6 +3087,9 @@ class _Field {
     initial: initial,
     required: required,
   );
+
+  factory _Field.date(String key, String label, {String initial = ''}) =>
+      _Field._(key: key, label: label, kind: _FieldKind.date, initial: initial);
 
   factory _Field.number(
     String key,

@@ -15,6 +15,8 @@ export function useAdminCommerceWorkspace(props) {
     const queryTab = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('tab')
     const activeTab = ref(queryTab || 'marketplace')
     const campaignStatusError = ref('')
+    const editingCoupon = ref(null)
+    const deletingCoupon = useForm({})
     
     const couponForm = useForm({
         code: '',
@@ -24,7 +26,6 @@ export function useAdminCommerceWorkspace(props) {
         percent_off: 50,
         value_cents: '',
         max_redemptions: '',
-        starts_at: '',
         ends_at: '',
         is_active: true,
     })
@@ -441,12 +442,63 @@ export function useAdminCommerceWorkspace(props) {
         },
     })
 
-    const storeCoupon = () => couponForm
-        .transform((data) => transformMoneyFields(data, ['value_cents']))
-        .post(route('admin.commerce.coupons.store'), {
-            preserveScroll: true,
-            onSuccess: () => couponForm.reset(),
+    const cancelCouponEdit = () => {
+        editingCoupon.value = null
+        couponForm.reset().clearErrors()
+    }
+
+    const editCoupon = (coupon) => {
+        editingCoupon.value = coupon
+        couponForm.clearErrors()
+        Object.assign(couponForm, {
+            code: coupon.code,
+            scope: coupon.scope || 'subscription',
+            name: coupon.name,
+            type: coupon.type,
+            percent_off: coupon.percent_off ?? '',
+            value_cents: coupon.value_cents == null ? '' : centsToMajor(coupon.value_cents),
+            max_redemptions: coupon.max_redemptions ?? '',
+            ends_at: coupon.ends_on ?? '',
+            is_active: Boolean(coupon.is_active),
         })
+    }
+
+    const storeCoupon = () => {
+        const coupon = editingCoupon.value
+        couponForm.transform((data) => {
+            const payload = transformMoneyFields({
+                ...data,
+                value_cents: data.type === 'fixed' ? data.value_cents : null,
+                percent_off: data.type === 'percent' ? data.percent_off : null,
+            }, data.type === 'fixed' ? ['value_cents'] : [])
+            if (coupon && data.ends_at === (coupon.ends_on ?? '')) delete payload.ends_at
+            return payload
+        })
+        couponForm.submit(coupon ? 'put' : 'post', coupon
+            ? route('admin.commerce.coupons.update', coupon.id)
+            : route('admin.commerce.coupons.store'), {
+            preserveScroll: true,
+            onSuccess: cancelCouponEdit,
+        })
+    }
+
+    const deleteCoupon = async (coupon) => {
+        if (deletingCoupon.processing || couponForm.processing) return
+        const confirmed = await confirmDialog({
+            title: 'Rabattcode löschen',
+            message: `Soll der Rabattcode „${coupon.code}“ endgültig gelöscht werden?`,
+            confirmLabel: 'Löschen',
+            danger: true,
+        })
+        if (!confirmed || deletingCoupon.processing || couponForm.processing) return
+
+        deletingCoupon.delete(route('admin.commerce.coupons.destroy', coupon.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (editingCoupon.value?.id === coupon.id) cancelCouponEdit()
+            },
+        })
+    }
 
     const storeAddon = () => addonForm
         .transform((data) => transformMoneyFields(data, ['monthly_price_cents', 'yearly_price_cents']))
@@ -922,6 +974,11 @@ export function useAdminCommerceWorkspace(props) {
         setMarketplaceVisualUpload,
         updateMarketplaceVisuals,
         storeCoupon,
+        editingCoupon,
+        deletingCoupon,
+        editCoupon,
+        cancelCouponEdit,
+        deleteCoupon,
         storeAddon,
         storeTaxRate,
         updateCommerceSettings,

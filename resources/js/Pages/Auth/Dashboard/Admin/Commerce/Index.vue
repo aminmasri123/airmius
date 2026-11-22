@@ -153,6 +153,11 @@ const {
     setMarketplaceVisualUpload,
     updateMarketplaceVisuals,
     storeCoupon,
+    editingCoupon,
+    deletingCoupon,
+    editCoupon,
+    cancelCouponEdit,
+    deleteCoupon,
     storeAddon,
     storeTaxRate,
     updateCommerceSettings,
@@ -277,6 +282,11 @@ const {
             :money-input-attrs="moneyInputAttrs"
             :store-addon="storeAddon"
             :store-coupon="storeCoupon"
+            :editing-coupon="editingCoupon"
+            :deleting-coupon="deletingCoupon"
+            :edit-coupon="editCoupon"
+            :cancel-coupon-edit="cancelCouponEdit"
+            :delete-coupon="deleteCoupon"
         />
 
         <AdminCommerceMarketplacePanel

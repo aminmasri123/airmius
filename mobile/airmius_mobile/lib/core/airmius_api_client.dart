@@ -4966,6 +4966,9 @@ class AirmiusApiClient {
     AirmiusJson body,
   ) => _json('PATCH', '/api/v1/admin/commerce/coupons/$couponId', body: body);
 
+  Future<AirmiusJson> adminDeleteCommerceCoupon(int couponId) =>
+      _json('DELETE', '/api/v1/admin/commerce/coupons/$couponId');
+
   Future<AirmiusJson> adminCreateCommerceAddon(AirmiusJson body) =>
       _json('POST', '/api/v1/admin/commerce/addons', body: body);
 
