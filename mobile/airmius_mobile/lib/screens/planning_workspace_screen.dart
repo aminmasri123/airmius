@@ -388,6 +388,16 @@ PlanningEditor competitionPlanningEditor(
     'starts_on': planningApiDay(DateTime.now()),
     'ends_on': planningApiDay(DateTime.now()),
     'registration_deadline_at': '',
+    'venue_status': 'tbd',
+    'venue_name': '',
+    'street': '',
+    'house_number': '',
+    'postal_code': '',
+    'city': '',
+    'country': '',
+    'participation_fee_type': 'unknown',
+    'participation_fee_cents': null,
+    'participation_fee_basis': null,
     ...?row,
   };
   initial['starts_on'] = planningApiDay(initial['starts_on']);
@@ -398,20 +408,56 @@ PlanningEditor competitionPlanningEditor(
   return PlanningEditor(
     title: planningText(context, 'competitions'),
     initial: initial,
-    fields: (f) => [
-      f.text('name', required: true),
-      f.options(
-        'team_id',
-        planningRows(club['teams']),
-        label: f.t('team'),
-        nullable: true,
-      ),
-      f.text('season_name', max: 120),
-      f.status(['planned', 'open', 'closed', 'completed', 'cancelled']),
-      f.date('starts_on'),
-      f.date('ends_on'),
-      f.date('registration_deadline_at', time: true, required: false),
-    ],
+    fields: (f) {
+      final venueKnown = f.values['venue_status'] == 'known';
+      final paid = f.values['participation_fee_type'] == 'paid';
+      return [
+        f.text('name', required: true),
+        f.options(
+          'team_id',
+          planningRows(club['teams']),
+          label: f.t('team'),
+          nullable: true,
+        ),
+        f.text('season_name', max: 120),
+        f.status(['planned', 'open', 'closed', 'completed', 'cancelled']),
+        f.date('starts_on'),
+        f.date('ends_on'),
+        f.date('registration_deadline_at', time: true, required: false),
+        Text(
+          f.t('locationAndAddress'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        f.status(['tbd', 'known'], key: 'venue_status'),
+        if (venueKnown) ...[
+          f.text('venue_name', required: false, max: 120),
+          f.text('street', required: false, max: 160),
+          f.text('house_number', required: false, max: 30),
+          f.text('postal_code', required: false, max: 20),
+          f.text('city', required: true, max: 120),
+          f.text('country', required: false, max: 120),
+        ],
+        Text(
+          f.t('participationCost'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        f.options('participation_fee_type', [
+          {'id': 'unknown', 'name': f.t('unknown')},
+          {'id': 'free', 'name': f.t('free')},
+          {'id': 'paid', 'name': f.t('paidFee')},
+        ], label: f.t('participation_fee_type')),
+        if (paid) ...[
+          f.money('participation_fee_cents'),
+          f.options('participation_fee_basis', [
+            {'id': 'person', 'name': f.t('feePerson')},
+            {'id': 'team', 'name': f.t('teamFee')},
+            {'id': 'flat', 'name': f.t('flat')},
+          ], label: f.t('participation_fee_basis')),
+        ],
+      ];
+    },
     validate: (v) {
       if (planningDate(v['ends_on'])!.isBefore(planningDate(v['starts_on'])!)) {
         return planningText(context, 'dateOrder');
@@ -435,6 +481,19 @@ PlanningEditor competitionPlanningEditor(
       'registration_deadline_at': planningDate(
         v['registration_deadline_at'],
       )?.toUtc().toIso8601String(),
+      for (final key in [
+        'venue_status',
+        'venue_name',
+        'street',
+        'house_number',
+        'postal_code',
+        'city',
+        'country',
+        'participation_fee_type',
+        'participation_fee_cents',
+        'participation_fee_basis',
+      ])
+        key: v[key],
     }, id: planningId(row?['id'])),
   );
 }

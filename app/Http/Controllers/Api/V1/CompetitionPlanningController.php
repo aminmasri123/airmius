@@ -35,9 +35,11 @@ class CompetitionPlanningController extends Controller
     {
         $workspace->authorizeClub($club, $request->user());
 
-        return response()->json(['data' => Competition::query()->where('club_id', $club->id)
-            ->select(['id', 'club_id', 'team_id', 'season_name', 'name', 'status', 'starts_on', 'ends_on', 'registration_deadline_at'])
-            ->withCount(['rosterEntries', 'registrations'])->orderByDesc('starts_on')->get()]);
+        $competitions = Competition::query()->where('club_id', $club->id)
+            ->select(['id', 'club_id', 'team_id', 'season_name', 'name', 'status', 'starts_on', 'ends_on', 'registration_deadline_at', 'metadata'])
+            ->with('venues')->withCount(['rosterEntries', 'registrations'])->orderByDesc('starts_on')->get();
+
+        return response()->json(['data' => $competitions->map(fn (Competition $competition) => $this->competitionView($competition))]);
     }
 
     public function show(Request $request, Competition $competition, PlanningWorkspaceService $workspace)
@@ -48,7 +50,7 @@ class CompetitionPlanningController extends Controller
         $finance = collect([ClubPermissions::FINANCE_VIEW, ClubPermissions::FINANCE_EDIT, ClubPermissions::FINANCE_APPROVE])
             ->contains(fn ($permission) => ClubPermissions::allows($competition->club, $request->user(), $permission));
         $competition->load(['classes', 'venues', 'rosterEntries', 'registrations', 'tournamentGroups.entries', 'tournamentMatches', 'team']);
-        $data = $competition->only(['id', 'club_id', 'team_id', 'season_name', 'name', 'status', 'starts_on', 'ends_on', 'registration_deadline_at']);
+        $data = $this->competitionView($competition);
         $teamUserIds = $competition->team?->users()->pluck('users.id')->all() ?? [];
         $gamesEnabled = Schema::hasTable('competition_games');
 
@@ -89,21 +91,31 @@ class CompetitionPlanningController extends Controller
     public function store(Request $request, Club $club)
     {
         $this->edit($request, $club);
-        $competition = Competition::create(['club_id' => $club->id] + $this->competitionData($request, $club));
+        $details = $this->competitionDetails($request);
+        $competition = DB::transaction(function () use ($request, $club, $details) {
+            $competition = Competition::create(['club_id' => $club->id] + $this->competitionData($request, $club));
+            $this->saveCompetitionDetails($competition, $details);
+
+            return $competition->fresh('venues');
+        });
         ClubAuditLog::record($club, $request->user(), 'club.competition.created', $competition, []);
 
-        return response()->json(['data' => $competition], 201);
+        return response()->json(['data' => $this->competitionView($competition)], 201);
     }
 
     public function update(Request $request, Competition $competition)
     {
         $this->edit($request, $competition->club);
         $data = $this->competitionData($request, $competition->club);
+        $details = $this->competitionDetails($request);
         abort_if(Schema::hasTable('competition_games') && $competition->games()->exists() && (int) ($data['team_id'] ?? 0) !== (int) $competition->team_id, 422, 'The team cannot be changed after games have been created.');
-        $competition->update($data);
+        DB::transaction(function () use ($competition, $data, $details): void {
+            $competition->update($data);
+            $this->saveCompetitionDetails($competition, $details);
+        });
         ClubAuditLog::record($competition->club, $request->user(), 'club.competition.updated', $competition, []);
 
-        return response()->json(['data' => $competition]);
+        return response()->json(['data' => $this->competitionView($competition->fresh('venues'))]);
     }
 
     public function destroy(Request $request, Competition $competition)
@@ -370,5 +382,80 @@ class CompetitionPlanningController extends Controller
             'ends_on' => ['required', 'date_format:Y-m-d', 'after_or_equal:starts_on'],
             'registration_deadline_at' => ['nullable', 'date', 'before_or_equal:ends_on'],
         ]);
+    }
+
+    private function competitionDetails(Request $request): array
+    {
+        return $request->validate([
+            'venue_status' => ['sometimes', Rule::in(['known', 'tbd'])],
+            'venue_name' => ['nullable', 'string', 'max:120'],
+            'street' => ['nullable', 'string', 'max:160'],
+            'house_number' => ['nullable', 'string', 'max:30'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
+            'city' => ['nullable', 'string', 'max:120', 'required_if:venue_status,known'],
+            'country' => ['nullable', 'string', 'max:120'],
+            'participation_fee_type' => ['sometimes', Rule::in(['unknown', 'free', 'paid'])],
+            'participation_fee_cents' => ['nullable', 'integer', 'min:1', 'max:100000000', 'required_if:participation_fee_type,paid'],
+            'participation_fee_basis' => ['nullable', Rule::in(['person', 'team', 'flat']), 'required_if:participation_fee_type,paid'],
+        ]);
+    }
+
+    private function saveCompetitionDetails(Competition $competition, array $details): void
+    {
+        if ($details === []) {
+            return;
+        }
+
+        $metadata = $competition->metadata ?? [];
+        foreach (['venue_status', 'participation_fee_type', 'participation_fee_cents', 'participation_fee_basis'] as $key) {
+            if (array_key_exists($key, $details)) {
+                $metadata[$key] = $details[$key];
+            }
+        }
+        if (array_key_exists('participation_fee_type', $details) && $details['participation_fee_type'] !== 'paid') {
+            $metadata['participation_fee_cents'] = null;
+            $metadata['participation_fee_basis'] = null;
+        }
+        $competition->update(['metadata' => $metadata ?: null]);
+
+        if (($details['venue_status'] ?? null) !== 'known') {
+            return;
+        }
+
+        $venueData = [];
+        foreach (['street', 'house_number', 'postal_code', 'city', 'country'] as $key) {
+            $venueData[$key] = filled($details[$key] ?? null) ? trim((string) $details[$key]) : null;
+        }
+        $venueData['name'] = trim((string) ($details['venue_name'] ?? ''))
+            ?: ($venueData['city'] ?: __('Austragungsort'));
+
+        $venue = $competition->venues()->oldest('id')->first();
+        $venue ? $venue->update($venueData) : $competition->venues()->create(['club_id' => $competition->club_id] + $venueData);
+    }
+
+    private function competitionView(Competition $competition): array
+    {
+        $venue = $competition->relationLoaded('venues')
+            ? $competition->venues->sortBy('id')->first()
+            : $competition->venues()->oldest('id')->first();
+        $metadata = $competition->metadata ?? [];
+        $venueStatus = $metadata['venue_status'] ?? ($venue ? 'known' : 'tbd');
+        $showVenue = $venueStatus === 'known';
+
+        return $competition->only([
+            'id', 'club_id', 'team_id', 'season_name', 'name', 'status', 'starts_on', 'ends_on',
+            'registration_deadline_at', 'roster_entries_count', 'registrations_count',
+        ]) + [
+            'venue_status' => $venueStatus,
+            'venue_name' => $showVenue ? $venue?->name : null,
+            'street' => $showVenue ? $venue?->street : null,
+            'house_number' => $showVenue ? $venue?->house_number : null,
+            'postal_code' => $showVenue ? $venue?->postal_code : null,
+            'city' => $showVenue ? $venue?->city : null,
+            'country' => $showVenue ? $venue?->country : null,
+            'participation_fee_type' => $metadata['participation_fee_type'] ?? 'unknown',
+            'participation_fee_cents' => $metadata['participation_fee_cents'] ?? null,
+            'participation_fee_basis' => $metadata['participation_fee_basis'] ?? null,
+        ];
     }
 }

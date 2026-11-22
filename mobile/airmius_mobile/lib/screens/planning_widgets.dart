@@ -182,6 +182,31 @@ class PlanningEditorState extends State<PlanningEditor> {
       },
     ),
   );
+  Widget money(String key, {bool required = true}) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextFormField(
+      key: ValueKey('$key:${values[key]}'),
+      initialValue: values[key] == null
+          ? ''
+          : ((values[key] as num) / 100)
+                .toStringAsFixed(2)
+                .replaceAll('.', ','),
+      enabled: !busy,
+      decoration: InputDecoration(labelText: t(key), suffixText: '€'),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      onChanged: (v) {
+        final amount = double.tryParse(v.trim().replaceAll(',', '.'));
+        values[key] = amount == null ? null : (amount * 100).round();
+      },
+      validator: (v) {
+        if (!required && (v?.trim().isEmpty ?? true)) return null;
+        final amount = double.tryParse((v ?? '').trim().replaceAll(',', '.'));
+        return amount == null || amount <= 0 || amount > 1000000
+            ? t('invalidMoney')
+            : null;
+      },
+    ),
+  );
   Widget date(
     String key, {
     bool time = false,

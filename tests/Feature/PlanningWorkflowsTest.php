@@ -329,6 +329,65 @@ class PlanningWorkflowsTest extends TestCase
             ->assertJsonPath('data.venues.0.metadata.access_notes', 'Mannschaftsbus über Tor 2. Parkplätze hinter der Halle.');
     }
 
+    public function test_competition_creation_saves_direct_address_and_participation_cost(): void
+    {
+        [$owner, $club] = $this->fixture();
+        Sanctum::actingAs($owner);
+
+        $competition = $this->postJson("/api/v1/clubs/{$club->id}/competitions", [
+            'name' => 'Direct Address Cup',
+            'status' => 'planned',
+            'starts_on' => '2026-12-05',
+            'ends_on' => '2026-12-06',
+            'venue_status' => 'known',
+            'venue_name' => 'Sporthalle Nord',
+            'street' => 'Musterstraße',
+            'house_number' => '12',
+            'postal_code' => '12345',
+            'city' => 'Berlin',
+            'country' => 'Deutschland',
+            'participation_fee_type' => 'paid',
+            'participation_fee_cents' => 1950,
+            'participation_fee_basis' => 'person',
+        ])->assertCreated()
+            ->assertJsonPath('data.venue_name', 'Sporthalle Nord')
+            ->assertJsonPath('data.city', 'Berlin')
+            ->assertJsonPath('data.participation_fee_type', 'paid')
+            ->assertJsonPath('data.participation_fee_cents', 1950)
+            ->json('data');
+
+        $this->assertDatabaseHas('competition_venues', [
+            'competition_id' => $competition['id'],
+            'name' => 'Sporthalle Nord',
+            'street' => 'Musterstraße',
+            'city' => 'Berlin',
+        ]);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/competitions")
+            ->assertOk()
+            ->assertJsonPath('data.0.venue_name', 'Sporthalle Nord')
+            ->assertJsonPath('data.0.participation_fee_basis', 'person');
+    }
+
+    public function test_paid_competition_requires_amount_and_basis_but_unknown_location_is_allowed(): void
+    {
+        [$owner, $club] = $this->fixture();
+        Sanctum::actingAs($owner);
+        $base = [
+            'name' => 'Draft Cup', 'status' => 'planned', 'starts_on' => '2026-12-05',
+            'ends_on' => '2026-12-06', 'venue_status' => 'tbd', 'participation_fee_type' => 'paid',
+        ];
+
+        $this->postJson("/api/v1/clubs/{$club->id}/competitions", $base)->assertUnprocessable()
+            ->assertJsonValidationErrors(['participation_fee_cents', 'participation_fee_basis']);
+
+        $base['participation_fee_type'] = 'unknown';
+        $this->postJson("/api/v1/clubs/{$club->id}/competitions", $base)
+            ->assertCreated()
+            ->assertJsonPath('data.venue_status', 'tbd')
+            ->assertJsonPath('data.participation_fee_type', 'unknown');
+    }
+
     public function test_competition_club_boundaries_and_finance_permissions(): void
     {
         [$owner, $club] = $this->fixture();
