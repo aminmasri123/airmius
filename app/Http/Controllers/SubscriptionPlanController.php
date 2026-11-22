@@ -32,11 +32,13 @@ class SubscriptionPlanController extends Controller
     {
         $clubQuery = trim((string) $request->string('club_query'));
         $userQuery = trim((string) $request->string('user_query'));
+        $userId = max(0, $request->integer('user_id'));
 
         return Inertia::render('Auth/Dashboard/Admin/Subscriptions/Index', [
             'filters' => [
                 'club_query' => $clubQuery,
                 'user_query' => $userQuery,
+                'user_id' => $userId ?: null,
             ],
             'plans' => fn () => SubscriptionPlan::query()
                 ->with('countryPrices')
@@ -67,6 +69,7 @@ class SubscriptionPlanController extends Controller
                     'subscription' => $club->currentSubscription ? $this->subscriptionResource($club->currentSubscription) : null,
                 ]),
             'users' => fn () => User::query()
+                ->when($userId, fn ($query) => $query->whereKey($userId))
                 ->with(['subscriptions' => fn ($query) => $query
                     ->with('plan:id,name,target_actor')
                     ->latest('id')])
@@ -98,8 +101,9 @@ class SubscriptionPlanController extends Controller
                 ]),
             'userSubscriptions' => fn () => UserSubscription::query()
                 ->with(['user:id,name,email', 'plan:id,name,target_actor'])
+                ->when($userId, fn ($query) => $query->where('user_id', $userId))
                 ->latest('id')
-                ->limit(100)
+                ->unless($userId, fn ($query) => $query->limit(100))
                 ->get()
                 ->map(fn (UserSubscription $subscription) => [
                     ...$this->subscriptionResource($subscription),

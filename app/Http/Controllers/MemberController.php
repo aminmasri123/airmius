@@ -33,6 +33,7 @@ class MemberController extends Controller
         $search = trim((string) $request->input('search', ''));
         $status = (string) $request->input('status', 'all');
         $canManageInactivity = (bool) $request->user()?->can('system.manage');
+        $canManageSubscriptions = ! $request->expectsJson() && $request->user()->can('subscriptions.manage');
         $tab = (string) $request->input('tab', 'users');
         if ($tab === 'inactivity' && ! $canManageInactivity) {
             $tab = 'users';
@@ -42,6 +43,10 @@ class MemberController extends Controller
 
         $users = User::query()
             ->select(['id', 'name', 'email', 'profile_visibility', 'account_status', 'suspended_until', 'suspension_reason', 'last_login_at', 'last_seen_at', 'created_at'])
+            ->when($canManageSubscriptions, fn ($query) => $query->with([
+                'subscriptions:id,user_id,subscription_plan_id,status',
+                'subscriptions.plan:id,name',
+            ]))
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
@@ -63,6 +68,7 @@ class MemberController extends Controller
 
         $payload = [
             'users' => $users,
+            'canManageSubscriptions' => $canManageSubscriptions,
             'canAssignRoles' => $request->user()->can('users.assign_roles') || $request->user()->can('user.manage'),
             'inactiveUsers' => $inactiveUsers,
             'inactiveSummary' => $canManageInactivity ? $this->inactiveSummary() : [],

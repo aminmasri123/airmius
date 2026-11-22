@@ -1,8 +1,8 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ConfirmActionModal from '@/Components/ConfirmActionModal.vue'
-import { Head, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
+import { computed, onMounted, ref, watch } from 'vue'
 import { centsToMajor, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
 import { useI18n } from 'vue-i18n'
 
@@ -26,6 +26,7 @@ const tx = (key, fallback = key, values = {}) => {
 const selectedActor = ref('all')
 const clubSearch = ref(props.filters.club_query || '')
 const userSearch = ref(props.filters.user_query || '')
+const userSubscriptionsSection = ref(null)
 const editingPlanId = ref(null)
 const pendingCancellation = ref(null)
 const cancellationProcessing = ref(false)
@@ -35,12 +36,19 @@ const planForms = ref({})
 const resetUserForms = () => { userForms.value = {} }
 let searchTimer = null
 
+onMounted(() => {
+    if (props.filters.user_id && window.location.hash === '#user-subscriptions') {
+        userSubscriptionsSection.value?.scrollIntoView()
+    }
+})
+
 watch([clubSearch, userSearch], () => {
     clearTimeout(searchTimer)
     searchTimer = setTimeout(() => {
         router.get(route('admin.subscriptions.index'), {
             club_query: clubSearch.value.trim() || undefined,
             user_query: userSearch.value.trim() || undefined,
+            user_id: props.filters.user_id || undefined,
         }, {
             only: ['clubs', 'users', 'filters'],
             preserveState: true,
@@ -812,10 +820,16 @@ const markTransferPaid = (checkout) => {
             </div>
         </section>
 
-        <section v-if="selectedActor === 'all'" class="surface-card overflow-hidden">
+        <section v-if="selectedActor === 'all'" id="user-subscriptions" ref="userSubscriptionsSection" class="surface-card scroll-mt-6 overflow-hidden">
             <div class="border-b border-border p-5">
                 <div>
                     <h2 class="text-lg font-semibold text-primary">{{ tx('Nutzer-Abos') }}</h2>
+                    <div v-if="filters.user_id" class="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                        <span v-if="users[0]" class="font-medium text-primary">{{ users[0].name }} · {{ users[0].email }}</span>
+                        <Link :href="`${route('admin.subscriptions.index')}#user-subscriptions`" class="font-semibold text-primary underline">
+                            {{ tx('users_admin.all_subscriptions', 'Alle Nutzer-Abos anzeigen') }}
+                        </Link>
+                    </div>
                     <p class="mt-1 text-sm text-secondary">
                         {{ tx('Persönliche Pläne für Sportler, Trainer, Sponsoren, Anbieter und weitere Rollen verwalten.') }}
                     </p>

@@ -16,6 +16,44 @@ class AdminSubscriptionManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_user_list_exposes_subscriptions_only_to_subscription_managers_and_editor_filters_by_user(): void
+    {
+        $admin = User::factory()->create();
+        $viewer = User::factory()->create();
+        $this->grantPermissions($admin, ['users.view', 'subscriptions.manage']);
+        $this->grantPermissions($viewer, ['users.view']);
+        $plan = $this->createPlan(['name' => 'Test Plan', 'slug' => 'user-list-test', 'target_actor' => 'sportler']);
+        $target = User::factory()->create(['name' => 'Subscription Test User']);
+        $subscription = $target->subscriptions()->create([
+            'subscription_plan_id' => $plan->id,
+            'status' => 'active',
+        ]);
+        $viewer->subscriptions()->create([
+            'subscription_plan_id' => $plan->id,
+            'status' => 'active',
+        ]);
+
+        $list = route('users.index', ['search' => $target->email]);
+        $this->actingAs($admin)->get($list)->assertInertia(fn (Assert $page) => $page
+            ->where('canManageSubscriptions', true)
+            ->has('users.data.0.subscriptions', 1)
+            ->where('users.data.0.subscriptions.0.plan.name', 'Test Plan')
+            ->where('users.data.0.subscriptions.0.status', 'active'));
+
+        $editor = route('admin.subscriptions.index', ['user_id' => $target->id]);
+        $this->get($editor)->assertInertia(fn (Assert $page) => $page
+            ->where('filters.user_id', $target->id)
+            ->has('users', 1)
+            ->where('users.0.id', $target->id)
+            ->has('userSubscriptions', 1)
+            ->where('userSubscriptions.0.id', $subscription->id));
+
+        $this->actingAs($viewer)->get($list)->assertInertia(fn (Assert $page) => $page
+            ->where('canManageSubscriptions', false)
+            ->missing('users.data.0.subscriptions'));
+        $this->get($editor)->assertForbidden();
+    }
+
     public function test_subscription_admin_can_open_subscription_overview(): void
     {
         $admin = User::factory()->create();

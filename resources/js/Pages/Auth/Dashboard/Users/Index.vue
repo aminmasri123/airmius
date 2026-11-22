@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { Head, router } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import RoleAssignmentManager from '@/Components/Auth/RoleAssignmentManager.vue'
 import DeleteConfirmModal from '@/Components/Auth/DeleteConfirmModal.vue'
@@ -19,6 +19,7 @@ const tx = (key, fallback, values = {}) => {
 
 const props = defineProps({
     canAssignRoles: Boolean,
+    canManageSubscriptions: Boolean,
     users: {
         type: Object,
         default: () => ({
@@ -336,6 +337,8 @@ const sendInactivityNotice = (user, stage) => {
                                 E-Mail</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">
                                 Status</th>
+                            <th v-if="canManageSubscriptions" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">
+                                {{ tx('users_admin.subscriptions', 'Abos') }}</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">
                                 Erstellt am</th>
                             <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">
@@ -358,10 +361,24 @@ const sendInactivityNotice = (user, stage) => {
                                     {{ user.suspension_reason }}
                                 </p>
                             </td>
+                            <td v-if="canManageSubscriptions" class="px-4 py-4 text-sm">
+                                <ul v-if="user.subscriptions?.length" class="space-y-1">
+                                    <li v-for="subscription in user.subscriptions" :key="subscription.id">
+                                        <span class="text-primary">{{ subscription.plan?.name || '–' }}</span>
+                                        <span class="ms-2 text-xs text-secondary">{{ tx(`subscriptions.status.${subscription.status}`, subscription.status) }}</span>
+                                    </li>
+                                </ul>
+                                <span v-else class="text-secondary">{{ tx('users_admin.no_subscriptions', 'Kein Abo') }}</span>
+                            </td>
                             <td class="px-4 py-4 text-sm text-primary">{{ formatDate(user.created_at) }}</td>
                             <td class="px-4 py-4 text-sm">
-                                <div class="flex space-x-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <RoleAssignmentManager v-if="canAssignRoles && $page.props.auth?.user?.id !== user.id" :user-id="user.id" />
+                                    <Link v-if="canManageSubscriptions"
+                                        :href="`${route('admin.subscriptions.index', { user_id: user.id })}#user-subscriptions`"
+                                        class="rounded border border-border px-3 py-1 text-primary hover:bg-muted">
+                                        {{ tx('users_admin.actions.manage_subscriptions', 'Abos verwalten') }}
+                                    </Link>
                                     <button @click="router.visit(route('members.edit', user.id))"
                                         class="px-3 py-1 bg-primary text-buttonTextPrimary rounded hover:bg-primary/80 transition-colors">
                                         {{ tx('users_admin.actions.edit', 'Bearbeiten') }}
@@ -375,7 +392,7 @@ const sendInactivityNotice = (user, stage) => {
                         </tr>
 
                         <tr v-if="users.data.length === 0">
-                            <td colspan="6" class="px-4 py-4 text-center text-sm text-secondary">
+                            <td :colspan="canManageSubscriptions ? 7 : 6" class="px-4 py-4 text-center text-sm text-secondary">
                                 {{ tx('users_admin.empty', 'Keine Nutzer gefunden.') }}
                             </td>
                         </tr>
