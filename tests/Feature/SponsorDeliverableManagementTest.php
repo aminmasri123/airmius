@@ -36,6 +36,16 @@ class SponsorDeliverableManagementTest extends TestCase
         $this->postJson('/api/v1/sponsor-management/'.$sponsor->id.'/deliverables', [
             'club_id' => $club->id, 'title' => 'Logo on club website', 'status' => 'planned',
         ])->assertCreated();
+        $image = 'data:image/jpeg;base64,'.base64_encode(file_get_contents(
+            \Illuminate\Http\UploadedFile::fake()->image('proof.jpg', 20, 20)->getRealPath(),
+        ));
+        $deliverable = $sponsor->deliverables()->where('club_id', $club->id)->firstOrFail();
+        $this->putJson('/api/v1/sponsor-management/'.$sponsor->id.'/deliverables/'.$deliverable->id, [
+            'club_id' => $club->id, 'title' => 'Logo on club website',
+            'status' => 'fulfilled', 'evidence_images' => [$image],
+        ])->assertOk()->assertJsonPath('data.evidence_images.0', $image);
+        $this->getJson('/api/v1/sponsor-workspace')
+            ->assertOk()->assertJsonPath('data.partners.0.deliverables.0.evidence_images.0', $image);
         $this->postJson('/api/v1/sponsor-management/'.$sponsor->id.'/deliverables', [
             'club_id' => $otherClub->id, 'title' => 'Foreign club',
         ])->assertForbidden();

@@ -356,6 +356,7 @@ class SponsorWorkspaceService
                         'status' => $deliverable->status,
                         'responsible' => $deliverable->responsible?->only(['id', 'name']),
                         'fulfillment_evidence' => $deliverable->fulfillment_evidence,
+                        'evidence_images' => $deliverable->evidence_images ?? [],
                         'fulfilled_at' => $deliverable->fulfilled_at?->toIso8601String(),
                         'is_overdue' => $deliverable->isOverdue(),
                     ])->values(),
