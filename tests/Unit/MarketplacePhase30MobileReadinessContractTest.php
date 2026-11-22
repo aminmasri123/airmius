@@ -43,7 +43,7 @@ class MarketplacePhase30MobileReadinessContractTest extends TestCase
 
         self::assertStringContainsString("final variants = _marketMaps(product['variants'])", $marketplace);
         self::assertStringContainsString('_ProductVariantRow(', $marketplace);
-        self::assertStringContainsString('Future<void> _refreshQuote() async', $marketplace);
+        self::assertStringContainsString('Future<void> _refreshQuote({String? couponChange}) async', $marketplace);
         self::assertStringContainsString('shippingCountry: _country.text', $marketplace);
         self::assertStringContainsString("label: t('market.itemsSubtotal')", $marketplace);
         self::assertStringContainsString("label: t('market.shipping')", $marketplace);
