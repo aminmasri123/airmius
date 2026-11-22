@@ -971,6 +971,20 @@ class AirmiusApiClient {
     '/api/v1/clubs/$clubId/service-hour-records/$recordId',
   );
 
+  Future<AirmiusJson> respondToClubServiceHourRecord(
+    int clubId,
+    int recordId,
+    String decision, {
+    String? reason,
+  }) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/service-hour-records/$recordId/member-response',
+    body: {
+      'decision': decision,
+      if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+    },
+  );
+
   Future<AirmiusJson> writeClubServiceHours(
     int clubId,
     String resource,
@@ -996,6 +1010,11 @@ class AirmiusApiClient {
         .hasMatch(resource)) {
       final recordId = resource.split('/')[1];
       path = '/api/v1/clubs/$clubId/service-hour-records/$recordId/unconfirm';
+    } else if (RegExp(r'^service-hour-records/\d+/member-response$')
+        .hasMatch(resource)) {
+      final recordId = resource.split('/')[1];
+      path =
+          '/api/v1/clubs/$clubId/service-hour-records/$recordId/member-response';
     } else if (RegExp(r'^service-hour-records/\d+/corrections$')
         .hasMatch(resource)) {
       final recordId = resource.split('/')[1];

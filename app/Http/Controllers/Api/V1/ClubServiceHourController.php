@@ -9,6 +9,7 @@ use App\Models\ClubServiceHourExemption;
 use App\Models\ClubServiceHourRecord;
 use App\Models\ClubServiceHourRequirement;
 use App\Models\ClubYearPeriod;
+use App\Models\Notification;
 use App\Models\User;
 use App\Notifications\ServiceHourRecorded;
 use App\Services\ClubServiceHourLedger;
@@ -121,6 +122,7 @@ class ClubServiceHourController extends Controller
             'replacement_for_user_id' => $data['replacement_for_user_id'] ?? null,
             'kind' => $data['kind'] ?? (empty($data['replacement_for_user_id']) ? 'service' : 'replacement'),
             'status' => 'pending',
+            'member_response_status' => 'pending',
             'served_on' => $data['served_on'],
             'minutes' => $data['minutes'],
             'title' => $data['title'],
@@ -137,8 +139,59 @@ class ClubServiceHourController extends Controller
     {
         $this->authorizeRecord($request, $club, $record, ClubPermissions::MEMBERS_MANAGE);
         $this->ensurePeriodOpen($this->period($club, (int) $record->club_year_period_id));
+        if ($record->member_response_status !== 'accepted') {
+            throw ValidationException::withMessages([
+                'record' => $record->member_response_status === 'disputed'
+                    ? 'Das Mitglied hat diese Dienststunde beanstandet. Prüfe und bearbeite den Eintrag zuerst.'
+                    : 'Das Mitglied muss die Dienststunde zuerst bestätigen.',
+            ]);
+        }
 
         return response()->json(['data' => $this->recordPayload($ledger->confirm($record, $request->user()))]);
+    }
+
+    public function respondToRecord(Request $request, Club $club, ClubServiceHourRecord $record)
+    {
+        $this->authorizeServiceHours($request, $club, ClubPermissions::MEMBERS_VIEW);
+        abort_unless((int) $record->club_id === (int) $club->id, 404);
+        abort_unless((int) $record->user_id === (int) $request->user()->id, 403);
+        if ($record->status !== 'pending') {
+            throw ValidationException::withMessages(['record' => 'Diese Dienststunde wurde bereits endgültig bestätigt.']);
+        }
+        $data = $request->validate([
+            'decision' => ['required', Rule::in(['accepted', 'disputed'])],
+            'reason' => ['nullable', 'required_if:decision,disputed', 'string', 'max:1000'],
+        ]);
+
+        $record->forceFill([
+            'member_response_status' => $data['decision'],
+            'member_response_reason' => $data['decision'] === 'disputed' ? $data['reason'] : null,
+            'member_responded_at' => now(),
+        ])->save();
+        Notification::query()
+            ->where('user_id', $record->user_id)
+            ->where('type', 'club.service_hour.recorded')
+            ->get()
+            ->filter(fn (Notification $notification) =>
+                (int) ($notification->data['service_hour_record_id'] ?? 0) === (int) $record->id)
+            ->each(function (Notification $notification) use ($record): void {
+                $notification->forceFill(['data' => array_merge($notification->data, [
+                    'member_response_status' => $record->member_response_status,
+                    'member_response_reason' => $record->member_response_reason,
+                    'member_responded_at' => $record->member_responded_at?->toJSON(),
+                ])])->save();
+            });
+        ClubAuditLog::record(
+            $club,
+            $request->user(),
+            $data['decision'] === 'accepted'
+                ? 'club.service_hour.member_accepted'
+                : 'club.service_hour.member_disputed',
+            $record,
+            ['reason' => $record->member_response_reason],
+        );
+
+        return response()->json(['data' => $this->recordPayload($record->refresh())]);
     }
 
     public function unconfirmRecord(Request $request, Club $club, ClubServiceHourRecord $record)
@@ -200,6 +253,9 @@ class ClubServiceHourController extends Controller
             'notes' => $data['notes'] ?? null,
             'notification_channel' => $data['notification_channel'] ?? 'none',
             'notified_at' => null,
+            'member_response_status' => 'pending',
+            'member_response_reason' => null,
+            'member_responded_at' => null,
         ])->save();
 
         $this->notifyMember($club, $this->member($club, (int) $record->user_id), $record);
@@ -338,6 +394,7 @@ class ClubServiceHourController extends Controller
                     'served_on' => $record->served_on->format('Y-m-d'),
                     'minutes' => (int) $record->minutes,
                     'activity' => $record->title,
+                    'member_response_status' => 'pending',
                     'mobile_url' => 'airmius://notifications',
                 ],
                 ['category' => 'club', 'priority' => 'normal'],
@@ -365,6 +422,9 @@ class ClubServiceHourController extends Controller
             'replacement_for_user_id' => $record->replacement_for_user_id,
             'kind' => $record->kind,
             'status' => $record->status,
+            'member_response_status' => $record->member_response_status,
+            'member_response_reason' => $record->member_response_reason,
+            'member_responded_at' => $record->member_responded_at?->toJSON(),
             'served_on' => $record->served_on->format('Y-m-d'),
             'minutes' => $record->minutes,
             'title' => $record->title,

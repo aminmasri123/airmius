@@ -80,6 +80,9 @@ class ClubServiceHourLedger
                     'served_on' => $record->served_on->format('Y-m-d'),
                     'minutes' => $record->minutes,
                     'status' => $record->status,
+                    'member_response_status' => $record->member_response_status,
+                    'member_response_reason' => $record->member_response_reason,
+                    'member_responded_at' => $record->member_responded_at?->toJSON(),
                     'notification_channel' => $record->notification_channel,
                     'notified_at' => $record->notified_at?->toJSON(),
                     'corrections' => $record->corrections->map(fn (ClubServiceHourCorrection $correction) => [
@@ -131,6 +134,8 @@ class ClubServiceHourLedger
                     'served_on' => $record->served_on->format('Y-m-d'),
                     'kind' => $record->kind,
                     'replacement_for_user_id' => $record->replacement_for_user_id,
+                    'member_response_status' => $record->member_response_status,
+                    'member_responded_at' => $record->member_responded_at?->toJSON(),
                     'confirmed_by' => $actor->id,
                 ],
             ])->save();

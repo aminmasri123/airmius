@@ -1,6 +1,7 @@
 import 'carpool_ride_screen.dart';
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
@@ -45,14 +46,127 @@ class NotificationDetailScreen extends StatefulWidget {
 
 class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   bool _busy = false;
+  late String _serviceHourResponseStatus;
 
   @override
   void initState() {
     super.initState();
+    _serviceHourResponseStatus =
+        '${widget.notification.data['member_response_status'] ?? 'pending'}';
     if (widget.notification.unread) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _markRead(silent: true);
       });
+    }
+  }
+
+  bool get _isServiceHourResponse =>
+      widget.notification.type == 'club.service_hour.recorded' &&
+      _intFromDynamic(widget.notification.data['club_id']) != null &&
+      _intFromDynamic(widget.notification.data['service_hour_record_id']) !=
+          null;
+
+  Future<void> _respondToServiceHour(String decision) async {
+    if (_busy || !_isServiceHourResponse) return;
+    String? reason;
+    if (decision == 'accepted') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Dienststunde bestätigen?'),
+          content: const Text(
+            'Bitte bestätige nur, wenn Tätigkeit, Datum und Dauer stimmen.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Bestätigen'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    } else {
+      final controller = TextEditingController();
+      reason = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Dienststunde beanstanden'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            maxLength: 1000,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Begründung',
+              hintText: 'Was stimmt nicht?',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: const Text('Beanstandung senden'),
+            ),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (!mounted || reason == null) return;
+      if (reason.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bitte gib eine Begründung ein.')),
+        );
+        return;
+      }
+    }
+
+    setState(() => _busy = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      await services.clientForSession(services.authState.session)
+          .respondToClubServiceHourRecord(
+            _intFromDynamic(widget.notification.data['club_id'])!,
+            _intFromDynamic(
+              widget.notification.data['service_hour_record_id'],
+            )!,
+            decision,
+            reason: reason,
+          );
+      widget.onChanged();
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _serviceHourResponseStatus = decision;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            decision == 'accepted'
+                ? 'Dienststunde bestätigt.'
+                : 'Beanstandung wurde an die Vereinsverwaltung gesendet.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is AirmiusApiException
+                ? error.userMessage
+                : 'Rückmeldung konnte nicht gespeichert werden.',
+          ),
+        ),
+      );
     }
   }
 
@@ -205,8 +319,43 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                             ? Theme.of(context).colorScheme.secondary
                             : accent,
                       ),
+                      if (_isServiceHourResponse &&
+                          _serviceHourResponseStatus != 'pending')
+                        StatusPill(
+                          _serviceHourResponseStatus == 'accepted'
+                              ? 'Bestätigt'
+                              : 'Beanstandet',
+                          color: _serviceHourResponseStatus == 'accepted'
+                              ? accent
+                              : Theme.of(context).colorScheme.error,
+                        ),
                     ],
                   ),
+                  if (_isServiceHourResponse &&
+                      _serviceHourResponseStatus == 'pending') ...[
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        AirmiusButton(
+                          label: 'Bestätigen',
+                          icon: Icons.check,
+                          onPressed: _busy
+                              ? null
+                              : () => _respondToServiceHour('accepted'),
+                        ),
+                        AirmiusButton(
+                          label: 'Beanstanden',
+                          icon: Icons.flag_outlined,
+                          secondary: true,
+                          onPressed: _busy
+                              ? null
+                              : () => _respondToServiceHour('disputed'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

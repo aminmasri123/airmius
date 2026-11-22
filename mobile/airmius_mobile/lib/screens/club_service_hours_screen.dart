@@ -445,6 +445,86 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
     );
   }
 
+  Future<void> respondToRecord(
+    Map<String, dynamic> record,
+    String decision,
+  ) async {
+    String? reason;
+    if (decision == 'disputed') {
+      final savedReason = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => _ServiceHourForm(
+            title: 'Dienststunde beanstanden',
+            fields: const [_Field('reason', 'Begründung')],
+            onSave: (payload) async {
+              final value = '${payload['reason'] ?? ''}'.trim();
+              if (value.isEmpty) return 'Bitte eine Begründung eingeben.';
+              reason = value;
+              return null;
+            },
+          ),
+        ),
+      );
+      if (savedReason != true || !mounted) return;
+    } else {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Dienststunde bestätigen?'),
+          content: Text(
+            'Du bestätigst, dass „${record['title']}“ mit den angegebenen Daten stimmt.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Bestätigen'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await client.respondToClubServiceHourRecord(
+        widget.club.id,
+        (record['id'] as num).toInt(),
+        decision,
+        reason: reason,
+      );
+      await load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              decision == 'accepted'
+                  ? 'Dienststunde bestätigt.'
+                  : 'Beanstandung wurde gesendet.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => error = e is AirmiusApiException
+              ? e.userMessage
+              : 'Rückmeldung konnte nicht gespeichert werden.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -628,6 +708,21 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                         ),
                       ),
                     ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        switch (record['member_response_status'] ?? 'pending') {
+                          'accepted' => 'Rückmeldung: Vom Mitglied bestätigt',
+                          'disputed' =>
+                            'Rückmeldung: Beanstandet${record['member_response_reason'] == null ? '' : ' – ${record['member_response_reason']}'}',
+                          _ => 'Rückmeldung: Ausstehend',
+                        },
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ),
                   for (final correction
                       in (record['corrections'] as List? ?? [])
                           .whereType<Map>())
@@ -654,14 +749,27 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                             icon: const Icon(Icons.delete_outline),
                             label: const Text('Entfernen'),
                           ),
-                          TextButton(
-                            onPressed: () => action(
-                              'Dienst bestätigen',
-                              'service-hour-records/${record['id']}/confirm',
-                              [],
+                          if (record['member_response_status'] == 'accepted')
+                            TextButton(
+                              onPressed: () => action(
+                                    'Dienst bestätigen',
+                                    'service-hour-records/${record['id']}/confirm',
+                                    [],
+                                  ),
+                              child: const Text('Endgültig bestätigen'),
+                            )
+                          else
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              child: Text(
+                                record['member_response_status'] == 'disputed'
+                                    ? 'Beanstandung prüfen'
+                                    : 'Wartet auf Rückmeldung',
+                              ),
                             ),
-                            child: const Text('Bestätigen'),
-                          ),
                         ],
                         if (record['status'] == 'confirmed')
                           ...[
@@ -687,6 +795,27 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                               child: const Text('Korrigieren'),
                             ),
                           ],
+                      ],
+                    ),
+                  if (AirmiusServicesScope.of(context).authState.user?.id ==
+                          record['user_id'] &&
+                      record['status'] == 'pending' &&
+                      (record['member_response_status'] ?? 'pending') ==
+                          'pending')
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: () => respondToRecord(record, 'accepted'),
+                          icon: const Icon(Icons.check),
+                          label: const Text('Bestätigen'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () => respondToRecord(record, 'disputed'),
+                          icon: const Icon(Icons.flag_outlined),
+                          label: const Text('Beanstanden'),
+                        ),
                       ],
                     ),
                 ],

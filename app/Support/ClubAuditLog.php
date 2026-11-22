@@ -45,6 +45,8 @@ class ClubAuditLog
         'club.service_hour.updated' => 'Dienststunde aktualisiert',
         'club.service_hour.deleted' => 'Dienststunde entfernt',
         'club.service_hour.unconfirmed' => 'Bestätigung einer Dienststunde aufgehoben',
+        'club.service_hour.member_accepted' => 'Dienststunde durch Mitglied bestätigt',
+        'club.service_hour.member_disputed' => 'Dienststunde durch Mitglied beanstandet',
         'club.policy_document.created' => 'Vereinsdokumentfassung angelegt',
         'club.policy_document.updated' => 'Vereinsdokumentfassung aktualisiert',
         'club.policy_document.deleted' => 'Vereinsdokumentfassung gelöscht',

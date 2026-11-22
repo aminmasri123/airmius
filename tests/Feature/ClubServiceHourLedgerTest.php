@@ -42,8 +42,17 @@ class ClubServiceHourLedgerTest extends TestCase
             'title' => 'Aufbau Heimturnier',
         ])->assertCreated()
             ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.member_response_status', 'pending')
             ->json('data.id');
 
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/confirm")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('record');
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/member-response", [
+            'decision' => 'accepted',
+        ])->assertOk()->assertJsonPath('data.member_response_status', 'accepted');
+        Sanctum::actingAs($manager);
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/confirm")
             ->assertOk()
             ->assertJsonPath('data.status', 'confirmed')
@@ -109,6 +118,11 @@ class ClubServiceHourLedgerTest extends TestCase
             ->assertJsonPath('data.replacement_for_user_id', $member->id)
             ->json('data.id');
 
+        Sanctum::actingAs($helper);
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/member-response", [
+            'decision' => 'accepted',
+        ])->assertOk();
+        Sanctum::actingAs($manager);
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/confirm")->assertOk();
         $this->getJson("/api/v1/clubs/{$club->id}/service-hours?period_id={$period->id}")
             ->assertOk()
@@ -205,6 +219,43 @@ class ClubServiceHourLedgerTest extends TestCase
         $this->assertDatabaseMissing('club_service_hour_records', ['id' => $recordId]);
     }
 
+    public function test_member_can_dispute_service_hours_and_manager_must_resolve_them_before_confirmation(): void
+    {
+        [$club, $owner, $member, $manager, $period] = $this->fixture();
+        Sanctum::actingAs($manager);
+        $recordId = $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records", [
+            'period_id' => $period->id,
+            'user_id' => $member->id,
+            'served_on' => '2026-05-12',
+            'minutes' => 90,
+            'title' => 'Turnieraufbau',
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/member-response", [
+            'decision' => 'accepted',
+        ])->assertForbidden();
+
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/member-response", [
+            'decision' => 'disputed',
+            'reason' => 'Ich war nur 45 Minuten am Bierstand.',
+        ])->assertOk()
+            ->assertJsonPath('data.member_response_status', 'disputed')
+            ->assertJsonPath('data.member_response_reason', 'Ich war nur 45 Minuten am Bierstand.');
+
+        Sanctum::actingAs($manager);
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/confirm")
+            ->assertUnprocessable()->assertJsonValidationErrors('record');
+        $this->putJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}", [
+            'user_id' => $member->id,
+            'served_on' => '2026-05-12',
+            'minutes' => 45,
+            'title' => 'Turnieraufbau',
+        ])->assertOk()
+            ->assertJsonPath('data.member_response_status', 'pending')
+            ->assertJsonPath('data.member_response_reason', null);
+    }
+
     public function test_manager_can_unconfirm_then_update_or_delete_a_confirmed_service_hour_record(): void
     {
         [$club, $owner, $member, $manager, $period] = $this->fixture();
@@ -217,6 +268,11 @@ class ClubServiceHourLedgerTest extends TestCase
             'minutes' => 90,
             'title' => 'Turnieraufbau',
         ])->assertCreated()->json('data.id');
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/member-response", [
+            'decision' => 'accepted',
+        ])->assertOk();
+        Sanctum::actingAs($manager);
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/confirm")
             ->assertOk();
 
