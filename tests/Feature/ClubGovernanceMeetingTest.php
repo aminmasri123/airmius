@@ -18,6 +18,56 @@ class ClubGovernanceMeetingTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_manager_can_record_presence_and_late_attendee_without_changing_existing_ballot(): void
+    {
+        $owner = User::factory()->create();
+        $invited = User::factory()->create();
+        $forgotten = User::factory()->create();
+        $outsider = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach([
+            $invited->id => ['role' => 'member', 'membership_status' => 'active'],
+            $forgotten->id => ['role' => 'member', 'membership_status' => 'active'],
+        ]);
+        $meeting = $club->governanceMeetings()->create(['type' => 'board', 'title' => 'Vorstand', 'status' => 'held', 'participant_scope' => 'custom']);
+        $recipient = $meeting->recipients()->create(['club_id' => $club->id, 'user_id' => $invited->id, 'attendance_eligible' => true, 'voting_eligible' => true, 'delivery_status' => 'pending']);
+        $base = "/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}";
+        Sanctum::actingAs($owner);
+        $decisionId = $this->postJson("$base/decisions", ['type' => 'motion', 'voting_mode' => 'named', 'title' => 'Antrag', 'majority_rule' => 'simple'])
+            ->assertCreated()->assertJsonPath('data.eligible_voters', 1)->json('data.id');
+        $this->patchJson("$base/recipients/{$recipient->id}/presence", ['was_present' => true])->assertOk()->assertJsonPath('data.was_present', true);
+        $lateId = $this->postJson("$base/attendees", ['user_id' => $forgotten->id])->assertCreated()
+            ->assertJsonPath('data.was_present', true)->assertJsonPath('data.voting_eligible', false)->json('data.id');
+        $this->getJson($base)->assertOk()->assertJsonPath('data.decisions.0.eligible_voters', 1);
+        $this->postJson("$base/attendees", ['user_id' => $forgotten->id])->assertUnprocessable();
+        $this->postJson("$base/attendees", ['user_id' => $outsider->id])->assertUnprocessable();
+        Sanctum::actingAs($forgotten);
+        $this->postJson("$base/decisions/$decisionId/vote", ['recipient_id' => $lateId, 'choice' => 'yes'])->assertForbidden();
+        $this->patchJson("$base/recipients/{$recipient->id}/presence", ['was_present' => false])->assertForbidden();
+        $this->deleteJson("$base/decisions/$decisionId")->assertForbidden();
+        Sanctum::actingAs($owner);
+        $this->deleteJson("$base/decisions/$decisionId")->assertNoContent();
+    }
+
+    public function test_decision_with_a_vote_or_closed_result_cannot_be_deleted(): void
+    {
+        $owner = User::factory()->create();
+        $voter = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($voter->id, ['role' => 'member', 'membership_status' => 'active']);
+        $meeting = $club->governanceMeetings()->create(['type' => 'board', 'title' => 'Vorstand', 'status' => 'held', 'participant_scope' => 'custom']);
+        $recipient = $meeting->recipients()->create(['club_id' => $club->id, 'user_id' => $voter->id, 'attendance_eligible' => true, 'voting_eligible' => true, 'delivery_status' => 'pending']);
+        $base = "/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}";
+        Sanctum::actingAs($owner);
+        $decisionId = $this->postJson("$base/decisions", ['type' => 'motion', 'voting_mode' => 'named', 'title' => 'Antrag', 'majority_rule' => 'simple'])->assertCreated()->json('data.id');
+        Sanctum::actingAs($voter);
+        $this->postJson("$base/decisions/$decisionId/vote", ['recipient_id' => $recipient->id, 'choice' => 'yes'])->assertOk();
+        Sanctum::actingAs($owner);
+        $this->deleteJson("$base/decisions/$decisionId")->assertUnprocessable();
+        $this->postJson("$base/decisions/$decisionId/close")->assertOk();
+        $this->deleteJson("$base/decisions/$decisionId")->assertUnprocessable();
+    }
+
     public function test_internal_meeting_is_only_visible_to_invited_active_members_and_managers(): void
     {
         $owner = User::factory()->create();

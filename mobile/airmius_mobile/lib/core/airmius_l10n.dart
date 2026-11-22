@@ -24773,6 +24773,20 @@ const _clubInventoryDe = {
   'inventory.scannerInvalid': 'Kein gültiger Airmius-Inventarcode erkannt.',
   'inventory.scannerCameraFailed': 'Kamera konnte nicht geöffnet werden.',
   'inventory.scannerHint': 'QR-Code am Vereinsmaterial in den Rahmen halten.',
+  'inventory.scannerSearching': 'Kamera aktiv – suche nach einem Code …',
+  'inventory.scannerWrongCode':
+      'Code erkannt, aber kein Airmius-Inventarcode. Bitte den quadratischen QR-Code verwenden.',
+  'inventory.scannerChecking': 'Inventarcode erkannt – wird geprüft …',
+  'inventory.scannerValid': 'Gültiger Inventarcode erkannt.',
+  'inventory.scannerContinue': 'Weiter',
+  'inventory.scannerNoAccess':
+      'Code erkannt, aber du darfst diesen Gegenstand nicht öffnen.',
+  'inventory.scannerWrongClubOrInvalid':
+      'Code erkannt, aber er ist ungültig oder gehört zu einem anderen Verein.',
+  'inventory.scannerRevoked':
+      'Code erkannt, aber dieser Inventarcode wurde widerrufen.',
+  'inventory.scannerCheckFailed':
+      'Code erkannt, die Prüfung war jedoch nicht möglich. Bitte erneut versuchen.',
   'inventory.createItem': 'Gegenstand anlegen',
   'inventory.createResource': 'Ressource anlegen',
   'inventory.editResource': 'Ressource bearbeiten',
@@ -24977,6 +24991,20 @@ const _clubInventoryEn = {
   'inventory.scannerCameraFailed': 'The camera could not be opened.',
   'inventory.scannerHint':
       'Hold the QR code on the club equipment inside the frame.',
+  'inventory.scannerSearching': 'Camera active – looking for a code …',
+  'inventory.scannerWrongCode':
+      'Code detected, but it is not an Airmius inventory code. Please use the square QR code.',
+  'inventory.scannerChecking': 'Inventory code detected – checking …',
+  'inventory.scannerValid': 'Valid inventory code detected.',
+  'inventory.scannerContinue': 'Continue',
+  'inventory.scannerNoAccess':
+      'Code detected, but you do not have permission to open this item.',
+  'inventory.scannerWrongClubOrInvalid':
+      'Code detected, but it is invalid or belongs to another club.',
+  'inventory.scannerRevoked':
+      'Code detected, but this inventory code has been revoked.',
+  'inventory.scannerCheckFailed':
+      'Code detected, but it could not be checked. Please try again.',
   'inventory.createItem': 'Create item',
   'inventory.createResource': 'Create resource',
   'inventory.editResource': 'Edit resource',
@@ -25180,6 +25208,20 @@ const _clubInventoryFr = {
   'inventory.scannerCameraFailed': 'Impossible d’ouvrir la caméra.',
   'inventory.scannerHint':
       'Placez le code QR du matériel du club dans le cadre.',
+  'inventory.scannerSearching': 'Caméra active – recherche d’un code…',
+  'inventory.scannerWrongCode':
+      'Code détecté, mais ce n’est pas un code d’inventaire Airmius. Utilisez le code QR carré.',
+  'inventory.scannerChecking': 'Code d’inventaire détecté – vérification…',
+  'inventory.scannerValid': 'Code d’inventaire valide détecté.',
+  'inventory.scannerContinue': 'Continuer',
+  'inventory.scannerNoAccess':
+      'Code détecté, mais vous n’êtes pas autorisé à ouvrir cet objet.',
+  'inventory.scannerWrongClubOrInvalid':
+      'Code détecté, mais il est invalide ou appartient à un autre club.',
+  'inventory.scannerRevoked':
+      'Code détecté, mais ce code d’inventaire a été révoqué.',
+  'inventory.scannerCheckFailed':
+      'Code détecté, mais sa vérification a échoué. Veuillez réessayer.',
   'inventory.createItem': 'Créer un article',
   'inventory.createResource': 'Créer une ressource',
   'inventory.editResource': 'Modifier la ressource',
@@ -25351,6 +25393,20 @@ const _clubInventoryAr = {
   'inventory.scannerInvalid': 'لم يتم اكتشاف رمز مخزون Airmius صالح.',
   'inventory.scannerCameraFailed': 'تعذر فتح الكاميرا.',
   'inventory.scannerHint': 'ضع رمز QR الموجود على معدات النادي داخل الإطار.',
+  'inventory.scannerSearching': 'الكاميرا مفعّلة – جارٍ البحث عن رمز…',
+  'inventory.scannerWrongCode':
+      'تم اكتشاف رمز، لكنه ليس رمز مخزون Airmius. استخدم رمز QR المربع.',
+  'inventory.scannerChecking': 'تم اكتشاف رمز المخزون – جارٍ التحقق…',
+  'inventory.scannerValid': 'تم اكتشاف رمز مخزون صالح.',
+  'inventory.scannerContinue': 'متابعة',
+  'inventory.scannerNoAccess':
+      'تم اكتشاف الرمز، لكن ليس لديك إذن لفتح هذا العنصر.',
+  'inventory.scannerWrongClubOrInvalid':
+      'تم اكتشاف الرمز، لكنه غير صالح أو ينتمي إلى نادٍ آخر.',
+  'inventory.scannerRevoked':
+      'تم اكتشاف الرمز، لكن رمز المخزون هذا قد تم إلغاؤه.',
+  'inventory.scannerCheckFailed':
+      'تم اكتشاف الرمز، لكن تعذر التحقق منه. حاول مرة أخرى.',
   'inventory.createItem': 'إنشاء عنصر',
   'inventory.createResource': 'إنشاء مورد',
   'inventory.editResource': 'تعديل المورد',

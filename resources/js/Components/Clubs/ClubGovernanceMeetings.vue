@@ -18,6 +18,9 @@ const query = ref('')
 const status = ref('')
 const form = ref(null)
 const decisionForm = ref(null)
+const attendeeKey = ref('')
+const missingAttendees = computed(() => (governance.value.member_options || []).filter((person) =>
+    !(meeting.value?.recipients || []).some((recipient) => recipient[person.kind === 'external' ? 'club_external_member_id' : 'user_id'] === person.id)))
 const labels = {
     board: 'Vorstandssitzung', committee: 'Ausschusssitzung', general_assembly: 'Mitgliederversammlung',
     draft: 'Entwurf', invited: 'Eingeladen', held: 'Durchgeführt', cancelled: 'Abgesagt',
@@ -91,6 +94,9 @@ async function openMeeting(id) {
     try {
         const response = await request('get', `${baseUrl.value}/${id}`)
         if (token === generation) meeting.value = response.data
+        if (token === generation && response.data?.can_manage === true) {
+            governance.value = (await request('get', `/api/v1/clubs/${encodeURIComponent(props.clubId)}/governance`)).data
+        }
     } catch (cause) {
         if (token === generation) { error.value = apiError(cause); meetings.value = []; canCreate.value = false }
     } finally {
@@ -213,6 +219,34 @@ async function closeDecision(decision) {
         notice.value = 'Abstimmung abgeschlossen.'
     }
 }
+async function deleteDecision(decision) {
+    if (!canManage.value || busy.value || decision.status !== 'open' || decision.result?.votes_cast) return
+    if (!await confirmDialog({ title: 'Beschluss löschen', message: `„${decision.title}“ wird dauerhaft gelöscht. Dies ist nur möglich, solange niemand abgestimmt hat.`, confirmLabel: 'Löschen' })) return
+    const id = meeting.value.id
+    if (await mutate(() => request('delete', `${baseUrl.value}/${id}/decisions/${decision.id}`), 'Beschluss gelöscht.')) {
+        await openMeeting(id)
+        notice.value = 'Beschluss gelöscht.'
+    }
+}
+async function addAttendee() {
+    const person = missingAttendees.value.find((item) => personKey(item) === attendeeKey.value)
+    if (!canManage.value || !person) return
+    const id = meeting.value.id
+    const field = person.kind === 'external' ? 'club_external_member_id' : 'user_id'
+    if (await mutate(() => request('post', `${baseUrl.value}/${id}/attendees`, { [field]: person.id }), 'Anwesenheit nachgetragen.')) {
+        attendeeKey.value = ''
+        await openMeeting(id)
+        notice.value = 'Anwesenheit nachgetragen.'
+    }
+}
+async function presence(recipient, value) {
+    if (!canManage.value) return
+    const id = meeting.value.id
+    if (await mutate(() => request('patch', `${baseUrl.value}/${id}/recipients/${recipient.id}/presence`, { was_present: value }), 'Anwesenheit gespeichert.')) {
+        await openMeeting(id)
+        notice.value = 'Anwesenheit gespeichert.'
+    }
+}
 async function delivery(recipient, value) {
     if (!canManage.value) return
     if (await mutate(() => request('patch', `${baseUrl.value}/${meeting.value.id}/recipients/${recipient.id}/delivery`, { delivery_status: value }), 'Zustellstatus gespeichert.')) {
@@ -308,10 +342,11 @@ onMounted(loadList)
                     <p v-if="decision.viewer_has_voted" class="mt-2 text-sm text-secondary">Ihre Stimme wurde abgegeben.</p>
                     <div v-if="canVote(decision)" class="mt-3 flex flex-wrap gap-2"><button v-for="option in decision.options" :key="option" type="button" class="meeting-button" :disabled="busy" @click="vote(decision, option)">{{ label(option) }}</button></div>
                     <button v-if="canManage && decision.status === 'open' && !decision.correction_locked_at" type="button" class="meeting-button mt-3" :disabled="busy" @click="closeDecision(decision)"><i class="las la-lock" aria-hidden="true"></i> Abstimmung abschließen</button>
+                    <button v-if="canManage && decision.status === 'open' && !decision.correction_locked_at && !decision.result?.votes_cast" type="button" class="meeting-button mt-3 ml-2" :disabled="busy" @click="deleteDecision(decision)"><i class="las la-trash" aria-hidden="true"></i> Beschluss löschen</button>
                 </article>
                 <p v-if="!meeting.decisions?.length" class="mt-2 text-sm text-secondary">Noch keine Beschlüsse.</p>
             </div>
-            <div><h4 class="font-semibold text-primary">Einladungen</h4><ul class="mt-2 divide-y divide-border"><li v-for="recipient in meeting.recipients" :key="recipient.id" class="flex flex-wrap items-center justify-between gap-2 py-2"><div class="min-w-0 text-sm text-primary"><p class="break-words">{{ recipient.person?.name || 'Mitglied' }}</p><p class="text-xs text-secondary">{{ recipient.voting_eligible ? 'Stimmberechtigt' : 'Nicht stimmberechtigt' }}{{ recipient.response_status ? ` · ${recipient.response_status}` : '' }}</p></div><select v-if="canManage" :value="recipient.delivery_status" :aria-label="`Zustellstatus: ${recipient.person?.name || 'Mitglied'}`" :disabled="busy" @change="delivery(recipient, $event.target.value)"><option v-for="value in ['pending', 'sent', 'delivered', 'failed', 'bounced']" :key="value" :value="value">{{ label(value) }}</option></select><span v-else class="text-sm text-secondary">{{ label(recipient.delivery_status) }}</span></li></ul></div>
+            <div><h4 class="font-semibold text-primary">Anwesenheit &amp; Einladungen</h4><p class="mt-1 text-sm text-secondary">Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen erhalten kein Stimmrecht in bestehenden Abstimmungen.</p><div v-if="canManage && missingAttendees.length" class="mt-3 flex flex-wrap gap-2"><select v-model="attendeeKey" aria-label="Anwesende Person auswählen"><option value="">Person auswählen</option><option v-for="person in missingAttendees" :key="personKey(person)" :value="personKey(person)">{{ person.name }}</option></select><button type="button" class="meeting-button" :disabled="busy || !attendeeKey" @click="addAttendee">Anwesende Person nachtragen</button></div><ul class="mt-2 divide-y divide-border"><li v-for="recipient in meeting.recipients" :key="recipient.id" class="flex flex-wrap items-center justify-between gap-2 py-2"><div class="min-w-0 text-sm text-primary"><p class="break-words">{{ recipient.person?.name || 'Mitglied' }}</p><p class="text-xs text-secondary">{{ recipient.voting_eligible ? 'Stimmberechtigt' : 'Nicht stimmberechtigt' }} · {{ recipient.was_present === true ? 'Anwesend' : recipient.was_present === false ? 'Abwesend' : 'Anwesenheit noch nicht erfasst' }}</p></div><div class="flex flex-wrap gap-2"><select v-if="canManage" :value="recipient.was_present === null ? '' : String(recipient.was_present)" :aria-label="`Anwesenheit: ${recipient.person?.name || 'Mitglied'}`" :disabled="busy" @change="presence(recipient, $event.target.value === 'true')"><option value="" disabled>Anwesenheit erfassen</option><option value="true">Anwesend</option><option value="false">Abwesend</option></select><select v-if="canManage" :value="recipient.delivery_status" :aria-label="`Zustellstatus: ${recipient.person?.name || 'Mitglied'}`" :disabled="busy" @change="delivery(recipient, $event.target.value)"><option v-for="value in ['pending', 'sent', 'delivered', 'failed', 'bounced']" :key="value" :value="value">{{ label(value) }}</option></select><span v-else class="text-sm text-secondary">{{ label(recipient.delivery_status) }}</span></div></li></ul></div>
             <div><h4 class="font-semibold text-primary">Protokollversionen</h4><details v-for="version in meeting.versions" :key="version.id" class="mt-2 border-t border-border py-2"><summary class="cursor-pointer text-sm text-primary">Version {{ version.version }} · {{ label(version.status) }} · {{ date(version.created_at) }}{{ creator(version) ? ` · ${creator(version)}` : '' }}</summary><ol class="mt-2 text-sm text-secondary"><li v-for="(item, index) in version.agenda_items" :key="index">{{ index + 1 }}. {{ item.title }}{{ item.description ? `: ${item.description}` : '' }}</li></ol><p class="mt-2 whitespace-pre-wrap break-words text-sm text-primary">{{ version.notes || 'Keine Notizen.' }}</p></details><p v-if="!meeting.versions?.length" class="text-sm text-secondary">Keine Versionen verfügbar.</p></div>
         </div>
 

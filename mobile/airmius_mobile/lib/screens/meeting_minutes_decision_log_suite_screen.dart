@@ -52,12 +52,18 @@ class _MeetingMinutesDecisionLogSuiteScreenState
     });
     try {
       final boundClub = widget.club;
-      final access = governanceMap((await _client.governanceMeetingNavigation())['data']);
-      final allowedIds = (access['club_ids'] is List ? access['club_ids'] as List : const [])
-          .map(governanceInt).whereType<int>().toSet();
+      final access = governanceMap(
+        (await _client.governanceMeetingNavigation())['data'],
+      );
+      final allowedIds =
+          (access['club_ids'] is List ? access['club_ids'] as List : const [])
+              .map(governanceInt)
+              .whereType<int>()
+              .toSet();
       final clubs = boundClub == null
           ? governanceMaps((await _client.clubs(mine: true))['data'])
-              .where((club) => allowedIds.contains(governanceInt(club['id']))).toList()
+                .where((club) => allowedIds.contains(governanceInt(club['id'])))
+                .toList()
           : <AirmiusJson>[
               if (allowedIds.contains(boundClub.id))
                 {'id': boundClub.id, 'name': boundClub.name},
@@ -314,6 +320,100 @@ class _MeetingMinutesDecisionLogSuiteScreenState
     );
   }
 
+  Future<void> _deleteDecision(AirmiusJson decision) async {
+    if (!_canManage || _busy || decision['status'] != 'open') return;
+    if (!await _confirm(
+      'Beschluss löschen',
+      '„${decision['title']}“ wird dauerhaft gelöscht. Das ist nur möglich, solange niemand abgestimmt hat.',
+      'Löschen',
+    ))
+      return;
+    if (!mounted) return;
+    await _write(
+      () => _client.deleteClubGovernanceDecision(
+        _clubId,
+        governanceInt(_meeting?['id'])!,
+        governanceInt(decision['id'])!,
+      ),
+    );
+  }
+
+  Future<void> _addAttendee() async {
+    if (!_canManage || _busy) return;
+    try {
+      final governance = governanceMap(
+        (await _client.clubGovernance(_clubId))['data'],
+      );
+      if (!mounted) return;
+      final existing = governanceMaps(_meeting?['recipients']);
+      final options = governanceMaps(governance['member_options']).where((
+        person,
+      ) {
+        final id = governanceInt(person['id']);
+        final field = person['kind'] == 'external'
+            ? 'club_external_member_id'
+            : 'user_id';
+        return id != null &&
+            !existing.any((recipient) => governanceInt(recipient[field]) == id);
+      }).toList();
+      if (options.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Alle verfügbaren Mitglieder stehen bereits in der Liste.',
+            ),
+          ),
+        );
+        return;
+      }
+      AirmiusJson? selected;
+      selected = await showDialog<AirmiusJson>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Anwesende Person nachtragen'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Nachgetragene Personen werden als anwesend erfasst. Bereits laufende Abstimmungen erhalten dadurch keine zusätzlichen Stimmberechtigten.',
+                ),
+                const SizedBox(height: 12),
+                for (final person in options)
+                  ListTile(
+                    title: Text('${person['name']}'),
+                    onTap: () => Navigator.pop(dialogContext, person),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Abbrechen'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || selected == null) return;
+      final field = selected['kind'] == 'external'
+          ? 'club_external_member_id'
+          : 'user_id';
+      await _write(
+        () => _client.addClubGovernanceAttendee(
+          _clubId,
+          governanceInt(_meeting?['id'])!,
+          {field: selected!["id"]},
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(governanceError(error))));
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -516,8 +616,16 @@ class _MeetingMinutesDecisionLogSuiteScreenState
         ),
       if (decisions.isEmpty) const Text('Noch keine Beschlüsse.'),
       for (final decision in decisions) _decision(decision),
-      _heading('Einladungen'),
-      const Text('Empfänger und Stimmrechte sind festgeschrieben.'),
+      _heading('Anwesenheit & Einladungen'),
+      const Text(
+        'Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen erhalten kein Stimmrecht in bestehenden Abstimmungen.',
+      ),
+      if (_canManage)
+        TextButton.icon(
+          onPressed: _busy ? null : _addAttendee,
+          icon: const Icon(Icons.person_add_outlined),
+          label: const Text('Anwesende Person nachtragen'),
+        ),
       for (final recipient in recipients)
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -533,6 +641,29 @@ class _MeetingMinutesDecisionLogSuiteScreenState
                     ? 'Stimmberechtigt'
                     : 'Nicht stimmberechtigt',
               ),
+              Text(
+                recipient['was_present'] == true
+                    ? 'Anwesend'
+                    : recipient['was_present'] == false
+                    ? 'Abwesend'
+                    : 'Anwesenheit noch nicht erfasst',
+              ),
+              if (_canManage)
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Anwesend'),
+                  value: recipient['was_present'] == true,
+                  onChanged: _busy
+                      ? null
+                      : (value) => _write(
+                          () => _client.updateClubGovernancePresence(
+                            _clubId,
+                            governanceInt(item['id'])!,
+                            governanceInt(recipient['id'])!,
+                            value,
+                          ),
+                        ),
+                ),
               if (recipient['response_status'] != null)
                 Text('${recipient['response_status']}'),
               if (_canManage)
@@ -676,6 +807,15 @@ class _MeetingMinutesDecisionLogSuiteScreenState
                 onPressed: _busy ? null : () => _close(decision),
                 icon: const Icon(Icons.lock_outline),
                 label: const Text('Abstimmung abschließen'),
+              ),
+            if (_canManage &&
+                decision['status'] == 'open' &&
+                decision['correction_locked_at'] == null &&
+                (result['votes_cast'] ?? 0) == 0)
+              TextButton.icon(
+                onPressed: _busy ? null : () => _deleteDecision(decision),
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Beschluss löschen'),
               ),
           ],
         ),

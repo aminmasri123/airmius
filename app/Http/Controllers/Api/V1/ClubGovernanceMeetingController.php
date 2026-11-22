@@ -140,6 +140,68 @@ class ClubGovernanceMeetingController extends Controller
         return response()->json(['data' => $this->recipientPayload($recipient->fresh()->load(['user:id,name', 'externalMember:id,name']))]);
     }
 
+    public function addAttendee(Request $request, Club $club, ClubGovernanceMeeting $meeting)
+    {
+        $this->authorizeMeeting($request, $club, $meeting, ClubPermissions::GOVERNANCE_EDIT);
+        $data = $request->validate([
+            'user_id' => ['nullable', 'required_without:club_external_member_id', 'integer', Rule::exists('users', 'id')],
+            'club_external_member_id' => ['nullable', 'required_without:user_id', 'integer', Rule::exists('club_external_members', 'id')->where('club_id', $club->id)],
+        ]);
+        if (! empty($data['user_id']) && ! empty($data['club_external_member_id'])) {
+            throw ValidationException::withMessages(['user_id' => 'Bitte genau eine Person auswählen.']);
+        }
+        if (! empty($data['user_id']) && ! $club->users()->where('users.id', $data['user_id'])->wherePivot('membership_status', 'active')->exists()) {
+            throw ValidationException::withMessages(['user_id' => 'Nur aktive Vereinsmitglieder können nachgetragen werden.']);
+        }
+
+        $recipient = DB::transaction(function () use ($club, $meeting, $data) {
+            ClubGovernanceMeeting::query()->whereKey($meeting->id)->lockForUpdate()->firstOrFail();
+            $identity = ! empty($data['user_id']) ? ['user_id' => $data['user_id']] : ['club_external_member_id' => $data['club_external_member_id']];
+            if ($meeting->recipients()->where($identity)->exists()) {
+                throw ValidationException::withMessages(['user_id' => 'Diese Person steht bereits in der Teilnehmerliste. Bitte dort die Anwesenheit setzen.']);
+            }
+            return $meeting->recipients()->create([
+                ...$identity, 'club_id' => $club->id, 'attendance_eligible' => true,
+                'voting_eligible' => false, 'eligibility_source' => 'attendance_correction',
+                'delivery_status' => 'pending', 'was_present' => true,
+            ]);
+        });
+        ClubAuditLog::record($club, $request->user(), 'club.governance.meeting.attendee.added', $meeting, [
+            'entity_type' => 'meeting_recipient', 'recipient_id' => $recipient->id,
+        ]);
+        return response()->json(['data' => $this->recipientPayload($recipient->load(['user:id,name', 'externalMember:id,name']))], 201);
+    }
+
+    public function updatePresence(Request $request, Club $club, ClubGovernanceMeeting $meeting, ClubGovernanceMeetingRecipient $recipient)
+    {
+        $this->authorizeMeeting($request, $club, $meeting, ClubPermissions::GOVERNANCE_EDIT);
+        abort_unless((int) $recipient->club_id === (int) $club->id && (int) $recipient->club_governance_meeting_id === (int) $meeting->id, 404);
+        $data = $request->validate(['was_present' => ['required', 'boolean']]);
+        $recipient->update($data);
+        ClubAuditLog::record($club, $request->user(), 'club.governance.meeting.presence.updated', $meeting, [
+            'entity_type' => 'meeting_recipient', 'recipient_id' => $recipient->id,
+            'was_present' => $recipient->was_present,
+        ]);
+        return response()->json(['data' => $this->recipientPayload($recipient->load(['user:id,name', 'externalMember:id,name']))]);
+    }
+
+    public function deleteDecision(Request $request, Club $club, ClubGovernanceMeeting $meeting, ClubGovernanceMeetingDecision $decision)
+    {
+        $this->authorizeMeeting($request, $club, $meeting, ClubPermissions::GOVERNANCE_EDIT);
+        $this->assertDecisionBelongsToMeeting($club, $meeting, $decision);
+        DB::transaction(function () use ($decision) {
+            $locked = ClubGovernanceMeetingDecision::query()->whereKey($decision->id)->lockForUpdate()->firstOrFail();
+            if ($locked->status !== 'open' || $locked->correction_locked_at || $locked->votes()->exists()) {
+                throw ValidationException::withMessages(['decision' => 'Dieser Beschluss hat bereits Stimmen oder wurde abgeschlossen und kann deshalb nicht gelöscht werden.']);
+            }
+            $locked->delete();
+        });
+        ClubAuditLog::record($club, $request->user(), 'club.governance.meeting.decision.deleted', $meeting, [
+            'entity_type' => 'meeting_decision', 'decision_id' => $decision->id, 'title' => $decision->title,
+        ]);
+        return response()->noContent();
+    }
+
     public function storeDecision(Request $request, Club $club, ClubGovernanceMeeting $meeting)
     {
         $this->authorizeMeeting($request, $club, $meeting, ClubPermissions::GOVERNANCE_EDIT);
@@ -716,6 +778,7 @@ class ClubGovernanceMeetingController extends Controller
             'id' => $recipient->id,
             'attendance_eligible' => (bool) $recipient->attendance_eligible,
             'voting_eligible' => (bool) $recipient->voting_eligible,
+            'was_present' => $recipient->was_present,
             'eligibility_source' => $recipient->eligibility_source,
             'eligibility_role' => $recipient->eligibility_role,
             'delivery_status' => $recipient->delivery_status,

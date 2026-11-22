@@ -645,6 +645,36 @@ class AirmiusApiClient {
     body: payload,
   );
 
+  Future<AirmiusJson> addClubGovernanceAttendee(
+    int clubId,
+    int meetingId,
+    AirmiusJson payload,
+  ) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/governance/meetings/$meetingId/attendees',
+    body: payload,
+  );
+
+  Future<AirmiusJson> updateClubGovernancePresence(
+    int clubId,
+    int meetingId,
+    int recipientId,
+    bool present,
+  ) => _json(
+    'PATCH',
+    '/api/v1/clubs/$clubId/governance/meetings/$meetingId/recipients/$recipientId/presence',
+    body: {'was_present': present},
+  );
+
+  Future<AirmiusJson> deleteClubGovernanceDecision(
+    int clubId,
+    int meetingId,
+    int decisionId,
+  ) => _json(
+    'DELETE',
+    '/api/v1/clubs/$clubId/governance/meetings/$meetingId/decisions/$decisionId',
+  );
+
   Future<AirmiusJson> createClubGovernanceDecision(
     int clubId,
     int meetingId,
@@ -915,7 +945,8 @@ class AirmiusApiClient {
       _json('GET', '/api/v1/clubs/$clubId/year-periods');
 
   Future<AirmiusJson> clubServiceHours(int clubId, int periodId) => _json(
-    'GET', '/api/v1/clubs/$clubId/service-hours',
+    'GET',
+    '/api/v1/clubs/$clubId/service-hours',
     query: {'period_id': '$periodId'},
   );
 
@@ -3898,10 +3929,12 @@ class AirmiusApiClient {
     },
   );
 
-  Future<AirmiusJson> clubNewsletterSubscribers(int clubId, {int page = 1}) => _json(
-    'GET', '/api/v1/clubs/$clubId/newsletter/subscribers',
-    query: {'subscribers_page': '$page'},
-  );
+  Future<AirmiusJson> clubNewsletterSubscribers(int clubId, {int page = 1}) =>
+      _json(
+        'GET',
+        '/api/v1/clubs/$clubId/newsletter/subscribers',
+        query: {'subscribers_page': '$page'},
+      );
 
   Future<AirmiusJson> subscribeClubNewsletter({
     required int clubId,
@@ -4006,14 +4039,15 @@ class AirmiusApiClient {
   Future<AirmiusJson> deleteEditorialCategory(int categoryId) =>
       _json('DELETE', '/api/v1/editorial/categories/$categoryId');
 
-  Future<AirmiusJson> sponsorManagement({int? sponsorId, int? partnershipId}) => _json(
-    'GET',
-    '/api/v1/sponsor-management',
-    query: {
-      if (sponsorId != null) 'sponsor_id': sponsorId.toString(),
-      if (partnershipId != null) 'partnership_id': partnershipId.toString(),
-    },
-  );
+  Future<AirmiusJson> sponsorManagement({int? sponsorId, int? partnershipId}) =>
+      _json(
+        'GET',
+        '/api/v1/sponsor-management',
+        query: {
+          if (sponsorId != null) 'sponsor_id': sponsorId.toString(),
+          if (partnershipId != null) 'partnership_id': partnershipId.toString(),
+        },
+      );
 
   Future<AirmiusJson> sponsorInquiries({int? sponsorId}) => _json(
     'GET',

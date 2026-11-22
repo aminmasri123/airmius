@@ -715,7 +715,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}/governance/meetings/{meeting}', [ClubGovernanceMeetingController::class, 'show'])->name('clubs.governance.meetings.show');
         Route::put('/clubs/{club}/governance/meetings/{meeting}', [ClubGovernanceMeetingController::class, 'update'])->name('clubs.governance.meetings.update');
         Route::patch('/clubs/{club}/governance/meetings/{meeting}/recipients/{recipient}/delivery', [ClubGovernanceMeetingController::class, 'updateRecipientDelivery'])->name('clubs.governance.meetings.recipients.delivery');
+        Route::post('/clubs/{club}/governance/meetings/{meeting}/attendees', [ClubGovernanceMeetingController::class, 'addAttendee'])->name('clubs.governance.meetings.attendees.store');
+        Route::patch('/clubs/{club}/governance/meetings/{meeting}/recipients/{recipient}/presence', [ClubGovernanceMeetingController::class, 'updatePresence'])->name('clubs.governance.meetings.recipients.presence');
         Route::post('/clubs/{club}/governance/meetings/{meeting}/decisions', [ClubGovernanceMeetingController::class, 'storeDecision'])->name('clubs.governance.meetings.decisions.store');
+        Route::delete('/clubs/{club}/governance/meetings/{meeting}/decisions/{decision}', [ClubGovernanceMeetingController::class, 'deleteDecision'])->name('clubs.governance.meetings.decisions.destroy');
         Route::post('/clubs/{club}/governance/meetings/{meeting}/decisions/{decision}/vote', [ClubGovernanceMeetingController::class, 'castDecisionVote'])->name('clubs.governance.meetings.decisions.vote');
         Route::post('/clubs/{club}/governance/meetings/{meeting}/decisions/{decision}/close', [ClubGovernanceMeetingController::class, 'closeDecision'])->name('clubs.governance.meetings.decisions.close');
         Route::get('/clubs/{club}/policy-documents', [ClubPolicyDocumentController::class, 'index'])->name('clubs.policy-documents.index');

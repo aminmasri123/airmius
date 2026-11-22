@@ -745,73 +745,54 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
   }
 
   Future<void> _scan() async {
-    final token = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const ClubInventoryQrScannerScreen()),
-    );
     final clubId = _int(_club?['id']);
-    if (!mounted || token == null || clubId == null) return;
-    setState(() => _busy = true);
-    try {
-      final item = _map(
-        (await _client.scanClubInventoryItem(clubId, token))['data'],
-      );
-      if (!mounted) return;
-      setState(() => _busy = false);
-      await showModalBottomSheet<void>(
-        context: context,
-        showDragHandle: true,
-        builder: (sheetContext) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                '${item['name'] ?? t('inventory.fallbackItem')}',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                tx('inventory.availableCount', {
-                  'available': item['quantity_available'] ?? 0,
-                  'total': item['quantity_total'] ?? 0,
-                }),
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed:
-                    item['is_loanable'] != false &&
-                        item['can_checkout'] != false &&
-                        (_int(item['quantity_available']) ?? 0) > 0
-                    ? () {
-                        Navigator.pop(sheetContext);
-                        _checkout(item);
-                      }
-                    : null,
-                icon: const Icon(Icons.assignment_return_outlined),
-                label: Text(t('inventory.checkout')),
-              ),
-            ],
-          ),
+    if (clubId == null) return;
+    final item = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) => ClubInventoryQrScannerScreen(clubId: clubId),
+      ),
+    );
+    if (!mounted || item == null) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '${item['name'] ?? t('inventory.fallbackItem')}',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              tx('inventory.availableCount', {
+                'available': item['quantity_available'] ?? 0,
+                'total': item['quantity_total'] ?? 0,
+              }),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed:
+                  item['is_loanable'] != false &&
+                      item['can_checkout'] != false &&
+                      (_int(item['quantity_available']) ?? 0) > 0
+                  ? () {
+                      Navigator.pop(sheetContext);
+                      _checkout(item);
+                    }
+                  : null,
+              icon: const Icon(Icons.assignment_return_outlined),
+              label: Text(t('inventory.checkout')),
+            ),
+          ],
         ),
-      );
-    } on AirmiusApiException catch (error) {
-      if (mounted) {
-        setState(() {
-          _error = error.userMessage;
-          _busy = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _error = t('inventory.loadFailed');
-          _busy = false;
-        });
-      }
-    }
+      ),
+    );
   }
 
   Future<void> _qrAction(Map<String, dynamic> item, String action) async {
