@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\TransactionalMail;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -18,7 +19,7 @@ class ClubDeletionCodeRequested extends Notification
     {
         $german = $notifiable->language === 'de';
 
-        return (new MailMessage)
+        $message = (new MailMessage)
             ->subject($german ? 'Vereinslöschung bestätigen' : 'Confirm club deletion')
             ->line($german
                 ? "Für {$this->clubName} wurde ein Löschantrag vorbereitet."
@@ -29,5 +30,7 @@ class ClubDeletionCodeRequested extends Notification
             ->line($german
                 ? 'Wenn du das nicht warst, ignoriere diese E-Mail. Ohne Code wird keine Löschung beantragt.'
                 : 'If this was not you, ignore this email. No deletion is requested without the code.');
+
+        return app(TransactionalMail::class)->applyToMessage($message, 'security');
     }
 }
