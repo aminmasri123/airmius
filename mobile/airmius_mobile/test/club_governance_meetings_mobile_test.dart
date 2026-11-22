@@ -87,11 +87,18 @@ void main() {
     },
   );
 
-  testWidgets('uninvited members do not see a club in meeting navigation', (tester) async {
+  testWidgets('uninvited members do not see a club in meeting navigation', (
+    tester,
+  ) async {
     final transport = _MeetingsTransport()..navigationAllowed = false;
     await _mount(tester, transport);
     expect(find.text('Keine Vereine verfügbar.'), findsOneWidget);
-    expect(transport.requests.where((request) => request.path.endsWith('/governance/meetings')), isEmpty);
+    expect(
+      transport.requests.where(
+        (request) => request.path.endsWith('/governance/meetings'),
+      ),
+      isEmpty,
+    );
   });
 
   testWidgets(
@@ -199,6 +206,54 @@ void main() {
       );
       expect(find.text('Vorstand November'), findsOneWidget);
       expect(find.text('Sitzung bearbeiten'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'manager can add a non body member as participant without automatic voting rights',
+    (tester) async {
+      final transport = _MeetingsTransport()..manager = true;
+      await _mount(tester, transport, width: 800);
+      await tester.tap(find.byTooltip('Sitzung anlegen'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Titel'),
+        'Vorstand mit Gast',
+      );
+
+      for (var step = 0; step < 3; step++) {
+        await tester.tap(find.widgetWithText(FilledButton, 'Weiter'));
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text('Normales Mitglied'), findsNothing);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Weitere Personen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Normales Mitglied'), findsOneWidget);
+      await tester.tap(find.text('Normales Mitglied'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Weiter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
+      await tester.pumpAndSettle();
+
+      final save = transport.requests.singleWhere(
+        (request) =>
+            request.method == 'POST' && request.path.endsWith('/meetings'),
+      );
+      final recipients = (save.body?['recipients'] as List).whereType<Map>();
+      expect(
+        recipients.any(
+          (recipient) =>
+              recipient['user_id'] == 11 &&
+              recipient['delivery_status'] == 'pending' &&
+              recipient['attendance_eligible'] == true &&
+              recipient['voting_eligible'] == false,
+        ),
+        isTrue,
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -521,7 +576,11 @@ class _MeetingsTransport implements AirmiusApiTransport {
       );
     }
     if (request.path.endsWith('/governance/meeting-navigation')) {
-      return _response({'data': {'club_ids': navigationAllowed ? [7] : []}});
+      return _response({
+        'data': {
+          'club_ids': navigationAllowed ? [7] : [],
+        },
+      });
     }
     if (request.path.endsWith('/decisions')) {
       decisionTitle = request.body?['title'] as String? ?? decisionTitle;

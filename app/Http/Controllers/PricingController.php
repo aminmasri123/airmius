@@ -80,7 +80,7 @@ class PricingController extends Controller
                     'member_limit' => $plan->member_limit,
                     'team_limit' => $plan->team_limit,
                     'storage_gb' => $plan->storage_gb,
-                    'features' => $plan->features ?? [],
+                    'features' => $plan->catalogFeatures(),
                     'cta_label' => $plan->cta_label,
                     'badge' => $plan->badge,
                     'is_owned' => $activePlanIds->contains($plan->id),

@@ -105,6 +105,7 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
   final _votingRights = <String, bool>{};
   final _agenda = <(TextEditingController, TextEditingController)>[];
   bool _busy = false;
+  bool _showAdditionalRecipients = false;
   String? _error;
   int _step = 0;
   int _maxStep = 0;
@@ -177,24 +178,30 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
                 _activeKeys.contains(governancePersonKey(person)),
           )
           .toList();
+  List<AirmiusJson> get _additionalRecipientOptions =>
+      governanceMaps(widget.governance['member_options'])
+          .where((person) => !_activeKeys.contains(governancePersonKey(person)))
+          .toList();
   bool _defaultVoting(AirmiusJson person) =>
       _activeKeys.contains(governancePersonKey(person)) ||
-      (person['voting_eligible'] == true ||
-          (person['voting_eligible'] == null &&
-              person['kind'] == 'user' &&
-              (person['membership_status'] ?? 'active') == 'active'));
+      (_scope != 'body' &&
+          (person['voting_eligible'] == true ||
+              (person['voting_eligible'] == null &&
+                  person['kind'] == 'user' &&
+                  (person['membership_status'] ?? 'active') == 'active')));
   bool _voting(AirmiusJson person) =>
       _votingRights[governancePersonKey(person)] ?? _defaultVoting(person);
   void _syncRecipients() {
     if (widget.meeting != null) return;
     if (_scope == 'body') {
-      _recipients.removeWhere((key) => !_activeKeys.contains(key));
+      _recipients.addAll(_activeKeys);
+    } else {
+      _showAdditionalRecipients = false;
     }
     _votingRights.clear();
   }
 
   void _selectBodyMembers() => setState(() {
-    _recipients.clear();
     _recipients.addAll(
       governanceMaps(
         widget.governance['member_options'],
@@ -202,6 +209,48 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
     );
     _votingRights.clear();
   });
+
+  Widget _recipientChoice(AirmiusJson person, {bool additional = false}) {
+    final key = governancePersonKey(person);
+    final selected = _recipients.contains(key);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: Text(
+            '${person['name']}${person['kind'] == 'external' ? ' (Extern)' : ''}',
+          ),
+          subtitle: additional
+              ? const Text('Zusätzliche Teilnahme außerhalb des Gremiums')
+              : null,
+          value: selected,
+          onChanged: _busy
+              ? null
+              : (checked) => setState(() {
+                  checked == true
+                      ? _recipients.add(key)
+                      : _recipients.remove(key);
+                  if (checked != true) _votingRights.remove(key);
+                }),
+        ),
+        if (selected)
+          CheckboxListTile(
+            contentPadding: const EdgeInsets.only(left: 24),
+            controlAffinity: ListTileControlAffinity.leading,
+            title: const Text('Stimmrecht'),
+            subtitle: additional && !_voting(person)
+                ? const Text('Bei zusätzlichen Personen standardmäßig aus')
+                : null,
+            value: _voting(person),
+            onChanged: _busy
+                ? null
+                : (value) => setState(() => _votingRights[key] = value == true),
+          ),
+      ],
+    );
+  }
 
   @override
   void dispose() {
@@ -617,16 +666,12 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
     children: [
       _scheduledField(),
       _text(_location, 'Ort', 180),
-      _select(
-        'Teilnehmerkreis',
-        _scope,
-        ['body', 'club_members', 'custom'],
-        (value) {
-          _scope = value;
-          _syncRecipients();
-        },
-        locked: widget.meeting != null,
-      ),
+      _select('Teilnehmerkreis', _scope, ['body', 'club_members', 'custom'], (
+        value,
+      ) {
+        _scope = value;
+        _syncRecipients();
+      }, locked: widget.meeting != null),
       Padding(
         padding: const EdgeInsets.only(bottom: _fieldGap),
         child: DropdownButtonFormField<int>(
@@ -798,44 +843,51 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_scope == 'body') ...[
+          const Text(
+            'Gremiumsmitglieder werden vorgeschlagen. Weitere Vereinsmitglieder oder bekannte externe Personen können als Ausnahme ergänzt werden.',
+          ),
+          const SizedBox(height: 12),
+        ],
         if (_bodyId != null)
           OutlinedButton.icon(
             onPressed: _busy ? null : _selectBodyMembers,
             icon: const Icon(Icons.groups_outlined),
-            label: const Text('Gremiumsmitglieder auswählen'),
+            label: const Text('Gremium auswählen'),
           ),
         if (_recipientOptions.isEmpty)
           const Text('Keine Personen im gewählten Teilnehmerkreis verfügbar.'),
-        for (final person in _recipientOptions) ...[
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            title: Text(
-              '${person['name']}${person['kind'] == 'external' ? ' (Extern)' : ''}',
-            ),
-            value: _recipients.contains(governancePersonKey(person)),
-            onChanged: _busy
+        for (final person in _recipientOptions) _recipientChoice(person),
+        if (_scope == 'body' && _additionalRecipientOptions.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: _busy
                 ? null
-                : (checked) => setState(() {
-                    final key = governancePersonKey(person);
-                    checked == true
-                        ? _recipients.add(key)
-                        : _recipients.remove(key);
-                  }),
-          ),
-          if (_recipients.contains(governancePersonKey(person)))
-            CheckboxListTile(
-              contentPadding: const EdgeInsets.only(left: 24),
-              controlAffinity: ListTileControlAffinity.leading,
-              title: const Text('Stimmrecht'),
-              value: _voting(person),
-              onChanged: _busy
-                  ? null
-                  : (value) => setState(
-                      () => _votingRights[governancePersonKey(person)] =
-                          value == true,
-                    ),
+                : () => setState(
+                    () =>
+                        _showAdditionalRecipients = !_showAdditionalRecipients,
+                  ),
+            icon: Icon(
+              _showAdditionalRecipients
+                  ? Icons.expand_less
+                  : Icons.person_add_alt_1_outlined,
             ),
+            label: Text(
+              _showAdditionalRecipients
+                  ? 'Weitere Teilnehmer ausblenden'
+                  : 'Weitere Personen',
+            ),
+          ),
+          if (_showAdditionalRecipients ||
+              _additionalRecipientOptions.any(
+                (person) => _recipients.contains(governancePersonKey(person)),
+              )) ...[
+            const SizedBox(height: 8),
+            for (final person in _additionalRecipientOptions)
+              if (_showAdditionalRecipients ||
+                  _recipients.contains(governancePersonKey(person)))
+                _recipientChoice(person, additional: true),
+          ],
         ],
       ],
     );
@@ -883,7 +935,10 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
       children: [
         SizedBox(
           width: 150,
-          child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+          child: Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
         ),
         Expanded(child: Text(value)),
       ],

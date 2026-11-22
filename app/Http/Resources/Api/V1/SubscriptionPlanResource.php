@@ -25,7 +25,7 @@ class SubscriptionPlanResource extends JsonResource
             'member_limit' => $this->member_limit,
             'team_limit' => $this->team_limit,
             'storage_gb' => $this->storage_gb,
-            'features' => $this->features,
+            'features' => $this->resource->catalogFeatures(),
             'minimum_term_months' => $this->minimum_term_months,
             'cancellation_notice_days' => $this->cancellation_notice_days,
             'cta_label' => $this->cta_label,

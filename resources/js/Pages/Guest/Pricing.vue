@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, ref } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import axios from 'axios'
@@ -164,7 +164,7 @@ const audienceDecisionMatrix = {
         { area: 'Im Verein trainieren', free: planPill('frei im Vereinsplan'), premium: planPill('Club/Pro für Verein', 'pro'), note: 'Trainer sollen innerhalb eines Vereins nicht extra bezahlen müssen.' },
         { area: 'Eigene Gruppen', free: planPill('nicht enthalten', 'locked'), premium: planPill('Trainer Pro', 'pro'), note: 'Eigene Kundengruppen sind ein eigener Business-Use-Case.' },
         { area: 'KI-Planung & Regelprüfung', free: planPill('nicht enthalten', 'locked'), premium: planPill('Trainer Pro / Vereins-Pro', 'pro'), note: 'Mehr Verantwortung, KI-Kosten und Prüfpflicht.' },
-        { area: 'Kurse & Camps', free: planPill('später ansehen'), premium: planPill('Trainer Pro', 'pro'), note: 'Verkauf und Teilnehmerverwaltung gehören ins Premium-Paket.' },
+        { area: 'Kurse & Camps', free: planPill('Eigene Entwürfe'), premium: planPill('Eigene Entwürfe'), note: 'Kostenlose Kurs- und Campentwürfe lassen sich mit beiden Tarifen verwalten. Für eigene Kurse können Ersteller Teilnehmer freischalten und den Zugang widerrufen.' },
     ],
     verein: [
         { area: 'Starten mit Verein', free: planPill('Free: 1 Team / 25 Mitglieder'), premium: planPill('Starter für Wachstum', 'pro'), note: 'Kleine Vereine können risikofrei testen.' },
