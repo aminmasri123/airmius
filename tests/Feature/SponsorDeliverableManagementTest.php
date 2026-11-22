@@ -36,9 +36,8 @@ class SponsorDeliverableManagementTest extends TestCase
         $this->postJson('/api/v1/sponsor-management/'.$sponsor->id.'/deliverables', [
             'club_id' => $club->id, 'title' => 'Logo on club website', 'status' => 'planned',
         ])->assertCreated();
-        $image = 'data:image/jpeg;base64,'.base64_encode(file_get_contents(
-            \Illuminate\Http\UploadedFile::fake()->image('proof.jpg', 20, 20)->getRealPath(),
-        ));
+        $imageFile = \Illuminate\Http\UploadedFile::fake()->image('proof.jpg', 20, 20);
+        $image = 'data:image/jpeg;base64,'.base64_encode(file_get_contents($imageFile->getRealPath()));
         $deliverable = $sponsor->deliverables()->where('club_id', $club->id)->firstOrFail();
         $this->putJson('/api/v1/sponsor-management/'.$sponsor->id.'/deliverables/'.$deliverable->id, [
             'club_id' => $club->id, 'title' => 'Logo on club website',
