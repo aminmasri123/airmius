@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Models\Concerns\CleansClubMetadata;
+use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ClubInventoryItem extends Model
@@ -18,7 +20,7 @@ class ClubInventoryItem extends Model
     }
 
     protected $fillable = [
-        'club_id', 'club_department_id', 'team_id', 'parent_id', 'resource_type', 'opening_hours', 'booking_rules', 'rental_price_rules', 'name', 'sku', 'category', 'size', 'dimensions', 'location', 'description',
+        'club_id', 'club_department_id', 'team_id', 'parent_id', 'resource_type', 'opening_hours', 'booking_rules', 'rental_price_rules', 'name', 'sku', 'category', 'size', 'dimensions', 'location', 'description', 'image_path',
         'article_number', 'batch_number', 'purchase_price_cents', 'deposit_cents', 'supplier', 'purchased_on',
         'quantity_total', 'quantity_available', 'condition', 'status', 'is_loanable',
         'minimum_stock', 'reserved_quantity', 'reorder_lead_time_days',
@@ -48,6 +50,12 @@ class ClubInventoryItem extends Model
         static::creating(function (self $item): void {
             $item->qr_token ??= (string) Str::uuid();
             $item->qr_issued_at ??= now();
+        });
+
+        static::deleted(function (self $item): void {
+            if ($item->image_path) {
+                Storage::disk(UploadStorage::disk($item->image_path))->delete($item->image_path);
+            }
         });
     }
 

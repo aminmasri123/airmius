@@ -12,10 +12,12 @@ use App\Models\ClubInventoryMovement;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Services\ClubNumberRangeService;
+use App\Services\MediaOptimizer;
 use App\Support\AppNotification;
 use App\Support\ClubActiveMembership;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
+use App\Support\UploadStorage;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -23,6 +25,7 @@ use BaconQrCode\Writer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -170,6 +173,46 @@ class ClubInventoryController extends Controller
         $item->delete();
 
         return response()->json(['message' => __('organization.inventory.item_deleted'), 'data' => ['deleted' => true]]);
+    }
+
+    public function storeImage(Request $request, Club $club, ClubInventoryItem $item)
+    {
+        $this->ensureItemClub($club, $item);
+        $this->authorizeItem($request, $item, ClubPermissions::INVENTORY_EDIT);
+        $request->validate([
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+        ]);
+
+        $stored = app(MediaOptimizer::class)->store(
+            $request->file('image'),
+            "clubs/{$club->id}/inventory",
+        );
+        $previousPath = $item->image_path;
+        $item->forceFill(['image_path' => $stored['path']])->save();
+        if ($previousPath && $previousPath !== $stored['path']) {
+            Storage::disk(UploadStorage::disk($previousPath))->delete($previousPath);
+        }
+
+        return response()->json([
+            'message' => __('organization.inventory.item_updated'),
+            'data' => $this->itemPayload($item->refresh(), $request->user()),
+        ]);
+    }
+
+    public function destroyImage(Request $request, Club $club, ClubInventoryItem $item)
+    {
+        $this->ensureItemClub($club, $item);
+        $this->authorizeItem($request, $item, ClubPermissions::INVENTORY_EDIT);
+        $path = $item->image_path;
+        $item->forceFill(['image_path' => null])->save();
+        if ($path) {
+            Storage::disk(UploadStorage::disk($path))->delete($path);
+        }
+
+        return response()->json([
+            'message' => __('organization.inventory.item_updated'),
+            'data' => $this->itemPayload($item->refresh(), $request->user()),
+        ]);
     }
 
     public function scan(Request $request, Club $club)
@@ -1664,6 +1707,7 @@ class ClubInventoryController extends Controller
             'article_number', 'batch_number', 'purchase_price_cents', 'deposit_cents', 'supplier', 'purchased_on',
             'quantity_total', 'quantity_available', 'minimum_stock', 'reserved_quantity', 'reorder_lead_time_days', 'condition', 'status', 'is_loanable', 'requires_approval',
         ]);
+        $payload['image_url'] = UploadStorage::url($item->image_path);
         $payload['reservable_quantity'] = $this->reservableQuantity($item);
         $payload['reorder_proposal'] = $this->reorderProposal($item);
         $payload['movements'] = $item->relationLoaded('movements')

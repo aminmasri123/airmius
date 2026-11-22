@@ -14,9 +14,12 @@ use App\Models\Notification;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\ClubPermissions;
+use App\Support\UploadStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -24,6 +27,52 @@ use Tests\TestCase;
 class ClubInventoryApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_inventory_manager_can_upload_replace_and_remove_an_item_image(): void
+    {
+        Storage::fake(UploadStorage::disk());
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $item = ClubInventoryItem::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Leihball mit Bild',
+            'quantity_total' => 1,
+            'quantity_available' => 1,
+            'condition' => 'good',
+            'status' => 'active',
+            'is_loanable' => true,
+        ]);
+
+        Sanctum::actingAs($owner);
+        $firstResponse = $this->post(
+            "/api/v1/clubs/{$club->id}/inventory/{$item->id}/image",
+            ['image' => UploadedFile::fake()->image('ball.jpg', 600, 400)],
+            ['Accept' => 'application/json'],
+        )->assertOk()->assertJsonPath('data.id', $item->id);
+
+        $firstPath = $item->refresh()->image_path;
+        $this->assertNotNull($firstPath);
+        Storage::disk(UploadStorage::disk($firstPath))->assertExists($firstPath);
+        $this->assertNotNull($firstResponse->json('data.image_url'));
+
+        $this->post(
+            "/api/v1/clubs/{$club->id}/inventory/{$item->id}/image",
+            ['image' => UploadedFile::fake()->image('ball-new.png', 800, 500)],
+            ['Accept' => 'application/json'],
+        )->assertOk();
+
+        $secondPath = $item->refresh()->image_path;
+        $this->assertNotSame($firstPath, $secondPath);
+        Storage::disk(UploadStorage::disk($firstPath))->assertMissing($firstPath);
+        Storage::disk(UploadStorage::disk($secondPath))->assertExists($secondPath);
+
+        $this->deleteJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/image")
+            ->assertOk()
+            ->assertJsonPath('data.image_url', null);
+
+        $this->assertNull($item->refresh()->image_path);
+        Storage::disk(UploadStorage::disk($secondPath))->assertMissing($secondPath);
+    }
 
     public function test_inventory_manager_can_open_the_responsive_web_workspace(): void
     {

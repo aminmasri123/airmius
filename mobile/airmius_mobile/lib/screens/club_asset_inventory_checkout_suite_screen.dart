@@ -1,4 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+
 import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
@@ -8,6 +13,7 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/inventory_checkout_dialog.dart';
 import 'club_inventory_qr_scanner_screen.dart';
+import 'club_metadata_subject_screen.dart';
 
 const _inventoryCategoryValues = <String>[
   'balls',
@@ -36,7 +42,6 @@ const _inventoryCategoryValues = <String>[
   'office_admin',
   'other',
 ];
-import 'club_metadata_subject_screen.dart';
 
 class ClubAssetInventoryCheckoutSuiteScreen extends StatefulWidget {
   const ClubAssetInventoryCheckoutSuiteScreen({
@@ -1072,14 +1077,29 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
               children: [
                 Row(
                   children: [
-                    IconBadge(
-                      icon: widget.scheduledCheckout
-                          ? Icons.domain_outlined
-                          : Icons.inventory_2_outlined,
-                      color: (_int(item['quantity_available']) ?? 0) > 0
-                          ? AirmiusColors.green
-                          : AirmiusColors.red,
-                    ),
+                    if ('${item['image_url'] ?? ''}'.trim().isNotEmpty)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          '${item['image_url']}',
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const IconBadge(
+                            icon: Icons.inventory_2_outlined,
+                            color: AirmiusColors.green,
+                          ),
+                        ),
+                      )
+                    else
+                      IconBadge(
+                        icon: widget.scheduledCheckout
+                            ? Icons.domain_outlined
+                            : Icons.inventory_2_outlined,
+                        color: (_int(item['quantity_available']) ?? 0) > 0
+                            ? AirmiusColors.green
+                            : AirmiusColors.red,
+                      ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -1515,9 +1535,14 @@ class _InventoryItemEditorScreenState
   late String _resourceType;
   late bool _requiresApproval;
   late bool _isLoanable;
+  XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
+  bool _removeExistingImage = false;
+  int? _savedItemId;
   bool _saving = false;
 
-  bool get _editing => widget.item != null;
+  int? get _itemId => _savedItemId ?? _int(widget.item?['id']);
+  bool get _editing => _itemId != null;
   String t(String key) => AirmiusScope.of(context).t(key);
 
   AirmiusApiClient get _client {
@@ -1575,6 +1600,98 @@ class _InventoryItemEditorScreenState
     return value.isEmpty ? null : value;
   }
 
+  Future<void> _pickImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text(t('inventory.image.camera')),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: Text(t('inventory.image.gallery')),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _selectedImage = picked;
+      _selectedImageBytes = bytes;
+      _removeExistingImage = false;
+    });
+  }
+
+  Uri _imageUri(int itemId) {
+    final base = Uri.parse(_client.baseUrl);
+    final root = base.path.endsWith('/') ? base.path : '${base.path}/';
+    return base.replace(
+      path: '${root}api/v1/clubs/${widget.clubId}/inventory/$itemId/image',
+      query: null,
+      fragment: null,
+    );
+  }
+
+  Future<Map<String, String>> _imageHeaders() async {
+    final session = AirmiusServicesScope.of(context).authState.session;
+    if (session == null) throw StateError(t('inventory.image.sessionRequired'));
+    return {
+      'Authorization': 'Bearer ${session.token}',
+      'Accept': 'application/json',
+    };
+  }
+
+  Future<void> _syncImage(int itemId) async {
+    if (_selectedImage != null && _selectedImageBytes != null) {
+      final request = http.MultipartRequest('POST', _imageUri(itemId))
+        ..headers.addAll(await _imageHeaders())
+        ..files.add(
+          http.MultipartFile.fromBytes(
+            'image',
+            _selectedImageBytes!,
+            filename: _selectedImage!.name,
+          ),
+        );
+      final response = await http.Response.fromStream(await request.send());
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AirmiusApiException(
+          statusCode: response.statusCode,
+          body: response.body,
+          path: _imageUri(itemId).path,
+        );
+      }
+      return;
+    }
+    if (_removeExistingImage) {
+      final response = await http.delete(
+        _imageUri(itemId),
+        headers: await _imageHeaders(),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AirmiusApiException(
+          statusCode: response.statusCode,
+          body: response.body,
+          path: _imageUri(itemId).path,
+        );
+      }
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate() || _saving) return;
     setState(() => _saving = true);
@@ -1596,15 +1713,20 @@ class _InventoryItemEditorScreenState
       'is_loanable': _isLoanable,
     };
     try {
+      late final AirmiusJson response;
       if (_editing) {
-        await _client.updateClubInventoryItem(
+        response = await _client.updateClubInventoryItem(
           widget.clubId,
-          _int(widget.item!['id'])!,
+          _itemId!,
           payload,
         );
       } else {
-        await _client.createClubInventoryItem(widget.clubId, payload);
+        response = await _client.createClubInventoryItem(widget.clubId, payload);
       }
+      final itemId = _itemId ?? _int(_map(response['data'])['id']);
+      if (itemId == null) throw StateError(t('inventory.image.itemMissing'));
+      _savedItemId = itemId;
+      await _syncImage(itemId);
       if (mounted) Navigator.pop(context, true);
     } on AirmiusApiException catch (error) {
       if (mounted) {
@@ -1670,6 +1792,65 @@ class _InventoryItemEditorScreenState
                 ),
               ),
               const SizedBox(height: 12),
+              Text(
+                t('inventory.image.title'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              if (_selectedImageBytes != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.memory(
+                    _selectedImageBytes!,
+                    height: 190,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                )
+              else if (!_removeExistingImage &&
+                  '${widget.item?['image_url'] ?? ''}'.trim().isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.network(
+                    '${widget.item!['image_url']}',
+                    height: 190,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 10,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _saving ? null : _pickImage,
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    label: Text(t('inventory.image.choose')),
+                  ),
+                  if (_selectedImageBytes != null ||
+                      (!_removeExistingImage &&
+                          '${widget.item?['image_url'] ?? ''}'
+                              .trim()
+                              .isNotEmpty))
+                    TextButton.icon(
+                      onPressed: _saving
+                          ? null
+                          : () => setState(() {
+                              _selectedImage = null;
+                              _selectedImageBytes = null;
+                              _removeExistingImage = true;
+                            }),
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(t('inventory.image.remove')),
+                    ),
+                ],
+              ),
+              Text(
+                t('inventory.image.hint'),
+                style: TextStyle(color: airmiusMutedColor(context)),
+              ),
+              const SizedBox(height: 28),
               if (widget.resourceMode) ...[
                 DropdownButtonFormField<String>(
                   initialValue: _resourceType,

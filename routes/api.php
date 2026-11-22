@@ -784,6 +784,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}/inventory', [ClubInventoryController::class, 'index'])->name('clubs.inventory.index');
         Route::post('/clubs/{club}/inventory', [ClubInventoryController::class, 'store'])->name('clubs.inventory.store');
         Route::put('/clubs/{club}/inventory/{item}', [ClubInventoryController::class, 'update'])->name('clubs.inventory.update');
+        Route::post('/clubs/{club}/inventory/{item}/image', [ClubInventoryController::class, 'storeImage'])->middleware('throttle:file-uploads')->name('clubs.inventory.image.store');
+        Route::delete('/clubs/{club}/inventory/{item}/image', [ClubInventoryController::class, 'destroyImage'])->name('clubs.inventory.image.destroy');
         Route::delete('/clubs/{club}/inventory/{item}', [ClubInventoryController::class, 'destroy'])->name('clubs.inventory.destroy');
         Route::post('/clubs/{club}/inventory/scan', [ClubInventoryController::class, 'scan'])->name('clubs.inventory.scan');
         Route::post('/clubs/{club}/inventory/{item}/qr/reissue', [ClubInventoryController::class, 'reissueQr'])->name('clubs.inventory.qr.reissue');
