@@ -18,6 +18,21 @@ class ClubNewsletterTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_opt_in_uses_configured_system_sender_instead_of_default_smtp(): void
+    {
+        config(['mail.default' => 'smtp']);
+        $this->mock(\App\Support\TransactionalMail::class, function ($mock): void {
+            $mock->shouldReceive('transportFor')->once()->with('system')->andReturn([
+                'mailer' => 'array', 'address' => 'support@example.org', 'name' => 'Club support',
+            ]);
+        });
+        $club = Club::factory()->create();
+        app(ClubNewsletterService::class)->requestOptIn($club, 'reader@example.org');
+        $messages = Mail::mailer('array')->getSymfonyTransport()->messages();
+        $this->assertCount(1, $messages);
+        $this->assertSame('support@example.org', $messages->first()->getOriginalMessage()->getFrom()[0]->getAddress());
+    }
+
     public function test_subscriber_table_is_paginated_club_scoped_and_hides_tokens(): void
     {
         $owner = User::factory()->create();
@@ -79,7 +94,7 @@ class ClubNewsletterTest extends TestCase
 
         $this->from(route('guest.clubs.show', $club))
             ->post(route('guest.newsletter.subscribe', $club), [
-                'email' => 'reader@example.org',
+                'email' => 'reader@gmail.com',
                 'privacy_consent' => false,
                 'website' => '',
             ])
@@ -88,7 +103,7 @@ class ClubNewsletterTest extends TestCase
 
         $this->from(route('guest.clubs.show', $club))
             ->post(route('guest.newsletter.subscribe', $club), [
-                'email' => 'reader@example.org',
+                'email' => 'reader@gmail.com',
                 'name' => 'Reader',
                 'privacy_consent' => true,
                 'website' => '',
@@ -98,7 +113,7 @@ class ClubNewsletterTest extends TestCase
 
         $this->assertDatabaseHas('club_newsletter_subscriptions', [
             'club_id' => $club->id,
-            'email' => 'reader@example.org',
+            'email' => 'reader@gmail.com',
             'status' => 'pending',
         ]);
 

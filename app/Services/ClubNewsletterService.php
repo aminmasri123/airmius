@@ -9,6 +9,7 @@ use App\Models\ClubNewsletterSubscription;
 use App\Models\ClubNewsletterSuppression;
 use App\Models\User;
 use App\Support\EmailTemplate;
+use App\Support\TransactionalMail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -60,12 +61,11 @@ class ClubNewsletterService
         });
 
         $confirmationUrl = route('guest.newsletter.confirm', ['token' => $token]);
-        Mail::raw(
+        $this->sendMail(
             "Bitte bestätige deine Newsletter-Anmeldung für {$club->name}:\n\n{$confirmationUrl}\n\n".
             "Wenn du dich nicht angemeldet hast, kannst du diese E-Mail ignorieren.",
-            function ($message) use ($club, $email): void {
-                $message->to($email)->subject('Newsletter-Anmeldung für '.$club->name.' bestätigen');
-            },
+            $email,
+            'Newsletter-Anmeldung für '.$club->name.' bestätigen',
         );
 
         return [$subscription, $token];
@@ -181,9 +181,7 @@ class ClubNewsletterService
                         'token' => $this->unsubscribeToken($subscription),
                     ]);
 
-                    $sent = Mail::raw($body, function ($message) use ($campaign, $subscription): void {
-                        $message->to($subscription->email)->subject($campaign->subject);
-                    });
+                    $sent = $this->sendMail($body, $subscription->email, $campaign->subject);
 
                     $delivery->forceFill(['provider_message_id' => $sent?->getMessageId()])->save();
                 });
@@ -236,6 +234,15 @@ class ClubNewsletterService
         }
 
         return hash_equals($this->unsubscribeToken($subscription), $token) ? $subscription : null;
+    }
+
+    private function sendMail(string $body, string $email, string $subject): ?\Illuminate\Mail\SentMessage
+    {
+        $sender = app(TransactionalMail::class)->transportFor('system');
+
+        return Mail::mailer($sender['mailer'])->raw($body, function ($message) use ($sender, $email, $subject): void {
+            $message->from($sender['address'], $sender['name'])->to($email)->subject($subject);
+        });
     }
 
     private function campaignContent(array $data): array
