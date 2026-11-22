@@ -267,12 +267,20 @@ class ClubDeletionService
                 $locale = $user->language === 'de' ? 'de' : 'en';
                 $title = __('club_deletion.'.$event.'_title', [], $locale);
                 $body = __('club_deletion.'.$event.'_body', $replace, $locale);
-                $user->notify(new ClubDeletionChanged($title, $body, $url, __('club_deletion.open', [], $locale), $event));
+                try {
+                    $user->notify(new ClubDeletionChanged($title, $body, $url, __('club_deletion.open', [], $locale), $event));
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
             }
             foreach ($externalEmails as $email) {
-                Notification::route('mail', $email)->notify(new ClubDeletionChanged(
-                    __('club_deletion.'.$event.'_title'), __('club_deletion.'.$event.'_body', $replace), $url, __('club_deletion.open'), $event,
-                ));
+                try {
+                    Notification::route('mail', $email)->notify(new ClubDeletionChanged(
+                        __('club_deletion.'.$event.'_title'), __('club_deletion.'.$event.'_body', $replace), $url, __('club_deletion.open'), $event,
+                    ));
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
             }
         };
 
