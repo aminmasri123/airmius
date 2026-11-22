@@ -98,6 +98,27 @@ class ClubDeletionLifecycleTest extends TestCase
         ])->assertUnprocessable();
     }
 
+    public function test_code_requests_do_not_block_the_immediate_financial_export(): void
+    {
+        $club = $this->ownedClub();
+        ClubFinanceEntry::create([
+            'club_id' => $club->id, 'booked_on' => today(), 'type' => 'income',
+            'category' => 'other', 'title' => 'Mitgliedsbeitrag',
+            'amount' => 25, 'account' => 'cash',
+        ]);
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-code', ['identity' => 'password'])->assertOk();
+        }
+        $code = Notification::sent($club->owner, ClubDeletionCodeRequested::class)->last()->code;
+        $this->deleteJson('/api/v1/clubs/'.$club->id, [
+            'confirmation' => __('club_deletion.confirmation'), 'code' => $code,
+        ])->assertAccepted();
+
+        $this->get('/api/v1/clubs/'.$club->id.'/deletion-financial-export')->assertOk();
+        $this->postJson('/api/v1/clubs/'.$club->id.'/deletion-code', ['identity' => 'password'])->assertStatus(429);
+    }
+
     public function test_mail_transport_failure_is_reported_without_replacing_the_previous_code(): void
     {
         $club = $this->ownedClub();

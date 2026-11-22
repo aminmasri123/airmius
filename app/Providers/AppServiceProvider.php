@@ -254,6 +254,19 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
         });
 
+        foreach ([
+            'code' => 3,
+            'review' => 3,
+            'financial-export' => 6,
+            'archive-confirmation' => 3,
+            'request' => 5,
+        ] as $action => $perMinute) {
+            RateLimiter::for('club-deletion-'.$action, function (Request $request) use ($action, $perMinute) {
+                return Limit::perMinute($perMinute)
+                    ->by('club-deletion:'.$action.':'.($request->user()?->id ?: $request->ip()));
+            });
+        }
+
         RateLimiter::for('admin-area', function (Request $request) {
             $key = $request->user()?->id
                 ? 'admin:user:'.$request->user()->id

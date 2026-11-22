@@ -672,12 +672,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 'data' => (new ClubResource($club))->resolve($request),
             ]);
         })->name('clubs.update');
-        Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware('throttle:5,1')->name('clubs.destroy');
+        Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware('throttle:club-deletion-request')->name('clubs.destroy');
         Route::get('/clubs/{club}/deletion', [ClubDeletionController::class, 'show'])->name('clubs.deletion.show');
-        Route::post('/clubs/{club}/deletion-code', [ClubDeletionController::class, 'sendCode'])->middleware('throttle:3,1')->name('clubs.deletion.code');
-        Route::post('/clubs/{club}/deletion-review', [ClubDeletionController::class, 'requestReview'])->middleware('throttle:3,1')->name('clubs.deletion.review');
-        Route::get('/clubs/{club}/deletion-financial-export', [ClubDeletionController::class, 'export'])->middleware('throttle:3,1')->name('clubs.deletion.financial-export');
-        Route::post('/clubs/{club}/deletion-archive-confirmation', [ClubDeletionController::class, 'confirmArchive'])->middleware('throttle:3,1')->name('clubs.deletion.archive-confirmation');
+        Route::post('/clubs/{club}/deletion-code', [ClubDeletionController::class, 'sendCode'])->middleware('throttle:club-deletion-code')->name('clubs.deletion.code');
+        Route::post('/clubs/{club}/deletion-review', [ClubDeletionController::class, 'requestReview'])->middleware('throttle:club-deletion-review')->name('clubs.deletion.review');
+        Route::get('/clubs/{club}/deletion-financial-export', [ClubDeletionController::class, 'export'])->middleware('throttle:club-deletion-financial-export')->name('clubs.deletion.financial-export');
+        Route::post('/clubs/{club}/deletion-archive-confirmation', [ClubDeletionController::class, 'confirmArchive'])->middleware('throttle:club-deletion-archive-confirmation')->name('clubs.deletion.archive-confirmation');
         Route::delete('/clubs/{club}/deletion', [ClubDeletionController::class, 'destroy'])->name('clubs.deletion.cancel');
         Route::get('/clubs/{club}/budgets', [ClubBudgetController::class, 'index'])->name('clubs.budgets.index');
         Route::get('/clubs/{club}/finance-workspace', [ClubFinanceWorkspaceController::class, 'index'])->name('clubs.finance-workspace.index');
