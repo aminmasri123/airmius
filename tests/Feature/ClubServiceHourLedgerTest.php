@@ -165,7 +165,11 @@ class ClubServiceHourLedgerTest extends TestCase
 
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-requirements/{$requirementId}/lock")->assertOk();
         $this->getJson("/api/v1/clubs/{$club->id}/service-hours/periods")
-            ->assertOk()->assertJsonFragment(['name' => 'Beitragsjahr 2026']);
+            ->assertOk()
+            ->assertJsonFragment([
+                'type' => 'contribution',
+                'name' => 'Beitragsjahr 2026',
+            ]);
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records", [
             'period_id' => $period->id,
             'user_id' => $member->id,

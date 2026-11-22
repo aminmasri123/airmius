@@ -1351,7 +1351,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         body:
             'Mitgliedertypen, Beiträge, Logo, Coverbild, Steuerdaten, Sichtbarkeit und Organigramm anpassen.',
         color: theme.colorScheme.primary,
-        onTap: () => _open(const ClubSetupOnboardingScreen()),
+        onTap: () => _open(ClubSetupOnboardingScreen(clubId: club.id)),
       ),
     ];
     final communicationAreas = [

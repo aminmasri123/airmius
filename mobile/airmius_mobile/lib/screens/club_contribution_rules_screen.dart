@@ -8,12 +8,17 @@ import 'club_membership_management_screen.dart';
 /// surface as membership types and invoices, so settings cannot drift between
 /// two separate mobile implementations.
 class ClubContributionRulesScreen extends StatelessWidget {
-  const ClubContributionRulesScreen({super.key, this.initialTab = 'Regeln'});
+  const ClubContributionRulesScreen({
+    super.key,
+    this.initialTab = 'Regeln',
+    this.initialClubId,
+  });
 
   final String initialTab;
+  final int? initialClubId;
 
   @override
   Widget build(BuildContext context) {
-    return const ClubMembershipManagementScreen();
+    return ClubMembershipManagementScreen(initialClubId: initialClubId);
   }
 }

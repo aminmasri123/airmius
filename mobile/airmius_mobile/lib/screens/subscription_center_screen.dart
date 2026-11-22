@@ -11,6 +11,27 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'billing_detail_screen.dart';
 
+const _planAudienceOrder = <String>[
+  'sportler',
+  'trainer',
+  'verein',
+  'eltern',
+  'sponsor',
+  'anbieter',
+  'enterprise',
+];
+
+IconData _planAudienceIcon(String audience) => switch (audience) {
+  'trainer' => Icons.sports_outlined,
+  'verein' => Icons.groups_outlined,
+  'eltern' => Icons.family_restroom_outlined,
+  'sponsor' => Icons.campaign_outlined,
+  'anbieter' => Icons.storefront_outlined,
+  'enterprise' => Icons.account_tree_outlined,
+  'sportler' => Icons.directions_run_outlined,
+  _ => Icons.apps_outlined,
+};
+
 class SubscriptionCenterScreen extends StatefulWidget {
   const SubscriptionCenterScreen({super.key});
 
@@ -21,8 +42,11 @@ class SubscriptionCenterScreen extends StatefulWidget {
 
 class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
   String _section = 'subscriptions';
+  String _planAudience = 'all';
+  String _recommendedAudience = 'sportler';
   Future<_SubscriptionBundle>? _future;
   bool _busy = false;
+  bool _audienceInitialized = false;
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -32,6 +56,13 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_audienceInitialized) {
+      _audienceInitialized = true;
+      _recommendedAudience = _audienceForUser(
+        AirmiusServicesScope.of(context).authState.user,
+      );
+      _planAudience = _recommendedAudience;
+    }
     _future ??= _load();
   }
 
@@ -225,9 +256,104 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
         text: t('subscriptions.emptyPlans'),
       );
     }
+    final effectiveAudience = _planAudience;
+    final visiblePlans = effectiveAudience == 'all'
+        ? bundle.plans
+        : bundle.plans
+              .where(
+                (plan) =>
+                    _subscriptionText(
+                      plan['target_actor'],
+                      fallback: 'sportler',
+                    ) ==
+                    effectiveAudience,
+              )
+              .toList();
+    final filters = <String>['all', ..._planAudienceOrder];
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final plan in bundle.plans) ...[
+        AirmiusPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.tune,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      t('subscriptions.planFilterTitle'),
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              Text(
+                t('subscriptions.planFilterHint'),
+                style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+              ),
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final audience in filters) ...[
+                      ChoiceChip(
+                        selected: effectiveAudience == audience,
+                        avatar: Icon(_planAudienceIcon(audience), size: 18),
+                        label: Text(
+                          '${t('subscriptions.audience.$audience')} '
+                          '(${audience == 'all' ? bundle.plans.length : bundle.plans.where((plan) => _subscriptionText(plan['target_actor'], fallback: 'sportler') == audience).length})',
+                        ),
+                        onSelected: (_) =>
+                            setState(() => _planAudience = audience),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ],
+                ),
+              ),
+              if (effectiveAudience == _recommendedAudience) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.auto_awesome,
+                      size: 17,
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        t('subscriptions.recommendedForYou'),
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (visiblePlans.isEmpty)
+          _SubscriptionEmpty(
+            icon: Icons.filter_alt_off_outlined,
+            text: t('subscriptions.emptyFilteredPlans'),
+          ),
+        for (final plan in visiblePlans) ...[
           _PlanCard(
             plan: plan,
             busy: _busy,
@@ -237,6 +363,30 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
         ],
       ],
     );
+  }
+
+  String _audienceForUser(AirmiusUser? user) {
+    if (user == null) return 'sportler';
+    final roles = {
+      user.role.toLowerCase(),
+      ...user.roles.map((role) => role.toLowerCase()),
+    };
+    if (roles.any((const {'trainer', 'coach'}).contains)) return 'trainer';
+    if (roles.any((const {'sponsor', 'advertiser'}).contains)) return 'sponsor';
+    if (roles.any(
+      (const {'anbieter', 'provider', 'vendor', 'merchant'}).contains,
+    )) {
+      return 'anbieter';
+    }
+    if (roles.any((const {'eltern', 'parent', 'guardian'}).contains)) {
+      return 'eltern';
+    }
+    if (roles.any(
+      (const {'club_owner', 'club_admin', 'verein', 'vereinsadmin'}).contains,
+    )) {
+      return 'verein';
+    }
+    return 'sportler';
   }
 
   Widget _checkouts(_SubscriptionBundle bundle) {

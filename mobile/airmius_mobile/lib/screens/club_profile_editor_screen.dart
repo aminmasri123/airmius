@@ -98,27 +98,29 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
 
   Future<AirmiusClub> _loadClub() async {
     final repository = AirmiusServicesScope.of(context).repositories.clubs;
+    final requestedClubId = widget.initialClubId;
+    if (requestedClubId != null) {
+      final club = await repository.club(requestedClubId);
+      if (!_canOpenClub(club)) {
+        throw StateError(t('clubEditor.noManagedClub'));
+      }
+      _hydrate(club);
+      return club;
+    }
     final page = await repository.searchClubs(mine: true);
-    final manageable = page.items
-        .where(
-          (club) =>
-              club.canEditClubProfile ||
-              club.canEditClubLegal ||
-              club.canEditClubContact ||
-              club.canEditClubBranding ||
-              club.canViewFinance,
-        )
-        .toList();
+    final manageable = page.items.where(_canOpenClub).toList();
     if (manageable.isEmpty) throw StateError(t('clubEditor.noManagedClub'));
-    final selected =
-        manageable
-            .where((club) => club.id == widget.initialClubId)
-            .firstOrNull ??
-        manageable.first;
-    final club = await repository.club(selected.id);
+    final club = await repository.club(manageable.first.id);
     _hydrate(club);
     return club;
   }
+
+  bool _canOpenClub(AirmiusClub club) =>
+      club.canEditClubProfile ||
+      club.canEditClubLegal ||
+      club.canEditClubContact ||
+      club.canEditClubBranding ||
+      club.canViewFinance;
 
   void _hydrate(AirmiusClub club) {
     if (_hydratedId == club.id) return;
@@ -910,14 +912,23 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
                 if (club.canDelete) ...[
                   const SizedBox(height: 24),
                   const Divider(),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
-                    title: Text(t('clubDeletion.title')),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => ClubDeletionScreen(clubId: club.id, clubName: club.name),
+                  Material(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.delete_outline,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      title: Text(t('clubDeletion.title')),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => ClubDeletionScreen(
+                            clubId: club.id,
+                            clubName: club.name,
+                          ),
+                        ),
                       ),
                     ),
                   ),

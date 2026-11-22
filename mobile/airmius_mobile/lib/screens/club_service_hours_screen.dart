@@ -4,6 +4,18 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_services_scope.dart';
 import '../models/club_summary.dart';
 
+List<Map<String, dynamic>> serviceHourContributionPeriods(Object? value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Map<String, dynamic>>()
+      // The endpoint is contribution-only. Older servers omitted `type`.
+      .where(
+        (period) =>
+            period['type'] == null || period['type'] == 'contribution',
+      )
+      .toList();
+}
+
 class ClubServiceHoursScreen extends StatefulWidget {
   const ClubServiceHoursScreen({super.key, required this.club});
   final ClubSummary club;
@@ -41,10 +53,7 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
     });
     try {
       final years = await client.clubServiceHourPeriods(widget.club.id);
-      final available = (years['data'] as List? ?? [])
-          .whereType<Map<String, dynamic>>()
-          .where((p) => p['type'] == 'contribution')
-          .toList();
+      final available = serviceHourContributionPeriods(years['data']);
       final chosen = available.any((p) => p['id'] == periodId)
           ? periodId
           : (available.isEmpty ? null : (available.first['id'] as num).toInt());

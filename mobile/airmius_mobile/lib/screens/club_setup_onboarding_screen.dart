@@ -9,7 +9,9 @@ import 'club_role_permissions_screen.dart';
 import 'club_visibility_settings_screen.dart';
 
 class ClubSetupOnboardingScreen extends StatefulWidget {
-  const ClubSetupOnboardingScreen({super.key});
+  const ClubSetupOnboardingScreen({super.key, required this.clubId});
+
+  final int clubId;
 
   @override
   State<ClubSetupOnboardingScreen> createState() =>
@@ -178,7 +180,9 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                                 onPressed: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => ClubProfileEditorScreen(),
+                                    builder: (_) => ClubProfileEditorScreen(
+                                      initialClubId: widget.clubId,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -190,7 +194,9 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) =>
-                                        ClubVisibilitySettingsScreen(),
+                                        ClubVisibilitySettingsScreen(
+                                          initialClubId: widget.clubId,
+                                        ),
                                   ),
                                 ),
                               ),
@@ -201,8 +207,9 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                                 onPressed: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                        ClubContributionRulesScreen(),
+                                    builder: (_) => ClubContributionRulesScreen(
+                                      initialClubId: widget.clubId,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -225,7 +232,9 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) =>
-                                        ClubDocumentUploadManagerScreen(),
+                                        ClubDocumentUploadManagerScreen(
+                                          initialClubId: widget.clubId,
+                                        ),
                                   ),
                                 ),
                               ),
@@ -248,21 +257,29 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
     if (title == 'Stammdaten & Branding' || title == 'Steuerdaten') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ClubProfileEditorScreen()),
+        MaterialPageRoute(
+          builder: (_) => ClubProfileEditorScreen(initialClubId: widget.clubId),
+        ),
       );
       return;
     }
     if (title == 'Sichtbarkeit') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ClubVisibilitySettingsScreen()),
+        MaterialPageRoute(
+          builder: (_) =>
+              ClubVisibilitySettingsScreen(initialClubId: widget.clubId),
+        ),
       );
       return;
     }
     if (title == 'Mitgliedertypen & Beiträge') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ClubContributionRulesScreen()),
+        MaterialPageRoute(
+          builder: (_) =>
+              ClubContributionRulesScreen(initialClubId: widget.clubId),
+        ),
       );
       return;
     }
@@ -276,7 +293,10 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
     if (title == 'Dokumente') {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ClubDocumentUploadManagerScreen()),
+        MaterialPageRoute(
+          builder: (_) =>
+              ClubDocumentUploadManagerScreen(initialClubId: widget.clubId),
+        ),
       );
       return;
     }

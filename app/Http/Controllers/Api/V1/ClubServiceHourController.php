@@ -25,7 +25,7 @@ class ClubServiceHourController extends Controller
         return response()->json(['data' => $club->yearPeriods()
             ->where('type', 'contribution')
             ->orderByDesc('starts_on')
-            ->get(['id', 'name', 'starts_on', 'ends_on'])]);
+            ->get(['id', 'type', 'name', 'starts_on', 'ends_on'])]);
     }
 
     public function index(Request $request, Club $club, ClubServiceHourLedger $ledger)

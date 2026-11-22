@@ -1504,6 +1504,15 @@ class _ClubMembershipManagementScreenState
         .map(ClubSummary.fromAirmiusClub)
         .where((club) => club.canAccessMembershipWorkspace)
         .toList();
+    final requestedClubId = _selectedClubId;
+    if (requestedClubId != null &&
+        !managed.any((club) => club.id == requestedClubId)) {
+      final requested = ClubSummary.fromAirmiusClub(
+        await services.repositories.clubs.club(requestedClubId),
+      );
+      if (!requested.canAccessMembershipWorkspace) return null;
+      managed.insert(0, requested);
+    }
     if (managed.isEmpty) return null;
     var selected = managed.first;
     for (final club in managed) {
