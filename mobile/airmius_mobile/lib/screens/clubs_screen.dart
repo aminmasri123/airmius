@@ -326,8 +326,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
                               ),
                             ),
                           );
-                          if (mounted)
+                          if (mounted) {
                             setState(() => _clubsFuture = _loadClubs());
+                          }
                         },
                       ),
                     ],
@@ -5710,9 +5711,10 @@ class _MyClubMembershipScreenState extends State<_MyClubMembershipScreen> {
     body: FutureBuilder<ClubSummary>(
       future: _future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done)
+        if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -5725,6 +5727,7 @@ class _MyClubMembershipScreenState extends State<_MyClubMembershipScreen> {
               ],
             ),
           );
+        }
         final club = snapshot.data!;
         return ListView(
           padding: const EdgeInsets.all(20),

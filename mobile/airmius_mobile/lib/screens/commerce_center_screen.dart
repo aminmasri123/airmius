@@ -2233,7 +2233,8 @@ class _CampaignSheetState extends State<_CampaignSheet> {
                     allowedExtensions: ['jpg', 'jpeg', 'png', 'webp'],
                     withData: true,
                   );
-                  if (result != null && mounted) {
+                  if (!mounted || !context.mounted) return;
+                  if (result != null) {
                     final file = result.files.single;
                     if (file.size > 8 * 1024 * 1024) {
                       ScaffoldMessenger.of(context).showSnackBar(

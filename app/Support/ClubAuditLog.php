@@ -42,6 +42,8 @@ class ClubAuditLog
         'club.year_period.created' => 'Vereinsjahr angelegt',
         'club.year_period.updated' => 'Vereinsjahr aktualisiert',
         'club.year_period.deleted' => 'Vereinsjahr gelöscht',
+        'club.service_hour.updated' => 'Dienststunde aktualisiert',
+        'club.service_hour.deleted' => 'Dienststunde entfernt',
         'club.policy_document.created' => 'Vereinsdokumentfassung angelegt',
         'club.policy_document.updated' => 'Vereinsdokumentfassung aktualisiert',
         'club.policy_document.deleted' => 'Vereinsdokumentfassung gelöscht',

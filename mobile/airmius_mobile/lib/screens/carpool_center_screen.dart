@@ -526,7 +526,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                         child: Text(t('rides.resetSearch')),
                       ),
                       Text(
-                        filtered.length.toString() + ' ' + t('rides.results'),
+                        '${filtered.length} ${t('rides.results')}',
                       ),
                     ],
                   ),
@@ -700,21 +700,19 @@ class _RideCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  [
+                  '${[
                             ride['pickup_postal_code'],
                             ride['pickup_city'],
                             ride['pickup_country'],
                           ]
                           .where((v) => v != null && v.toString().isNotEmpty)
-                          .join(' ') +
-                      ' → ' +
-                      [
+                          .join(' ')} → ${[
                             ride['destination_postal_code'],
                             ride['destination_city'],
                             ride['destination_country'],
                           ]
                           .where((v) => v != null && v.toString().isNotEmpty)
-                          .join(' '),
+                          .join(' ')}',
                 ),
                 if (ride['is_driver'] == true &&
                     ride['area_search_ready'] != true)
@@ -1122,7 +1120,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
     ]) {
       _destination[field] = TextEditingController(
         text: _rideText(
-          ride['destination_' + field],
+          ride['destination_$field'],
           fallback: field == 'country' ? 'DE' : '',
         ),
       );
@@ -1237,10 +1235,11 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
     for (final entry in fields.entries) {
       entry.value.text = (place[entry.key] ?? '').toString();
     }
-    if (start)
+    if (start) {
       _pickupName.text = (place['street'] ?? '').toString().isEmpty
           ? (place['name'] ?? '').toString()
           : '';
+    }
     setState(() {});
   }
 
@@ -1273,7 +1272,7 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
       'cost_currency': _costCurrency,
       'address_details': true,
       for (final entry in _destination.entries)
-        'destination_' + entry.key: _nullable(entry.value.text),
+        'destination_${entry.key}': _nullable(entry.value.text),
       'visibility': _visibility,
       'club_id': _visibility == 'club' || _visibility == 'team'
           ? _clubId
@@ -1301,12 +1300,13 @@ class _RideEditorSheetState extends State<_RideEditorSheet> {
       await widget.onSave(payload);
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _saveError = error is AirmiusApiException
               ? error.userMessage
               : t('rides.actionError'),
         );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

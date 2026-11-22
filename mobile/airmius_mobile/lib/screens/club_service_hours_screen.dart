@@ -45,6 +45,12 @@ String? serviceHourApiDate(String value) {
   return '${match.group(3)}-${match.group(2)}-${match.group(1)}';
 }
 
+String serviceHourDisplayDate(Object? value) {
+  final match = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch('$value');
+  if (match == null) return '$value';
+  return '${match.group(3)}.${match.group(2)}.${match.group(1)}';
+}
+
 class ServiceHourDateInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -280,6 +286,132 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
     _Field('reason', 'Begründung'),
   ]);
 
+  Future<void> editRecord(Map<String, dynamic> record) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => _ServiceHourForm(
+          title: 'Dienst bearbeiten',
+          fields: [
+            _Field(
+              'user_id',
+              'Mitglied',
+              initial: '${record['user_id']}',
+              options: [
+                for (final member in items('members'))
+                  (
+                    value: '${member['user_id']}',
+                    label: '${member['name']}',
+                  ),
+              ],
+            ),
+            _Field('title', 'Tätigkeit', initial: '${record['title'] ?? ''}'),
+            _Field(
+              'served_on',
+              'Datum (TT.MM.JJJJ)',
+              date: true,
+              initial: serviceHourDisplayDate(record['served_on']),
+            ),
+            _Field(
+              'minutes',
+              'Dauer in Minuten',
+              number: true,
+              initial: '${record['minutes'] ?? ''}',
+            ),
+            _Field(
+              'notes',
+              'Notiz',
+              optional: true,
+              initial: '${record['notes'] ?? ''}',
+            ),
+            const _Field(
+              'notification_channel',
+              'Änderung mitteilen',
+              initial: 'app',
+              options: [
+                (value: 'none', label: 'Nicht informieren'),
+                (value: 'app', label: 'In der App benachrichtigen'),
+                (value: 'email', label: 'Per E-Mail informieren'),
+                (value: 'app_email', label: 'App und E-Mail'),
+              ],
+            ),
+          ],
+          onSave: (payload) async {
+            try {
+              await client.updateClubServiceHourRecord(
+                widget.club.id,
+                (record['id'] as num).toInt(),
+                payload,
+              );
+              return null;
+            } catch (e) {
+              return e is AirmiusApiException
+                  ? e.userMessage
+                  : 'Änderung konnte nicht gespeichert werden.';
+            }
+          },
+        ),
+      ),
+    );
+    if (saved == true && mounted) {
+      await load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dienststunde aktualisiert.')),
+        );
+      }
+    }
+  }
+
+  Future<void> deleteRecord(Map<String, dynamic> record) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Dienststunde entfernen?'),
+        content: Text(
+          '„${record['title']}“ wird dauerhaft entfernt. Diese Aktion kann nicht rückgängig gemacht werden.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Entfernen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await client.deleteClubServiceHourRecord(
+        widget.club.id,
+        (record['id'] as num).toInt(),
+      );
+      await load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dienststunde entfernt.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => error = e is AirmiusApiException
+              ? e.userMessage
+              : 'Dienststunde konnte nicht entfernt werden.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -443,7 +575,7 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                       '${record['title']} · ${nameFor(record['user_id'])}',
                     ),
                     subtitle: Text(
-                      '${record['served_on']} · ${hours(record['minutes'])} · '
+                      '${serviceHourDisplayDate(record['served_on'])} · ${hours(record['minutes'])} · '
                       '${record['status'] == 'confirmed' ? 'Bestätigt' : 'Offen'}',
                     ),
                   ),
@@ -474,9 +606,21 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                       subtitle: Text('${correction['reason']}'),
                     ),
                   if (data['can_manage'] == true && !locked)
-                    Row(
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
                       children: [
-                        if (record['status'] == 'pending')
+                        if (record['status'] == 'pending') ...[
+                          TextButton.icon(
+                            onPressed: () => editRecord(record),
+                            icon: const Icon(Icons.edit_outlined),
+                            label: const Text('Bearbeiten'),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => deleteRecord(record),
+                            icon: const Icon(Icons.delete_outline),
+                            label: const Text('Entfernen'),
+                          ),
                           TextButton(
                             onPressed: () => action(
                               'Dienst bestätigen',
@@ -485,6 +629,7 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                             ),
                             child: const Text('Bestätigen'),
                           ),
+                        ],
                         if (record['status'] == 'confirmed')
                           TextButton(
                             onPressed: () => action(
@@ -600,6 +745,7 @@ class _ServiceHourFormState extends State<_ServiceHourForm> {
                 )
               else
                 TextFormField(
+                  initialValue: field.initial,
                   decoration: InputDecoration(labelText: field.label),
                   keyboardType: field.number || field.date
                       ? TextInputType.number

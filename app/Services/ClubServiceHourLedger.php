@@ -73,7 +73,10 @@ class ClubServiceHourLedger
                 ->map(fn (ClubServiceHourRecord $record) => [
                     'id' => $record->id,
                     'user_id' => $record->user_id,
+                    'replacement_for_user_id' => $record->replacement_for_user_id,
+                    'kind' => $record->kind,
                     'title' => $record->title,
+                    'notes' => $record->notes,
                     'served_on' => $record->served_on->format('Y-m-d'),
                     'minutes' => $record->minutes,
                     'status' => $record->status,

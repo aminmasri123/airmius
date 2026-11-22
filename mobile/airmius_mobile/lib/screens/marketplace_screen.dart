@@ -286,8 +286,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         _marketText(_marketMap(group['children'])[_filters.catalogSubcategory]),
         _marketText(_marketMap(_taxonomy['sports'])[_filters.sport]),
       ].where((label) => label.isNotEmpty);
-      if (labels.isNotEmpty)
+      if (labels.isNotEmpty) {
         chip(labels.join(' · '), _filters.copyWith(clearTaxonomy: true));
+      }
     }
     if (_filters.minPriceCents != null || _filters.maxPriceCents != null) {
       final min = _filters.minPriceCents == null

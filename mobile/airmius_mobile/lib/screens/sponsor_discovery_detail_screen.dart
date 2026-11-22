@@ -7,7 +7,6 @@ import '../core/airmius_api_models.dart';
 import '../core/airmius_external_url.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
-import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
 class SponsorDiscoveryDetailScreen extends StatefulWidget {
@@ -65,8 +64,9 @@ class _SponsorDiscoveryDetailScreenState
   JsonMap? get _currentInquiry {
     for (final inquiry in _outgoing) {
       if ('${inquiry['sponsor_id']}' == '${widget.sponsor['id']}' &&
-          '${inquiry['club_id']}' == '$_clubId')
+          '${inquiry['club_id']}' == '$_clubId') {
         return inquiry;
+      }
     }
     return null;
   }

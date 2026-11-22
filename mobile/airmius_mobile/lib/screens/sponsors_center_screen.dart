@@ -186,10 +186,11 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
             final target = sponsors
                 .where((s) => _sponsorInt(s['id']) == widget.initialSponsorId)
                 .firstOrNull;
-            if (target != null)
+            if (target != null) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) _openSponsor(target, clubs, outgoing);
               });
+            }
           }
 
           return PageFrame(

@@ -828,6 +828,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/service-hour-requirements', [ClubServiceHourController::class, 'storeRequirement'])->name('clubs.service-hour-requirements.store');
         Route::post('/clubs/{club}/service-hour-requirements/{requirement}/lock', [ClubServiceHourController::class, 'lockRequirement'])->name('clubs.service-hour-requirements.lock');
         Route::post('/clubs/{club}/service-hour-records', [ClubServiceHourController::class, 'storeRecord'])->name('clubs.service-hour-records.store');
+        Route::put('/clubs/{club}/service-hour-records/{record}', [ClubServiceHourController::class, 'updateRecord'])->name('clubs.service-hour-records.update');
+        Route::delete('/clubs/{club}/service-hour-records/{record}', [ClubServiceHourController::class, 'destroyRecord'])->name('clubs.service-hour-records.destroy');
         Route::post('/clubs/{club}/service-hour-records/{record}/confirm', [ClubServiceHourController::class, 'confirmRecord'])->name('clubs.service-hour-records.confirm');
         Route::post('/clubs/{club}/service-hour-records/{record}/corrections', [ClubServiceHourController::class, 'correctRecord'])->name('clubs.service-hour-records.corrections.store');
         Route::post('/clubs/{club}/service-hour-exemptions', [ClubServiceHourController::class, 'storeExemption'])->name('clubs.service-hour-exemptions.store');

@@ -122,6 +122,7 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
           path: path,
         );
       }
+      if (!mounted) return;
       final saved = await FilePicker.platform.saveFile(
         dialogTitle: AirmiusScope.of(context).t('events.addToCalendar'),
         fileName: 'event-${_event.id}.ics',

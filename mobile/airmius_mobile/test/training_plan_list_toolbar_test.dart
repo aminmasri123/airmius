@@ -74,7 +74,7 @@ void main() {
       isFalse,
     );
   });
-  for (final language in AirmiusLanguage.values)
+  for (final language in AirmiusLanguage.values) {
     testWidgets('search, status and reset fit in ${language.name}', (
       tester,
     ) async {
@@ -140,4 +140,5 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+  }
 }

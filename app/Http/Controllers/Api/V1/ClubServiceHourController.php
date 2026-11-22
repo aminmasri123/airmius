@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Notifications\ServiceHourRecorded;
 use App\Services\ClubServiceHourLedger;
 use App\Support\AppNotification;
+use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
 use App\Support\LocalizedMail;
 use Illuminate\Http\Request;
@@ -127,42 +128,7 @@ class ClubServiceHourController extends Controller
             'notification_channel' => $data['notification_channel'] ?? 'none',
         ]);
 
-        $channel = (string) $record->notification_channel;
-        $replace = [
-            'club' => $club->name,
-            'activity' => $record->title,
-            'date' => LocalizedMail::for($member)->date($record->served_on),
-            'minutes' => (int) $record->minutes,
-        ];
-        if (in_array($channel, ['app', 'app_email'], true)) {
-            AppNotification::sendLocalized(
-                $member,
-                'club.service_hour.recorded',
-                'organization.notifications.service_hour_recorded_title',
-                'organization.notifications.service_hour_recorded_body',
-                $replace,
-                [
-                    'club_id' => $club->id,
-                    'service_hour_record_id' => $record->id,
-                    'served_on' => $record->served_on->format('Y-m-d'),
-                    'minutes' => (int) $record->minutes,
-                    'activity' => $record->title,
-                    'mobile_url' => 'airmius://notifications',
-                ],
-                ['category' => 'club', 'priority' => 'normal'],
-            );
-        }
-        if (in_array($channel, ['email', 'app_email'], true)) {
-            $member->notify(new ServiceHourRecorded(
-                $club->name,
-                $record->title,
-                $record->served_on->format('Y-m-d'),
-                (int) $record->minutes,
-            ));
-        }
-        if ($channel !== 'none') {
-            $record->forceFill(['notified_at' => now()])->save();
-        }
+        $this->notifyMember($club, $member, $record);
 
         return response()->json(['data' => $this->recordPayload($record)], 201);
     }
@@ -173,6 +139,64 @@ class ClubServiceHourController extends Controller
         $this->ensurePeriodOpen($this->period($club, (int) $record->club_year_period_id));
 
         return response()->json(['data' => $this->recordPayload($ledger->confirm($record, $request->user()))]);
+    }
+
+    public function updateRecord(Request $request, Club $club, ClubServiceHourRecord $record)
+    {
+        $this->authorizeRecord($request, $club, $record, ClubPermissions::MEMBERS_MANAGE);
+        $this->ensurePendingRecord($record);
+        $this->ensurePeriodOpen($this->period($club, (int) $record->club_year_period_id));
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'replacement_for_user_id' => ['nullable', 'integer', 'exists:users,id', 'different:user_id'],
+            'kind' => ['nullable', Rule::in(['service', 'replacement'])],
+            'served_on' => ['required', 'date_format:Y-m-d'],
+            'minutes' => ['required', 'integer', 'min:1', 'max:1440'],
+            'title' => ['required', 'string', 'max:160'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'notification_channel' => ['nullable', Rule::in(['none', 'app', 'email', 'app_email'])],
+        ]);
+        $this->member($club, (int) $data['user_id']);
+        if (! empty($data['replacement_for_user_id'])) {
+            $this->member($club, (int) $data['replacement_for_user_id']);
+        }
+
+        $fields = ['user_id', 'replacement_for_user_id', 'kind', 'served_on', 'minutes', 'title', 'notes'];
+        $before = $record->only($fields);
+        $record->fill([
+            'user_id' => $data['user_id'],
+            'replacement_for_user_id' => $data['replacement_for_user_id'] ?? null,
+            'kind' => $data['kind'] ?? (empty($data['replacement_for_user_id']) ? 'service' : 'replacement'),
+            'served_on' => $data['served_on'],
+            'minutes' => $data['minutes'],
+            'title' => $data['title'],
+            'notes' => $data['notes'] ?? null,
+            'notification_channel' => $data['notification_channel'] ?? 'none',
+            'notified_at' => null,
+        ])->save();
+
+        $this->notifyMember($club, $this->member($club, (int) $record->user_id), $record);
+
+        ClubAuditLog::record($club, $request->user(), 'club.service_hour.updated', $record, [
+            'before' => $before,
+            'after' => $record->fresh()->only($fields),
+        ]);
+
+        return response()->json(['data' => $this->recordPayload($record->refresh())]);
+    }
+
+    public function destroyRecord(Request $request, Club $club, ClubServiceHourRecord $record)
+    {
+        $this->authorizeRecord($request, $club, $record, ClubPermissions::MEMBERS_MANAGE);
+        $this->ensurePendingRecord($record);
+        $this->ensurePeriodOpen($this->period($club, (int) $record->club_year_period_id));
+
+        ClubAuditLog::record($club, $request->user(), 'club.service_hour.deleted', $record, [
+            'record' => $this->recordPayload($record),
+        ]);
+        $record->delete();
+
+        return response()->json(['message' => 'Dienststunde entfernt.']);
     }
 
     public function correctRecord(Request $request, Club $club, ClubServiceHourRecord $record, ClubServiceHourLedger $ledger)
@@ -256,6 +280,55 @@ class ClubServiceHourController extends Controller
         }
     }
 
+    private function ensurePendingRecord(ClubServiceHourRecord $record): void
+    {
+        if ($record->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'record' => 'Bereits bestätigte Dienststunden können nicht direkt geändert oder entfernt werden. Nutze dafür eine Korrektur.',
+            ]);
+        }
+    }
+
+    private function notifyMember(Club $club, User $member, ClubServiceHourRecord $record): void
+    {
+        $channel = (string) $record->notification_channel;
+        $replace = [
+            'club' => $club->name,
+            'activity' => $record->title,
+            'date' => LocalizedMail::for($member)->date($record->served_on),
+            'minutes' => (int) $record->minutes,
+        ];
+        if (in_array($channel, ['app', 'app_email'], true)) {
+            AppNotification::sendLocalized(
+                $member,
+                'club.service_hour.recorded',
+                'organization.notifications.service_hour_recorded_title',
+                'organization.notifications.service_hour_recorded_body',
+                $replace,
+                [
+                    'club_id' => $club->id,
+                    'service_hour_record_id' => $record->id,
+                    'served_on' => $record->served_on->format('Y-m-d'),
+                    'minutes' => (int) $record->minutes,
+                    'activity' => $record->title,
+                    'mobile_url' => 'airmius://notifications',
+                ],
+                ['category' => 'club', 'priority' => 'normal'],
+            );
+        }
+        if (in_array($channel, ['email', 'app_email'], true)) {
+            $member->notify(new ServiceHourRecorded(
+                $club->name,
+                $record->title,
+                $record->served_on->format('Y-m-d'),
+                (int) $record->minutes,
+            ));
+        }
+        if ($channel !== 'none') {
+            $record->forceFill(['notified_at' => now()])->save();
+        }
+    }
+
     private function recordPayload(ClubServiceHourRecord $record): array
     {
         return [
@@ -268,6 +341,7 @@ class ClubServiceHourController extends Controller
             'served_on' => $record->served_on->format('Y-m-d'),
             'minutes' => $record->minutes,
             'title' => $record->title,
+            'notes' => $record->notes,
             'notification_channel' => $record->notification_channel,
             'notified_at' => $record->notified_at?->toJSON(),
             'confirmed_at' => $record->confirmed_at?->toJSON(),

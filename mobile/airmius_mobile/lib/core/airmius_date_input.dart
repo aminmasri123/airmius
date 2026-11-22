@@ -21,8 +21,9 @@ class AirmiusDateInputFormatter extends TextInputFormatter {
 
     if (trailingSeparator &&
         newValue.text.length > oldValue.text.length &&
-        (limited.length == 2 || limited.length == 4))
+        (limited.length == 2 || limited.length == 4)) {
       output.write('.');
+    }
     final text = output.toString();
     return TextEditingValue(
       text: text,

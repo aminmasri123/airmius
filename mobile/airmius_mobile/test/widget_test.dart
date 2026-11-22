@@ -3691,8 +3691,9 @@ void main() {
           find.text('Ohne Plan loslaufen'),
           withRoute ? findsNothing : findsOneWidget,
         );
-        if (withRoute)
+        if (withRoute) {
           expect(find.textContaining('Orange: geplante Route'), findsOneWidget);
+        }
         expect(find.text('Lauf starten'), findsOneWidget);
         expect(tester.takeException(), isNull);
 

@@ -326,8 +326,9 @@ class _MeetingMinutesDecisionLogSuiteScreenState
       'Beschluss löschen',
       '„${decision['title']}“ wird dauerhaft gelöscht. Das ist nur möglich, solange niemand abgestimmt hat.',
       'Löschen',
-    ))
+    )) {
       return;
+    }
     if (!mounted) return;
     await _write(
       () => _client.deleteClubGovernanceDecision(

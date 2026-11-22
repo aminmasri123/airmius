@@ -953,6 +953,24 @@ class AirmiusApiClient {
   Future<AirmiusJson> clubServiceHourPeriods(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/service-hours/periods');
 
+  Future<AirmiusJson> updateClubServiceHourRecord(
+    int clubId,
+    int recordId,
+    AirmiusJson payload,
+  ) => _json(
+    'PUT',
+    '/api/v1/clubs/$clubId/service-hour-records/$recordId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> deleteClubServiceHourRecord(
+    int clubId,
+    int recordId,
+  ) => _json(
+    'DELETE',
+    '/api/v1/clubs/$clubId/service-hour-records/$recordId',
+  );
+
   Future<AirmiusJson> writeClubServiceHours(
     int clubId,
     String resource,

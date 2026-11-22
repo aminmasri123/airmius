@@ -2878,8 +2878,9 @@ class _CommerceFormDialogState extends State<_CommerceFormDialog> {
                           onChanged: (value) =>
                               setState(() => _choices[field.key] = value ?? ''),
                         );
-                        if (field.key != 'category' || !_showClassification)
+                        if (field.key != 'category' || !_showClassification) {
                           return dropdown;
+                        }
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [

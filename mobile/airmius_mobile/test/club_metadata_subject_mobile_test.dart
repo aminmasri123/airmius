@@ -416,12 +416,13 @@ class _SubjectTransport implements AirmiusApiTransport {
         }),
       );
     }
-    if (request.method == 'PUT' && failSave)
+    if (request.method == 'PUT' && failSave) {
       return const AirmiusApiResponse(
         statusCode: 422,
         body:
             '{"message":"Please check the value","errors":{"values.1":["Invalid value"]}}',
       );
+    }
     final data = jsonDecode(body) as Map<String, dynamic>;
     if (!legacy) data['data']['can_edit'] = !readOnly;
     if (longList) {

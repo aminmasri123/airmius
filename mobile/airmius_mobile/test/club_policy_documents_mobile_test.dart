@@ -485,17 +485,19 @@ class _PolicyDocumentTransport implements AirmiusApiTransport {
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     if (request.path == '/api/v1/uploads') {
       fileCalls++;
-      if (failFiles)
+      if (failFiles) {
         return const AirmiusApiResponse(
           statusCode: 404,
           body: '{"message":"No query results for model [App Models Club] 26"}',
         );
+      }
     }
-    if (request.path.endsWith('/policy-documents') && failPolicy)
+    if (request.path.endsWith('/policy-documents') && failPolicy) {
       return const AirmiusApiResponse(
         statusCode: 404,
         body: '{"message":"No query results for model [App Models Club] 26"}',
       );
+    }
     if (request.method == 'POST' &&
         request.path.endsWith('/policy-documents')) {
       writes.add(request);
@@ -507,12 +509,13 @@ class _PolicyDocumentTransport implements AirmiusApiTransport {
         );
       }
     }
-    if (request.path == '/api/v1/uploads')
+    if (request.path == '/api/v1/uploads') {
       return const AirmiusApiResponse(
         statusCode: 200,
         body:
             '{"data":[{"id":9,"display_name":"satzung.pdf"}],"meta":{"last_page":1}}',
       );
+    }
     if (request.path == '/api/v1/files') {
       return const AirmiusApiResponse(
         statusCode: 200,

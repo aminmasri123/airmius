@@ -2,6 +2,11 @@ import 'package:airmius/screens/club_service_hours_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('formats API service-hour dates for German display', () {
+    expect(serviceHourDisplayDate('2026-05-13'), '13.05.2026');
+    expect(serviceHourDisplayDate('unbekannt'), 'unbekannt');
+  });
+
   test('accepts contribution periods from current and older API responses', () {
     final periods = serviceHourContributionPeriods([
       {'id': 1, 'name': 'Beitragsjahr ohne Typ'},

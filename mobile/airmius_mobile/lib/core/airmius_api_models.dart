@@ -2806,7 +2806,7 @@ class AirmiusEvent {
     final address = [
       street,
       locality,
-      if (country != null) country,
+      ?country,
     ].where((line) => line.isNotEmpty).join('\n');
     final locationParts = [
       _nullableString(json['location_name']),

@@ -44,13 +44,14 @@ class _RideLocationFieldState extends State<RideLocationField> {
     _lastText = widget.controller.text;
     _timer?.cancel();
     ++_version;
-    if (mounted)
+    if (mounted) {
       setState(() {
         _rows = [];
         _queried = false;
         _loading = false;
         _error = null;
       });
+    }
   }
 
   @override
@@ -92,8 +93,9 @@ class _RideLocationFieldState extends State<RideLocationField> {
           _queried = true;
         });
       } catch (_) {
-        if (mounted && version == _version)
+        if (mounted && version == _version) {
           setState(() => _error = rideLocationText(context, 'unavailable'));
+        }
       } finally {
         if (mounted && version == _version) setState(() => _loading = false);
       }

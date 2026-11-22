@@ -1776,27 +1776,30 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
         result = await _waitForGeneration(result);
       }
       if (!mounted) return;
-      if (result['status'] == 'failed')
+      if (result['status'] == 'failed') {
         throw StateError(
           result['message']?.toString() ?? 'Erstellung fehlgeschlagen.',
         );
+      }
       if (result['status'] == 'completed') {
         setState(() => _recoveredPlan = _singleDataValue(result['plan']));
       }
     } on StateError catch (error) {
       if (mounted) setState(() => _error = error.message.toString());
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error =
               'Eine frühere Vorschau konnte nicht abgerufen werden. Öffne diese Seite bei bestehender Verbindung erneut.',
         );
+      }
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _checkingPrevious = false;
           _generating = false;
         });
+      }
     }
   }
 
@@ -1893,11 +1896,12 @@ class _AiPlanFormPageState extends State<_AiPlanFormPage> {
     } on StateError catch (error) {
       if (mounted) setState(() => _error = error.message.toString());
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error =
               'Die Vorschau konnte nicht geladen werden. Bitte prüfe deine Verbindung und versuche es erneut.',
         );
+      }
     } finally {
       if (mounted) {
         setState(() => _generating = false);

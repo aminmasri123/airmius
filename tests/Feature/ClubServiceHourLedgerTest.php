@@ -159,6 +159,80 @@ class ClubServiceHourLedgerTest extends TestCase
         NotificationFacade::assertSentTo($member, ServiceHourRecorded::class);
     }
 
+    public function test_manager_can_update_and_delete_pending_service_hour_records(): void
+    {
+        [$club, $owner, $member, $manager, $period] = $this->fixture();
+        $other = User::factory()->create(['name' => 'Anderes Mitglied']);
+        $club->users()->attach($other->id, ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active']);
+        Sanctum::actingAs($manager);
+
+        $recordId = $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records", [
+            'period_id' => $period->id,
+            'user_id' => $member->id,
+            'served_on' => '2026-05-12',
+            'minutes' => 90,
+            'title' => 'Turnieraufbau',
+            'notes' => 'Alte Notiz',
+        ])->assertCreated()->json('data.id');
+
+        $this->putJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}", [
+            'user_id' => $other->id,
+            'served_on' => '2026-05-13',
+            'minutes' => 120,
+            'title' => 'Turnierabbau',
+            'notes' => 'Aktualisierte Notiz',
+        ])->assertOk()
+            ->assertJsonPath('data.user_id', $other->id)
+            ->assertJsonPath('data.served_on', '2026-05-13')
+            ->assertJsonPath('data.minutes', 120)
+            ->assertJsonPath('data.title', 'Turnierabbau')
+            ->assertJsonPath('data.notes', 'Aktualisierte Notiz');
+
+        $this->assertDatabaseHas('club_service_hour_records', [
+            'id' => $recordId,
+            'user_id' => $other->id,
+            'minutes' => 120,
+            'title' => 'Turnierabbau',
+        ]);
+
+        $this->deleteJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Dienststunde entfernt.');
+        $this->assertDatabaseMissing('club_service_hour_records', ['id' => $recordId]);
+    }
+
+    public function test_confirmed_service_hour_records_must_use_corrections_instead_of_update_or_delete(): void
+    {
+        [$club, $owner, $member, $manager, $period] = $this->fixture();
+        Sanctum::actingAs($manager);
+
+        $recordId = $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records", [
+            'period_id' => $period->id,
+            'user_id' => $member->id,
+            'served_on' => '2026-05-12',
+            'minutes' => 90,
+            'title' => 'Turnieraufbau',
+        ])->assertCreated()->json('data.id');
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/confirm")
+            ->assertOk();
+
+        $this->putJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}", [
+            'user_id' => $member->id,
+            'served_on' => '2026-05-13',
+            'minutes' => 120,
+            'title' => 'Nicht zulässig',
+        ])->assertUnprocessable()->assertJsonValidationErrors('record');
+        $this->deleteJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}")
+            ->assertUnprocessable()->assertJsonValidationErrors('record');
+
+        $this->assertDatabaseHas('club_service_hour_records', [
+            'id' => $recordId,
+            'status' => 'confirmed',
+            'minutes' => 90,
+            'title' => 'Turnieraufbau',
+        ]);
+    }
+
     public function test_roles_permissions_period_scope_and_locked_period_are_enforced(): void
     {
         [$club, $owner, $member, $manager, $period, $role] = $this->fixture();

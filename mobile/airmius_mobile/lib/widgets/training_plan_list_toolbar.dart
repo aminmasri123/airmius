@@ -66,11 +66,12 @@ class _TrainingPlanListToolbarState extends State<TrainingPlanListToolbar> {
   @override
   void didUpdateWidget(covariant TrainingPlanListToolbar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_search.text != widget.query)
+    if (_search.text != widget.query) {
       _search.value = TextEditingValue(
         text: widget.query,
         selection: TextSelection.collapsed(offset: widget.query.length),
       );
+    }
   }
 
   @override

@@ -1,7 +1,8 @@
 import 'dart:convert';
-import '../lib/core/airmius_api_client.dart';
-import '../lib/core/airmius_api_models.dart';
-import '../lib/core/airmius_deep_links.dart';
+import 'dart:io';
+import 'package:airmius/core/airmius_api_client.dart';
+import 'package:airmius/core/airmius_api_models.dart';
+import 'package:airmius/core/airmius_deep_links.dart';
 class Transport extends AirmiusApiTransport {
   Transport(this.link);
   final String link;
@@ -14,6 +15,6 @@ Future<void> main() async {
     final notification = AirmiusNotification.fromJson((response['data'] as List).first as JsonMap);
     final target = const AirmiusDeepLinkResolver().resolve(notification.actionUrl!);
     if (target.type != AirmiusDeepLinkTargetType.adminTrainerApplications || target.id != 4 || !target.requiresAuth) throw StateError('API pipeline failed: ${notification.actionUrl} -> ${target.path}');
-    print('OK API -> notification -> authenticated trainer application 4: $link');
+    stdout.writeln('OK API -> notification -> authenticated trainer application 4: $link');
   }
 }
