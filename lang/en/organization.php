@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'service_hour_removed' => 'Service hour removed.',
     'roles' => [
         'unknown' => 'Unknown',
         'club' => [

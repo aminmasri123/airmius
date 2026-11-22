@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'service_hour_removed' => 'تم حذف ساعة الخدمة.',
     'roles' => [
         'unknown' => 'غير معروف',
         'club' => [

@@ -196,7 +196,7 @@ class ClubServiceHourController extends Controller
         ]);
         $record->delete();
 
-        return response()->json(['message' => 'Dienststunde entfernt.']);
+        return response()->json(['message' => __('organization.service_hour_removed')]);
     }
 
     public function correctRecord(Request $request, Club $club, ClubServiceHourRecord $record, ClubServiceHourLedger $ledger)
