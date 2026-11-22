@@ -76,7 +76,10 @@ class CommerceController extends Controller
     {
         $this->abortUnlessVisible($product, $request);
 
-        return new MarketplaceProductResource($product->loadMissing(['user.approvedSellerApplications', 'club', 'inventories']));
+        return (new MarketplaceProductResource($product->loadMissing(['user.approvedSellerApplications', 'club', 'inventories'])))
+            ->additional(['meta' => [
+                'can_review' => $request->user() !== null && $this->verifiedPurchaseOrder($request, $product) !== null,
+            ]]);
     }
 
     public function reviews(Request $request, MarketplaceProduct $product)

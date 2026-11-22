@@ -71,6 +71,7 @@ class MarketplaceTrustApiTest extends TestCase
 
         $this->getJson("/api/v1/commerce/products/{$product->id}?country=DE")
             ->assertOk()
+            ->assertJsonPath('meta.can_review', true)
             ->assertJsonPath('data.review_summary.rating_avg', 5)
             ->assertJsonPath('data.review_summary.rating_count', 1)
             ->assertJsonPath('data.review_summary.verified_purchase_count', 1)
@@ -97,6 +98,10 @@ class MarketplaceTrustApiTest extends TestCase
         $product = $this->publishedProduct($seller);
 
         Sanctum::actingAs($visitor);
+
+        $this->getJson("/api/v1/commerce/products/{$product->id}")
+            ->assertOk()
+            ->assertJsonPath('meta.can_review', false);
 
         $this->postJson("/api/v1/commerce/products/{$product->id}/reviews", [
             'rating' => 4,

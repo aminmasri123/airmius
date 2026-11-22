@@ -1757,6 +1757,7 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
   bool _busy = false;
   bool _cartAdded = false;
   bool? _wishlistSaved;
+  bool _reviewSaved = false;
 
   Future<void> _toggleWishlist(JsonMap product, bool saved) async {
     setState(() => _busy = true);
@@ -1786,6 +1787,7 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
     return _ProductBundle(
       product: _marketMap(responses[0]['data']),
       reviews: _marketMaps(responses[1]['data']),
+      canReview: _marketMap(responses[0]['meta'])['can_review'] as bool?,
     );
   }
 
@@ -2155,14 +2157,25 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
                       ),
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: () => _writeReview(product),
-                    icon: Icon(Icons.rate_review_outlined),
-                    label: Text(t('market.writeReview')),
-                  ),
+                  if (bundle.canReview != false)
+                    TextButton.icon(
+                      onPressed: () => _writeReview(product),
+                      icon: Icon(Icons.rate_review_outlined),
+                      label: Text(t('market.writeReview')),
+                    ),
                 ],
               ),
-              if (bundle.reviews.isEmpty)
+              if (bundle.canReview == false)
+                Text(
+                  t('market.reviewPurchaseRequired'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+              if (_reviewSaved)
+                Semantics(
+                  liveRegion: true,
+                  child: Text(t('market.reviewSaved')),
+                ),
+              if (bundle.reviews.isEmpty && !_reviewSaved)
                 Text(
                   t('market.noReviews'),
                   style: TextStyle(color: airmiusMutedColor(context)),
@@ -2180,40 +2193,37 @@ class _ProductDetailSheetState extends State<_ProductDetailSheet> {
   }
 
   Future<void> _writeReview(JsonMap product) async {
-    final result = await showDialog<_ReviewDraft>(
+    final saved = await showDialog<bool>(
       context: context,
-      builder: (_) => const _ReviewDialog(),
+      barrierDismissible: false,
+      builder: (_) => _ReviewDialog(
+        onSave: (draft) async {
+          await widget.client.createCommerceProductReview(
+            _marketInt(product['id']),
+            rating: draft.rating,
+            title: draft.title,
+            body: draft.body,
+          );
+        },
+      ),
     );
-    if (result == null || !mounted) return;
-    try {
-      await widget.client.createCommerceProductReview(
-        _marketInt(product['id']),
-        rating: result.rating,
-        title: result.title,
-        body: result.body,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AirmiusScope.of(context).t('market.reviewSaved')),
-        ),
-      );
-      widget.onChanged();
-      _reload();
-    } on AirmiusApiException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.userMessage)));
-    }
+    if (saved != true || !mounted) return;
+    setState(() => _reviewSaved = true);
+    widget.onChanged();
+    _reload();
   }
 }
 
 class _ProductBundle {
-  const _ProductBundle({required this.product, required this.reviews});
+  const _ProductBundle({
+    required this.product,
+    required this.reviews,
+    this.canReview,
+  });
 
   final JsonMap product;
   final List<JsonMap> reviews;
+  final bool? canReview;
 }
 
 class _ReviewCard extends StatelessWidget {
@@ -2292,7 +2302,9 @@ class _ReviewCard extends StatelessWidget {
 }
 
 class _ReviewDialog extends StatefulWidget {
-  const _ReviewDialog();
+  const _ReviewDialog({required this.onSave});
+
+  final Future<void> Function(_ReviewDraft) onSave;
 
   @override
   State<_ReviewDialog> createState() => _ReviewDialogState();
@@ -2300,8 +2312,34 @@ class _ReviewDialog extends StatefulWidget {
 
 class _ReviewDialogState extends State<_ReviewDialog> {
   int _rating = 5;
+  bool _saving = false;
+  String? _error;
   final _title = TextEditingController();
   final _body = TextEditingController();
+
+  Future<void> _save() async {
+    if (_saving) return;
+    FocusScope.of(context).unfocus();
+    final genericError = AirmiusScope.of(context).t('common.errorDetails');
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave(
+        _ReviewDraft(rating: _rating, title: _title.text, body: _body.text),
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error is AirmiusApiException
+            ? error.userMessage
+            : genericError;
+        _saving = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -2313,56 +2351,75 @@ class _ReviewDialogState extends State<_ReviewDialog> {
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return AlertDialog(
-      title: Text(t('market.writeReview')),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Semantics(
-              label: t('market.rating'),
-              child: Wrap(
-                children: [
-                  for (var index = 1; index <= 5; index++)
-                    IconButton(
-                      tooltip: '$index / 5',
-                      onPressed: () => setState(() => _rating = index),
-                      icon: Icon(
-                        index <= _rating ? Icons.star : Icons.star_border,
-                        color: Theme.of(context).colorScheme.tertiary,
+    return PopScope(
+      canPop: !_saving,
+      child: AlertDialog(
+        title: Text(t('market.writeReview')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Semantics(
+                label: t('market.rating'),
+                child: Wrap(
+                  children: [
+                    for (var index = 1; index <= 5; index++)
+                      IconButton(
+                        tooltip: '$index / 5',
+                        onPressed: _saving
+                            ? null
+                            : () => setState(() => _rating = index),
+                        icon: Icon(
+                          index <= _rating ? Icons.star : Icons.star_border,
+                          color: Theme.of(context).colorScheme.tertiary,
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            TextField(
-              controller: _title,
-              maxLength: 160,
-              decoration: InputDecoration(labelText: t('market.reviewTitle')),
-            ),
-            TextField(
-              controller: _body,
-              minLines: 3,
-              maxLines: 6,
-              maxLength: 2000,
-              decoration: InputDecoration(labelText: t('market.reviewBody')),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(t('cancel')),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(
-            context,
-            _ReviewDraft(rating: _rating, title: _title.text, body: _body.text),
+              TextField(
+                controller: _title,
+                enabled: !_saving,
+                maxLength: 160,
+                decoration: InputDecoration(labelText: t('market.reviewTitle')),
+              ),
+              TextField(
+                controller: _body,
+                enabled: !_saving,
+                minLines: 3,
+                maxLines: 6,
+                maxLength: 2000,
+                decoration: InputDecoration(labelText: t('market.reviewBody')),
+              ),
+              if (_error case final message?)
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    message,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          child: Text(t('save')),
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : () => Navigator.pop(context),
+            child: Text(t('cancel')),
+          ),
+          FilledButton(
+            onPressed: _saving ? null : _save,
+            child: _saving
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(t('save')),
+          ),
+        ],
+      ),
     );
   }
 }

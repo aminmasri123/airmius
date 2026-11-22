@@ -27510,6 +27510,8 @@ final _strings = {
     'market.pickup': 'Abholung möglich',
     'market.reviews': 'Bewertungen',
     'market.writeReview': 'Bewertung schreiben',
+    'market.reviewPurchaseRequired':
+        'Du kannst diesen Artikel nach einem abgeschlossenen Kauf bewerten.',
     'market.noReviews': 'Noch keine Bewertungen.',
     'market.reviewTitle': 'Titel (optional)',
     'market.reviewBody': 'Deine Erfahrung (optional)',
@@ -30185,6 +30187,8 @@ final _strings = {
     'market.pickup': 'Pickup available',
     'market.reviews': 'Reviews',
     'market.writeReview': 'Write a review',
+    'market.reviewPurchaseRequired':
+        'You can review this item after completing a purchase.',
     'market.noReviews': 'No reviews yet.',
     'market.reviewTitle': 'Title (optional)',
     'market.reviewBody': 'Your experience (optional)',
@@ -32830,6 +32834,8 @@ final _strings = {
     'market.pickup': 'Retrait disponible',
     'market.reviews': 'Avis',
     'market.writeReview': 'Donner un avis',
+    'market.reviewPurchaseRequired':
+        'Tu peux donner ton avis sur cet article après un achat finalisé.',
     'market.noReviews': 'Aucun avis pour le moment.',
     'market.reviewTitle': 'Titre (facultatif)',
     'market.reviewBody': 'Votre expérience (facultatif)',
@@ -35347,6 +35353,8 @@ final _strings = {
     'market.pickup': 'الاستلام متاح',
     'market.reviews': 'التقييمات',
     'market.writeReview': 'كتابة تقييم',
+    'market.reviewPurchaseRequired':
+        'يمكنك تقييم هذا المنتج بعد إتمام عملية الشراء.',
     'market.noReviews': 'لا توجد تقييمات بعد.',
     'market.reviewTitle': 'العنوان (اختياري)',
     'market.reviewBody': 'تجربتك (اختياري)',
