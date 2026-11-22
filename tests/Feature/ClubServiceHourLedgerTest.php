@@ -109,6 +109,25 @@ class ClubServiceHourLedgerTest extends TestCase
             ->assertJsonFragment(['user_id' => $helper->id, 'confirmed_minutes' => 180, 'remaining_minutes' => 120]);
     }
 
+    public function test_regular_member_sees_only_own_service_hours_and_exemptions(): void
+    {
+        [$club, $owner, $member, $manager, $period] = $this->fixture();
+        $other = User::factory()->create(['name' => 'Anderes Mitglied']);
+        $club->users()->attach($other->id, ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active']);
+        Sanctum::actingAs($manager);
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-exemptions", [
+            'period_id' => $period->id, 'user_id' => $other->id,
+            'minutes' => 120, 'reason' => 'Private Begründung',
+        ])->assertCreated();
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}/service-hours?period_id={$period->id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_manage', false)
+            ->assertDontSee('Private Begründung')
+            ->assertDontSee('Anderes Mitglied');
+    }
+
     public function test_roles_permissions_period_scope_and_locked_period_are_enforced(): void
     {
         [$club, $owner, $member, $manager, $period, $role] = $this->fixture();
@@ -122,6 +141,14 @@ class ClubServiceHourLedgerTest extends TestCase
         ]);
         Sanctum::actingAs(User::factory()->create());
         $this->getJson("/api/v1/clubs/{$club->id}/service-hours?period_id={$period->id}")->assertForbidden();
+        $this->getJson("/api/v1/clubs/{$club->id}/service-hours/periods")->assertForbidden();
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records", [
+            'period_id' => $period->id,
+            'user_id' => $member->id,
+            'served_on' => '2026-04-12',
+            'minutes' => 60,
+            'title' => 'Unzulässiger Dienst',
+        ])->assertForbidden();
 
         Sanctum::actingAs($manager);
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-requirements", [
@@ -137,6 +164,8 @@ class ClubServiceHourLedgerTest extends TestCase
         ])->assertCreated()->json('data.id');
 
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-requirements/{$requirementId}/lock")->assertOk();
+        $this->getJson("/api/v1/clubs/{$club->id}/service-hours/periods")
+            ->assertOk()->assertJsonFragment(['name' => 'Beitragsjahr 2026']);
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records", [
             'period_id' => $period->id,
             'user_id' => $member->id,
@@ -144,6 +173,19 @@ class ClubServiceHourLedgerTest extends TestCase
             'minutes' => 60,
             'title' => 'Spätdienst',
         ])->assertUnprocessable()->assertJsonValidationErrors('period_id');
+
+        $record = ClubServiceHourRecord::query()->create([
+            'club_id' => $club->id,
+            'club_year_period_id' => $period->id,
+            'user_id' => $member->id,
+            'recorded_by' => $manager->id,
+            'served_on' => '2026-04-12',
+            'minutes' => 60,
+            'title' => 'Vor Sperre erfasst',
+            'status' => 'pending',
+        ]);
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$record->id}/confirm")
+            ->assertUnprocessable()->assertJsonValidationErrors('period_id');
     }
 
     private function fixture(): array

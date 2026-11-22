@@ -63,6 +63,31 @@ class ClubServiceHourLedger
                 'ends_on' => $period->ends_on->format('Y-m-d'),
             ],
             'requirements' => $requirements->map(fn (ClubServiceHourRequirement $requirement) => $this->requirementPayload($requirement))->values(),
+            'records' => ClubServiceHourRecord::query()
+                ->where('club_id', $club->id)
+                ->where('club_year_period_id', $period->id)
+                ->with('corrections')
+                ->latest('served_on')
+                ->limit(200)
+                ->get()
+                ->map(fn (ClubServiceHourRecord $record) => [
+                    'id' => $record->id,
+                    'user_id' => $record->user_id,
+                    'title' => $record->title,
+                    'served_on' => $record->served_on->format('Y-m-d'),
+                    'minutes' => $record->minutes,
+                    'status' => $record->status,
+                    'corrections' => $record->corrections->map(fn (ClubServiceHourCorrection $correction) => [
+                        'minutes_delta' => $correction->minutes_delta,
+                        'reason' => $correction->reason,
+                    ])->values(),
+                ])->values(),
+            'exemptions' => ClubServiceHourExemption::query()
+                ->where('club_id', $club->id)
+                ->where('club_year_period_id', $period->id)
+                ->latest('id')
+                ->limit(200)
+                ->get(['id', 'user_id', 'minutes', 'reason']),
             'members' => $members->map(function (User $member) use ($requirements, $assignments, $confirmed, $corrections, $exemptions) {
                 $required = $this->requiredMinutes($requirements, $assignments->get($member->id, collect()));
                 $confirmedMinutes = (int) ($confirmed[$member->id] ?? 0);

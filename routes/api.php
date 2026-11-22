@@ -818,6 +818,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}/members/{user}/permissions', [ClubController::class, 'memberPermissions'])->name('clubs.members.permissions.show');
         Route::put('/clubs/{club}/members/{user}/permissions', [ClubController::class, 'updateMemberPermissions'])->name('clubs.members.permissions.update');
         Route::get('/clubs/{club}/service-hours', [ClubServiceHourController::class, 'index'])->name('clubs.service-hours.index');
+        Route::get('/clubs/{club}/service-hours/periods', [ClubServiceHourController::class, 'periods'])->name('clubs.service-hours.periods');
         Route::post('/clubs/{club}/service-hour-requirements', [ClubServiceHourController::class, 'storeRequirement'])->name('clubs.service-hour-requirements.store');
         Route::post('/clubs/{club}/service-hour-requirements/{requirement}/lock', [ClubServiceHourController::class, 'lockRequirement'])->name('clubs.service-hour-requirements.lock');
         Route::post('/clubs/{club}/service-hour-records', [ClubServiceHourController::class, 'storeRecord'])->name('clubs.service-hour-records.store');

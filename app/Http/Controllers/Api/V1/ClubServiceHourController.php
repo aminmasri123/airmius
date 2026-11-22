@@ -18,13 +18,38 @@ use Illuminate\Validation\ValidationException;
 
 class ClubServiceHourController extends Controller
 {
+    public function periods(Request $request, Club $club)
+    {
+        $this->authorizeServiceHours($request, $club, ClubPermissions::MEMBERS_VIEW);
+
+        return response()->json(['data' => $club->yearPeriods()
+            ->where('type', 'contribution')
+            ->orderByDesc('starts_on')
+            ->get(['id', 'name', 'starts_on', 'ends_on'])]);
+    }
+
     public function index(Request $request, Club $club, ClubServiceHourLedger $ledger)
     {
         $this->authorizeServiceHours($request, $club, ClubPermissions::MEMBERS_VIEW);
         $data = $request->validate(['period_id' => ['required', 'integer']]);
         $period = $this->period($club, (int) $data['period_id']);
 
-        return response()->json(['data' => $ledger->summary($club, $period)]);
+        $canManage = ClubPermissions::allows($club, $request->user(), ClubPermissions::MEMBERS_MANAGE);
+        $summary = $ledger->summary($club, $period);
+        if (! $canManage) {
+            $userId = (int) $request->user()->id;
+            foreach (['members', 'records', 'exemptions'] as $key) {
+                $summary[$key] = $summary[$key]->filter(fn ($item) => (int) $item['user_id'] === $userId)->values();
+            }
+        }
+
+        return response()->json(['data' => [
+            ...$summary,
+            'can_manage' => $canManage,
+            'roles' => $canManage
+                ? ClubRoleDefinition::query()->where('club_id', $club->id)->where('is_active', true)->orderBy('name')->get(['id', 'name'])
+                : [],
+        ]]);
     }
 
     public function storeRequirement(Request $request, Club $club, ClubServiceHourLedger $ledger)
@@ -103,6 +128,7 @@ class ClubServiceHourController extends Controller
     public function confirmRecord(Request $request, Club $club, ClubServiceHourRecord $record, ClubServiceHourLedger $ledger)
     {
         $this->authorizeRecord($request, $club, $record, ClubPermissions::MEMBERS_MANAGE);
+        $this->ensurePeriodOpen($this->period($club, (int) $record->club_year_period_id));
 
         return response()->json(['data' => $this->recordPayload($ledger->confirm($record, $request->user()))]);
     }
@@ -110,6 +136,7 @@ class ClubServiceHourController extends Controller
     public function correctRecord(Request $request, Club $club, ClubServiceHourRecord $record, ClubServiceHourLedger $ledger)
     {
         $this->authorizeRecord($request, $club, $record, ClubPermissions::MEMBERS_MANAGE);
+        $this->ensurePeriodOpen($this->period($club, (int) $record->club_year_period_id));
         $data = $request->validate([
             'minutes_delta' => ['required', 'integer', 'min:-1440', 'max:1440', 'not_in:0'],
             'reason' => ['required', 'string', 'max:240'],
@@ -162,7 +189,8 @@ class ClubServiceHourController extends Controller
 
     private function period(Club $club, int $id): ClubYearPeriod
     {
-        return ClubYearPeriod::query()->where('club_id', $club->id)->whereKey($id)->firstOrFail();
+        return ClubYearPeriod::query()->where('club_id', $club->id)
+            ->where('type', 'contribution')->whereKey($id)->firstOrFail();
     }
 
     private function role(Club $club, int $id): ClubRoleDefinition
