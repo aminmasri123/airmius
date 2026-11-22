@@ -96,8 +96,8 @@ const send = async () => {
         </section>
         <section class="grid gap-5 md:grid-cols-2">
             <div class="rounded-2xl border border-border bg-card p-5">
-                <h2 class="text-xl font-black text-primary">Zustellfehler</h2>
-                <p v-if="!failures.length" class="mt-3 text-sm text-secondary">Keine Zustellfehler bekannt.</p>
+                <h2 class="text-xl font-black text-primary">{{ $t('Zustellfehler') }}</h2>
+                <p v-if="!failures.length" class="mt-3 text-sm text-secondary">{{ $t('Keine Zustellfehler bekannt.') }}</p>
                 <ul v-else class="mt-3 divide-y divide-border">
                     <li v-for="item in failures" :key="item.id" class="py-3 text-sm">
                         <p class="break-all font-bold text-primary">{{ item.email }}</p>
@@ -107,9 +107,9 @@ const send = async () => {
                 </ul>
             </div>
             <div class="rounded-2xl border border-border bg-card p-5">
-                <h2 class="text-xl font-black text-primary">Gesperrte Adressen</h2>
-                <p class="mt-1 text-sm text-secondary">Diese Adressen werden beim nächsten Versand ausgeschlossen.</p>
-                <p v-if="!suppressions.length" class="mt-3 text-sm text-secondary">Keine Adressen gesperrt.</p>
+                <h2 class="text-xl font-black text-primary">{{ $t('Gesperrte Adressen') }}</h2>
+                <p class="mt-1 text-sm text-secondary">{{ $t('Diese Adressen werden beim nächsten Versand ausgeschlossen.') }}</p>
+                <p v-if="!suppressions.length" class="mt-3 text-sm text-secondary">{{ $t('Keine Adressen gesperrt.') }}</p>
                 <ul v-else class="mt-3 divide-y divide-border">
                     <li v-for="item in suppressions" :key="item.email" class="py-3 text-sm">
                         <p class="break-all font-bold text-primary">{{ item.email }}</p>
