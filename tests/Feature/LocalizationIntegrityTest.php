@@ -106,7 +106,11 @@ class LocalizationIntegrityTest extends TestCase
     {
         $report = LocalizationReadinessReport::make();
 
-        $this->assertSame(0, $report['vue']['total_candidates']);
+        $this->assertSame(
+            0,
+            $report['vue']['total_candidates'],
+            'Untranslated Vue candidates: '.json_encode($report['vue']['top_files'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        );
         $this->assertSame(0, $report['php']['total_candidates']);
         $this->assertGreaterThanOrEqual(58, $report['php']['runtime_server_legal_covered_response_string_candidates']);
         $this->assertSame([], $report['php']['top_files']);
