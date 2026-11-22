@@ -133,8 +133,11 @@ class AirmiusAuthState extends ChangeNotifier {
     try {
       resolved = await _refreshUserProfileIfPossible(restored);
     } on AirmiusApiException catch (error) {
-      if (error.statusCode != 401) rethrow;
-      await expireSession(restored.token);
+      if (error.statusCode != 401 && error.statusCode != 423) rethrow;
+      await expireSession(
+        restored.token,
+        message: error.statusCode == 423 ? error.userMessage : null,
+      );
       return;
     }
     if (_session?.token != restored.token) return;
@@ -472,12 +475,12 @@ class AirmiusAuthState extends ChangeNotifier {
   }
 
   /// Late responses from an old login must not sign out a newer session.
-  Future<void> expireSession(String token) async {
+  Future<void> expireSession(String token, {String? message}) async {
     if (_session?.token != token) return;
     _session = null;
     _twoFactorChallengeToken = null;
     _twoFactorAvailableMethods = const {};
-    _error = _authMessage('auth.error.sessionExpired');
+    _error = message ?? _authMessage('auth.error.sessionExpired');
     _setPhase(AirmiusAuthPhase.expired);
     await tokenStore.clear();
   }
@@ -517,7 +520,12 @@ class AirmiusAuthState extends ChangeNotifier {
         notifyListeners();
       }
     } on AirmiusApiException catch (error) {
-      if (error.statusCode == 401) await expireSession(current.token);
+      if (error.statusCode == 401 || error.statusCode == 423) {
+        await expireSession(
+          current.token,
+          message: error.statusCode == 423 ? error.userMessage : null,
+        );
+      }
     } catch (_) {
       // A network outage does not invalidate a device session.
     } finally {
@@ -777,7 +785,7 @@ class AirmiusAuthState extends ChangeNotifier {
       final currentUser = await repos.auth.currentUser();
       return currentUser;
     } on AirmiusApiException catch (error) {
-      if (error.statusCode == 401) rethrow;
+      if (error.statusCode == 401 || error.statusCode == 423) rethrow;
       return session.user;
     } catch (_) {
       return session.user;

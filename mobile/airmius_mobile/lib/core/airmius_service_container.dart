@@ -90,23 +90,31 @@ class AirmiusServiceContainer {
       repositoriesFor(authState.session);
 }
 
-/// Handles invalid sessions for JSON requests and direct uploads alike.
+/// Handles revoked and suspended sessions for JSON requests and direct uploads.
 class AirmiusSessionTransport implements AirmiusApiTransport {
   const AirmiusSessionTransport({
     required this.inner,
     required this.onUnauthorized,
   });
   final AirmiusApiTransport inner;
-  final Future<void> Function(String token) onUnauthorized;
+  final Future<void> Function(String token, {String? message}) onUnauthorized;
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     final response = await inner.send(request);
     final authorization = request.headers['Authorization'];
-    if (response.statusCode == 401 &&
-        authorization != null &&
-        authorization.startsWith('Bearer ')) {
-      await onUnauthorized(authorization.substring(7));
+    if (authorization != null && authorization.startsWith('Bearer ')) {
+      final token = authorization.substring(7);
+      if (response.statusCode == 401) {
+        await onUnauthorized(token);
+      } else if (response.statusCode == 423) {
+        final error = AirmiusApiException(
+          statusCode: response.statusCode,
+          body: response.body,
+          path: request.path,
+        );
+        await onUnauthorized(token, message: error.userMessage);
+      }
     }
     return response;
   }

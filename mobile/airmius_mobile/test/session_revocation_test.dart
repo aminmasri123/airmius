@@ -61,6 +61,26 @@ void main() {
     expect(auth.session, isNull);
     expect(await store.read(), isNull);
   });
+  for (final operation in ['request', 'heartbeat', 'restore']) {
+    test('a suspended account loses its local session on $operation', () async {
+      server.status = 423;
+      switch (operation) {
+        case 'request':
+          await expectLater(
+            client(auth.session).settings(),
+            throwsA(isA<AirmiusApiException>()),
+          );
+        case 'heartbeat':
+          await auth.validateSession();
+        case 'restore':
+          await auth.restore();
+      }
+      expect(auth.phase, AirmiusAuthPhase.expired);
+      expect(auth.session, isNull);
+      expect(await store.read(), isNull);
+      expect(auth.error, 'This account is suspended.');
+    });
+  }
   test(
     'a late response for an old token does not revoke a new login',
     () async {
@@ -88,6 +108,8 @@ class _Transport implements AirmiusApiTransport {
       statusCode: status,
       body: status == 200
           ? '{"data":{"id":1,"name":"Tester","email":"test@example.test"}}'
+          : status == 423
+          ? '{"message":"This account is suspended."}'
           : '{"message":"Unauthenticated."}',
     );
   }
