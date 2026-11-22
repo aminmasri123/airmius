@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Webhooks;
 
 use App\Http\Controllers\Controller;
 use App\Services\PostmarkSepaNoticeWebhookService;
+use App\Services\PostmarkNewsletterWebhookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -11,7 +12,7 @@ use Illuminate\Validation\Rule;
 
 class PostmarkMailWebhookController extends Controller
 {
-    public function __invoke(Request $request, PostmarkSepaNoticeWebhookService $service): JsonResponse
+    public function __invoke(Request $request, PostmarkSepaNoticeWebhookService $service, PostmarkNewsletterWebhookService $newsletters): JsonResponse
     {
         $username = (string) config('services.postmark.webhook_username');
         $password = (string) config('services.postmark.webhook_password');
@@ -40,11 +41,19 @@ class PostmarkMailWebhookController extends Controller
             'Type' => ['sometimes', 'string', 'max:80'],
             'TypeCode' => ['sometimes', 'integer'],
             'Inactive' => ['sometimes', 'boolean'],
+            'Description' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'Details' => ['sometimes', 'nullable', 'string', 'max:1000'],
         ]);
         if ($validator->fails()) {
             return response()->json(['message' => __('webhooks.invalid_payload')], 400);
         }
 
-        return response()->json(['status' => $service->handle($validator->validated())], 202);
+        $validated = $validator->validated();
+        $status = $service->handle($validated);
+        if ($status === 'ignored') {
+            $status = $newsletters->handle($validated);
+        }
+
+        return response()->json(['status' => $status], 202);
     }
 }

@@ -3253,7 +3253,7 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
                     final sent = await Navigator.of(context).push<bool>(
                       MaterialPageRoute(
                         builder: (_) =>
-                            ClubNewsletterScreen(clubId: profileClub.id),
+                            ClubNewsletterScreen(clubId: profileClub.id, canManage: profileClub.canPublishAnnouncements),
                       ),
                     );
                     if (!context.mounted || sent != true) return;
@@ -4207,7 +4207,10 @@ class _VolunteerProfileSheetState extends State<_VolunteerProfileSheet> {
     if (_visibility != 'private' &&
         (_lines(_availabilityController.text).isEmpty ||
             _lines(_skillsController.text).isEmpty ||
-            (_preferredTeamIds.isEmpty && _preferredAreas.isEmpty))) { showFormFeedback(context, formMessage(context, 'required')); return; }
+            (_preferredTeamIds.isEmpty && _preferredAreas.isEmpty))) {
+      showFormFeedback(context, formMessage(context, 'required'));
+      return;
+    }
     setState(() => _saving = true);
     final workload = int.tryParse(_workloadController.text.trim());
     try {

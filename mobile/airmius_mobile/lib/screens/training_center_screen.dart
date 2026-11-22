@@ -347,6 +347,9 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
     final payload = await showDialog<JsonMap>(
       context: context,
       builder: (context) => _CreateEventDialog(
+        initialDate: _viewMode == _EventViewMode.calendar
+            ? _selectedDate
+            : null,
         initialClubId: widget.initialClubId,
         initialType: widget.initialCreateType,
         clubs: workspace?.clubs ?? const [],
@@ -396,6 +399,7 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
         );
         _calendarCursor = DateTime(event.startsAt.year, event.startsAt.month);
         _selectedDate = _dateOnly(event.startsAt);
+        _viewMode = _EventViewMode.calendar;
         _creatingEvent = false;
       });
       final messenger = ScaffoldMessenger.of(context);
@@ -548,13 +552,6 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting &&
                     events.isEmpty)
                   const _LoadingEvents()
-                else if (!snapshot.hasError &&
-                    _viewMode == _EventViewMode.list &&
-                    visibleEvents.isEmpty)
-                  _EmptyEvents(
-                    onReset: _activeFilterCount > 0 ? _resetFilters : null,
-                    onCreate: _openCreateEventDialog,
-                  )
                 else
                   _EventsSurface(
                     viewMode: _viewMode,
@@ -590,6 +587,10 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
                       _workspaceFuture = _loadWorkspace();
                     }),
                     onRespond: _respond,
+                    onCreate: _openCreateEventDialog,
+                    onResetFilters: _activeFilterCount > 0
+                        ? _resetFilters
+                        : null,
                   ),
               ],
             );
@@ -1087,14 +1088,13 @@ class _WebParityHeader extends StatelessWidget {
                       secondary: true,
                       onPressed: onOpenPlansAndLogs,
                     ),
-                    if (hasEvents)
-                      AirmiusButton(
-                        label: creating
-                            ? scope.t('events.creating')
-                            : scope.t('events.create'),
-                        icon: Icons.add,
-                        onPressed: creating ? null : onCreate,
-                      ),
+                    AirmiusButton(
+                      label: creating
+                          ? scope.t('events.creating')
+                          : scope.t('events.createTitle'),
+                      icon: Icons.add,
+                      onPressed: creating ? null : onCreate,
+                    ),
                   ],
                 ),
                 if (nextEvent != null) ...[
@@ -1229,6 +1229,8 @@ class _EventsSurface extends StatelessWidget {
     required this.lastPage,
     required this.onListPageChanged,
     required this.onRespond,
+    required this.onCreate,
+    required this.onResetFilters,
   });
 
   final _EventViewMode viewMode;
@@ -1246,6 +1248,8 @@ class _EventsSurface extends StatelessWidget {
   final int lastPage;
   final ValueChanged<int> onListPageChanged;
   final void Function(AirmiusEvent event, String status) onRespond;
+  final VoidCallback onCreate;
+  final VoidCallback? onResetFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -1282,6 +1286,7 @@ class _EventsSurface extends StatelessWidget {
                   ),
                 ),
                 SegmentedButton<_EventViewMode>(
+                  key: const ValueKey('event-view-toggle'),
                   segments: [
                     ButtonSegment(
                       value: _EventViewMode.calendar,
@@ -1311,55 +1316,60 @@ class _EventsSurface extends StatelessWidget {
               onMove: onCalendarMove,
               onToday: onToday,
               onDateSelected: onDateSelected,
+              onCreate: onCreate,
             )
           else
             Padding(
               padding: const EdgeInsets.all(14),
-              child: Column(
-                children: [
-                  for (final event in events) ...[
-                    _EventCard(
-                      event: event,
-                      saving: savingEventId == event.id,
-                      onRespond: onRespond,
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  if (lastPage > 1)
-                    Row(
+              child: events.isEmpty
+                  ? _EmptyEvents(onReset: onResetFilters, onCreate: onCreate)
+                  : Column(
                       children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: currentPage > 1
-                                ? () => onListPageChanged(currentPage - 1)
-                                : null,
-                            icon: const Icon(Icons.chevron_left),
-                            label: Text(scope.t('events.previous')),
+                        for (final event in events) ...[
+                          _EventCard(
+                            event: event,
+                            saving: savingEventId == event.id,
+                            onRespond: onRespond,
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            '$currentPage / $lastPage',
-                            style: TextStyle(
-                              color: airmiusMutedColor(context),
-                              fontWeight: FontWeight.w800,
-                            ),
+                          const SizedBox(height: 12),
+                        ],
+                        if (lastPage > 1)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: currentPage > 1
+                                      ? () => onListPageChanged(currentPage - 1)
+                                      : null,
+                                  icon: const Icon(Icons.chevron_left),
+                                  label: Text(scope.t('events.previous')),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                child: Text(
+                                  '$currentPage / $lastPage',
+                                  style: TextStyle(
+                                    color: airmiusMutedColor(context),
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: currentPage < lastPage
+                                      ? () => onListPageChanged(currentPage + 1)
+                                      : null,
+                                  icon: const Icon(Icons.chevron_right),
+                                  label: Text(scope.t('events.next')),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: currentPage < lastPage
-                                ? () => onListPageChanged(currentPage + 1)
-                                : null,
-                            icon: const Icon(Icons.chevron_right),
-                            label: Text(scope.t('events.next')),
-                          ),
-                        ),
                       ],
                     ),
-                ],
-              ),
             ),
         ],
       ),
@@ -1376,6 +1386,7 @@ class _CalendarView extends StatelessWidget {
     required this.onMove,
     required this.onToday,
     required this.onDateSelected,
+    required this.onCreate,
   });
 
   final List<AirmiusEvent> events;
@@ -1385,6 +1396,7 @@ class _CalendarView extends StatelessWidget {
   final ValueChanged<int> onMove;
   final VoidCallback onToday;
   final ValueChanged<DateTime> onDateSelected;
+  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
@@ -1463,13 +1475,24 @@ class _CalendarView extends StatelessWidget {
             children: [
               Eyebrow(scope.t('events.selectedDay')),
               const SizedBox(height: 4),
-              Text(
-                _dateLabel(context, selectedDate),
-                style: TextStyle(
-                  color: airmiusTextColor(context),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _dateLabel(context, selectedDate),
+                      style: TextStyle(
+                        color: airmiusTextColor(context),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: scope.t('events.createTitle'),
+                    onPressed: onCreate,
+                    icon: const Icon(Icons.add_circle_outline),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               if (selectedEvents.isEmpty)
@@ -1900,6 +1923,7 @@ class _RsvpButton extends StatelessWidget {
 
 class _CreateEventDialog extends StatefulWidget {
   const _CreateEventDialog({
+    this.initialDate,
     this.initialClubId,
     this.initialType,
     required this.clubs,
@@ -1915,6 +1939,7 @@ class _CreateEventDialog extends StatefulWidget {
   });
 
   final int? initialClubId;
+  final DateTime? initialDate;
   final String? initialType;
 
   final List<AirmiusClub> clubs;
@@ -1964,6 +1989,17 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialDate != null) {
+      final selected = widget.initialDate!;
+      final suggested = DateTime.now().add(const Duration(hours: 1));
+      _start = DateTime(
+        selected.year,
+        selected.month,
+        selected.day,
+        suggested.hour,
+        suggested.minute,
+      );
+    }
     _clubId = widget.initialClubId;
     if (widget.initialType != null && widget.initialType!.isNotEmpty) {
       _type = widget.initialType!;
@@ -2420,21 +2456,24 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         ),
         const SizedBox(height: 16),
         AirmiusButton(
-          label:
-              '${scope.t('events.start')}: ${_dateLabel(context, _start)} ${_time(_start)}',
+          label: scope.t('events.start'),
           icon: Icons.schedule,
           onPressed: _pickStart,
           secondary: true,
         ),
+        const SizedBox(height: 6),
+        Text('${_dateLabel(context, _start)} ${_time(_start)}'),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: _end == null
-              ? scope.t('events.endOptional')
-              : '${scope.t('events.end')}: ${_dateLabel(context, _end!)} ${_time(_end!)}',
+          label: scope.t('events.endOptional'),
           icon: Icons.update,
           onPressed: _pickEnd,
           secondary: true,
         ),
+        if (_end != null) ...[
+          const SizedBox(height: 6),
+          Text('${_dateLabel(context, _end!)} ${_time(_end!)}'),
+        ],
         const SizedBox(height: 10),
         Text(
           scope.t('events.timezoneHint'),
@@ -2446,13 +2485,15 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         ),
         const SizedBox(height: 12),
         AirmiusButton(
-          label: _reminderAt == null
-              ? scope.t('events.reminder')
-              : '${scope.t('events.reminder')}: ${_dateLabel(context, _reminderAt!)} ${_time(_reminderAt!)}',
+          label: scope.t('events.reminder'),
           icon: Icons.notifications_active_outlined,
           onPressed: _pickReminder,
           secondary: true,
         ),
+        if (_reminderAt != null) ...[
+          const SizedBox(height: 6),
+          Text('${_dateLabel(context, _reminderAt!)} ${_time(_reminderAt!)}'),
+        ],
       ],
     );
   }
@@ -2513,13 +2554,15 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       if (_recurring != null) ...[
         const SizedBox(height: 10),
         AirmiusButton(
-          label: _recurrenceEndsAt == null
-              ? scope.t('events.recurrenceEnd')
-              : '${scope.t('events.recurrenceEnd')}: ${_dateLabel(context, _recurrenceEndsAt!)}',
+          label: scope.t('events.recurrenceEnd'),
           icon: Icons.event_repeat_outlined,
           onPressed: _pickRecurrenceEnd,
           secondary: true,
         ),
+        if (_recurrenceEndsAt != null) ...[
+          const SizedBox(height: 6),
+          Text(_dateLabel(context, _recurrenceEndsAt!)),
+        ],
       ],
       if (_recurring == 'weekly' || _recurring == 'biweekly') ...[
         const SizedBox(height: 10),
@@ -2613,6 +2656,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           const SizedBox(height: 16),
           DropdownButtonFormField<int?>(
             initialValue: _trainingSessionId,
+            isExpanded: true,
             decoration: InputDecoration(
               labelText: scope.t('events.trainingSession'),
               prefixIcon: const Icon(Icons.fitness_center_outlined),

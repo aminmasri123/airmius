@@ -167,6 +167,10 @@ void main() {
         find.widgetWithText(TextFormField, 'Titel'),
         'Vorstand November',
       );
+      for (var step = 0; step < 4; step++) {
+        await tester.tap(find.widgetWithText(FilledButton, 'Weiter'));
+        await tester.pumpAndSettle();
+      }
       await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
       await tester.pumpAndSettle();
       final save = transport.requests.singleWhere(
@@ -205,6 +209,12 @@ void main() {
     final transport = _MeetingsTransport()..manager = true;
     await _mount(tester, transport);
     await tester.tap(find.byTooltip('Sitzung anlegen'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Titel'),
+      'Terminprüfung',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Weiter'));
     await tester.pumpAndSettle();
 
     expect(
@@ -248,13 +258,18 @@ void main() {
         find.widgetWithText(TextFormField, 'Titel'),
         'Neues Protokoll',
       );
-      await tester.ensureVisible(
-        find.widgetWithText(TextFormField, 'Protokoll / Notizen'),
-      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Weiter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Weiter'));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Protokoll / Notizen'),
         'Beschluss wurde diskutiert.',
       );
+      await tester.tap(find.widgetWithText(FilledButton, 'Weiter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Weiter'));
+      await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
       await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsWidgets);

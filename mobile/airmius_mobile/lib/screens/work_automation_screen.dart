@@ -244,6 +244,54 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
     }
   }
 
+  Future<void> _edit(AirmiusJson job) async {
+    final clubId = _clubId!;
+    final details = (await _client.workAutomationJob(clubId, job['id'] as int))['data'] as AirmiusJson;
+    if (!mounted || _clubId != clubId) return;
+    final payload = await showDialog<AirmiusJson>(
+      context: context,
+      builder: (_) => WorkAutomationCreateDialog(
+        permissions: _permissions,
+        preview: (roles) async => (await _client.workAutomationRecipients(clubId, roles))['data']['count'] as int,
+        initial: details,
+      ),
+    );
+    if (!mounted || payload == null || _clubId != clubId) return;
+    setState(() => _busy = true);
+    try {
+      await _client.updateWorkAutomationJob(clubId, job['id'] as int, payload);
+      await _load();
+    } catch (_) {
+      if (mounted) setState(() => _error = _t('changedMeanwhile'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _delete(AirmiusJson job) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(_t('confirmDelete')),
+        content: Text('${job['title'] ?? _t(job['kind'])} #${job['id']}'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(_t('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(_t('delete'))),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    setState(() => _busy = true);
+    try {
+      await _client.deleteWorkAutomationJob(_clubId!, job['id'] as int);
+      await _load();
+    } catch (_) {
+      if (mounted) setState(() => _error = _t('changedMeanwhile'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _details(AirmiusJson job) => showDialog<void>(
     context: context,
     builder: (_) => WorkAutomationDetailsDialog(
@@ -401,6 +449,18 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
                   label: Text(_t('retry')),
                 ),
               ),
+            if (job['can_edit'] == true || job['can_delete'] == true)
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Wrap(
+                  children: [
+                    if (job['can_edit'] == true)
+                      TextButton.icon(onPressed: _busy ? null : () => _edit(job), icon: const Icon(Icons.edit_outlined), label: Text(_t('edit'))),
+                    if (job['can_delete'] == true)
+                      TextButton.icon(onPressed: _busy ? null : () => _delete(job), icon: const Icon(Icons.delete_outline), label: Text(_t('delete'))),
+                  ],
+                ),
+              ),
           ],
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -446,9 +506,11 @@ class WorkAutomationCreateDialog extends StatefulWidget {
     super.key,
     required this.permissions,
     required this.preview,
+    this.initial,
   });
   final List<AirmiusJson> permissions;
   final Future<int> Function(List<String>) preview;
+  final AirmiusJson? initial;
   @override
   State<WorkAutomationCreateDialog> createState() =>
       _WorkAutomationCreateDialogState();
@@ -468,6 +530,14 @@ class _WorkAutomationCreateDialogState
   @override
   void initState() {
     super.initState();
+    final initial = widget.initial;
+    if (initial != null) {
+      _kind = initial['kind'] as String;
+      _title.text = '${initial['title'] ?? ''}';
+      _body.text = '${initial['body'] ?? ''}';
+      _roles.addAll(((initial['recipient_roles'] as List?) ?? []).cast<String>());
+      if (initial['scheduled_at'] != null) _scheduled = DateTime.parse('${initial['scheduled_at']}').toLocal();
+    }
     _preview();
   }
 
@@ -567,7 +637,7 @@ class _WorkAutomationCreateDialogState
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text(_t('new')),
+    title: Text(_t(widget.initial == null ? 'new' : 'editJob')),
     content: SizedBox(
       width: 440,
       child: SingleChildScrollView(
@@ -662,7 +732,7 @@ class _WorkAutomationCreateDialogState
                   'scheduled_at': _scheduled?.toUtc().toIso8601String(),
                 });
               },
-        child: Text(_t('create')),
+        child: Text(_t(widget.initial == null ? 'create' : 'save')),
       ),
     ],
   );

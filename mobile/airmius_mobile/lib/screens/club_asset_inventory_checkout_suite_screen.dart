@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
+import 'package:qr_flutter/qr_flutter.dart';
 import '../widgets/airmius_form.dart';
 
 import '../core/airmius_api_client.dart';
@@ -854,6 +855,74 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
     );
   }
 
+  Future<void> _showQrCode(Map<String, dynamic> item) async {
+    final payload = '${item['qr_payload'] ?? ''}'.trim();
+    final revoked = item['qr_revoked_at'] != null;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('${item['name'] ?? t('inventory.fallbackItem')}'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (revoked || payload.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.qr_code_2_outlined, size: 72),
+                      const SizedBox(height: 12),
+                      Text(
+                        t('inventory.qrUnavailable'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
+                Semantics(
+                  label: t('inventory.qrCodeForItem').replaceAll(
+                    '{name}',
+                    '${item['name'] ?? t('inventory.fallbackItem')}',
+                  ),
+                  child: Container(
+                    key: ValueKey('inventoryQr-${item['id']}'),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: QrImageView(
+                      data: payload,
+                      size: 260,
+                      backgroundColor: Colors.white,
+                      semanticsLabel: t('inventory.qrCode'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  t('inventory.qrDisplayHint'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(t('inventory.close')),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pageTitle = widget.scheduledCheckout
@@ -1253,6 +1322,12 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                                 : 'inventory.editItem',
                           ),
                         ),
+                      ),
+                    if (_canManage && !widget.scheduledCheckout)
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _showQrCode(item),
+                        icon: const Icon(Icons.qr_code_2_outlined),
+                        label: Text(t('inventory.qrShow')),
                       ),
                     if (_canManage && !widget.scheduledCheckout)
                       OutlinedButton.icon(

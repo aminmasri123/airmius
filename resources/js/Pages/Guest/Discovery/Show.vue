@@ -3,8 +3,8 @@ import Footer from '@/Components/Guest/Footer.vue'
 import Nav from '@/Components/Guest/Nav.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
-import { Link } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { Link, useForm } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
@@ -64,6 +64,15 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
 }).format(Number(value || 0))
 
 const intervalLabel = (interval) => t(`public_discovery.intervals.${interval || 'none'}`)
+const newsletterSent = ref(false)
+const newsletterForm = useForm({ name: '', email: '', privacy_consent: false, website: '' })
+const subscribeNewsletter = () => newsletterForm.post(route('guest.newsletter.subscribe', props.entity.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+        newsletterSent.value = true
+        newsletterForm.reset()
+    },
+})
 </script>
 
 <template>
@@ -117,6 +126,36 @@ const intervalLabel = (interval) => t(`public_discovery.intervals.${interval || 
                             <p class="mt-2 text-3xl font-black">{{ stats[key] || 0 }}</p>
                         </article>
                     </div>
+                </div>
+            </section>
+
+            <section v-if="kind === 'club'" class="mx-auto mt-10 max-w-6xl rounded-3xl border border-air-blue/30 bg-card p-6 sm:p-8">
+                <div class="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,.8fr)] lg:items-start">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-[.18em] text-air-blue">{{ $t('Newsletter') }}</p>
+                        <h2 class="mt-2 text-2xl font-black">{{ $t('Neuigkeiten dieses Vereins per E-Mail') }}</h2>
+                        <p class="mt-3 max-w-2xl text-sm leading-7 text-secondary">{{ $t('Nach der Anmeldung erhältst du eine Bestätigungsmail. Erst nach deinem Klick darf der Verein dir Newsletter senden. Du kannst dich jederzeit mit einem Klick abmelden.') }}</p>
+                        <ul class="mt-4 space-y-2 text-sm text-secondary">
+                            <li class="flex gap-2"><i class="las la-check text-success" aria-hidden="true"></i>{{ $t('Keine Anmeldung ohne Bestätigung') }}</li>
+                            <li class="flex gap-2"><i class="las la-check text-success" aria-hidden="true"></i>{{ $t('E-Mail-Adresse bleibt für andere Empfänger unsichtbar') }}</li>
+                            <li class="flex gap-2"><i class="las la-check text-success" aria-hidden="true"></i>{{ $t('Jeder Newsletter enthält einen Abmeldelink') }}</li>
+                        </ul>
+                    </div>
+                    <div v-if="newsletterSent" class="rounded-2xl border border-success/30 bg-success/10 p-5" role="status">
+                        <p class="font-black text-success">{{ $t('Newsletter-Anfrage wurde verarbeitet') }}</p>
+                        <p class="mt-2 text-sm leading-6 text-secondary">{{ $t('Falls die Adresse noch nicht bestätigt ist, erhältst du eine E-Mail. Öffne sie und klicke innerhalb von 24 Stunden auf den Bestätigungslink. Prüfe bei Bedarf auch den Spam-Ordner.') }}</p>
+                        <button type="button" class="mt-4 text-sm font-bold text-air-blue hover:underline" @click="newsletterSent = false">{{ $t('Andere E-Mail-Adresse verwenden') }}</button>
+                    </div>
+                    <form v-else class="space-y-3 rounded-2xl border border-border bg-bg p-5" @submit.prevent="subscribeNewsletter">
+                        <label class="block"><span class="text-sm font-bold">{{ $t('Name (optional)') }}</span><input v-model.trim="newsletterForm.name" maxlength="160" autocomplete="name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"></label>
+                        <label class="block"><span class="text-sm font-bold">{{ $t('E-Mail-Adresse') }}</span><input v-model.trim="newsletterForm.email" required type="email" maxlength="255" autocomplete="email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"><span v-if="newsletterForm.errors.email" class="mt-1 block text-sm text-error">{{ newsletterForm.errors.email }}</span></label>
+                        <input v-model="newsletterForm.website" type="text" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true">
+                        <label class="flex items-start gap-3 text-sm leading-6 text-secondary"><input v-model="newsletterForm.privacy_consent" required type="checkbox" class="mt-1 rounded border-border bg-inputBg"><span>{{ $t('Ich möchte den Newsletter dieses Vereins erhalten und stimme der Verarbeitung meiner E-Mail-Adresse dafür zu. Die Einwilligung kann ich jederzeit widerrufen.') }}</span></label>
+                        <span v-if="newsletterForm.errors.privacy_consent" class="block text-sm text-error">{{ newsletterForm.errors.privacy_consent }}</span>
+                        <button type="submit" class="w-full rounded-xl bg-buttonPrimary px-4 py-3 font-black text-buttonTextPrimary disabled:opacity-60" :disabled="newsletterForm.processing">
+                            {{ newsletterForm.processing ? $t('Wird gesendet …') : $t('Bestätigungsmail anfordern') }}
+                        </button>
+                    </form>
                 </div>
             </section>
 

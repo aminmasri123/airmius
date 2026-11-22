@@ -70,7 +70,9 @@ class ClubYearPeriodController extends Controller
     {
         $this->authorizeManage($request, $club, ClubPermissions::YEAR_PERIODS_EDIT);
         $period = $club->yearPeriods()->create($this->validatedData($request, $club));
-        $this->audit($club, $request, 'club.year_period.created', $period);
+        $this->audit($club, $request, 'club.year_period.created', $period, [
+            'values' => $this->auditValues($period),
+        ]);
 
         return response()->json(['data' => $this->payload($period)], 201);
     }
@@ -79,8 +81,19 @@ class ClubYearPeriodController extends Controller
     {
         $this->authorizePeriod($request, $club, $yearPeriod, ClubPermissions::YEAR_PERIODS_EDIT);
         abort_if($yearPeriod->finance_closed_at, 422, 'Abgeschlossene Geschäftsjahre dürfen nicht verändert werden.');
+        $before = $this->auditValues($yearPeriod);
         $yearPeriod->update($this->validatedData($request, $club, $yearPeriod));
-        $this->audit($club, $request, 'club.year_period.updated', $yearPeriod);
+        $after = $this->auditValues($yearPeriod->fresh());
+        $changes = collect($after)
+            ->filter(fn ($value, string $field) => (string) $value !== (string) ($before[$field] ?? ''))
+            ->map(fn ($value, string $field) => [
+                'field' => $field,
+                'from' => $before[$field] ?? null,
+                'to' => $value,
+            ])
+            ->values()
+            ->all();
+        $this->audit($club, $request, 'club.year_period.updated', $yearPeriod, ['changes' => $changes]);
 
         return response()->json(['data' => $this->payload($yearPeriod->refresh())]);
     }
@@ -91,7 +104,9 @@ class ClubYearPeriodController extends Controller
         if ($yearPeriod->isInUse()) {
             throw ValidationException::withMessages(['year_period' => __('validation.year_period_in_use')]);
         }
-        $this->audit($club, $request, 'club.year_period.deleted', $yearPeriod);
+        $this->audit($club, $request, 'club.year_period.deleted', $yearPeriod, [
+            'values' => $this->auditValues($yearPeriod),
+        ]);
         $yearPeriod->delete();
 
         return response()->json(['data' => ['deleted' => true]]);
@@ -167,8 +182,21 @@ class ClubYearPeriodController extends Controller
         ];
     }
 
-    private function audit(Club $club, Request $request, string $type, ClubYearPeriod $period): void
+    private function audit(Club $club, Request $request, string $type, ClubYearPeriod $period, array $details = []): void
     {
-        ClubAuditLog::record($club, $request->user(), $type, $period, ['entity_type' => 'year_period']);
+        ClubAuditLog::record($club, $request->user(), $type, $period, [
+            'entity_type' => 'year_period',
+            ...$details,
+        ]);
+    }
+
+    private function auditValues(ClubYearPeriod $period): array
+    {
+        return [
+            'type' => $period->type,
+            'name' => $period->name,
+            'starts_on' => $period->starts_on->format('Y-m-d'),
+            'ends_on' => $period->ends_on->format('Y-m-d'),
+        ];
     }
 }

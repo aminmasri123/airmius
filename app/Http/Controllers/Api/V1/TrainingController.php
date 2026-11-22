@@ -519,6 +519,22 @@ class TrainingController extends Controller
             'api_v1_mobile',
         );
 
+        if (($data['notify_trainer'] ?? false) && in_array($trainingLog->status, ['completed', 'partial'], true)) {
+            $trainer = $planItem?->plan?->creator;
+            $athlete = $request->user();
+            if ($trainer && ! $trainer->is($athlete) && $this->logAccess->canViewProtectedCaseFile($trainer, $trainingLog->refresh())) {
+                AppNotification::sendLocalized(
+                    $trainer,
+                    'training.log.updated',
+                    'server.training.notifications.log_updated_title',
+                    'server.training.notifications.assigned_log_updated_body',
+                    ['athlete' => $athlete->name, 'item' => $planItem->title, 'plan' => $planItem->plan->title],
+                    ['url' => route('auth.training.logs.show', $trainingLog), 'training_log_id' => $trainingLog->id],
+                    ['after_commit' => true],
+                );
+            }
+        }
+
         return new TrainingLogResource(
             $this->loadLogForResource($trainingLog->refresh())
         );

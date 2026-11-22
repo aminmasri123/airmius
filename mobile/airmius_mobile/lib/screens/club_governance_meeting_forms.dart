@@ -106,6 +106,16 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
   final _agenda = <(TextEditingController, TextEditingController)>[];
   bool _busy = false;
   String? _error;
+  int _step = 0;
+  int _maxStep = 0;
+
+  static const _stepTitles = <String>[
+    'Grunddaten',
+    'Termin & Rahmen',
+    'Tagesordnung',
+    'Teilnehmer',
+    'Prüfen',
+  ];
 
   @override
   void initState() {
@@ -234,7 +244,21 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
   }
 
   Future<void> _save() async {
-    if (_busy || !_key.currentState!.validate()) return;
+    if (_busy) return;
+    if (_title.text.trim().isEmpty) {
+      setState(() {
+        _step = 0;
+        _error = 'Bitte einen Titel eingeben.';
+      });
+      return;
+    }
+    if (_agenda.any((pair) => pair.$1.text.trim().isEmpty)) {
+      setState(() {
+        _step = 2;
+        _error = 'Bitte alle Tagesordnungspunkte benennen.';
+      });
+      return;
+    }
     if (_scope == 'body' && _bodyId == null) {
       setState(() => _error = 'Bitte ein Gremium auswählen.');
       return;
@@ -461,26 +485,418 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
     );
   }
 
+  bool _validateStep() {
+    setState(() => _error = null);
+    if (!(_key.currentState?.validate() ?? true)) return false;
+    if (_step == 1 && _scope == 'body' && _bodyId == null) {
+      setState(() => _error = 'Bitte ein Gremium auswählen.');
+      return false;
+    }
+    if (_step == 3 && widget.meeting == null && _recipients.isEmpty) {
+      setState(() => _error = 'Bitte mindestens eine Person einladen.');
+      return false;
+    }
+    return true;
+  }
+
+  void _nextStep() {
+    if (_busy || !_validateStep()) return;
+    FocusScope.of(context).unfocus();
+    if (_step < _stepTitles.length - 1) {
+      setState(() {
+        _step++;
+        if (_step > _maxStep) _maxStep = _step;
+      });
+    }
+  }
+
+  void _previousStep() {
+    if (_busy || _step == 0) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _error = null;
+      _step--;
+    });
+  }
+
   Widget _bottomActions() => SafeArea(
     minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
     child: Row(
       children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: _busy ? null : () => Navigator.pop(context),
-            child: const Text('Abbrechen'),
-          ),
+        OutlinedButton.icon(
+          onPressed: _busy
+              ? null
+              : _step == 0
+              ? () => Navigator.pop(context)
+              : _previousStep,
+          icon: Icon(_step == 0 ? Icons.close : Icons.arrow_back),
+          label: Text(_step == 0 ? 'Abbrechen' : 'Zurück'),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: FilledButton(
-            onPressed: _busy ? null : _save,
-            child: const Text('Speichern'),
+          child: FilledButton.icon(
+            onPressed: _busy
+                ? null
+                : _step == _stepTitles.length - 1
+                ? _save
+                : _nextStep,
+            icon: Icon(
+              _step == _stepTitles.length - 1
+                  ? Icons.check
+                  : Icons.arrow_forward,
+            ),
+            label: Text(
+              _step == _stepTitles.length - 1 ? 'Speichern' : 'Weiter',
+            ),
           ),
         ),
       ],
     ),
   );
+
+  Widget _progress() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Row(
+        children: [
+          Text(
+            'Schritt ${_step + 1} von ${_stepTitles.length}',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+          const Spacer(),
+          Text(_stepTitles[_step]),
+        ],
+      ),
+      const SizedBox(height: 8),
+      LinearProgressIndicator(value: (_step + 1) / _stepTitles.length),
+      const SizedBox(height: 12),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var index = 0; index < _stepTitles.length; index++) ...[
+              ActionChip(
+                avatar: CircleAvatar(child: Text('${index + 1}')),
+                label: Text(_stepTitles[index]),
+                onPressed: _busy || index > _maxStep
+                    ? null
+                    : () => setState(() {
+                        _error = null;
+                        _step = index;
+                      }),
+              ),
+              if (index < _stepTitles.length - 1) const SizedBox(width: 8),
+            ],
+          ],
+        ),
+      ),
+      const SizedBox(height: 24),
+    ],
+  );
+
+  Widget _basicStep() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _text(_title, 'Titel', 180, required: true),
+      _select('Sitzungsart', _type, [
+        'board',
+        'committee',
+        'general_assembly',
+      ], (value) => _type = value),
+      _select('Status', _status, [
+        'draft',
+        'invited',
+        'held',
+        'cancelled',
+      ], (value) => _status = value),
+    ],
+  );
+
+  Widget _scheduleStep() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      _scheduledField(),
+      _text(_location, 'Ort', 180),
+      _select(
+        'Teilnehmerkreis',
+        _scope,
+        ['body', 'club_members', 'custom'],
+        (value) {
+          _scope = value;
+          _syncRecipients();
+        },
+        locked: widget.meeting != null,
+      ),
+      Padding(
+        padding: const EdgeInsets.only(bottom: _fieldGap),
+        child: DropdownButtonFormField<int>(
+          initialValue: _bodyId,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Gremium'),
+          items: [
+            const DropdownMenuItem<int>(
+              value: null,
+              child: Text('Ohne Gremium'),
+            ),
+            for (final body in governanceMaps(widget.governance['bodies']))
+              DropdownMenuItem(
+                value: governanceInt(body['id']),
+                child: Text('${body['name']}', overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: _busy || widget.meeting != null
+              ? null
+              : (value) => setState(() {
+                  _bodyId = value;
+                  _syncRecipients();
+                }),
+        ),
+      ),
+      _optionalDateSwitch(
+        title: 'Abweichenden Stichtag festlegen',
+        inactiveHint: 'Automatisch: Datum des Sitzungstermins.',
+        value: _useCustomEligibility,
+        locked: widget.meeting != null,
+        onChanged: (enabled) => setState(() {
+          _useCustomEligibility = enabled;
+          _eligibility = enabled
+              ? (_eligibility ?? _scheduled ?? DateTime.now())
+              : null;
+          _syncRecipients();
+        }),
+      ),
+      if (_useCustomEligibility)
+        _date(
+          'Stichtag der Berechtigung',
+          _eligibility,
+          () async {
+            final date = await _pickDate(_eligibility);
+            if (date != null && mounted) {
+              setState(() {
+                _eligibility = date;
+                _syncRecipients();
+              });
+            }
+          },
+          () => setState(() {
+            _useCustomEligibility = false;
+            _eligibility = null;
+            _syncRecipients();
+          }),
+          locked: widget.meeting != null,
+        ),
+      _optionalDateSwitch(
+        title: 'Antragsfrist festlegen',
+        inactiveHint: 'Keine Antragsfrist festgelegt.',
+        value: _useMotionsDeadline,
+        onChanged: (enabled) => setState(() {
+          _useMotionsDeadline = enabled;
+          _motionsDue = enabled
+              ? (_motionsDue ?? _scheduled ?? DateTime.now())
+              : null;
+        }),
+      ),
+      if (_useMotionsDeadline)
+        _date(
+          'Antragsfrist',
+          _motionsDue,
+          () async {
+            final date = await _pickDate(_motionsDue);
+            if (date != null && mounted) setState(() => _motionsDue = date);
+          },
+          () => setState(() {
+            _useMotionsDeadline = false;
+            _motionsDue = null;
+          }),
+        ),
+    ],
+  );
+
+  Widget _agendaStep() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      for (var i = 0; i < _agenda.length; i++)
+        Column(
+          key: ObjectKey(_agenda[i].$1),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _text(
+              _agenda[i].$1,
+              '${i + 1}. Tagesordnungspunkt',
+              180,
+              required: true,
+            ),
+            _text(_agenda[i].$2, 'Beschreibung', 2000, lines: 2),
+            Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                tooltip: 'Tagesordnungspunkt entfernen',
+                icon: const Icon(Icons.delete_outline),
+                onPressed: _busy
+                    ? null
+                    : () {
+                        final pair = _agenda[i];
+                        setState(() => _agenda.removeAt(i));
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          pair.$1.dispose();
+                          pair.$2.dispose();
+                        });
+                      },
+              ),
+            ),
+          ],
+        ),
+      Padding(
+        padding: const EdgeInsets.only(bottom: _sectionGap),
+        child: OutlinedButton.icon(
+          onPressed: _busy || _agenda.length >= 50
+              ? null
+              : () => setState(
+                  () => _agenda.add((
+                    TextEditingController(),
+                    TextEditingController(),
+                  )),
+                ),
+          icon: const Icon(Icons.add),
+          label: const Text('Tagesordnungspunkt hinzufügen'),
+        ),
+      ),
+      _text(_notes, 'Protokoll / Notizen', 5000, lines: 5),
+    ],
+  );
+
+  Widget _recipientsStep() {
+    if (widget.meeting != null) {
+      final recipients = governanceMaps(widget.meeting?['recipients']);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Der Teilnehmerkreis dieser Sitzung ist bereits festgeschrieben.',
+          ),
+          const SizedBox(height: 12),
+          for (final recipient in recipients)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                recipient['voting_eligible'] == true
+                    ? Icons.how_to_vote_outlined
+                    : Icons.person_outline,
+              ),
+              title: Text(
+                '${governanceMap(recipient['person'])['name'] ?? 'Person'}',
+              ),
+              subtitle: Text(
+                recipient['voting_eligible'] == true
+                    ? 'Teilnahme- und stimmberechtigt'
+                    : 'Teilnahmeberechtigt',
+              ),
+            ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_bodyId != null)
+          OutlinedButton.icon(
+            onPressed: _busy ? null : _selectBodyMembers,
+            icon: const Icon(Icons.groups_outlined),
+            label: const Text('Gremiumsmitglieder auswählen'),
+          ),
+        if (_recipientOptions.isEmpty)
+          const Text('Keine Personen im gewählten Teilnehmerkreis verfügbar.'),
+        for (final person in _recipientOptions) ...[
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: Text(
+              '${person['name']}${person['kind'] == 'external' ? ' (Extern)' : ''}',
+            ),
+            value: _recipients.contains(governancePersonKey(person)),
+            onChanged: _busy
+                ? null
+                : (checked) => setState(() {
+                    final key = governancePersonKey(person);
+                    checked == true
+                        ? _recipients.add(key)
+                        : _recipients.remove(key);
+                  }),
+          ),
+          if (_recipients.contains(governancePersonKey(person)))
+            CheckboxListTile(
+              contentPadding: const EdgeInsets.only(left: 24),
+              controlAffinity: ListTileControlAffinity.leading,
+              title: const Text('Stimmrecht'),
+              value: _voting(person),
+              onChanged: _busy
+                  ? null
+                  : (value) => setState(
+                      () => _votingRights[governancePersonKey(person)] =
+                          value == true,
+                    ),
+            ),
+        ],
+      ],
+    );
+  }
+
+  Widget _reviewStep() {
+    final existingRecipients = governanceMaps(widget.meeting?['recipients']);
+    final recipientCount = widget.meeting == null
+        ? _recipients.length
+        : existingRecipients.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Bitte alle Angaben vor dem Speichern prüfen.',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 16),
+        _reviewRow('Titel', _title.text.trim()),
+        _reviewRow('Sitzungsart', governanceLabel(_type)),
+        _reviewRow('Status', governanceLabel(_status)),
+        _reviewRow(
+          'Termin',
+          _scheduled == null
+              ? 'Nicht angegeben'
+              : '${formatAirmiusDate(_scheduled)} ${TimeOfDay.fromDateTime(_scheduled!).format(context)}',
+        ),
+        _reviewRow('Ort', _location.text.trim().isEmpty ? '–' : _location.text),
+        _reviewRow('Tagesordnungspunkte', '${_agenda.length}'),
+        _reviewRow('Eingeladene Personen', '$recipientCount'),
+        if (_notes.text.trim().isNotEmpty)
+          _reviewRow('Protokoll / Notizen', _notes.text.trim()),
+        const SizedBox(height: 12),
+        const Text(
+          'Du kannst über die Schritte oben oder mit „Zurück“ jederzeit Änderungen vornehmen.',
+        ),
+      ],
+    );
+  }
+
+  Widget _reviewRow(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 150,
+          child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+        ),
+        Expanded(child: Text(value)),
+      ],
+    ),
+  );
+
+  Widget _stepContent() => switch (_step) {
+    0 => _basicStep(),
+    1 => _scheduleStep(),
+    2 => _agendaStep(),
+    3 => _recipientsStep(),
+    _ => _reviewStep(),
+  };
 
   @override
   Widget build(BuildContext context) => PopScope(
@@ -521,233 +937,14 @@ class _ClubGovernanceMeetingFormState extends State<ClubGovernanceMeetingForm> {
                         padding: EdgeInsets.only(bottom: 16),
                         child: LinearProgressIndicator(),
                       ),
-                    _text(_title, 'Titel', 180, required: true),
-                    _select('Sitzungsart', _type, [
-                      'board',
-                      'committee',
-                      'general_assembly',
-                    ], (value) => _type = value),
-                    _select('Status', _status, [
-                      'draft',
-                      'invited',
-                      'held',
-                      'cancelled',
-                    ], (value) => _status = value),
-                    _scheduledField(),
-                    _text(_location, 'Ort', 180),
-                    _select(
-                      'Teilnehmerkreis',
-                      _scope,
-                      ['body', 'club_members', 'custom'],
-                      (value) {
-                        _scope = value;
-                        _syncRecipients();
-                      },
-                      locked: widget.meeting != null,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: _fieldGap),
-                      child: DropdownButtonFormField<int>(
-                        initialValue: _bodyId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Gremium'),
-                        items: [
-                          const DropdownMenuItem<int>(
-                            value: null,
-                            child: Text('Ohne Gremium'),
-                          ),
-                          for (final body in governanceMaps(
-                            widget.governance['bodies'],
-                          ))
-                            DropdownMenuItem(
-                              value: governanceInt(body['id']),
-                              child: Text(
-                                '${body['name']}',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                        ],
-                        onChanged: _busy || widget.meeting != null
-                            ? null
-                            : (value) => setState(() {
-                                _bodyId = value;
-                                _syncRecipients();
-                              }),
+                    _progress(),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 180),
+                      child: KeyedSubtree(
+                        key: ValueKey(_step),
+                        child: _stepContent(),
                       ),
                     ),
-                    _optionalDateSwitch(
-                      title: 'Abweichenden Stichtag festlegen',
-                      inactiveHint: 'Automatisch: Datum des Sitzungstermins.',
-                      value: _useCustomEligibility,
-                      locked: widget.meeting != null,
-                      onChanged: (enabled) => setState(() {
-                        _useCustomEligibility = enabled;
-                        _eligibility = enabled
-                            ? (_eligibility ?? _scheduled ?? DateTime.now())
-                            : null;
-                        _syncRecipients();
-                      }),
-                    ),
-                    if (_useCustomEligibility)
-                      _date(
-                        'Stichtag der Berechtigung',
-                        _eligibility,
-                        () async {
-                          final date = await _pickDate(_eligibility);
-                          if (date != null && mounted) {
-                            setState(() {
-                              _eligibility = date;
-                              _syncRecipients();
-                            });
-                          }
-                        },
-                        () => setState(() {
-                          _useCustomEligibility = false;
-                          _eligibility = null;
-                          _syncRecipients();
-                        }),
-                        locked: widget.meeting != null,
-                      ),
-                    _optionalDateSwitch(
-                      title: 'Antragsfrist festlegen',
-                      inactiveHint: 'Keine Antragsfrist festgelegt.',
-                      value: _useMotionsDeadline,
-                      onChanged: (enabled) => setState(() {
-                        _useMotionsDeadline = enabled;
-                        _motionsDue = enabled
-                            ? (_motionsDue ?? _scheduled ?? DateTime.now())
-                            : null;
-                      }),
-                    ),
-                    if (_useMotionsDeadline)
-                      _date(
-                        'Antragsfrist',
-                        _motionsDue,
-                        () async {
-                          final date = await _pickDate(_motionsDue);
-                          if (date != null && mounted) {
-                            setState(() => _motionsDue = date);
-                          }
-                        },
-                        () => setState(() {
-                          _useMotionsDeadline = false;
-                          _motionsDue = null;
-                        }),
-                      ),
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8, bottom: 12),
-                      child: Text(
-                        'Tagesordnung',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    for (var i = 0; i < _agenda.length; i++)
-                      Column(
-                        key: ObjectKey(_agenda[i].$1),
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _text(
-                            _agenda[i].$1,
-                            '${i + 1}. Tagesordnungspunkt',
-                            180,
-                            required: true,
-                          ),
-                          _text(_agenda[i].$2, 'Beschreibung', 2000, lines: 2),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: IconButton(
-                              tooltip: 'Tagesordnungspunkt entfernen',
-                              icon: const Icon(Icons.delete_outline),
-                              onPressed: _busy
-                                  ? null
-                                  : () {
-                                      final pair = _agenda[i];
-                                      setState(() => _agenda.removeAt(i));
-                                      WidgetsBinding.instance
-                                          .addPostFrameCallback((_) {
-                                            pair.$1.dispose();
-                                            pair.$2.dispose();
-                                          });
-                                    },
-                            ),
-                          ),
-                        ],
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: _sectionGap),
-                      child: TextButton.icon(
-                        onPressed: _busy || _agenda.length >= 50
-                            ? null
-                            : () => setState(
-                                () => _agenda.add((
-                                  TextEditingController(),
-                                  TextEditingController(),
-                                )),
-                              ),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Tagesordnungspunkt'),
-                      ),
-                    ),
-                    _text(_notes, 'Protokoll / Notizen', 5000, lines: 5),
-                    if (widget.meeting == null) ...[
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8, bottom: 12),
-                        child: Text(
-                          'Einzuladende Personen',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      if (_bodyId != null)
-                        TextButton.icon(
-                          onPressed: _busy ? null : _selectBodyMembers,
-                          icon: const Icon(Icons.groups_outlined),
-                          label: const Text('Gremiumsmitglieder auswählen'),
-                        ),
-                      if (_recipientOptions.isEmpty)
-                        const Text(
-                          'Keine Personen im gewählten Teilnehmerkreis verfügbar.',
-                        ),
-                      for (final person in _recipientOptions) ...[
-                        CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          title: Text(
-                            '${person['name']}${person['kind'] == 'external' ? ' (Extern)' : ''}',
-                          ),
-                          value: _recipients.contains(
-                            '${person['kind']}:${person['id']}',
-                          ),
-                          onChanged: _busy
-                              ? null
-                              : (checked) => setState(() {
-                                  final key =
-                                      '${person['kind']}:${person['id']}';
-                                  checked == true
-                                      ? _recipients.add(key)
-                                      : _recipients.remove(key);
-                                }),
-                        ),
-                        if (_recipients.contains(governancePersonKey(person)))
-                          CheckboxListTile(
-                            contentPadding: const EdgeInsets.only(left: 24),
-                            controlAffinity: ListTileControlAffinity.leading,
-                            title: const Text('Stimmrecht'),
-                            value: _voting(person),
-                            onChanged: _busy
-                                ? null
-                                : (value) => setState(
-                                    () =>
-                                        _votingRights[governancePersonKey(
-                                              person,
-                                            )] =
-                                            value == true,
-                                  ),
-                          ),
-                      ],
-                    ] else
-                      const Text(
-                        'Empfänger und Stimmrechte sind nach dem Anlegen festgeschrieben.',
-                      ),
                   ],
                 ),
               ),

@@ -59,6 +59,8 @@ class ClubAuditLog
         'club.number_range.default_cleared' => 'Standardnummernkreis entfernt',
         'club.metadata_subject.updated' => 'Eigene Daten und Kategorien aktualisiert',
         'club.invoice.created' => 'Rechnung erstellt',
+        'club.invoice.run.created' => 'Beitragsrechnung erstellt',
+        'club.invoice.cancelled' => 'Rechnung storniert',
         'club.invoice.member_question' => 'Rueckfrage zur Rechnung eingegangen',
         'club.document.downloaded' => 'Geschütztes Dokument heruntergeladen',
         'club.deletion.financial_exported' => 'Finanzdaten für Vereinsschließung exportiert',

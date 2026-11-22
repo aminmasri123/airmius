@@ -1,0 +1,120 @@
+diff --git a/app/Support/ClubAuditLog.php b/app/Support/ClubAuditLog.php
+--- a/app/Support/ClubAuditLog.php
++++ b/app/Support/ClubAuditLog.php
+@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
+ 
+ class ClubAuditLog
+ {
++    public const RETENTION_DAYS = 7;
++
+     public const LABELS = [
+         'club.platform.updated' => 'Vereinsdaten durch Plattformverwaltung geändert',
+         'club.platform.verification_updated' => 'Vereinsprüfung durch Plattformverwaltung geändert',
+@@ -167,13 +169,14 @@ class ClubAuditLog
+         ]);
+     }
+ 
+-    public static function forClub(Club $club, int $limit = 50): array
++    public static function forClub(Club $club, ?int $limit = null): array
+     {
+         return Activity::query()
+             ->where('club_id', $club->id)
++            ->where('created_at', '>=', now()->subDays(self::RETENTION_DAYS))
+             ->with('user:id,name,email')
+             ->latest('id')
+-            ->limit($limit)
++            ->when($limit !== null, fn ($query) => $query->limit($limit))
+             ->get()
+             ->map(fn (Activity $activity) => self::payload($activity))
+             ->values()
+diff --git a/mobile/airmius_mobile/lib/core/airmius_l10n.dart b/mobile/airmius_mobile/lib/core/airmius_l10n.dart
+--- a/mobile/airmius_mobile/lib/core/airmius_l10n.dart
++++ b/mobile/airmius_mobile/lib/core/airmius_l10n.dart
+@@ -12225,6 +12225,9 @@ const _membershipDe = {
+  'membership.audit.title': 'Änderungsverlauf',
+   'membership.audit.empty': 'Noch keine Änderungen protokolliert.',
+   'membership.audit.system': 'System',
++  'membership.audit.retentionTitle': 'Aufbewahrung: 7 Tage',
++  'membership.audit.retentionBody':
++      'Audit-Einträge werden sieben Tage gespeichert und danach automatisch sowie dauerhaft gelöscht.',
+   'membership.audit.roleUpdated': 'Vereinsrolle geändert',
+   'membership.audit.memberUpdated': 'Mitgliedsdaten geändert',
+   'membership.audit.invoiceCreated': 'Rechnung erstellt',
+@@ -12569,6 +12572,9 @@ final _membershipEn = {
+  'membership.audit.title': 'Change history',
+   'membership.audit.empty': 'No changes have been logged yet.',
+   'membership.audit.system': 'System',
++  'membership.audit.retentionTitle': 'Retention: 7 days',
++  'membership.audit.retentionBody':
++      'Audit entries are stored for seven days and then deleted automatically and permanently.',
+   'membership.audit.roleUpdated': 'Club role changed',
+   'membership.audit.memberUpdated': 'Member data changed',
+   'membership.audit.invoiceCreated': 'Invoice created',
+@@ -12895,6 +12901,9 @@ final _membershipFr = {
+  'membership.audit.title': 'Historique des modifications',
+   'membership.audit.empty': 'Aucune modification enregistrée.',
+   'membership.audit.system': 'Système',
++  'membership.audit.retentionTitle': 'Conservation : 7 jours',
++  'membership.audit.retentionBody':
++      'Les entrées d’audit sont conservées sept jours, puis supprimées automatiquement et définitivement.',
+   'membership.audit.roleUpdated': 'Rôle du club modifié',
+   'membership.audit.memberUpdated': 'Données du membre modifiées',
+   'membership.audit.invoiceCreated': 'Facture créée',
+@@ -13209,6 +13218,9 @@ final _membershipAr = {
+  'membership.audit.title': 'سجل التغييرات',
+   'membership.audit.empty': 'لم يتم تسجيل أي تغييرات بعد.',
+   'membership.audit.system': 'النظام',
++  'membership.audit.retentionTitle': 'مدة الاحتفاظ: 7 أيام',
++  'membership.audit.retentionBody':
++      'تُحفظ سجلات التدقيق لمدة سبعة أيام ثم تُحذف تلقائيًا ونهائيًا.',
+   'membership.audit.roleUpdated': 'تم تغيير دور النادي',
+   'membership.audit.memberUpdated': 'تم تغيير بيانات العضو',
+   'membership.audit.invoiceCreated': 'تم إنشاء الفاتورة',
+diff --git a/mobile/airmius_mobile/lib/screens/club_membership_management_screen.dart b/mobile/airmius_mobile/lib/screens/club_membership_management_screen.dart
+--- a/mobile/airmius_mobile/lib/screens/club_membership_management_screen.dart
++++ b/mobile/airmius_mobile/lib/screens/club_membership_management_screen.dart
+@@ -9555,6 +9555,35 @@ class _ClubAuditPanel extends StatelessWidget {
+         children: [
+           Eyebrow(scope.t('membership.audit.title')),
+           const SizedBox(height: 8),
++          Container(
++            width: double.infinity,
++            padding: const EdgeInsets.all(12),
++            decoration: BoxDecoration(
++              color: AirmiusColors.orange.withValues(alpha: 0.10),
++              border: Border.all(
++                color: AirmiusColors.orange.withValues(alpha: 0.40),
++              ),
++              borderRadius: BorderRadius.circular(12),
++            ),
++            child: Column(
++              crossAxisAlignment: CrossAxisAlignment.start,
++              children: [
++                Text(
++                  scope.t('membership.audit.retentionTitle'),
++                  style: TextStyle(
++                    color: airmiusTextColor(context),
++                    fontWeight: FontWeight.w900,
++                  ),
++                ),
++                const SizedBox(height: 4),
++                Text(
++                  scope.t('membership.audit.retentionBody'),
++                  style: TextStyle(color: airmiusMutedColor(context)),
++                ),
++              ],
++            ),
++          ),
++          const SizedBox(height: 12),
+           if (logs.isEmpty)
+             Text(
+               scope.t('membership.audit.empty'),
+@@ -9563,7 +9592,7 @@ class _ClubAuditPanel extends StatelessWidget {
+               style: TextStyle(color: airmiusMutedColor(context)),
+             )
+           else
+-            for (final log in logs.take(50)) ...[
++            for (final log in logs) ...[
+               ListTile(
+                 contentPadding: EdgeInsets.zero,
+                 leading: Icon(

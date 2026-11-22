@@ -26,6 +26,9 @@ const pending = ref(null)
 const recipientCount = ref(null)
 const detail = ref(null)
 const dialog = ref(null)
+const editDialog = ref(null)
+const editForm = ref(null)
+const editRecipientCount = ref(null)
 const emptyForm = () => ({ kind: 'reminder', title: '', body: '', recipient_roles: [], scheduled_at: '' })
 const form = ref(emptyForm())
 const statuses = ['scheduled', 'queued', 'running', 'completed', 'failed']
@@ -93,7 +96,7 @@ const showDetails = async (id) => {
         const response = await window.axios.get(route('api.v1.clubs.work-automation-jobs.show', [selected, id]))
         if (clubId.value !== selected) return
         detail.value = response.data.data
-        dialog.value.showModal()
+        if (!dialog.value.open) dialog.value.showModal()
     } catch { error.value = tx('error') }
 }
 const retry = async (job) => {
@@ -103,6 +106,50 @@ const retry = async (job) => {
         await window.axios.post(route('api.v1.clubs.work-automation-jobs.retry', [clubId.value, job.id]), { expected_attempts: job.attempts })
         await load()
     } catch (failure) { await load(true); error.value = uncertainResponse(failure) ? tx('uncertain') : tx('error') }
+    finally { busy.value = false }
+}
+const localDateTime = (value) => {
+    if (!value) return ''
+    const parsed = new Date(value)
+    return new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
+const previewEditRecipients = async () => {
+    if (!editForm.value) return
+    editRecipientCount.value = null
+    try {
+        const response = await window.axios.get(route('api.v1.clubs.work-automation-jobs.recipients', clubId.value), { params: { recipient_roles: editForm.value.recipient_roles } })
+        editRecipientCount.value = response.data.data.count
+    } catch { error.value = tx('error') }
+}
+const beginEdit = async (job) => {
+    const source = job.body === undefined ? (await window.axios.get(route('api.v1.clubs.work-automation-jobs.show', [clubId.value, job.id]))).data.data : job
+    editForm.value = { id: source.id, kind: source.kind, title: source.title || '', body: source.body || '', recipient_roles: [...source.recipient_roles], scheduled_at: localDateTime(source.scheduled_at) }
+    await previewEditRecipients()
+    editDialog.value.showModal()
+}
+const saveEdit = async () => {
+    if (busy.value || !editForm.value) return
+    busy.value = true
+    try {
+        const response = await window.axios.patch(route('api.v1.clubs.work-automation-jobs.update', [clubId.value, editForm.value.id]), {
+            kind: editForm.value.kind,
+            recipient_roles: editForm.value.recipient_roles,
+            scheduled_at: editForm.value.scheduled_at,
+            payload: { title: editForm.value.title, body: editForm.value.body },
+        })
+        editDialog.value.close(); editForm.value = null; detail.value = response.data.data
+        await load()
+    } catch (failure) { error.value = Object.values(failure.response?.data?.errors || {}).flat()[0] || tx('changedMeanwhile') }
+    finally { busy.value = false }
+}
+const remove = async (job) => {
+    if (busy.value || !window.confirm(tx('confirmDelete'))) return
+    busy.value = true
+    try {
+        await window.axios.delete(route('api.v1.clubs.work-automation-jobs.destroy', [clubId.value, job.id]))
+        dialog.value?.close(); detail.value = null
+        await load()
+    } catch { error.value = tx('changedMeanwhile'); await load(true) }
     finally { busy.value = false }
 }
 watch([status, currentPage], () => load())
@@ -156,6 +203,8 @@ onUnmounted(() => { revision++; window.clearInterval(poll) })
                     <div class="min-w-0 flex-1"><button class="max-w-full break-words text-start font-semibold text-primary" @click="showDetails(job.id)">{{ job.title || tx(job.kind) }} #{{ job.id }}</button><p class="text-xs text-secondary">{{ tx(job.kind) }} · {{ tx('attempts') }}: {{ job.attempts }} · {{ date(job.scheduled_at || job.queued_at) }}</p><p v-if="job.error_code" class="text-sm text-red-600">{{ errorLabel(job.error_code) }}</p></div>
                     <span :class="job.status === 'failed' ? 'text-red-600' : 'text-primary'" class="text-sm font-semibold">{{ tx(job.status) }}</span>
                     <button v-if="job.can_retry" :disabled="busy" :title="tx('retry')" :aria-label="tx('retry')" class="h-10 w-10 text-xl text-primary" @click="retry(job)"><i class="las la-redo-alt" aria-hidden="true" /></button>
+                    <button v-if="job.can_edit" :disabled="busy" :title="tx('edit')" :aria-label="tx('edit')" class="h-10 w-10 text-xl text-primary" @click="beginEdit(job)"><i class="las la-pen" aria-hidden="true" /></button>
+                    <button v-if="job.can_delete" :disabled="busy" :title="tx('delete')" :aria-label="tx('delete')" class="h-10 w-10 text-xl text-red-600" @click="remove(job)"><i class="las la-trash" aria-hidden="true" /></button>
                     <button :title="tx('details')" :aria-label="tx('details')" class="h-10 w-10 text-xl text-primary" @click="showDetails(job.id)"><i class="las la-info-circle" aria-hidden="true" /></button>
                 </li>
             </ul>
@@ -172,7 +221,21 @@ onUnmounted(() => { revision++; window.clearInterval(poll) })
                 <template v-if="detail.result"><p class="mt-3 text-sm">{{ tx('stored') }}: {{ detail.result.stored_notifications }}</p><p class="text-sm">{{ tx('skipped') }}: {{ detail.result.skipped_notifications }}</p></template>
                 <h3 class="mt-5 font-semibold">{{ tx('history') }}</h3><ol class="mt-2 space-y-2 text-sm"><li v-for="(event, index) in detail.history" :key="index">{{ tx(event.event.split('.').pop()) }} · {{ date(event.at) }}<span v-if="event.data.error_code" class="block text-red-600">{{ errorLabel(event.data.error_code) }}</span></li></ol>
                 <button v-if="detail.can_retry" :disabled="busy" class="mt-4 text-sm font-semibold" @click="retry(detail)"><i class="las la-redo-alt" /> {{ tx('retry') }}</button>
+                <div v-if="detail.can_edit || detail.can_delete" class="mt-4 flex flex-wrap gap-4"><button v-if="detail.can_edit" :disabled="busy" class="text-sm font-semibold" @click="beginEdit(detail)"><i class="las la-pen" /> {{ tx('edit') }}</button><button v-if="detail.can_delete" :disabled="busy" class="text-sm font-semibold text-red-600" @click="remove(detail)"><i class="las la-trash" /> {{ tx('delete') }}</button></div>
             </template>
+        </dialog>
+        <dialog ref="editDialog" class="max-h-[85vh] w-[calc(100%-2rem)] max-w-xl overflow-auto rounded-lg border border-border bg-card p-5 text-primary backdrop:bg-black/40" aria-labelledby="automation-edit-title">
+            <form v-if="editForm" class="grid gap-4" @submit.prevent="saveEdit">
+                <h2 id="automation-edit-title" class="text-lg font-semibold">{{ tx('editJob') }}</h2>
+                <p class="text-sm text-secondary">{{ tx('editableHint') }}</p>
+                <label class="text-sm">{{ tx('kind') }}<select v-model="editForm.kind" class="mt-1 w-full rounded-lg border-border bg-inputBg"><option value="reminder">{{ tx('reminder') }}</option><option value="escalation">{{ tx('escalation') }}</option></select></label>
+                <label class="text-sm">{{ tx('subject') }}<input v-model="editForm.title" required maxlength="160" class="mt-1 w-full rounded-lg border-border bg-inputBg" /></label>
+                <label class="text-sm">{{ tx('body') }}<textarea v-model="editForm.body" required maxlength="2000" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg" /></label>
+                <label class="text-sm">{{ tx('when') }}<input v-model="editForm.scheduled_at" required type="datetime-local" class="mt-1 w-full rounded-lg border-border bg-inputBg" /></label>
+                <label class="text-sm">{{ tx('recipients') }}<select v-model="editForm.recipient_roles" multiple size="4" class="mt-1 w-full rounded-lg border-border bg-inputBg" @change="previewEditRecipients"><option v-for="permission in meta.recipient_permissions" :key="permission.key" :value="permission.key">{{ permission.label || permission.key }}</option></select></label>
+                <p v-if="editRecipientCount !== null" class="text-sm text-secondary">{{ tx('recipientCount') }}: {{ editRecipientCount }}</p>
+                <div class="flex justify-end gap-3"><button type="button" :disabled="busy" class="rounded-lg px-4 py-2" @click="editDialog.close()">{{ tx('cancel') }}</button><button type="submit" :disabled="busy || editRecipientCount === null || editRecipientCount === 0" class="rounded-lg bg-primary px-4 py-2 font-semibold text-white disabled:opacity-50">{{ tx('save') }}</button></div>
+            </form>
         </dialog>
     </main>
 </template>

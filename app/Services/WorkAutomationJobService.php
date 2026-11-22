@@ -255,6 +255,41 @@ class WorkAutomationJobService
         return $job->fresh();
     }
 
+    public function updateScheduled(WorkAutomationJob $job, User $actor, array $attributes): WorkAutomationJob
+    {
+        return DB::transaction(function () use ($job, $actor, $attributes) {
+            $job = WorkAutomationJob::query()->whereKey($job->id)->lockForUpdate()->firstOrFail();
+            abort_unless(WorkAutomationAccess::canManageScheduled($job, $actor), 409, 'Only unstarted scheduled jobs can be edited.');
+            $job->forceFill([
+                'kind' => $attributes['kind'],
+                'recipient_roles' => array_values(array_unique($attributes['recipient_roles'] ?? [])),
+                'payload' => $attributes['payload'],
+                'scheduled_at' => Carbon::parse($attributes['scheduled_at'])->utc(),
+            ])->save();
+            ClubAuditLog::record($job->club, $actor, 'club.work_automation.updated', $job, [
+                'job_id' => $job->id,
+                'kind' => $job->kind,
+                'scheduled_at' => $job->scheduled_at?->toIso8601String(),
+            ]);
+
+            return $job->refresh();
+        });
+    }
+
+    public function deleteJob(WorkAutomationJob $job, User $actor): void
+    {
+        DB::transaction(function () use ($job, $actor) {
+            $job = WorkAutomationJob::query()->whereKey($job->id)->lockForUpdate()->firstOrFail();
+            abort_unless(WorkAutomationAccess::canDelete($job, $actor), 409, 'Queued or running jobs cannot be deleted.');
+            ClubAuditLog::record($job->club, $actor, 'club.work_automation.deleted', $job, [
+                'job_id' => $job->id,
+                'kind' => $job->kind,
+                'scheduled_at' => $job->scheduled_at?->toIso8601String(),
+            ]);
+            $job->delete();
+        });
+    }
+
     private function dispatch(WorkAutomationJob $job): void
     {
         DB::afterCommit(function () use ($job) {

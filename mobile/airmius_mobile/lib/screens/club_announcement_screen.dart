@@ -603,6 +603,142 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
   int? _teamId;
   String _mode = 'now';
   DateTime? _publishAt;
+  bool _generatingAiDraft = false;
+
+  String _audienceLabel(AirmiusScope scope) {
+    if (_audience != 'team') {
+      return scope.t('clubs.announcements.allMembers');
+    }
+    for (final team in widget.teams) {
+      if (team.id == _teamId) return team.name;
+    }
+    return scope.t('clubs.announcements.teamOnly');
+  }
+
+  Future<void> _generateAiDraft() async {
+    final scope = AirmiusScope.of(context);
+    final purpose = TextEditingController(
+      text: _body.text.trim().isNotEmpty
+          ? _body.text.trim()
+          : _title.text.trim(),
+    );
+    var tone = 'friendly';
+    final request = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(scope.t('clubs.announcements.aiTitle')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(scope.t('clubs.announcements.aiExplanation')),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: purpose,
+                  autofocus: true,
+                  minLines: 3,
+                  maxLines: 6,
+                  maxLength: 600,
+                  decoration: InputDecoration(
+                    labelText: scope.t('clubs.announcements.aiPurpose'),
+                    hintText: scope.t('clubs.announcements.aiPurposeHint'),
+                  ),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: tone,
+                  decoration: InputDecoration(
+                    labelText: scope.t('clubs.announcements.aiTone'),
+                  ),
+                  items: [
+                    for (final value in const [
+                      'friendly',
+                      'formal',
+                      'concise',
+                    ])
+                      DropdownMenuItem(
+                        value: value,
+                        child: Text(
+                          scope.t('clubs.announcements.aiTone.$value'),
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) =>
+                      setDialogState(() => tone = value ?? 'friendly'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(scope.t('clubs.announcements.cancel')),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                final text = purpose.text.trim();
+                if (text.isEmpty) return;
+                Navigator.pop(dialogContext, {'purpose': text, 'tone': tone});
+              },
+              icon: const Icon(Icons.auto_awesome),
+              label: Text(scope.t('clubs.announcements.aiGenerate')),
+            ),
+          ],
+        ),
+      ),
+    );
+    purpose.dispose();
+    if (request == null || !mounted) return;
+
+    setState(() => _generatingAiDraft = true);
+    try {
+      final purposeText = '${request['purpose']}';
+      final response = await AirmiusServicesScope.of(context)
+          .clientForSession(AirmiusServicesScope.of(context).authState.session)
+          .generateCommunicationDraft({
+            'type': 'message',
+            'tone': request['tone'],
+            'audience': _audienceLabel(scope),
+            'purpose': purposeText,
+            'locale': scope.language.code.toLowerCase(),
+            'channel': 'in_app',
+            'instructions': scope.t('clubs.announcements.aiInstructions'),
+            'source_context': [
+              {
+                'label': scope.t('clubs.announcements.aiSourceLabel'),
+                'reference': 'user-provided-announcement-brief',
+                'excerpt': purposeText,
+              },
+            ],
+          });
+      final draft = response['data'] as JsonMap? ?? const {};
+      final subject = '${draft['subject'] ?? ''}'.trim();
+      final body = '${draft['body'] ?? ''}'.trim();
+      if (subject.isEmpty || body.isEmpty) {
+        throw AirmiusApiException(
+          statusCode: 422,
+          body: scope.t('clubs.announcements.aiInvalidResponse'),
+          path: '/api/v1/ai/communication-drafts',
+        );
+      }
+      _title.text = subject;
+      _body.text = body;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(scope.t('clubs.announcements.aiReady'))),
+        );
+      }
+    } on AirmiusApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      }
+    } finally {
+      if (mounted) setState(() => _generatingAiDraft = false);
+    }
+  }
 
   @override
   void initState() {
@@ -734,6 +870,23 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
                       : null,
                   onChanged: (value) => setState(() => _teamId = value),
                 ),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: OutlinedButton.icon(
+                  onPressed: _generatingAiDraft ? null : _generateAiDraft,
+                  icon: _generatingAiDraft
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.auto_awesome),
+                  label: Text(
+                    _generatingAiDraft
+                        ? scope.t('clubs.announcements.aiGenerating')
+                        : scope.t('clubs.announcements.aiAction'),
+                  ),
+                ),
+              ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 isExpanded: true,

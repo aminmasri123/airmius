@@ -45,8 +45,11 @@ class ClubYearPeriodTest extends TestCase
             ->assertJsonPath('data.can_view_reports', true);
 
         $activity = Activity::query()->where('type', 'club.year_period.created')->latest('id')->firstOrFail();
-        $this->assertSame(['entity_type' => 'year_period'], $activity->data);
-        $this->assertStringNotContainsString('Saison', json_encode($activity->data));
+        $this->assertSame('year_period', $activity->data['entity_type']);
+        $this->assertSame('sport', $activity->data['values']['type']);
+        $this->assertSame('Saison 2026/27', $activity->data['values']['name']);
+        $this->assertSame('2026-07-01', $activity->data['values']['starts_on']);
+        $this->assertSame('2027-06-30', $activity->data['values']['ends_on']);
     }
 
     public function test_periods_of_the_same_type_cannot_overlap(): void
@@ -116,6 +119,14 @@ class ClubYearPeriodTest extends TestCase
         $this->putJson("/api/v1/clubs/{$club->id}/year-periods/{$foreignPeriod->id}", $payload)->assertNotFound();
         $this->putJson("/api/v1/clubs/{$club->id}/year-periods/{$period->id}", $payload)
             ->assertOk()->assertJsonPath('data.name', 'Beiträge 2026/27');
+        $updated = Activity::query()->where('type', 'club.year_period.updated')->latest('id')->firstOrFail();
+        $this->assertSame('year_period', $updated->data['entity_type']);
+        $this->assertSame(
+            ['name', 'starts_on', 'ends_on'],
+            collect($updated->data['changes'])->pluck('field')->all(),
+        );
+        $this->assertSame('Beiträge 2026', $updated->data['changes'][0]['from']);
+        $this->assertSame('Beiträge 2026/27', $updated->data['changes'][0]['to']);
         $this->deleteJson("/api/v1/clubs/{$club->id}/year-periods/{$period->id}")->assertOk();
         $this->assertDatabaseMissing('club_year_periods', ['id' => $period->id]);
     }

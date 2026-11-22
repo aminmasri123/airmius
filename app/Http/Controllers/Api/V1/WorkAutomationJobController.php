@@ -107,6 +107,33 @@ class WorkAutomationJobController extends Controller
             ->header('Cache-Control', 'private, no-store');
     }
 
+    public function update(Request $request, Club $club, WorkAutomationJob $workAutomationJob, WorkAutomationJobService $service)
+    {
+        abort_unless((int) $workAutomationJob->club_id === (int) $club->id, 404);
+        abort_unless(WorkAutomationAccess::canManageScheduled($workAutomationJob, $request->user()), 409);
+        $data = $request->validate([
+            'kind' => ['required', Rule::in([WorkAutomationJob::KIND_REMINDER, WorkAutomationJob::KIND_ESCALATION])],
+            'recipient_roles' => ['nullable', 'array', 'max:8'],
+            'recipient_roles.*' => ['string', Rule::in(ClubPermissions::ALL), 'distinct'],
+            'scheduled_at' => ['required', 'date', 'after:now'],
+            'payload' => ['required', 'array:title,body'],
+            'payload.title' => ['required', 'string', 'max:160'],
+            'payload.body' => ['required', 'string', 'max:2000'],
+        ]);
+
+        return response()->json(['data' => $this->payload($service->updateScheduled($workAutomationJob, $request->user(), $data), $request->user())])
+            ->header('Cache-Control', 'private, no-store');
+    }
+
+    public function destroy(Request $request, Club $club, WorkAutomationJob $workAutomationJob, WorkAutomationJobService $service)
+    {
+        abort_unless((int) $workAutomationJob->club_id === (int) $club->id, 404);
+        abort_unless(WorkAutomationAccess::canDelete($workAutomationJob, $request->user()), 409);
+        $service->deleteJob($workAutomationJob, $request->user());
+
+        return response()->noContent();
+    }
+
     private function authorizeAccess(Club $club, Request $request): void
     {
         abort_unless(WorkAutomationAccess::canView($club, $request->user()), 403);
@@ -150,6 +177,8 @@ class WorkAutomationJobController extends Controller
             'scheduled_at' => $job->scheduled_at?->toIso8601String(),
             'result' => $job->result,
             'can_retry' => $job->status === WorkAutomationJob::STATUS_FAILED && WorkAutomationAccess::canRetry($job, $user),
+            'can_edit' => WorkAutomationAccess::canManageScheduled($job, $user),
+            'can_delete' => WorkAutomationAccess::canDelete($job, $user),
         ];
     }
 }

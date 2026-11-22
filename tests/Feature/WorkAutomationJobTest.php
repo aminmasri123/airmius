@@ -284,6 +284,48 @@ class WorkAutomationJobTest extends TestCase
         $this->assertSame('queue_dispatch_failed', $job->fresh()->error_code);
     }
 
+    public function test_scheduled_job_can_be_edited_and_finished_job_can_be_removed_but_running_job_is_protected(): void
+    {
+        Queue::fake();
+        [$club, $owner] = $this->clubWithOwner();
+        Sanctum::actingAs($owner);
+        $path = $this->path($club);
+        $id = $this->postJson($path, [
+            'kind' => 'reminder',
+            'idempotency_key' => 'editable-scheduled-job',
+            'scheduled_at' => now()->addDay()->toIso8601String(),
+            'payload' => ['title' => 'Before', 'body' => 'Old body'],
+        ])->assertAccepted()->assertJsonPath('data.can_edit', true)->assertJsonPath('data.can_delete', true)->json('data.id');
+
+        $this->patchJson("$path/$id", [
+            'kind' => 'escalation',
+            'recipient_roles' => [ClubPermissions::FINANCE_MANAGE],
+            'scheduled_at' => now()->addDays(2)->toIso8601String(),
+            'payload' => ['title' => 'After', 'body' => 'New body'],
+        ])->assertOk()->assertJsonPath('data.title', 'After')->assertJsonPath('data.kind', 'escalation');
+        $this->assertDatabaseHas('activities', ['club_id' => $club->id, 'type' => 'club.work_automation.updated']);
+
+        $this->deleteJson("$path/$id")->assertNoContent();
+        $this->assertDatabaseMissing('work_automation_jobs', ['id' => $id]);
+        $this->assertDatabaseHas('activities', ['club_id' => $club->id, 'type' => 'club.work_automation.deleted']);
+
+        $completed = app(WorkAutomationJobService::class)->enqueue($club, 'reminder', 'completed-immutable', $owner);
+        app(WorkAutomationJobService::class)->run($completed->id);
+        $this->patchJson("$path/{$completed->id}", [
+            'kind' => 'reminder', 'scheduled_at' => now()->addDay()->toIso8601String(),
+            'payload' => ['title' => 'Changed', 'body' => 'Changed'],
+        ])->assertStatus(409);
+        $this->deleteJson("$path/{$completed->id}")->assertNoContent();
+        $this->assertDatabaseMissing('work_automation_jobs', ['id' => $completed->id]);
+
+        $running = WorkAutomationJob::query()->create([
+            'club_id' => $club->id, 'kind' => 'reminder', 'status' => 'running',
+            'idempotency_key' => 'running-protected', 'queued_at' => now(), 'started_at' => now(),
+        ]);
+        $this->deleteJson("$path/{$running->id}")->assertStatus(409);
+        $this->assertDatabaseHas('work_automation_jobs', ['id' => $running->id]);
+    }
+
     public function test_failed_initial_dispatch_is_persisted_and_retry_recovers(): void
     {
         [$club, $owner] = $this->clubWithOwner();

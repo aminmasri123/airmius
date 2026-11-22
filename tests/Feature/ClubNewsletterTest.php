@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\ClubNewsletterService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -17,8 +18,33 @@ class ClubNewsletterTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_subscriber_table_is_paginated_club_scoped_and_hides_tokens(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $other = Club::factory()->create();
+        foreach (range(1, 31) as $index) {
+            ClubNewsletterSubscription::create([
+                'club_id' => $club->id, 'email' => "reader{$index}@example.org",
+                'name' => 'Reader '.$index, 'status' => 'pending',
+                'confirmation_token_hash' => 'private-confirmation-token-'.$index,
+            ]);
+        }
+        ClubNewsletterSubscription::create(['club_id' => $other->id, 'email' => 'foreign@example.org', 'status' => 'confirmed']);
+        Sanctum::actingAs($owner);
+        $url = "/api/v1/clubs/{$club->id}/newsletter/subscribers";
+        $response = $this->getJson($url)->assertOk()->assertJsonCount(30, 'data')->assertJsonPath('total', 31);
+        $response->assertDontSee('private-confirmation-token')->assertDontSee('foreign@example.org');
+        $this->assertArrayNotHasKey('confirmation_token_hash', $response->json('data.0'));
+        $this->getJson($url.'?subscribers_page=2')->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson("/api/v1/clubs/{$other->id}/newsletter/subscribers")->assertForbidden();
+        Sanctum::actingAs(User::factory()->create());
+        $this->getJson($url)->assertForbidden();
+    }
+
     public function test_double_opt_in_stores_only_token_hash_and_confirms_subscription(): void
     {
+        Mail::fake();
         $owner = User::factory()->create();
         $club = Club::query()->create(['owner_id' => $owner->id, 'name' => 'Mail Club']);
 
@@ -38,6 +64,116 @@ class ClubNewsletterTest extends TestCase
         $this->assertSame('confirmed', $fresh->status);
         $this->assertNull($fresh->confirmation_token_hash);
         $this->assertNotNull($fresh->unsubscribe_token_hash);
+    }
+
+    public function test_public_web_subscription_requires_consent_and_only_accepts_listed_verified_clubs(): void
+    {
+        Mail::fake();
+        $owner = User::factory()->create();
+        $club = Club::query()->create([
+            'owner_id' => $owner->id,
+            'name' => 'Public Newsletter Club',
+            'verification_status' => 'verified',
+            'is_listed' => true,
+        ]);
+
+        $this->from(route('guest.clubs.show', $club))
+            ->post(route('guest.newsletter.subscribe', $club), [
+                'email' => 'reader@example.org',
+                'privacy_consent' => false,
+                'website' => '',
+            ])
+            ->assertRedirect(route('guest.clubs.show', $club))
+            ->assertSessionHasErrors('privacy_consent');
+
+        $this->from(route('guest.clubs.show', $club))
+            ->post(route('guest.newsletter.subscribe', $club), [
+                'email' => 'reader@example.org',
+                'name' => 'Reader',
+                'privacy_consent' => true,
+                'website' => '',
+            ])
+            ->assertRedirect(route('guest.clubs.show', $club))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('club_newsletter_subscriptions', [
+            'club_id' => $club->id,
+            'email' => 'reader@example.org',
+            'status' => 'pending',
+        ]);
+
+        $club->update(['is_listed' => false]);
+        $this->post(route('guest.newsletter.subscribe', $club), [
+            'email' => 'other@example.org',
+            'privacy_consent' => true,
+        ])->assertNotFound();
+    }
+
+    public function test_confirmation_link_expires_and_web_status_does_not_leak_tokens(): void
+    {
+        Mail::fake();
+        $owner = User::factory()->create();
+        $club = Club::query()->create(['owner_id' => $owner->id, 'name' => 'Expiry Club']);
+        [$subscription, $token] = app(ClubNewsletterService::class)
+            ->requestOptIn($club, 'expiry@example.org');
+        $subscription->forceFill(['confirmation_sent_at' => now()->subDays(2)])->save();
+
+        $this->get(route('guest.newsletter.confirm', $token))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Guest/NewsletterStatus')
+                ->where('status', 'invalid'));
+
+        $this->assertSame('pending', $subscription->fresh()->status);
+    }
+
+    public function test_public_resubmission_cannot_disable_an_existing_confirmed_subscription(): void
+    {
+        Mail::fake();
+        $owner = User::factory()->create();
+        $club = Club::query()->create([
+            'owner_id' => $owner->id,
+            'name' => 'Protected Subscription Club',
+            'verification_status' => 'verified',
+            'is_listed' => true,
+        ]);
+        $subscription = ClubNewsletterSubscription::query()->create([
+            'club_id' => $club->id,
+            'email' => 'confirmed@example.org',
+            'status' => 'confirmed',
+            'confirmed_at' => now(),
+            'unsubscribe_token_hash' => hash('sha256', 'existing-token'),
+        ]);
+
+        $this->post(route('guest.newsletter.subscribe', $club), [
+            'email' => 'confirmed@example.org',
+            'privacy_consent' => true,
+            'website' => '',
+        ])->assertRedirect();
+
+        $fresh = $subscription->fresh();
+        $this->assertSame('confirmed', $fresh->status);
+        $this->assertNotNull($fresh->confirmed_at);
+        $this->assertSame(hash('sha256', 'existing-token'), $fresh->unsubscribe_token_hash);
+    }
+
+    public function test_only_authorized_club_roles_can_open_newsletter_management(): void
+    {
+        $owner = User::factory()->create();
+        $outsider = User::factory()->create();
+        $club = Club::query()->create(['owner_id' => $owner->id, 'name' => 'Managed Newsletter Club']);
+
+        $this->actingAs($outsider)
+            ->get(route('auth.clubs.newsletter.show', $club))
+            ->assertForbidden();
+
+        $this->actingAs($owner)
+            ->get(route('auth.clubs.newsletter.show', $club))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/Dashboard/Clubs/Newsletter')
+                ->where('club.id', $club->id)
+                ->where('counts.confirmed', 0));
     }
 
     public function test_campaign_send_is_club_scoped_idempotent_and_respects_suppression_list(): void
@@ -149,5 +285,47 @@ class ClubNewsletterTest extends TestCase
             'email' => 'hard@example.org',
             'reason' => 'hard_bounce',
         ]);
+    }
+
+    public function test_authenticated_postmark_bounce_suppresses_matching_newsletter_only(): void
+    {
+        config()->set('services.postmark.webhook_username', 'hook');
+        config()->set('services.postmark.webhook_password', 'secret');
+        config()->set('services.postmark.webhook_ips', []);
+
+        $owner = User::factory()->create();
+        $club = Club::query()->create(['owner_id' => $owner->id, 'name' => 'Mail Club']);
+        $campaign = ClubNewsletterCampaign::query()->create([
+            'club_id' => $club->id, 'created_by' => $owner->id,
+            'subject' => 'News', 'body' => 'Text', 'status' => 'sent',
+        ]);
+        $delivery = ClubNewsletterDelivery::query()->create([
+            'club_newsletter_campaign_id' => $campaign->id,
+            'club_id' => $club->id,
+            'email' => 'member@example.org',
+            'status' => 'sent',
+            'provider_message_id' => 'provider-123',
+        ]);
+        $payload = [
+            'RecordType' => 'Bounce', 'MessageID' => 'provider-123',
+            'Email' => 'member@example.org', 'BouncedAt' => now()->toIso8601String(),
+            'Type' => 'HardBounce', 'Inactive' => true,
+        ];
+
+        $this->postJson('/webhooks/mail/postmark', $payload)->assertUnauthorized();
+        $this->assertSame('sent', $delivery->fresh()->status);
+
+        $this->withBasicAuth('hook', 'secret')
+            ->postJson('/webhooks/mail/postmark', [...$payload, 'Email' => 'wrong@example.org'])
+            ->assertAccepted()->assertJsonPath('status', 'ignored');
+        $this->assertSame('sent', $delivery->fresh()->status);
+
+        $this->postJson('/webhooks/mail/postmark', $payload)
+            ->assertAccepted()->assertJsonPath('status', 'processed');
+        $this->assertDatabaseHas('club_newsletter_suppressions', [
+            'club_id' => $club->id, 'email' => 'member@example.org', 'reason' => 'hard_bounce',
+        ]);
+        $this->postJson('/webhooks/mail/postmark', $payload)
+            ->assertAccepted()->assertJsonPath('status', 'duplicate');
     }
 }

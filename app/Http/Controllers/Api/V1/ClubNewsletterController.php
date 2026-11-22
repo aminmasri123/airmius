@@ -33,6 +33,14 @@ class ClubNewsletterController extends Controller
         ], 202);
     }
 
+    public function subscribers(Request $request, Club $club)
+    {
+        $this->authorizeManage($request, $club);
+        $request->validate(['subscribers_page' => ['nullable', 'integer', 'min:1']]);
+
+        return response()->json($this->newsletters->subscribers($club));
+    }
+
     public function confirm(string $token)
     {
         $subscription = $this->newsletters->confirm($token);

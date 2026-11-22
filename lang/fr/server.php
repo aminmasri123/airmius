@@ -40,6 +40,8 @@ return [
             'fallback_someone' => 'Quelqu’un',
             'log_saved_title' => 'Entraînement documenté',
             'assigned_log_saved_body' => ':athlete a documenté la séance « :item » du plan « :plan ».',
+            'log_updated_title' => 'Journal d’entraînement corrigé',
+            'assigned_log_updated_body' => ':athlete a corrigé le journal de la séance « :item » du programme « :plan ».',
             'log_saved_body' => ':actor a enregistré « :log » pour :athlete.',
             'item_added_title' => 'Nouvelle séance dans le plan',
             'item_added_body' => '« :item » a été ajouté à « :plan ».',

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
+import 'club_newsletter_subscribers_screen.dart';
 
 class ClubNewsletterScreen extends StatefulWidget {
-  const ClubNewsletterScreen({super.key, required this.clubId});
+  const ClubNewsletterScreen({super.key, required this.clubId, this.canManage = false});
 
   final int clubId;
+  final bool canManage;
 
   @override
   State<ClubNewsletterScreen> createState() => _ClubNewsletterScreenState();
@@ -71,7 +73,18 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(t('guestClubs.newsletterTitle'))),
+    appBar: AppBar(
+      title: Text(t('guestClubs.newsletterTitle')),
+      actions: [
+        if (widget.canManage) IconButton(
+          tooltip: ClubNewsletterSubscribersScreen.title(context),
+          icon: const Icon(Icons.people_outline),
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+            builder: (_) => ClubNewsletterSubscribersScreen(clubId: widget.clubId),
+          )),
+        ),
+      ],
+    ),
     body: SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(20),

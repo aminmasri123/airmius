@@ -11,6 +11,7 @@ import 'club_governance_screen.dart';
 import 'club_metadata_screen.dart';
 import 'club_policy_documents_screen.dart';
 import 'club_year_periods_screen.dart';
+import 'club_service_hours_screen.dart';
 
 class ClubOrganizationScreen extends StatefulWidget {
   const ClubOrganizationScreen({super.key, required this.club});
@@ -284,6 +285,16 @@ class _ClubOrganizationScreenState extends State<ClubOrganizationScreen> {
                 _teamSection(),
               ],
               if (widget.club.isMember || widget.club.canManage) ...[
+                const SizedBox(height: 14),
+                Card(child: ListTile(
+                  leading: const Icon(Icons.access_time_outlined),
+                  title: const Text('Dienststunden'),
+                  subtitle: const Text('Pflicht, Dienste und Saldo je Beitragsjahr'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                    builder: (_) => ClubServiceHoursScreen(club: widget.club),
+                  )),
+                )),
                 const SizedBox(height: 14),
                 Card(
                   child: ListTile(

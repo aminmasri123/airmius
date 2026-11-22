@@ -875,6 +875,13 @@ const formatMoney = (value) => new Intl.NumberFormat(localeCode.value, {
                         </div>
 
                         <div class="flex min-w-0 flex-wrap gap-2 sm:justify-end">
+                            <Link
+                                v-if="viewer.can_manage"
+                                :href="route('auth.clubs.newsletter.show', clubProfile.id)"
+                                class="rounded-lg border border-air-blue/40 px-4 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/10"
+                            >
+                                <i class="las la-envelope" aria-hidden="true"></i> {{ tAuto('Newsletter') }}
+                            </Link>
                             <button
                                 v-if="clubProfile.owner_id && viewer.social?.can_send_message"
                                 type="button"

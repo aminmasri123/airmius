@@ -889,6 +889,10 @@ class AirmiusApiClient {
     int announcementId,
   ) =>
       _json('POST', '/api/v1/clubs/$clubId/announcements/$announcementId/read');
+
+  Future<AirmiusJson> generateCommunicationDraft(AirmiusJson body) =>
+      _json('POST', '/api/v1/ai/communication-drafts', body: body);
+
   Future<AirmiusJson> updateClubMembershipSettings(
     int clubId,
     AirmiusJson payload,
@@ -909,6 +913,23 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> clubYearPeriods(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/year-periods');
+
+  Future<AirmiusJson> clubServiceHours(int clubId, int periodId) => _json(
+    'GET', '/api/v1/clubs/$clubId/service-hours',
+    query: {'period_id': '$periodId'},
+  );
+
+  Future<AirmiusJson> clubServiceHourPeriods(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/service-hours/periods');
+
+  Future<AirmiusJson> writeClubServiceHours(
+    int clubId, String resource, AirmiusJson payload,
+  ) {
+    if (!RegExp(r'^(service-hour-requirements|service-hour-records|service-hour-exemptions|service-hour-requirements/\d+/lock|service-hour-records/\d+/(confirm|corrections))$').hasMatch(resource)) {
+      throw ArgumentError.value(resource);
+    }
+    return _json('POST', '/api/v1/clubs/$clubId/$resource', body: payload);
+  }
 
   Future<AirmiusJson> clubFinanceWorkspace(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/finance-workspace');
@@ -1166,6 +1187,19 @@ class AirmiusApiClient {
     '/api/v1/clubs/$clubId/work-automation-jobs/$jobId/retry',
     body: {'expected_attempts': attempts},
   );
+
+  Future<AirmiusJson> updateWorkAutomationJob(
+    int clubId,
+    int jobId,
+    AirmiusJson payload,
+  ) => _json(
+    'PATCH',
+    '/api/v1/clubs/$clubId/work-automation-jobs/$jobId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> deleteWorkAutomationJob(int clubId, int jobId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/work-automation-jobs/$jobId');
 
   Future<AirmiusJson> myClubTasks() => _json('GET', '/api/v1/tasks');
 
@@ -3839,6 +3873,11 @@ class AirmiusApiClient {
       if (location != null && location.trim().isNotEmpty)
         'location': location.trim(),
     },
+  );
+
+  Future<AirmiusJson> clubNewsletterSubscribers(int clubId, {int page = 1}) => _json(
+    'GET', '/api/v1/clubs/$clubId/newsletter/subscribers',
+    query: {'subscribers_page': '$page'},
   );
 
   Future<AirmiusJson> subscribeClubNewsletter({

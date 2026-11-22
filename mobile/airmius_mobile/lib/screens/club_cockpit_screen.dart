@@ -11,6 +11,7 @@ import '../widgets/airmius_widgets.dart';
 import 'club_membership_management_screen.dart';
 import 'club_governance_screen.dart';
 import 'club_organization_screen.dart';
+import 'club_service_hours_screen.dart';
 import 'club_announcement_screen.dart';
 import 'club_asset_inventory_checkout_suite_screen.dart';
 import 'club_jobs_screen.dart';
@@ -1307,6 +1308,14 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           body: t('clubOrganization.hint'),
           color: theme.colorScheme.primary,
           onTap: () => _open(ClubOrganizationScreen(club: club)),
+        ),
+      if (club.isMember || club.canManage)
+        _ClubArea(
+          icon: Icons.access_time_outlined,
+          title: 'Dienststunden',
+          body: 'Stundenpflicht, geleistete Dienste und Saldo',
+          color: theme.colorScheme.secondary,
+          onTap: () => _open(ClubServiceHoursScreen(club: club)),
         ),
       _ClubArea(
         icon: Icons.apartment_outlined,

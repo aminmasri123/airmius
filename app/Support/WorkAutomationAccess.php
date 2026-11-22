@@ -40,6 +40,22 @@ final class WorkAutomationAccess
         return self::canCreate($job->club, $user);
     }
 
+    public static function canManageScheduled(WorkAutomationJob $job, User $user): bool
+    {
+        return self::canCreate($job->club, $user)
+            && ($job->payload['template'] ?? null) === null
+            && $job->status === WorkAutomationJob::STATUS_SCHEDULED
+            && (int) $job->attempts === 0
+            && $job->dispatched_at === null;
+    }
+
+    public static function canDelete(WorkAutomationJob $job, User $user): bool
+    {
+        return self::canCreate($job->club, $user)
+            && ($job->payload['template'] ?? null) === null
+            && ! in_array($job->status, [WorkAutomationJob::STATUS_QUEUED, WorkAutomationJob::STATUS_RUNNING], true);
+    }
+
     public static function clubs(User $user): Collection
     {
         return Club::query()

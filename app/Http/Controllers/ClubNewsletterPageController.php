@@ -64,6 +64,7 @@ class ClubNewsletterPageController extends Controller
 
         return Inertia::render('Auth/Dashboard/Clubs/Newsletter', [
             'club' => $club->only(['id', 'name']),
+            'subscribers' => $this->newsletters->subscribers($club),
             'counts' => [
                 'confirmed' => (int) ($counts['confirmed'] ?? 0),
                 'pending' => (int) ($counts['pending'] ?? 0),

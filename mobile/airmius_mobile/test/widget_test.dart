@@ -104,6 +104,7 @@ import 'package:airmius/screens/club_membership_management_screen.dart';
 import 'package:airmius/screens/club_tasks_screen.dart';
 import 'package:airmius/screens/club_membership_admin_screen.dart';
 import 'package:airmius/screens/clubs_screen.dart';
+import 'package:airmius/screens/club_newsletter_screen.dart';
 import 'package:airmius/screens/commerce_center_screen.dart';
 import 'package:airmius/screens/conversations_center_screen.dart';
 import 'package:airmius/screens/dashboard_screen.dart';
@@ -917,6 +918,7 @@ void main() {
       3,
       reason: 'krank',
       notes: 'Erholung',
+      notifyTrainer: false,
     );
     await client.deleteTrainingPlanItem(8, 3);
     await client.previewAiTrainingPlan({'goal': '5 km'});
@@ -1304,15 +1306,17 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Filter zurücksetzen'), findsNothing);
     expect(
-      find.text('Noch keine Events vorhanden. Erstelle das erste Event.'),
+      find.text('An diesem Tag gibt es keine Events im aktuellen Filter.'),
       findsOneWidget,
     );
 
     final pageScroll = tester.state<ScrollableState>(
-      find.descendant(
-        of: find.byType(CustomScrollView),
-        matching: find.byType(Scrollable),
-      ),
+      find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     expect(pageScroll.position.maxScrollExtent, greaterThanOrEqualTo(0));
     expect(pageScroll.position.pixels, 0);
@@ -1321,6 +1325,42 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(pageScroll.position.pixels, greaterThanOrEqualTo(0));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty event list can return to calendar and create an event', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 800));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[],"calendar_events":[],"event_stats":{"upcoming":0,"today":0,"cancelled":0},"event_creation":{"allows_recurring":false},"event_types":["training"],"visibilities":["public"],"clubs":[],"teams":[],"sports":[]}',
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const TrainingCenterScreen(),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Event erstellen'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('event-view-toggle')));
+    await tester.tap(find.text('Liste').first);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('event-view-toggle')), findsOneWidget);
+    expect(find.text('Event erstellen'), findsWidgets);
+
+    await tester.tap(find.text('Kalender').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Heute'), findsWidgets);
+    expect(find.text('Event erstellen'), findsOneWidget);
+    await tester.ensureVisible(find.text('Event erstellen'));
+    await tester.tap(find.text('Event erstellen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Weiter'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -1929,9 +1969,56 @@ void main() {
     expect(find.text('Airmius Running Club'), findsOneWidget);
     expect(find.text('Offiziell'), findsOneWidget);
     expect(find.text('Nach diesem Verein fragen'), findsOneWidget);
+    expect(find.text('Newsletter abonnieren'), findsOneWidget);
+    expect(find.text('Vereinsprofil öffnen'), findsNothing);
     expect(transport.paths, contains('/api/v1/public/clubs'));
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'signed-in club search opens the existing profile with newsletter action',
+    (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(390, 1800));
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":[{"id":8,"name":"Airmius Running Club","sport_type":"Running","city":"Berlin","country":"DE","is_official":true,"membership_requests_enabled":true,"teams_count":3,"membership_types":[]}],"meta":{"total":1}}',
+        ),
+      );
+      final container = await _authenticatedWidgetTestContainer(
+        const AirmiusUser(
+          id: 7,
+          name: 'Sam Sportler',
+          email: 'sam@example.test',
+          role: 'athlete',
+        ),
+        transport: transport,
+      );
+
+      await _pumpAirmiusWidget(
+        tester,
+        container,
+        const GuestClubDirectoryScreen(),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Newsletter abonnieren'), findsNothing);
+      await tester.tap(find.text('Vereinsprofil öffnen'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ClubProfileScreen), findsOneWidget);
+      expect(find.text('Newsletter abonnieren'), findsOneWidget);
+      await tester.tap(find.text('Newsletter abonnieren'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ClubNewsletterScreen), findsOneWidget);
+      expect(
+        tester
+            .widgetList<TextField>(find.byType(TextField))
+            .any((field) => field.controller?.text == 'sam@example.test'),
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('guest jobs navigation renders live public recruiting data', (
     WidgetTester tester,

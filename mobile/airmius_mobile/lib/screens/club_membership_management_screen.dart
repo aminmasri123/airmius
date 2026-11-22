@@ -9531,6 +9531,12 @@ class _ClubAuditPanel extends StatelessWidget {
       'club.member.role_updated' => scope.t('membership.audit.roleUpdated'),
       'club.member.updated' => scope.t('membership.audit.memberUpdated'),
       'club.invoice.created' => scope.t('membership.audit.invoiceCreated'),
+      'club.invoice.run.created' => scope.t(
+        'membership.audit.invoiceRunCreated',
+      ),
+      'club.invoice.cancelled' => scope.t(
+        'membership.audit.invoiceCancelled',
+      ),
       'club.invoice.status_updated' => scope.t(
         'membership.audit.invoiceStatusUpdated',
       ),
@@ -9545,6 +9551,94 @@ class _ClubAuditPanel extends StatelessWidget {
     if (parsed == null) return '$value';
     final material = MaterialLocalizations.of(context);
     return '${material.formatMediumDate(parsed)} · ${material.formatTimeOfDay(TimeOfDay.fromDateTime(parsed))}';
+  }
+
+  String _actor(AirmiusScope scope, JsonMap log) {
+    final actor = log['actor'] as JsonMap?;
+    final name = '${actor?['name'] ?? ''}'.trim();
+    return name.isEmpty ? scope.t('membership.audit.system') : name;
+  }
+
+  String _subject(AirmiusScope scope, JsonMap log) {
+    final data = log['data'] as JsonMap? ?? const {};
+    final number = '${data['invoice_number'] ?? ''}'.trim();
+    final entityType = '${data['entity_type'] ?? ''}';
+    final subjectType = '${log['subject_type'] ?? ''}';
+    final id = '${log['subject_id'] ?? ''}'.trim();
+    final kind = number.isNotEmpty || subjectType.endsWith('ClubInvoice')
+        ? scope.t('membership.audit.objectInvoice')
+        : entityType == 'year_period' || subjectType.endsWith('ClubYearPeriod')
+            ? scope.t('membership.audit.objectYearPeriod')
+            : subjectType.endsWith('User')
+                ? scope.t('membership.audit.objectMember')
+                : scope.t('membership.audit.objectRecord');
+    final identifier = number.isNotEmpty ? number : id;
+    return identifier.isEmpty ? kind : '$kind $identifier';
+  }
+
+  String _field(AirmiusScope scope, String field) => switch (field) {
+    'type' => scope.t('membership.audit.fieldType'),
+    'name' => scope.t('membership.audit.fieldName'),
+    'starts_on' => scope.t('membership.audit.fieldStart'),
+    'ends_on' => scope.t('membership.audit.fieldEnd'),
+    'status' ||
+    'old_status' ||
+    'new_status' ||
+    'from_status' ||
+    'to_status' => scope.t(
+      'membership.audit.fieldStatus',
+    ),
+    'role' || 'from_role' || 'to_role' => scope.t(
+      'membership.audit.fieldRole',
+    ),
+    'amount' || 'settled_amount' => scope.t('membership.audit.fieldAmount'),
+    'invoice_number' => scope.t('membership.audit.objectInvoice'),
+    'member_name' => scope.t('membership.audit.objectMember'),
+    _ => field.replaceAll('_', ' '),
+  };
+
+  List<String> _details(AirmiusScope scope, JsonMap log) {
+    final data = log['data'] as JsonMap? ?? const {};
+    final details = <String>[];
+    final changes = data['changes'];
+    if (changes is List) {
+      for (final item in changes.whereType<Map>()) {
+        final field = '${item['field'] ?? ''}';
+        if (field.isEmpty) continue;
+        details.add(
+          '${_field(scope, field)}: ${item['from'] ?? '–'} → ${item['to'] ?? '–'}',
+        );
+      }
+    }
+    const safeFields = <String>[
+      'invoice_number',
+      'amount',
+      'settled_amount',
+      'old_status',
+      'new_status',
+      'from_status',
+      'to_status',
+      'from_role',
+      'to_role',
+      'member_name',
+      'operation',
+    ];
+    for (final field in safeFields) {
+      final value = data[field];
+      if (value != null && '$value'.trim().isNotEmpty) {
+        details.add('${_field(scope, field)}: $value');
+      }
+    }
+    final values = data['values'];
+    if (values is Map) {
+      for (final field in const ['type', 'name', 'starts_on', 'ends_on']) {
+        final value = values[field];
+        if (value != null && '$value'.trim().isNotEmpty) {
+          details.add('${_field(scope, field)}: $value');
+        }
+      }
+    }
+    return details.toSet().toList();
   }
 
   @override
@@ -9592,19 +9686,46 @@ class _ClubAuditPanel extends StatelessWidget {
             )
           else
             for (final log in logs) ...[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  Icons.history_outlined,
-                  color: airmiusAccentColor(context),
-                ),
-                title: Text(
-                  _label(scope, log),
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                subtitle: Text(
-                  '${(log['actor'] as JsonMap?)?['name'] ?? scope.t('membership.audit.system')} · ${_createdAt(context, log['created_at'])}',
-                ),
+              Builder(
+                builder: (context) {
+                  final details = _details(scope, log);
+                  return ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: const EdgeInsets.only(
+                      left: 56,
+                      bottom: 12,
+                    ),
+                    leading: Icon(
+                      Icons.history_outlined,
+                      color: airmiusAccentColor(context),
+                    ),
+                    title: Text(
+                      _label(scope, log),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      '${scope.t('membership.audit.performedBy')}: ${_actor(scope, log)}\n${_createdAt(context, log['created_at'])}',
+                    ),
+                    children: [
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          '${scope.t('membership.audit.object')}: ${_subject(scope, log)}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          details.isEmpty
+                              ? scope.t('membership.audit.noDetails')
+                              : '${scope.t('membership.audit.details')}:\n${details.join('\n')}',
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               if (log != logs.last) const Divider(height: 1),
             ],

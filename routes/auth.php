@@ -11,6 +11,7 @@ use App\Http\Controllers\ClubDeletionController;
 use App\Http\Controllers\ClubInventoryPageController;
 use App\Http\Controllers\ClubMemberRemovalController;
 use App\Http\Controllers\ClubMembershipController;
+use App\Http\Controllers\ClubNewsletterPageController;
 use App\Http\Controllers\ClubMemberTimelineController;
 use App\Http\Controllers\ClubStaffSchedulingPageController;
 use App\Http\Controllers\CommentController;
@@ -354,6 +355,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     // CLUBS
     Route::get('/clubs', [ClubController::class, 'index'])->middleware('club');
     Route::get('/clubs/{club}', [ClubController::class, 'show'])->name('auth.clubs.show');
+    Route::get('/clubs/{club}/newsletter', [ClubNewsletterPageController::class, 'show'])->name('auth.clubs.newsletter.show');
+    Route::post('/clubs/{club}/newsletter', [ClubNewsletterPageController::class, 'send'])
+        ->middleware('throttle:5,1')
+        ->name('auth.clubs.newsletter.send');
     Route::post('/clubs', [ClubController::class, 'store'])->name('auth.clubs.store');
     Route::put('/clubs/{club}', [ClubController::class, 'update'])->middleware('club')->name('auth.clubs.update');
     Route::post('/clubs/{club}/sponsors', [ClubController::class, 'storeSponsor'])->middleware('club')->name('auth.clubs.sponsors.store');

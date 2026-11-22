@@ -762,7 +762,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/announcements/{announcement}/withdraw', [ClubAnnouncementController::class, 'withdraw'])->name('clubs.announcements.withdraw');
         Route::delete('/clubs/{club}/announcements/{announcement}', [ClubAnnouncementController::class, 'destroy'])->name('clubs.announcements.destroy');
         Route::post('/clubs/{club}/announcements/{announcement}/read', [ClubAnnouncementController::class, 'acknowledge'])->name('clubs.announcements.read');
-        Route::post('/clubs/{club}/newsletter/subscribe', [ClubNewsletterController::class, 'subscribe'])->name('clubs.newsletter.subscribe');
+        Route::get('/clubs/{club}/newsletter/subscribers', [ClubNewsletterController::class, 'subscribers'])->name('clubs.newsletter.subscribers');
         Route::post('/clubs/{club}/newsletter/send', [ClubNewsletterController::class, 'send'])->name('clubs.newsletter.send');
         Route::post('/clubs/{club}/newsletter/suppressions', [ClubNewsletterController::class, 'suppress'])->name('clubs.newsletter.suppressions.store');
         Route::post('/clubs/{club}/newsletter/deliveries/{delivery}/bounce', [ClubNewsletterController::class, 'bounce'])->name('clubs.newsletter.deliveries.bounce');
@@ -958,6 +958,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}/work-automation-recipients', [WorkAutomationJobController::class, 'recipients'])->name('clubs.work-automation-jobs.recipients');
         Route::get('/clubs/{club}/work-automation-jobs/{workAutomationJob}', [WorkAutomationJobController::class, 'show'])->name('clubs.work-automation-jobs.show');
         Route::post('/clubs/{club}/work-automation-jobs', [WorkAutomationJobController::class, 'store'])->name('clubs.work-automation-jobs.store');
+        Route::patch('/clubs/{club}/work-automation-jobs/{workAutomationJob}', [WorkAutomationJobController::class, 'update'])->name('clubs.work-automation-jobs.update');
+        Route::delete('/clubs/{club}/work-automation-jobs/{workAutomationJob}', [WorkAutomationJobController::class, 'destroy'])->name('clubs.work-automation-jobs.destroy');
         Route::post('/clubs/{club}/work-automation-jobs/{workAutomationJob}/retry', [WorkAutomationJobController::class, 'retry'])->name('clubs.work-automation-jobs.retry');
         Route::post('/clubs/{club}/donations', [ClubController::class, 'recordDonation'])->middleware('throttle:payment-actions')->name('clubs.donations.store');
         Route::post('/clubs/{club}/prepayments', [ClubController::class, 'recordPrepayment'])->middleware('throttle:payment-actions')->name('clubs.prepayments.store');

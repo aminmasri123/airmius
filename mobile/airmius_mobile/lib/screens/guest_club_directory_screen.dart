@@ -4,8 +4,11 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
+import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
+import 'clubs_screen.dart';
 import 'public_interest_screen.dart';
+import 'club_newsletter_screen.dart';
 
 /// Guest-safe catalogue for verified, publicly listed clubs.
 ///
@@ -186,6 +189,16 @@ class _GuestClubDirectoryScreenState extends State<GuestClubDirectoryScreen> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _ClubCard(
                         club: club,
+                        onOpen:
+                            AirmiusServicesScope.of(context).authState.user ==
+                                null
+                            ? null
+                            : () => _openClubProfile(club),
+                        onNewsletter:
+                            AirmiusServicesScope.of(context).authState.user ==
+                                null
+                            ? () => _openNewsletter(club)
+                            : null,
                         onInterest: () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                             builder: (_) => PublicInterestScreen(
@@ -210,13 +223,65 @@ class _GuestClubDirectoryScreenState extends State<GuestClubDirectoryScreen> {
     final text = value?.toString().trim() ?? '';
     return text.isEmpty ? fallback : text;
   }
+
+  void _openClubProfile(JsonMap club) {
+    final id = club['id'] is num ? (club['id'] as num).round() : null;
+    if (id == null) return;
+    final summary = ClubSummary(
+      id: id,
+      name: _text(club['name'], t('guestClubs.club')),
+      city: _text(club['city']),
+      members: 0,
+      teams: club['teams_count'] is num
+          ? (club['teams_count'] as num).round()
+          : 0,
+      posts: 0,
+      acceptsMemberships: club['membership_requests_enabled'] == true,
+      hasPendingMembershipRequest: false,
+      isMember: false,
+      verified: club['is_official'] == true,
+      sportType: _text(club['sport_type']),
+      postalCode: _text(club['postal_code']),
+      country: _text(club['country']),
+      logoUrl: _text(club['logo_url']),
+    );
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ClubProfileScreen(
+          club: summary,
+          requested: false,
+          onRequest: (_) {},
+          onWithdraw: (_) {},
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openNewsletter(JsonMap club) async {
+    final clubId = club['id'] is num ? (club['id'] as num).round() : null;
+    if (clubId == null) return;
+    final sent = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ClubNewsletterScreen(clubId: clubId)),
+    );
+    if (!mounted || sent != true) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(t('guestClubs.newsletterSent'))));
+  }
 }
 
 class _ClubCard extends StatelessWidget {
-  const _ClubCard({required this.club, required this.onInterest});
+  const _ClubCard({
+    required this.club,
+    this.onOpen,
+    required this.onInterest,
+    this.onNewsletter,
+  });
 
   final JsonMap club;
+  final VoidCallback? onOpen;
   final VoidCallback onInterest;
+  final VoidCallback? onNewsletter;
 
   String _text(Object? value, [String fallback = '']) {
     final text = value?.toString().trim() ?? '';
@@ -297,12 +362,28 @@ class _ClubCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          if (onOpen != null) ...[
+            AirmiusButton(
+              label: t('guestClubs.openProfile'),
+              icon: Icons.account_balance_outlined,
+              onPressed: onOpen,
+            ),
+            const SizedBox(height: 8),
+          ],
           AirmiusButton(
             label: t('guestClubs.interested'),
             icon: Icons.send_outlined,
             secondary: true,
             onPressed: onInterest,
           ),
+          const SizedBox(height: 8),
+          if (onNewsletter != null)
+            AirmiusButton(
+              label: t('guestClubs.newsletterAction'),
+              icon: Icons.mark_email_unread_outlined,
+              secondary: true,
+              onPressed: onNewsletter,
+            ),
         ],
       ),
     );

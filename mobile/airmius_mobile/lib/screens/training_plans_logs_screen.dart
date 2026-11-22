@@ -521,6 +521,10 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                     '${log.durationMinutes} ${t('trainingHub.minutes')}',
                   if (log.distanceMeters != null)
                     '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                  if (log.rpe != null)
+                    '${t('trainingHub.rpe')} ${log.rpe}/10',
+                  if (log.pain != null)
+                    '${t('liveWorkout.pain')} ${log.pain}/10',
                   if (log.entries.isNotEmpty)
                     '${_workoutExercisesFromEntries(log.entries).length} ${t(_workoutExercisesFromEntries(log.entries).length == 1 ? 'workout.exerciseSingular' : 'workout.exercises')}',
                 ].join(' · '),
@@ -1411,6 +1415,14 @@ class _TrainingLogApiDetailScreenState
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.w900),
                       ),
+                      if (log.athleteName?.isNotEmpty == true) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          '${t('trainingHub.athlete')}: ${log.athleteName}',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ],
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
@@ -1427,6 +1439,10 @@ class _TrainingLogApiDetailScreenState
                             ),
                           if (log.intensity?.isNotEmpty == true)
                             StatusPill(log.intensity!),
+                          if (log.rpe != null)
+                            StatusPill('${t('trainingHub.rpe')} ${log.rpe}/10'),
+                          if (log.pain != null)
+                            StatusPill('${t('liveWorkout.pain')} ${log.pain}/10'),
                         ],
                       ),
                       if (log.status == 'missed' && log.missedReason != null) ...[
@@ -1443,6 +1459,23 @@ class _TrainingLogApiDetailScreenState
                     ],
                   ),
                 ),
+                if (log.rpe != null || log.pain != null) ...[
+                  const SizedBox(height: 14),
+                  AirmiusPanel(
+                    title: t('trainingHub.effortReview'),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (log.rpe != null)
+                          Text('${t('trainingHub.rpe')}: ${log.rpe}/10'),
+                        if (log.pain != null) ...[
+                          if (log.rpe != null) const SizedBox(height: 8),
+                          Text('${t('liveWorkout.pain')}: ${log.pain}/10'),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
                 if (log.sportRoute != null || log.sportRouteTrack != null) ...[
                   const SizedBox(height: 14),
                   AirmiusPanel(
@@ -5325,6 +5358,8 @@ class _LogFormDialogState extends State<_LogFormDialog> {
   late String _privacy;
   late List<_WorkoutExerciseDraft> _exercises;
   double _rpe = 5;
+  double _pain = 0;
+  bool _notifyTrainerAgain = false;
   int? _sportRouteId;
   int? _sportRouteTrackId;
   List<_TrainingRouteReference> _routes = const [];
@@ -5357,6 +5392,7 @@ class _LogFormDialogState extends State<_LogFormDialog> {
         ? []
         : _workoutExercisesFromEntries(initial.entries);
     _rpe = initial?.rpe?.toDouble() ?? 5;
+    _pain = initial?.pain?.toDouble() ?? 0;
     _sportRouteId = initial?.sportRoute?.id ?? widget.prefillSportRouteId;
     _sportRouteTrackId = initial?.sportRouteTrack?.id;
   }
@@ -5437,7 +5473,9 @@ class _LogFormDialogState extends State<_LogFormDialog> {
     'intensity': _intensity,
     'privacy_scope': _privacy,
     'notes': _notes.text.trim(),
-    'wellness': {'rpe': _rpe.round()},
+    'wellness': {'rpe': _rpe.round(), 'pain': _pain.round()},
+    if (widget.initial?.trainingPlanItemId != null)
+      'notify_trainer': _notifyTrainerAgain,
     'entries': [
       for (final exercise in _exercises) ...exercise.toPayloadEntries(),
     ],
@@ -5776,7 +5814,10 @@ class _LogFormDialogState extends State<_LogFormDialog> {
                           (value) => ChoiceChip(
                             selected: _privacy == value,
                             label: Text(t('trainingHub.privacy.$value')),
-                            onSelected: (_) => setState(() => _privacy = value),
+                            onSelected: (_) => setState(() {
+                              _privacy = value;
+                              if (value == 'private') _notifyTrainerAgain = false;
+                            }),
                           ),
                         )
                         .toList(),
@@ -5812,9 +5853,28 @@ class _LogFormDialogState extends State<_LogFormDialog> {
                           label: '${_rpe.round()}',
                           onChanged: (value) => setState(() => _rpe = value),
                         ),
+                        Text('${t('liveWorkout.pain')}: ${_pain.round()}/10'),
+                        Slider(
+                          value: _pain,
+                          min: 0,
+                          max: 10,
+                          divisions: 10,
+                          label: '${_pain.round()}',
+                          onChanged: (value) => setState(() => _pain = value),
+                        ),
                       ],
                     ),
                   ),
+                  if (widget.initial?.trainingPlanItemId != null)
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(t('trainingHub.notifyTrainerAgain')),
+                      subtitle: Text(t('trainingHub.notifyTrainerAgainHint')),
+                      value: _notifyTrainerAgain,
+                      onChanged: _privacy == 'private'
+                          ? null
+                          : (value) => setState(() => _notifyTrainerAgain = value),
+                    ),
                   TextField(
                     controller: _notes,
                     minLines: 3,
@@ -7682,6 +7742,7 @@ class _TrainingLog {
   const _TrainingLog({
     required this.id,
     required this.createdBy,
+    this.athleteName,
     required this.title,
     required this.status,
     this.trainingPlanItemId,
@@ -7696,6 +7757,7 @@ class _TrainingLog {
     this.feedbacks = const [],
     this.privacyScope,
     this.rpe,
+    this.pain,
     this.entries = const [],
     this.plannedExercises = const [],
     this.sportRoute,
@@ -7723,6 +7785,9 @@ class _TrainingLog {
     return _TrainingLog(
       id: _asInt(json['id']),
       createdBy: _asInt(json['created_by']),
+      athleteName: json['athlete'] is Map
+          ? (json['athlete'] as Map)['name']?.toString()
+          : null,
       title: json['title']?.toString() ?? '',
       status: json['status']?.toString() ?? 'completed',
       trainingPlanItemId: _nullableInt(json['training_plan_item_id']),
@@ -7739,6 +7804,7 @@ class _TrainingLog {
       ).map(_TrainingFeedback.fromJson).toList(),
       privacyScope: metrics['privacy_scope']?.toString(),
       rpe: _nullableInt(wellness['rpe']),
+      pain: _nullableInt(wellness['pain']),
       entries: _mapList(
         json['entries'],
       ).map(_TrainingLogEntry.fromJson).toList(),
@@ -7758,6 +7824,7 @@ class _TrainingLog {
 
   final int id;
   final int createdBy;
+  final String? athleteName;
   final String title;
   final String status;
   final int? trainingPlanItemId;
@@ -7772,6 +7839,7 @@ class _TrainingLog {
   final List<_TrainingFeedback> feedbacks;
   final String? privacyScope;
   final int? rpe;
+  final int? pain;
   final List<_TrainingLogEntry> entries;
   final List<_WorkoutExerciseDraft> plannedExercises;
   final _TrainingRouteReference? sportRoute;

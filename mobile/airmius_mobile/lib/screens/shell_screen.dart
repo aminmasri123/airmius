@@ -26,6 +26,7 @@ import 'conversations_center_screen.dart';
 import 'feed_center_screen.dart';
 import 'global_search_screen.dart';
 import 'guest_portal_screen.dart';
+import 'guest_club_directory_screen.dart';
 import 'module_screen.dart';
 import 'notifications_center_screen.dart';
 import 'profile_screen.dart';
@@ -1052,6 +1053,12 @@ class _ModuleDrawer extends StatelessWidget {
       Icons.family_restroom_outlined,
       planningLabel(scope.language, 'family'),
       () => _openScreen(context, const FamilyCalendarScreen()),
+    );
+    add(
+      'discover',
+      Icons.travel_explore_outlined,
+      scope.t('guestPortal.clubs'),
+      () => _openScreen(context, const GuestClubDirectoryScreen()),
     );
     add(
       'account',

@@ -229,9 +229,28 @@ class _ClubYearPeriodsScreenState extends State<ClubYearPeriodsScreen> {
               children: [
                 const Icon(Icons.date_range_outlined),
                 const SizedBox(width: 8),
-                Text(
-                  t('clubYearPeriods.type.$type'),
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+                Expanded(
+                  child: Text(
+                    t('clubYearPeriods.type.$type'),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                IconButton(
+                  tooltip: t('clubYearPeriods.info'),
+                  icon: const Icon(Icons.info_outline),
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text(t('clubYearPeriods.type.$type')),
+                      content: Text(t('clubYearPeriods.explanation.$type')),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(t('common.close')),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -527,10 +546,21 @@ class _YearPeriodDialogState extends State<_YearPeriodDialog> {
                   .toList(),
               onChanged: (value) => setState(() => _type = value ?? _type),
             ),
+            const SizedBox(height: 10),
+            Text(
+              t('clubYearPeriods.explanation.$_type'),
+              style: TextStyle(
+                color: airmiusMutedColor(context),
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _name,
               decoration: InputDecoration(labelText: t('clubYearPeriods.name')),
             ),
+            const SizedBox(height: 14),
             TextField(
               controller: _start,
               keyboardType: TextInputType.datetime,
@@ -539,6 +569,7 @@ class _YearPeriodDialogState extends State<_YearPeriodDialog> {
                 labelText: t('clubYearPeriods.startsOn'),
               ),
             ),
+            const SizedBox(height: 14),
             TextField(
               controller: _end,
               keyboardType: TextInputType.datetime,

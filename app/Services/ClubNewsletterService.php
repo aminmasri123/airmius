@@ -15,6 +15,14 @@ use Illuminate\Support\Str;
 
 class ClubNewsletterService
 {
+    public function subscribers(Club $club): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        return ClubNewsletterSubscription::query()
+            ->where('club_id', $club->id)
+            ->latest('id')
+            ->paginate(30, ['id', 'name', 'email', 'status', 'created_at', 'confirmed_at'], 'subscribers_page');
+    }
+
     public function requestOptIn(Club $club, string $email, ?string $name = null, ?User $user = null): array
     {
         $email = Str::lower(trim($email));
@@ -169,13 +177,15 @@ class ClubNewsletterService
                         'sent_at' => now(),
                     ]);
 
-                    $body = $campaign->body."\n\nAbmelden: ".url('/api/v1/newsletter/unsubscribe/'.$this->unsubscribeToken($subscription));
+                    $body = $campaign->body."\n\nNewsletter abbestellen: ".route('guest.newsletter.unsubscribe', [
+                        'token' => $this->unsubscribeToken($subscription),
+                    ]);
 
-                    Mail::raw($body, function ($message) use ($campaign, $subscription): void {
+                    $sent = Mail::raw($body, function ($message) use ($campaign, $subscription): void {
                         $message->to($subscription->email)->subject($campaign->subject);
                     });
 
-                    $delivery->forceFill(['provider_message_id' => 'local-'.$delivery->id])->save();
+                    $delivery->forceFill(['provider_message_id' => $sent?->getMessageId()])->save();
                 });
 
             $campaign->forceFill(['status' => 'sent', 'sent_at' => now()])->save();
@@ -192,11 +202,11 @@ class ClubNewsletterService
             'status' => 'bounced',
             'bounce_type' => $data['bounce_type'] ?? 'unknown',
             'failure_reason' => $data['failure_reason'] ?? null,
-            'bounced_at' => now(),
+            'bounced_at' => $delivery->bounced_at ?? now(),
         ])->save();
 
-        if (($data['bounce_type'] ?? null) === 'hard') {
-            $this->suppress($club->id, $delivery->email, 'hard_bounce', ['delivery_id' => $delivery->id]);
+        if (in_array($data['bounce_type'] ?? null, ['hard', 'complaint'], true)) {
+            $this->suppress($club->id, $delivery->email, $data['bounce_type'] === 'complaint' ? 'complaint' : 'hard_bounce', ['delivery_id' => $delivery->id]);
         }
 
         return $delivery->fresh();

@@ -1393,7 +1393,8 @@ const _commerceAdvDe = {
   'commerceAdv.headline': 'Überschrift',
   'commerceAdv.description': 'Beschreibung',
   'commerceAdv.targetUrl': 'Link beim Klick auf die Anzeige',
-  'commerceAdv.targetUrlHint': 'Diese Seite öffnet sich, wenn jemand die Anzeige antippt.',
+  'commerceAdv.targetUrlHint':
+      'Diese Seite öffnet sich, wenn jemand die Anzeige antippt.',
   'commerceAdv.imageSource': 'Anzeigenbild',
   'commerceAdv.imageLink': 'Bild-Link',
   'commerceAdv.imageUpload': 'Hochladen',
@@ -1581,7 +1582,8 @@ final _commerceAdvFr = {
   'commerceAdv.headline': 'Titre',
   'commerceAdv.description': 'Description',
   'commerceAdv.targetUrl': 'Lien ouvert au clic sur l’annonce',
-  'commerceAdv.targetUrlHint': 'Cette page s’ouvre lorsque quelqu’un touche l’annonce.',
+  'commerceAdv.targetUrlHint':
+      'Cette page s’ouvre lorsque quelqu’un touche l’annonce.',
   'commerceAdv.imageSource': 'Image de l’annonce',
   'commerceAdv.imageLink': 'Lien de l’image',
   'commerceAdv.imageUpload': 'Importer',
@@ -8517,6 +8519,26 @@ const _clubsWorkspaceDe = {
   'clubs.announcements.createTitle': 'Neue Mitteilung',
   'clubs.announcements.title': 'Titel',
   'clubs.announcements.body': 'Nachricht',
+  'clubs.announcements.aiAction': 'Mit KI formulieren',
+  'clubs.announcements.aiTitle': 'KI-Entwurf erstellen',
+  'clubs.announcements.aiExplanation':
+      'Beschreibe die gewünschte Mitteilung. Die KI erstellt nur einen bearbeitbaren Entwurf und versendet nichts.',
+  'clubs.announcements.aiPurpose': 'Worum geht es?',
+  'clubs.announcements.aiPurposeHint':
+      'Zum Beispiel: Das Freitagstraining fällt aus. Ersatztermin ist Montag um 18 Uhr.',
+  'clubs.announcements.aiTone': 'Ton',
+  'clubs.announcements.aiTone.friendly': 'Freundlich',
+  'clubs.announcements.aiTone.formal': 'Formell',
+  'clubs.announcements.aiTone.concise': 'Kurz und direkt',
+  'clubs.announcements.aiGenerate': 'Entwurf erstellen',
+  'clubs.announcements.aiGenerating': 'Entwurf wird erstellt …',
+  'clubs.announcements.aiReady':
+      'KI-Entwurf eingefügt. Bitte Inhalt und Zielgruppe prüfen.',
+  'clubs.announcements.aiInvalidResponse':
+      'Der KI-Entwurf war unvollständig. Bitte erneut versuchen.',
+  'clubs.announcements.aiInstructions':
+      'Erstelle Titel und Nachricht. Erfinde keine Fakten. Der Text muss vor dem Versand geprüft und bearbeitet werden können.',
+  'clubs.announcements.aiSourceLabel': 'Briefing der verantwortlichen Person',
   'clubs.announcements.audience': 'Zielgruppe',
   'clubs.announcements.allMembers': 'Alle aktiven Mitglieder',
   'clubs.announcements.teamOnly': 'Nur ein Team',
@@ -8922,6 +8944,26 @@ const _clubsWorkspaceEn = {
   'clubs.announcements.createTitle': 'New announcement',
   'clubs.announcements.title': 'Title',
   'clubs.announcements.body': 'Message',
+  'clubs.announcements.aiAction': 'Draft with AI',
+  'clubs.announcements.aiTitle': 'Create AI draft',
+  'clubs.announcements.aiExplanation':
+      'Describe the announcement. AI only creates an editable draft and sends nothing.',
+  'clubs.announcements.aiPurpose': 'What is it about?',
+  'clubs.announcements.aiPurposeHint':
+      'For example: Friday training is cancelled. The replacement is Monday at 6 pm.',
+  'clubs.announcements.aiTone': 'Tone',
+  'clubs.announcements.aiTone.friendly': 'Friendly',
+  'clubs.announcements.aiTone.formal': 'Formal',
+  'clubs.announcements.aiTone.concise': 'Brief and direct',
+  'clubs.announcements.aiGenerate': 'Create draft',
+  'clubs.announcements.aiGenerating': 'Creating draft …',
+  'clubs.announcements.aiReady':
+      'AI draft inserted. Please review the content and audience.',
+  'clubs.announcements.aiInvalidResponse':
+      'The AI draft was incomplete. Please try again.',
+  'clubs.announcements.aiInstructions':
+      'Create a title and message. Do not invent facts. The text must remain editable and be reviewed before sending.',
+  'clubs.announcements.aiSourceLabel': 'Brief from the responsible person',
   'clubs.announcements.audience': 'Audience',
   'clubs.announcements.allMembers': 'All active members',
   'clubs.announcements.teamOnly': 'One team only',
@@ -9323,6 +9365,26 @@ const _clubsWorkspaceFr = {
   'clubs.announcements.createTitle': 'Nouvelle annonce',
   'clubs.announcements.title': 'Titre',
   'clubs.announcements.body': 'Message',
+  'clubs.announcements.aiAction': 'Rédiger avec l’IA',
+  'clubs.announcements.aiTitle': 'Créer un brouillon avec l’IA',
+  'clubs.announcements.aiExplanation':
+      'Décrivez la communication. L’IA crée uniquement un brouillon modifiable et n’envoie rien.',
+  'clubs.announcements.aiPurpose': 'De quoi s’agit-il ?',
+  'clubs.announcements.aiPurposeHint':
+      'Par exemple : l’entraînement de vendredi est annulé. Le remplacement est lundi à 18 h.',
+  'clubs.announcements.aiTone': 'Ton',
+  'clubs.announcements.aiTone.friendly': 'Amical',
+  'clubs.announcements.aiTone.formal': 'Formel',
+  'clubs.announcements.aiTone.concise': 'Bref et direct',
+  'clubs.announcements.aiGenerate': 'Créer le brouillon',
+  'clubs.announcements.aiGenerating': 'Création du brouillon …',
+  'clubs.announcements.aiReady':
+      'Brouillon IA inséré. Vérifiez le contenu et le public.',
+  'clubs.announcements.aiInvalidResponse':
+      'Le brouillon IA était incomplet. Veuillez réessayer.',
+  'clubs.announcements.aiInstructions':
+      'Créez un titre et un message. N’inventez aucun fait. Le texte doit rester modifiable et être vérifié avant l’envoi.',
+  'clubs.announcements.aiSourceLabel': 'Brief de la personne responsable',
   'clubs.announcements.audience': 'Public',
   'clubs.announcements.allMembers': 'Tous les membres actifs',
   'clubs.announcements.teamOnly': 'Une seule équipe',
@@ -9719,6 +9781,26 @@ const _clubsWorkspaceAr = {
   'clubs.announcements.createTitle': 'إعلان جديد',
   'clubs.announcements.title': 'العنوان',
   'clubs.announcements.body': 'الرسالة',
+  'clubs.announcements.aiAction': 'صياغة بالذكاء الاصطناعي',
+  'clubs.announcements.aiTitle': 'إنشاء مسودة بالذكاء الاصطناعي',
+  'clubs.announcements.aiExplanation':
+      'صِف الإعلان المطلوب. ينشئ الذكاء الاصطناعي مسودة قابلة للتعديل فقط ولا يرسل أي شيء.',
+  'clubs.announcements.aiPurpose': 'ما موضوع الإعلان؟',
+  'clubs.announcements.aiPurposeHint':
+      'مثال: تم إلغاء تدريب الجمعة، والموعد البديل يوم الاثنين الساعة السادسة مساءً.',
+  'clubs.announcements.aiTone': 'النبرة',
+  'clubs.announcements.aiTone.friendly': 'ودية',
+  'clubs.announcements.aiTone.formal': 'رسمية',
+  'clubs.announcements.aiTone.concise': 'مختصرة ومباشرة',
+  'clubs.announcements.aiGenerate': 'إنشاء المسودة',
+  'clubs.announcements.aiGenerating': 'جارٍ إنشاء المسودة …',
+  'clubs.announcements.aiReady':
+      'أُدرجت مسودة الذكاء الاصطناعي. يُرجى مراجعة المحتوى والجمهور.',
+  'clubs.announcements.aiInvalidResponse':
+      'كانت مسودة الذكاء الاصطناعي غير مكتملة. يُرجى المحاولة مجددًا.',
+  'clubs.announcements.aiInstructions':
+      'أنشئ عنوانًا ورسالة من دون اختلاق معلومات. يجب أن يبقى النص قابلًا للتعديل وأن يُراجع قبل الإرسال.',
+  'clubs.announcements.aiSourceLabel': 'موجز الشخص المسؤول',
   'clubs.announcements.audience': 'الجمهور',
   'clubs.announcements.allMembers': 'جميع الأعضاء النشطين',
   'clubs.announcements.teamOnly': 'فريق واحد فقط',
@@ -12228,6 +12310,24 @@ const _membershipDe = {
   'membership.audit.retentionTitle': 'Aufbewahrung: 7 Tage',
   'membership.audit.retentionBody':
       'Audit-Einträge werden sieben Tage gespeichert und danach automatisch sowie dauerhaft gelöscht.',
+  'membership.audit.performedBy': 'Durchgeführt von',
+  'membership.audit.object': 'Objekt',
+  'membership.audit.details': 'Änderungen',
+  'membership.audit.noDetails':
+      'Für diesen älteren Eintrag wurden keine weiteren Details gespeichert.',
+  'membership.audit.objectInvoice': 'Rechnung',
+  'membership.audit.objectYearPeriod': 'Vereinsjahr',
+  'membership.audit.objectMember': 'Mitglied',
+  'membership.audit.objectRecord': 'Datensatz',
+  'membership.audit.fieldType': 'Typ',
+  'membership.audit.fieldName': 'Name',
+  'membership.audit.fieldStart': 'Beginn',
+  'membership.audit.fieldEnd': 'Ende',
+  'membership.audit.fieldStatus': 'Status',
+  'membership.audit.fieldRole': 'Rolle',
+  'membership.audit.fieldAmount': 'Betrag',
+  'membership.audit.invoiceRunCreated': 'Beitragsrechnung erstellt',
+  'membership.audit.invoiceCancelled': 'Rechnung storniert',
   'membership.audit.roleUpdated': 'Vereinsrolle geändert',
   'membership.audit.memberUpdated': 'Mitgliedsdaten geändert',
   'membership.audit.invoiceCreated': 'Rechnung erstellt',
@@ -12575,6 +12675,24 @@ final _membershipEn = {
   'membership.audit.retentionTitle': 'Retention: 7 days',
   'membership.audit.retentionBody':
       'Audit entries are stored for seven days and then deleted automatically and permanently.',
+  'membership.audit.performedBy': 'Performed by',
+  'membership.audit.object': 'Object',
+  'membership.audit.details': 'Changes',
+  'membership.audit.noDetails':
+      'No additional details were stored for this older entry.',
+  'membership.audit.objectInvoice': 'Invoice',
+  'membership.audit.objectYearPeriod': 'Club year',
+  'membership.audit.objectMember': 'Member',
+  'membership.audit.objectRecord': 'Record',
+  'membership.audit.fieldType': 'Type',
+  'membership.audit.fieldName': 'Name',
+  'membership.audit.fieldStart': 'Start',
+  'membership.audit.fieldEnd': 'End',
+  'membership.audit.fieldStatus': 'Status',
+  'membership.audit.fieldRole': 'Role',
+  'membership.audit.fieldAmount': 'Amount',
+  'membership.audit.invoiceRunCreated': 'Contribution invoice created',
+  'membership.audit.invoiceCancelled': 'Invoice cancelled',
   'membership.audit.roleUpdated': 'Club role changed',
   'membership.audit.memberUpdated': 'Member data changed',
   'membership.audit.invoiceCreated': 'Invoice created',
@@ -12904,6 +13022,24 @@ final _membershipFr = {
   'membership.audit.retentionTitle': 'Conservation : 7 jours',
   'membership.audit.retentionBody':
       'Les entrées d’audit sont conservées sept jours, puis supprimées automatiquement et définitivement.',
+  'membership.audit.performedBy': 'Effectué par',
+  'membership.audit.object': 'Objet',
+  'membership.audit.details': 'Modifications',
+  'membership.audit.noDetails':
+      'Aucun détail supplémentaire n’a été enregistré pour cette ancienne entrée.',
+  'membership.audit.objectInvoice': 'Facture',
+  'membership.audit.objectYearPeriod': 'Année du club',
+  'membership.audit.objectMember': 'Membre',
+  'membership.audit.objectRecord': 'Enregistrement',
+  'membership.audit.fieldType': 'Type',
+  'membership.audit.fieldName': 'Nom',
+  'membership.audit.fieldStart': 'Début',
+  'membership.audit.fieldEnd': 'Fin',
+  'membership.audit.fieldStatus': 'Statut',
+  'membership.audit.fieldRole': 'Rôle',
+  'membership.audit.fieldAmount': 'Montant',
+  'membership.audit.invoiceRunCreated': 'Facture de cotisation créée',
+  'membership.audit.invoiceCancelled': 'Facture annulée',
   'membership.audit.roleUpdated': 'Rôle du club modifié',
   'membership.audit.memberUpdated': 'Données du membre modifiées',
   'membership.audit.invoiceCreated': 'Facture créée',
@@ -13221,6 +13357,23 @@ final _membershipAr = {
   'membership.audit.retentionTitle': 'مدة الاحتفاظ: 7 أيام',
   'membership.audit.retentionBody':
       'تُحفظ سجلات التدقيق لمدة سبعة أيام ثم تُحذف تلقائيًا ونهائيًا.',
+  'membership.audit.performedBy': 'نُفّذ بواسطة',
+  'membership.audit.object': 'العنصر',
+  'membership.audit.details': 'التغييرات',
+  'membership.audit.noDetails': 'لم تُحفظ تفاصيل إضافية لهذا الإدخال القديم.',
+  'membership.audit.objectInvoice': 'فاتورة',
+  'membership.audit.objectYearPeriod': 'سنة النادي',
+  'membership.audit.objectMember': 'عضو',
+  'membership.audit.objectRecord': 'سجل',
+  'membership.audit.fieldType': 'النوع',
+  'membership.audit.fieldName': 'الاسم',
+  'membership.audit.fieldStart': 'البداية',
+  'membership.audit.fieldEnd': 'النهاية',
+  'membership.audit.fieldStatus': 'الحالة',
+  'membership.audit.fieldRole': 'الدور',
+  'membership.audit.fieldAmount': 'المبلغ',
+  'membership.audit.invoiceRunCreated': 'تم إنشاء فاتورة الاشتراك',
+  'membership.audit.invoiceCancelled': 'تم إلغاء الفاتورة',
   'membership.audit.roleUpdated': 'تم تغيير دور النادي',
   'membership.audit.memberUpdated': 'تم تغيير بيانات العضو',
   'membership.audit.invoiceCreated': 'تم إنشاء الفاتورة',
@@ -20320,6 +20473,13 @@ final _clubEditorLabelsDe = {
   'clubYearPeriods.type.business': 'Geschäftsjahre',
   'clubYearPeriods.type.contribution': 'Beitragsjahre',
   'clubYearPeriods.type.sport': 'Sportjahre',
+  'clubYearPeriods.info': 'Jahresart erklären',
+  'clubYearPeriods.explanation.business':
+      'Zeitraum für Buchhaltung und Finanzberichte des Vereins, z. B. 1. Januar bis 31. Dezember.',
+  'clubYearPeriods.explanation.contribution':
+      'Zeitraum für Mitgliedsbeiträge und Beitragsrechnungen. Er kann vom Geschäftsjahr abweichen.',
+  'clubYearPeriods.explanation.sport':
+      'Zeitraum für die sportliche Saison, z. B. Trainings und Veranstaltungen von August bis Juli.',
   'clubYearPeriods.name': 'Bezeichnung',
   'clubYearPeriods.startsOn': 'Beginn (TT.MM.JJJJ)',
   'clubYearPeriods.endsOn': 'Ende (TT.MM.JJJJ)',
@@ -20376,15 +20536,19 @@ final _clubEditorLabelsDe = {
   'clubPolicyDocuments.internal': 'Nur intern',
   'clubPolicyDocuments.notes': 'Hinweise',
   'clubPolicyDocuments.file': 'Vereinsdatei',
-  'clubPolicyDocuments.unavailable': 'Die Vereinsdokumente sind derzeit nicht verfügbar oder du hast keinen Zugriff. Bitte prüfe den Verein und versuche es erneut.',
-  'clubPolicyDocuments.filesUnavailable': 'Die Dateibibliothek ist nicht verfügbar oder du hast keinen Zugriff. Bereits geladene Satzungen bleiben davon unberührt.',
+  'clubPolicyDocuments.unavailable':
+      'Die Vereinsdokumente sind derzeit nicht verfügbar oder du hast keinen Zugriff. Bitte prüfe den Verein und versuche es erneut.',
+  'clubPolicyDocuments.filesUnavailable':
+      'Die Dateibibliothek ist nicht verfügbar oder du hast keinen Zugriff. Bereits geladene Satzungen bleiben davon unberührt.',
   'clubPolicyDocuments.fileSource': 'Datei auswählen',
   'clubPolicyDocuments.useExisting': 'Vorhandene Vereinsdatei',
   'clubPolicyDocuments.uploadNew': 'Neue Datei hochladen',
   'clubPolicyDocuments.chooseExisting': 'Vereinsdatei auswählen',
   'clubPolicyDocuments.chooseUpload': 'Datei vom Gerät auswählen',
-  'clubPolicyDocuments.folderHint': 'Neue Uploads werden im Vereinsordner „Satzungen und Ordnungen“ passend zur Dokumentart abgelegt.',
-  'clubPolicyDocuments.fileLimit': 'Bitte wähle eine Datei zwischen 1 Byte und 50 MB.',
+  'clubPolicyDocuments.folderHint':
+      'Neue Uploads werden im Vereinsordner „Satzungen und Ordnungen“ passend zur Dokumentart abgelegt.',
+  'clubPolicyDocuments.fileLimit':
+      'Bitte wähle eine Datei zwischen 1 Byte und 50 MB.',
   'clubPolicyDocuments.calendar': 'Datum im Kalender wählen',
   'clubPolicyDocuments.searchFile': 'Datei suchen',
   'clubPolicyDocuments.noFiles': 'Keine passenden Vereinsdateien gefunden.',
@@ -20611,6 +20775,13 @@ final _clubEditorLabelsEn = {
   'clubYearPeriods.type.business': 'Business years',
   'clubYearPeriods.type.contribution': 'Contribution years',
   'clubYearPeriods.type.sport': 'Sport years',
+  'clubYearPeriods.info': 'Explain year type',
+  'clubYearPeriods.explanation.business':
+      'Period for the club’s accounting and financial reports, for example January to December.',
+  'clubYearPeriods.explanation.contribution':
+      'Period for membership fees and invoices. It can differ from the business year.',
+  'clubYearPeriods.explanation.sport':
+      'Period for the sporting season, such as training and events from August to July.',
   'clubYearPeriods.name': 'Name',
   'clubYearPeriods.startsOn': 'Start (DD.MM.YYYY)',
   'clubYearPeriods.endsOn': 'End (DD.MM.YYYY)',
@@ -20665,15 +20836,19 @@ final _clubEditorLabelsEn = {
   'clubPolicyDocuments.internal': 'Internal only',
   'clubPolicyDocuments.notes': 'Notes',
   'clubPolicyDocuments.file': 'Club file',
-  'clubPolicyDocuments.unavailable': 'The club documents are currently unavailable or you do not have access. Please check the club and try again.',
-  'clubPolicyDocuments.filesUnavailable': 'The file library is unavailable or you do not have access. This does not affect already loaded statutes.',
+  'clubPolicyDocuments.unavailable':
+      'The club documents are currently unavailable or you do not have access. Please check the club and try again.',
+  'clubPolicyDocuments.filesUnavailable':
+      'The file library is unavailable or you do not have access. This does not affect already loaded statutes.',
   'clubPolicyDocuments.fileSource': 'Choose a file',
   'clubPolicyDocuments.useExisting': 'Existing club file',
   'clubPolicyDocuments.uploadNew': 'Upload a new file',
   'clubPolicyDocuments.chooseExisting': 'Choose club file',
   'clubPolicyDocuments.chooseUpload': 'Choose file from device',
-  'clubPolicyDocuments.folderHint': 'New uploads are stored in the club’s statutes and regulations folder, grouped by document type.',
-  'clubPolicyDocuments.fileLimit': 'Please choose a file between 1 byte and 50 MB.',
+  'clubPolicyDocuments.folderHint':
+      'New uploads are stored in the club’s statutes and regulations folder, grouped by document type.',
+  'clubPolicyDocuments.fileLimit':
+      'Please choose a file between 1 byte and 50 MB.',
   'clubPolicyDocuments.calendar': 'Choose date from calendar',
   'clubPolicyDocuments.searchFile': 'Search files',
   'clubPolicyDocuments.noFiles': 'No matching club files found.',
@@ -20849,6 +21024,13 @@ final _clubEditorLabelsFr = {
   'clubYearPeriods.type.business': 'Exercices',
   'clubYearPeriods.type.contribution': 'Années de cotisation',
   'clubYearPeriods.type.sport': 'Saisons sportives',
+  'clubYearPeriods.info': 'Expliquer le type d’année',
+  'clubYearPeriods.explanation.business':
+      'Période pour la comptabilité et les rapports financiers du club, par exemple de janvier à décembre.',
+  'clubYearPeriods.explanation.contribution':
+      'Période des cotisations et des factures. Elle peut différer de l’exercice comptable.',
+  'clubYearPeriods.explanation.sport':
+      'Période de la saison sportive, par exemple les entraînements et événements d’août à juillet.',
   'clubYearPeriods.name': 'Nom',
   'clubYearPeriods.startsOn': 'Début (AAAA-MM-JJ)',
   'clubYearPeriods.endsOn': 'Fin (AAAA-MM-JJ)',
@@ -20904,15 +21086,19 @@ final _clubEditorLabelsFr = {
   'clubPolicyDocuments.internal': 'Interne uniquement',
   'clubPolicyDocuments.notes': 'Notes',
   'clubPolicyDocuments.file': 'Fichier du club',
-  'clubPolicyDocuments.unavailable': 'Les documents du club sont indisponibles ou vous n’avez pas accès. Vérifiez le club et réessayez.',
-  'clubPolicyDocuments.filesUnavailable': 'La bibliothèque est indisponible ou vous n’avez pas accès. Les statuts déjà chargés restent disponibles.',
+  'clubPolicyDocuments.unavailable':
+      'Les documents du club sont indisponibles ou vous n’avez pas accès. Vérifiez le club et réessayez.',
+  'clubPolicyDocuments.filesUnavailable':
+      'La bibliothèque est indisponible ou vous n’avez pas accès. Les statuts déjà chargés restent disponibles.',
   'clubPolicyDocuments.fileSource': 'Choisir un fichier',
   'clubPolicyDocuments.useExisting': 'Fichier existant du club',
   'clubPolicyDocuments.uploadNew': 'Importer un nouveau fichier',
   'clubPolicyDocuments.chooseExisting': 'Choisir un fichier du club',
   'clubPolicyDocuments.chooseUpload': 'Choisir un fichier sur cet appareil',
-  'clubPolicyDocuments.folderHint': 'Les nouveaux fichiers sont classés par type de document dans le dossier des statuts et règlements du club.',
-  'clubPolicyDocuments.fileLimit': 'Choisissez un fichier entre 1 octet et 50 Mo.',
+  'clubPolicyDocuments.folderHint':
+      'Les nouveaux fichiers sont classés par type de document dans le dossier des statuts et règlements du club.',
+  'clubPolicyDocuments.fileLimit':
+      'Choisissez un fichier entre 1 octet et 50 Mo.',
   'clubPolicyDocuments.calendar': 'Choisir une date dans le calendrier',
   'clubPolicyDocuments.searchFile': 'Rechercher un fichier',
   'clubPolicyDocuments.noFiles': 'Aucun fichier correspondant.',
@@ -21078,6 +21264,13 @@ final _clubEditorLabelsAr = {
   'clubYearPeriods.type.business': 'سنوات الأعمال',
   'clubYearPeriods.type.contribution': 'سنوات الاشتراكات',
   'clubYearPeriods.type.sport': 'السنوات الرياضية',
+  'clubYearPeriods.info': 'شرح نوع السنة',
+  'clubYearPeriods.explanation.business':
+      'فترة المحاسبة والتقارير المالية للنادي، مثل يناير إلى ديسمبر.',
+  'clubYearPeriods.explanation.contribution':
+      'فترة اشتراكات الأعضاء وفواتيرها، وقد تختلف عن السنة المالية.',
+  'clubYearPeriods.explanation.sport':
+      'فترة الموسم الرياضي، مثل التدريبات والفعاليات من أغسطس إلى يوليو.',
   'clubYearPeriods.name': 'الاسم',
   'clubYearPeriods.startsOn': 'البداية (DD.MM.YYYY)',
   'clubYearPeriods.endsOn': 'النهاية (DD.MM.YYYY)',
@@ -21131,15 +21324,19 @@ final _clubEditorLabelsAr = {
   'clubPolicyDocuments.internal': 'داخلي فقط',
   'clubPolicyDocuments.notes': 'ملاحظات',
   'clubPolicyDocuments.file': 'ملف النادي',
-  'clubPolicyDocuments.unavailable': 'مستندات النادي غير متاحة حاليًا أو لا تملك صلاحية الوصول. تحقق من النادي وحاول مجددًا.',
-  'clubPolicyDocuments.filesUnavailable': 'مكتبة الملفات غير متاحة أو لا تملك صلاحية الوصول. لا يؤثر ذلك في اللوائح المحمّلة.',
+  'clubPolicyDocuments.unavailable':
+      'مستندات النادي غير متاحة حاليًا أو لا تملك صلاحية الوصول. تحقق من النادي وحاول مجددًا.',
+  'clubPolicyDocuments.filesUnavailable':
+      'مكتبة الملفات غير متاحة أو لا تملك صلاحية الوصول. لا يؤثر ذلك في اللوائح المحمّلة.',
   'clubPolicyDocuments.fileSource': 'اختيار ملف',
   'clubPolicyDocuments.useExisting': 'ملف موجود للنادي',
   'clubPolicyDocuments.uploadNew': 'رفع ملف جديد',
   'clubPolicyDocuments.chooseExisting': 'اختيار ملف النادي',
   'clubPolicyDocuments.chooseUpload': 'اختيار ملف من الجهاز',
-  'clubPolicyDocuments.folderHint': 'تُحفظ الملفات الجديدة في مجلد أنظمة ولوائح النادي بحسب نوع المستند.',
-  'clubPolicyDocuments.fileLimit': 'اختر ملفًا بحجم بين بايت واحد و50 ميغابايت.',
+  'clubPolicyDocuments.folderHint':
+      'تُحفظ الملفات الجديدة في مجلد أنظمة ولوائح النادي بحسب نوع المستند.',
+  'clubPolicyDocuments.fileLimit':
+      'اختر ملفًا بحجم بين بايت واحد و50 ميغابايت.',
   'clubPolicyDocuments.calendar': 'اختيار تاريخ من التقويم',
   'clubPolicyDocuments.searchFile': 'البحث عن ملف',
   'clubPolicyDocuments.noFiles': 'لا توجد ملفات مطابقة.',
@@ -24560,6 +24757,14 @@ const _clubInventoryDe = {
   'inventory.scanQr': 'QR-Code scannen',
   'inventory.qrReissue': 'QR neu ausstellen',
   'inventory.qrRevoke': 'QR widerrufen',
+  'inventory.qrShow': 'QR-Code anzeigen',
+  'inventory.qrCode': 'Inventar-QR-Code',
+  'inventory.qrCodeForItem': 'Inventar-QR-Code für {name}',
+  'inventory.qrDisplayHint':
+      'Diesen Code am Gegenstand anbringen oder mit einem zweiten Gerät scannen.',
+  'inventory.qrUnavailable':
+      'Dieser QR-Code ist widerrufen. Stelle einen neuen Code aus, um ihn wieder anzuzeigen.',
+  'inventory.close': 'Schließen',
   'inventory.qrReissueConfirm':
       'Der alte Inventarcode wird danach ungültig. Neu ausstellen?',
   'inventory.qrRevokeConfirm':
@@ -24672,9 +24877,12 @@ const _clubInventoryDe = {
   'inventory.image.camera': 'Foto aufnehmen',
   'inventory.image.gallery': 'Aus Galerie auswählen',
   'inventory.image.remove': 'Bild entfernen',
-  'inventory.image.hint': 'JPG, PNG oder WebP bis 8 MB. Das Bild wird beim Speichern optimiert.',
-  'inventory.image.sessionRequired': 'Bitte melde dich erneut an, um das Bild hochzuladen.',
-  'inventory.image.itemMissing': 'Der gespeicherte Artikel konnte nicht gefunden werden.',
+  'inventory.image.hint':
+      'JPG, PNG oder WebP bis 8 MB. Das Bild wird beim Speichern optimiert.',
+  'inventory.image.sessionRequired':
+      'Bitte melde dich erneut an, um das Bild hochzuladen.',
+  'inventory.image.itemMissing':
+      'Der gespeicherte Artikel konnte nicht gefunden werden.',
   'inventory.size': 'Größe',
   'inventory.dimensions': 'Maße (L × B × H)',
   'inventory.location': 'Lagerort',
@@ -24752,6 +24960,14 @@ const _clubInventoryEn = {
   'inventory.scanQr': 'Scan QR code',
   'inventory.qrReissue': 'Reissue QR',
   'inventory.qrRevoke': 'Revoke QR',
+  'inventory.qrShow': 'Show QR code',
+  'inventory.qrCode': 'Inventory QR code',
+  'inventory.qrCodeForItem': 'Inventory QR code for {name}',
+  'inventory.qrDisplayHint':
+      'Attach this code to the item or scan it with a second device.',
+  'inventory.qrUnavailable':
+      'This QR code has been revoked. Reissue it to display a valid code.',
+  'inventory.close': 'Close',
   'inventory.qrReissueConfirm':
       'The old inventory code will no longer be valid. Reissue it?',
   'inventory.qrRevokeConfirm':
@@ -24865,8 +25081,10 @@ const _clubInventoryEn = {
   'inventory.image.camera': 'Take photo',
   'inventory.image.gallery': 'Choose from gallery',
   'inventory.image.remove': 'Remove image',
-  'inventory.image.hint': 'JPG, PNG or WebP up to 8 MB. The image is optimized when saved.',
-  'inventory.image.sessionRequired': 'Please sign in again to upload the image.',
+  'inventory.image.hint':
+      'JPG, PNG or WebP up to 8 MB. The image is optimized when saved.',
+  'inventory.image.sessionRequired':
+      'Please sign in again to upload the image.',
   'inventory.image.itemMissing': 'The saved item could not be found.',
   'inventory.size': 'Size',
   'inventory.dimensions': 'Dimensions (L × W × H)',
@@ -24945,6 +25163,14 @@ const _clubInventoryFr = {
   'inventory.scanQr': 'Scanner le code QR',
   'inventory.qrReissue': 'Réémettre le QR',
   'inventory.qrRevoke': 'Révoquer le QR',
+  'inventory.qrShow': 'Afficher le code QR',
+  'inventory.qrCode': 'Code QR d’inventaire',
+  'inventory.qrCodeForItem': 'Code QR d’inventaire pour {name}',
+  'inventory.qrDisplayHint':
+      'Fixez ce code sur l’objet ou scannez-le avec un deuxième appareil.',
+  'inventory.qrUnavailable':
+      'Ce code QR a été révoqué. Réémettez-le pour afficher un code valide.',
+  'inventory.close': 'Fermer',
   'inventory.qrReissueConfirm':
       'L’ancien code d’inventaire ne sera plus valable. Le réémettre ?',
   'inventory.qrRevokeConfirm':
@@ -25061,8 +25287,10 @@ const _clubInventoryFr = {
   'inventory.image.camera': 'Prendre une photo',
   'inventory.image.gallery': 'Choisir dans la galerie',
   'inventory.image.remove': 'Supprimer l’image',
-  'inventory.image.hint': 'JPG, PNG ou WebP jusqu’à 8 Mo. L’image est optimisée lors de l’enregistrement.',
-  'inventory.image.sessionRequired': 'Reconnectez-vous pour téléverser l’image.',
+  'inventory.image.hint':
+      'JPG, PNG ou WebP jusqu’à 8 Mo. L’image est optimisée lors de l’enregistrement.',
+  'inventory.image.sessionRequired':
+      'Reconnectez-vous pour téléverser l’image.',
   'inventory.image.itemMissing': 'L’article enregistré est introuvable.',
   'inventory.size': 'Taille',
   'inventory.dimensions': 'Dimensions (L × l × H)',
@@ -25107,6 +25335,14 @@ const _clubInventoryAr = {
   'inventory.scanQr': 'مسح رمز QR',
   'inventory.qrReissue': 'إصدار QR جديد',
   'inventory.qrRevoke': 'إلغاء QR',
+  'inventory.qrShow': 'عرض رمز QR',
+  'inventory.qrCode': 'رمز QR للمخزون',
+  'inventory.qrCodeForItem': 'رمز QR للمخزون لـ {name}',
+  'inventory.qrDisplayHint':
+      'ثبّت هذا الرمز على العنصر أو امسحه باستخدام جهاز ثانٍ.',
+  'inventory.qrUnavailable':
+      'تم إلغاء رمز QR هذا. أصدِر رمزًا جديدًا لعرض رمز صالح.',
+  'inventory.close': 'إغلاق',
   'inventory.qrReissueConfirm':
       'سيصبح رمز المخزون القديم غير صالح. هل تريد إصدار رمز جديد؟',
   'inventory.qrRevokeConfirm':
@@ -25217,7 +25453,8 @@ const _clubInventoryAr = {
   'inventory.image.camera': 'التقاط صورة',
   'inventory.image.gallery': 'اختيار من المعرض',
   'inventory.image.remove': 'إزالة الصورة',
-  'inventory.image.hint': 'JPG أو PNG أو WebP حتى 8 ميغابايت. تُحسّن الصورة عند الحفظ.',
+  'inventory.image.hint':
+      'JPG أو PNG أو WebP حتى 8 ميغابايت. تُحسّن الصورة عند الحفظ.',
   'inventory.image.sessionRequired': 'يرجى تسجيل الدخول مجددًا لرفع الصورة.',
   'inventory.image.itemMissing': 'تعذر العثور على العنصر المحفوظ.',
   'inventory.size': 'المقاس',
@@ -25282,7 +25519,8 @@ const _clubMetadataDe = {
   'clubMetadata.moveOptionDown': 'Nach unten',
   'clubMetadata.optionEmpty': 'Bitte gib einen Auswahlwert ein.',
   'clubMetadata.optionDuplicate': 'Dieser Auswahlwert ist bereits vorhanden.',
-  'clubMetadata.optionTooLong': 'Ein Auswahlwert darf höchstens 160 Zeichen enthalten.',
+  'clubMetadata.optionTooLong':
+      'Ein Auswahlwert darf höchstens 160 Zeichen enthalten.',
   'clubMetadata.optionLimit': 'Maximal 50 Auswahlwerte sind möglich.',
   'clubMetadata.sortOrder': 'Sortierung',
   'clubMetadata.required': 'Pflichtfeld',
@@ -25329,7 +25567,8 @@ const _clubMetadataDe = {
   'clubMetadataValues.title': 'Eigene Daten',
   'clubMetadataValues.action': 'Eigene Daten bearbeiten',
   'clubMetadataValues.manageFields': 'Felder und Kategorien verwalten',
-  'clubMetadataValues.readOnly': 'Nur Leserechte – Änderungen sind nicht erlaubt.',
+  'clubMetadataValues.readOnly':
+      'Nur Leserechte – Änderungen sind nicht erlaubt.',
   'clubMetadataValues.hint':
       'Zusätzliche Vereinsangaben und Kategorien pflegen.',
   'clubMetadataValues.error':
@@ -25464,7 +25703,8 @@ final _clubMetadataFr = {
   'clubMetadata.moveOptionDown': 'Descendre',
   'clubMetadata.optionEmpty': 'Saisissez une option.',
   'clubMetadata.optionDuplicate': 'Cette option existe déjà.',
-  'clubMetadata.optionTooLong': 'Une option peut contenir au maximum 160 caractères.',
+  'clubMetadata.optionTooLong':
+      'Une option peut contenir au maximum 160 caractères.',
   'clubMetadata.optionLimit': 'Vous pouvez ajouter jusqu’à 50 options.',
   'clubMetadata.sortOrder': 'Ordre',
   'clubMetadata.required': 'Obligatoire',
@@ -25509,7 +25749,8 @@ final _clubMetadataFr = {
   'clubMetadataValues.title': 'Données personnalisées',
   'clubMetadataValues.action': 'Modifier les données personnalisées',
   'clubMetadataValues.manageFields': 'Gérer les champs et les catégories',
-  'clubMetadataValues.readOnly': 'Accès en lecture seule – modifications non autorisées.',
+  'clubMetadataValues.readOnly':
+      'Accès en lecture seule – modifications non autorisées.',
   'clubMetadataValues.hint':
       'Gérer les informations et catégories supplémentaires.',
   'clubMetadataValues.error':
@@ -26098,7 +26339,11 @@ final _strings = {
     'trainingHub.markMissed': 'Als nicht gemacht markieren',
     'trainingHub.missedReason': 'Grund',
     'trainingHub.notifyTrainer': 'Trainer informieren?',
-    'trainingHub.notifyTrainerDetails': 'Dein Trainer erhält den Grund und deine optionale Notiz.',
+    'trainingHub.notifyTrainerAgain': 'Trainer erneut benachrichtigen',
+    'trainingHub.notifyTrainerAgainHint':
+        'Nur bei dieser Korrektur. Dein Trainer erhält einen Link zum aktualisierten Log.',
+    'trainingHub.notifyTrainerDetails':
+        'Dein Trainer erhält den Grund und deine optionale Notiz.',
     'trainingHub.notifyTrainerCompletionDetails':
         'Dein Trainer erhält eine Nachricht mit einem Link zum Trainingslog.',
     'trainingHub.missed.krank': 'Krank',
@@ -26273,6 +26518,8 @@ final _strings = {
     'trainingHub.privacy.trainer': 'Trainerinnen und Trainer',
     'trainingHub.privacy.team': 'Mein Team',
     'trainingHub.rpe': 'Empfundene Belastung',
+    'trainingHub.athlete': 'Sportler',
+    'trainingHub.effortReview': 'Belastungsbewertung',
     'trainingHub.notes': 'Notizen',
     'trainingHub.deleteConfirmTitle': 'Wirklich löschen?',
     'trainingHub.deleteConfirmBody':
@@ -27718,8 +27965,10 @@ final _strings = {
     'events.routeOpen': 'Route öffnen',
     'events.detailTitle': 'Eventdetail',
     'events.addToCalendar': 'Zum Kalender hinzufügen',
-    'events.calendarSaved': 'Kalenderdatei gespeichert. Öffne sie, um den Termin zu übernehmen.',
-    'events.calendarSaveFailed': 'Die Kalenderdatei konnte nicht gespeichert werden.',
+    'events.calendarSaved':
+        'Kalenderdatei gespeichert. Öffne sie, um den Termin zu übernehmen.',
+    'events.calendarSaveFailed':
+        'Die Kalenderdatei konnte nicht gespeichert werden.',
     'events.detailSubtitle': 'Teilnahme, Treffpunkt und Organisation',
     'events.start': 'Start',
     'events.attendance': 'Teilnahme',
@@ -28305,8 +28554,10 @@ final _strings = {
     'sponsors.all': 'Alle',
     'sponsors.locationFilters': 'Standortfilter',
     'sponsors.contact': 'Sponsor kontaktieren',
-    'sponsors.contactClubRequired': 'Für eine Anfrage brauchst du die Sponsoring-Berechtigung in einem Verein.',
-    'sponsors.contactUnavailable': 'Für diesen Sponsor ist kein direkter Kontakt in Airmius verfügbar.',
+    'sponsors.contactClubRequired':
+        'Für eine Anfrage brauchst du die Sponsoring-Berechtigung in einem Verein.',
+    'sponsors.contactUnavailable':
+        'Für diesen Sponsor ist kein direkter Kontakt in Airmius verfügbar.',
     'sponsors.platform': 'Plattform',
     'sponsors.clubs': 'Vereine',
     'sponsors.outfit': 'Outfit',
@@ -28421,8 +28672,10 @@ final _strings = {
     'sponsorAdmin.title': 'Sponsorverwaltung',
     'sponsorAdmin.partnershipRequests': 'Offene Partnerschaftsanfragen',
     'sponsorAdmin.partnershipDetails': 'Details zur Anfrage',
-    'sponsorAdmin.partnershipNoDetails': 'Der Sponsor hat keine weiteren Angaben mitgesendet.',
-    'sponsorAdmin.partnershipUnavailable': 'Diese Anfrage ist nicht mehr offen oder für dich nicht verfügbar.',
+    'sponsorAdmin.partnershipNoDetails':
+        'Der Sponsor hat keine weiteren Angaben mitgesendet.',
+    'sponsorAdmin.partnershipUnavailable':
+        'Diese Anfrage ist nicht mehr offen oder für dich nicht verfügbar.',
     'sponsorAdmin.contractVersion': 'Vertragsversion',
     'sponsorAdmin.partnershipHelpTitle': 'Was passiert mit einer Anfrage?',
     'sponsorAdmin.partnershipHelpBody':
@@ -28783,7 +29036,11 @@ final _strings = {
     'trainingHub.markMissed': 'Mark as missed',
     'trainingHub.missedReason': 'Reason',
     'trainingHub.notifyTrainer': 'Notify your coach?',
-    'trainingHub.notifyTrainerDetails': 'Your coach will receive the reason and any note you add.',
+    'trainingHub.notifyTrainerAgain': 'Notify your coach again',
+    'trainingHub.notifyTrainerAgainHint':
+        'Only for this update. Your coach will receive a link to the updated log.',
+    'trainingHub.notifyTrainerDetails':
+        'Your coach will receive the reason and any note you add.',
     'trainingHub.notifyTrainerCompletionDetails':
         'Your coach will receive a notification with a link to the training log.',
     'trainingHub.missed.krank': 'Ill',
@@ -28955,6 +29212,8 @@ final _strings = {
     'trainingHub.privacy.trainer': 'Coaches',
     'trainingHub.privacy.team': 'My team',
     'trainingHub.rpe': 'Perceived exertion',
+    'trainingHub.athlete': 'Athlete',
+    'trainingHub.effortReview': 'Effort rating',
     'trainingHub.notes': 'Notes',
     'trainingHub.deleteConfirmTitle': 'Delete this item?',
     'trainingHub.deleteConfirmBody': 'This action cannot be undone.',
@@ -30912,8 +31171,10 @@ final _strings = {
     'sponsors.all': 'All',
     'sponsors.locationFilters': 'Location filters',
     'sponsors.contact': 'Contact sponsor',
-    'sponsors.contactClubRequired': 'To send an inquiry, you need sponsorship permissions for a club.',
-    'sponsors.contactUnavailable': 'Direct contact with this sponsor is unavailable in Airmius.',
+    'sponsors.contactClubRequired':
+        'To send an inquiry, you need sponsorship permissions for a club.',
+    'sponsors.contactUnavailable':
+        'Direct contact with this sponsor is unavailable in Airmius.',
     'sponsors.platform': 'Platform',
     'sponsors.clubs': 'Clubs',
     'sponsors.outfit': 'Outfit',
@@ -31026,8 +31287,10 @@ final _strings = {
     'sponsorAdmin.title': 'Sponsor management',
     'sponsorAdmin.partnershipRequests': 'Open partnership requests',
     'sponsorAdmin.partnershipDetails': 'Request details',
-    'sponsorAdmin.partnershipNoDetails': 'The sponsor did not send any additional details.',
-    'sponsorAdmin.partnershipUnavailable': 'This request is no longer open or available to you.',
+    'sponsorAdmin.partnershipNoDetails':
+        'The sponsor did not send any additional details.',
+    'sponsorAdmin.partnershipUnavailable':
+        'This request is no longer open or available to you.',
     'sponsorAdmin.contractVersion': 'Contract version',
     'sponsorAdmin.partnershipHelpTitle': 'What happens to a request?',
     'sponsorAdmin.partnershipHelpBody':
@@ -31396,7 +31659,11 @@ final _strings = {
     'trainingHub.markMissed': 'Marquer comme manquée',
     'trainingHub.missedReason': 'Motif',
     'trainingHub.notifyTrainer': 'Prévenir votre entraîneur ?',
-    'trainingHub.notifyTrainerDetails': 'Votre entraîneur recevra le motif et votre note éventuelle.',
+    'trainingHub.notifyTrainerAgain': 'Prévenir à nouveau votre entraîneur',
+    'trainingHub.notifyTrainerAgainHint':
+        'Uniquement pour cette modification. Votre entraîneur recevra un lien vers le journal mis à jour.',
+    'trainingHub.notifyTrainerDetails':
+        'Votre entraîneur recevra le motif et votre note éventuelle.',
     'trainingHub.notifyTrainerCompletionDetails':
         'Votre entraîneur recevra une notification avec un lien vers le journal.',
     'trainingHub.missed.krank': 'Maladie',
@@ -31570,6 +31837,8 @@ final _strings = {
     'trainingHub.privacy.trainer': 'Coachs',
     'trainingHub.privacy.team': 'Mon équipe',
     'trainingHub.rpe': 'Effort ressenti',
+    'trainingHub.athlete': 'Sportif',
+    'trainingHub.effortReview': 'Évaluation de l’effort',
     'trainingHub.notes': 'Notes',
     'trainingHub.deleteConfirmTitle': 'Vraiment supprimer ?',
     'trainingHub.deleteConfirmBody': 'Cette action ne peut pas être annulée.',
@@ -32933,8 +33202,10 @@ final _strings = {
     'events.routeOpen': 'Ouvrir l’itinéraire',
     'events.detailTitle': 'Detail evenement',
     'events.addToCalendar': 'Ajouter au calendrier',
-    'events.calendarSaved': 'Fichier calendrier enregistré. Ouvrez-le pour ajouter l’événement.',
-    'events.calendarSaveFailed': 'Le fichier calendrier n’a pas pu être enregistré.',
+    'events.calendarSaved':
+        'Fichier calendrier enregistré. Ouvrez-le pour ajouter l’événement.',
+    'events.calendarSaveFailed':
+        'Le fichier calendrier n’a pas pu être enregistré.',
     'events.detailSubtitle': 'Participation, lieu et organisation',
     'events.start': 'Debut',
     'events.attendance': 'Participation',
@@ -33511,8 +33782,10 @@ final _strings = {
     'sponsors.all': 'Tous',
     'sponsors.locationFilters': 'Filtres géographiques',
     'sponsors.contact': 'Contacter le sponsor',
-    'sponsors.contactClubRequired': 'Pour envoyer une demande, tu dois disposer des droits de sponsoring dans un club.',
-    'sponsors.contactUnavailable': 'Ce sponsor ne peut pas être contacté directement dans Airmius.',
+    'sponsors.contactClubRequired':
+        'Pour envoyer une demande, tu dois disposer des droits de sponsoring dans un club.',
+    'sponsors.contactUnavailable':
+        'Ce sponsor ne peut pas être contacté directement dans Airmius.',
     'sponsors.platform': 'Plateforme',
     'sponsors.clubs': 'Clubs',
     'sponsors.outfit': 'Tenues',
@@ -33581,8 +33854,10 @@ final _strings = {
     'sponsorAdmin.title': 'Gestion des sponsors',
     'sponsorAdmin.partnershipRequests': 'Demandes de partenariat ouvertes',
     'sponsorAdmin.partnershipDetails': 'Détails de la demande',
-    'sponsorAdmin.partnershipNoDetails': 'Le sponsor n’a transmis aucune information supplémentaire.',
-    'sponsorAdmin.partnershipUnavailable': 'Cette demande est close ou indisponible.',
+    'sponsorAdmin.partnershipNoDetails':
+        'Le sponsor n’a transmis aucune information supplémentaire.',
+    'sponsorAdmin.partnershipUnavailable':
+        'Cette demande est close ou indisponible.',
     'sponsorAdmin.contractVersion': 'Version du contrat',
     'sponsorAdmin.partnershipHelpTitle': 'Que devient une demande ?',
     'sponsorAdmin.partnershipHelpBody':
@@ -33941,6 +34216,9 @@ final _strings = {
     'trainingHub.markMissed': 'وضع علامة كفائتة',
     'trainingHub.missedReason': 'السبب',
     'trainingHub.notifyTrainer': 'هل تريد إبلاغ مدربك؟',
+    'trainingHub.notifyTrainerAgain': 'إبلاغ مدربك مرة أخرى',
+    'trainingHub.notifyTrainerAgainHint':
+        'لهذا التعديل فقط. سيتلقى مدربك رابطًا إلى سجل التدريب المحدّث.',
     'trainingHub.notifyTrainerDetails': 'سيتلقى مدربك السبب وأي ملاحظة تضيفها.',
     'trainingHub.notifyTrainerCompletionDetails':
         'سيتلقى مدربك إشعارًا يتضمن رابطًا إلى سجل التدريب.',
@@ -34109,6 +34387,8 @@ final _strings = {
     'trainingHub.privacy.trainer': 'المدربون',
     'trainingHub.privacy.team': 'فريقي',
     'trainingHub.rpe': 'الجهد المحسوس',
+    'trainingHub.athlete': 'الرياضي',
+    'trainingHub.effortReview': 'تقييم الجهد',
     'trainingHub.notes': 'ملاحظات',
     'trainingHub.deleteConfirmTitle': 'هل تريد الحذف؟',
     'trainingHub.deleteConfirmBody': 'لا يمكن التراجع عن هذا الإجراء.',
@@ -35944,8 +36224,10 @@ final _strings = {
     'sponsors.all': 'الكل',
     'sponsors.locationFilters': 'عوامل تصفية الموقع',
     'sponsors.contact': 'تواصل مع الراعي',
-    'sponsors.contactClubRequired': 'لإرسال طلب، تحتاج إلى صلاحية إدارة الرعاية في أحد الأندية.',
-    'sponsors.contactUnavailable': 'لا يمكن التواصل مباشرة مع هذا الراعي عبر Airmius.',
+    'sponsors.contactClubRequired':
+        'لإرسال طلب، تحتاج إلى صلاحية إدارة الرعاية في أحد الأندية.',
+    'sponsors.contactUnavailable':
+        'لا يمكن التواصل مباشرة مع هذا الراعي عبر Airmius.',
     'sponsors.platform': 'المنصة',
     'sponsors.clubs': 'الأندية',
     'sponsors.outfit': 'الملابس',

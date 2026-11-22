@@ -547,6 +547,44 @@ class TrainingPlanApiCrudTest extends TestCase
         );
     }
 
+    public function test_athlete_can_opt_in_to_notify_coach_again_after_correcting_log(): void
+    {
+        [$coach, $athlete, $team] = $this->trainingFixture();
+        $coach->update(['language' => 'de']);
+        $plan = $this->createPlan($coach, $team);
+        $item = $plan->items()->create(['title' => 'Tempolauf', 'sport_type' => 'laufen']);
+
+        Sanctum::actingAs($athlete);
+        $logId = $this->postJson('/api/v1/training/logs', [
+            'title' => 'Tempolauf', 'training_plan_item_id' => $item->id,
+            'status' => 'completed', 'duration_minutes' => 30,
+            'privacy_scope' => 'trainer', 'notify_trainer' => false,
+            'wellness' => ['rpe' => 7, 'pain' => 2],
+        ])->assertCreated()->json('data.id');
+
+        $payload = [
+            'title' => 'Tempolauf korrigiert', 'training_plan_item_id' => $item->id,
+            'status' => 'completed', 'duration_minutes' => 35,
+            'privacy_scope' => 'trainer', 'wellness' => ['rpe' => 8, 'pain' => 3],
+        ];
+        $this->putJson("/api/v1/training/logs/{$logId}", $payload + ['notify_trainer' => false])
+            ->assertOk()->assertJsonPath('data.metrics.wellness.pain', 3);
+        $this->assertDatabaseMissing('notifications', ['type' => 'training.log.updated']);
+
+        $this->putJson("/api/v1/training/logs/{$logId}", [
+            ...$payload, 'privacy_scope' => 'private', 'notify_trainer' => true,
+        ])->assertOk();
+        $this->assertDatabaseMissing('notifications', ['type' => 'training.log.updated']);
+
+        $this->putJson("/api/v1/training/logs/{$logId}", [
+            ...$payload, 'notify_trainer' => true,
+        ])->assertOk();
+        $notice = Notification::query()->where('type', 'training.log.updated')->sole();
+        $this->assertEquals($coach->id, $notice->user_id);
+        $this->assertSame($logId, $notice->data['training_log_id']);
+        $this->assertStringContainsString($athlete->name, $notice->data['body']);
+    }
+
     public function test_mobile_api_can_save_and_instantiate_scoped_training_templates(): void
     {
         [$coach, $athlete, $team] = $this->trainingFixture();
