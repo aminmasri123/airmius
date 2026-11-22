@@ -242,6 +242,8 @@ return [
         'inventory_loan_return_requested_body' => ':user hat die Rückgabe von :item gemeldet. Bitte prüfe und bestätige sie.',
         'inventory_loan_return_confirmed_title' => 'Rückgabe bestätigt',
         'inventory_loan_return_confirmed_body' => 'Die Rückgabe von :item bei :club wurde bestätigt.',
+        'service_hour_recorded_title' => 'Neue Dienststunde eingetragen',
+        'service_hour_recorded_body' => 'Für dich wurde bei :club am :date die Tätigkeit „:activity“ mit :minutes Minuten erfasst. Der Eintrag wartet auf Bestätigung durch die Vereinsverwaltung.',
         'inventory_resource_booked_title' => 'Ressource verbindlich gebucht',
         'inventory_resource_booked_body' => ':item wurde für :start–:end Uhr gebucht.',
         'task_assigned_body' => ':user hat dir in :club die Aufgabe ":task" zugewiesen.',

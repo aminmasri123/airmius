@@ -10,8 +10,11 @@ use App\Models\ClubServiceHourRecord;
 use App\Models\ClubServiceHourRequirement;
 use App\Models\ClubYearPeriod;
 use App\Models\User;
+use App\Notifications\ServiceHourRecorded;
 use App\Services\ClubServiceHourLedger;
+use App\Support\AppNotification;
 use App\Support\ClubPermissions;
+use App\Support\LocalizedMail;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -100,10 +103,11 @@ class ClubServiceHourController extends Controller
             'minutes' => ['required', 'integer', 'min:1', 'max:1440'],
             'title' => ['required', 'string', 'max:160'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'notification_channel' => ['nullable', Rule::in(['none', 'app', 'email', 'app_email'])],
         ]);
         $period = $this->period($club, (int) $data['period_id']);
         $this->ensurePeriodOpen($period);
-        $this->member($club, (int) $data['user_id']);
+        $member = $this->member($club, (int) $data['user_id']);
         if (! empty($data['replacement_for_user_id'])) {
             $this->member($club, (int) $data['replacement_for_user_id']);
         }
@@ -120,7 +124,45 @@ class ClubServiceHourController extends Controller
             'minutes' => $data['minutes'],
             'title' => $data['title'],
             'notes' => $data['notes'] ?? null,
+            'notification_channel' => $data['notification_channel'] ?? 'none',
         ]);
+
+        $channel = (string) $record->notification_channel;
+        $replace = [
+            'club' => $club->name,
+            'activity' => $record->title,
+            'date' => LocalizedMail::for($member)->date($record->served_on),
+            'minutes' => (int) $record->minutes,
+        ];
+        if (in_array($channel, ['app', 'app_email'], true)) {
+            AppNotification::sendLocalized(
+                $member,
+                'club.service_hour.recorded',
+                'organization.notifications.service_hour_recorded_title',
+                'organization.notifications.service_hour_recorded_body',
+                $replace,
+                [
+                    'club_id' => $club->id,
+                    'service_hour_record_id' => $record->id,
+                    'served_on' => $record->served_on->format('Y-m-d'),
+                    'minutes' => (int) $record->minutes,
+                    'activity' => $record->title,
+                    'mobile_url' => 'airmius://notifications',
+                ],
+                ['category' => 'club', 'priority' => 'normal'],
+            );
+        }
+        if (in_array($channel, ['email', 'app_email'], true)) {
+            $member->notify(new ServiceHourRecorded(
+                $club->name,
+                $record->title,
+                $record->served_on->format('Y-m-d'),
+                (int) $record->minutes,
+            ));
+        }
+        if ($channel !== 'none') {
+            $record->forceFill(['notified_at' => now()])->save();
+        }
 
         return response()->json(['data' => $this->recordPayload($record)], 201);
     }
@@ -226,6 +268,8 @@ class ClubServiceHourController extends Controller
             'served_on' => $record->served_on->format('Y-m-d'),
             'minutes' => $record->minutes,
             'title' => $record->title,
+            'notification_channel' => $record->notification_channel,
+            'notified_at' => $record->notified_at?->toJSON(),
             'confirmed_at' => $record->confirmed_at?->toJSON(),
             'confirmation_snapshot' => $record->confirmation_snapshot,
         ];

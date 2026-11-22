@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_services_scope.dart';
@@ -14,6 +15,70 @@ List<Map<String, dynamic>> serviceHourContributionPeriods(Object? value) {
             period['type'] == null || period['type'] == 'contribution',
       )
       .toList();
+}
+
+String formatServiceHourDateDigits(String value) {
+  var digits = value.replaceAll(RegExp(r'\D'), '');
+  if (digits.length > 8) digits = digits.substring(0, 8);
+  if (digits.length < 2) return digits;
+  if (digits.length == 2) return '$digits.';
+  if (digits.length < 4) {
+    return '${digits.substring(0, 2)}.${digits.substring(2)}';
+  }
+  if (digits.length == 4) {
+    return '${digits.substring(0, 2)}.${digits.substring(2)}.';
+  }
+  return '${digits.substring(0, 2)}.${digits.substring(2, 4)}.${digits.substring(4)}';
+}
+
+String? serviceHourApiDate(String value) {
+  final match = RegExp(r'^(\d{2})\.(\d{2})\.(\d{4})$').firstMatch(value.trim());
+  if (match == null) return null;
+  final day = int.parse(match.group(1)!);
+  final month = int.parse(match.group(2)!);
+  final year = int.parse(match.group(3)!);
+  if (year < 1900) return null;
+  final parsed = DateTime(year, month, day);
+  if (parsed.year != year || parsed.month != month || parsed.day != day) {
+    return null;
+  }
+  return '${match.group(3)}-${match.group(2)}-${match.group(1)}';
+}
+
+class ServiceHourDateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final oldDigits = oldValue.text.replaceAll(RegExp(r'\D'), '');
+    if (newValue.text.length < oldValue.text.length &&
+        digits.length == oldDigits.length &&
+        digits.isNotEmpty) {
+      final selectionEnd = newValue.selection.end;
+      final cursor = selectionEnd < 0
+          ? 0
+          : (selectionEnd > newValue.text.length
+                ? newValue.text.length
+                : selectionEnd);
+      final digitsBeforeCursor = newValue.text
+          .substring(0, cursor)
+          .replaceAll(RegExp(r'\D'), '')
+          .length;
+      final candidate = digitsBeforeCursor - 1;
+      final removeAt = candidate < 0
+          ? 0
+          : (candidate >= digits.length ? digits.length - 1 : candidate);
+      digits = digits.substring(0, removeAt) + digits.substring(removeAt + 1);
+    }
+    if (digits.length > 8) digits = digits.substring(0, 8);
+    final formatted = formatServiceHourDateDigits(digits);
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
 }
 
 class ClubServiceHoursScreen extends StatefulWidget {
@@ -192,9 +257,20 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
     _Field('period_id', 'Beitragsjahr', fixed: periodId),
     choice('user_id', 'Mitglied', items('members'), 'user_id', 'name'),
     _Field('title', 'Tätigkeit'),
-    _Field('served_on', 'Datum (JJJJ-MM-TT)'),
+    _Field('served_on', 'Datum (TT.MM.JJJJ)', date: true),
     _Field('minutes', 'Dauer in Minuten', number: true),
     _Field('notes', 'Notiz', optional: true),
+    _Field(
+      'notification_channel',
+      'Mitglied informieren',
+      initial: 'app',
+      options: const [
+        (value: 'none', label: 'Nicht informieren'),
+        (value: 'app', label: 'In der App benachrichtigen'),
+        (value: 'email', label: 'Per E-Mail informieren'),
+        (value: 'app_email', label: 'App und E-Mail'),
+      ],
+    ),
   ]);
 
   void addExemption() => action('Befreiung', 'service-hour-exemptions', [
@@ -371,6 +447,22 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                       '${record['status'] == 'confirmed' ? 'Bestätigt' : 'Offen'}',
                     ),
                   ),
+                  if (record['notification_channel'] != null &&
+                      record['notification_channel'] != 'none')
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Informiert: ${switch (record['notification_channel']) {
+                            'email' => 'E-Mail',
+                            'app_email' => 'App und E-Mail',
+                            _ => 'App',
+                          }}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    ),
                   for (final correction
                       in (record['corrections'] as List? ?? [])
                           .whereType<Map>())
@@ -433,13 +525,16 @@ class _Field {
     this.key,
     this.label, {
     this.number = false,
+    this.date = false,
     this.optional = false,
     this.fixed,
+    this.initial,
     this.options,
   });
   final String key, label;
-  final bool number, optional;
+  final bool number, date, optional;
   final int? fixed;
+  final String? initial;
   final List<({String value, String label})>? options;
 }
 
@@ -461,6 +556,15 @@ class _ServiceHourFormState extends State<_ServiceHourForm> {
   final values = <String, String>{};
   bool saving = false;
   String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final field in widget.fields) {
+      if (field.initial != null) values[field.key] = field.initial!;
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(widget.title)),
@@ -485,6 +589,7 @@ class _ServiceHourFormState extends State<_ServiceHourForm> {
               if (field.options != null)
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(labelText: field.label),
+                  initialValue: field.initial,
                   items: [
                     for (final o in field.options!)
                       DropdownMenuItem(value: o.value, child: Text(o.label)),
@@ -496,14 +601,23 @@ class _ServiceHourFormState extends State<_ServiceHourForm> {
               else
                 TextFormField(
                   decoration: InputDecoration(labelText: field.label),
-                  keyboardType: field.number
+                  keyboardType: field.number || field.date
                       ? TextInputType.number
                       : TextInputType.text,
-                  onChanged: (value) => values[field.key] = value,
-                  validator: (value) =>
-                      !field.optional && (value == null || value.trim().isEmpty)
-                      ? 'Bitte ${field.label.toLowerCase()} eingeben.'
+                  inputFormatters: field.date
+                      ? [ServiceHourDateInputFormatter()]
                       : null,
+                  onChanged: (value) => values[field.key] = value,
+                  validator: (value) {
+                    if (!field.optional &&
+                        (value == null || value.trim().isEmpty)) {
+                      return 'Bitte ${field.label.toLowerCase()} eingeben.';
+                    }
+                    if (field.date && serviceHourApiDate(value ?? '') == null) {
+                      return 'Bitte ein gültiges Datum im Format TT.MM.JJJJ eingeben.';
+                    }
+                    return null;
+                  },
                 ),
             ],
           const SizedBox(height: 24),
@@ -516,8 +630,9 @@ class _ServiceHourFormState extends State<_ServiceHourForm> {
                     for (final field in widget.fields) {
                       final value = field.fixed ?? values[field.key];
                       if (value == null || value == '') continue;
-                      payload[field.key] =
-                          field.number ||
+                      payload[field.key] = field.date
+                          ? serviceHourApiDate('$value')
+                          : field.number ||
                               field.fixed != null ||
                               field.options != null
                           ? int.tryParse('$value') ?? value

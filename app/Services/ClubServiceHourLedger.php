@@ -77,6 +77,8 @@ class ClubServiceHourLedger
                     'served_on' => $record->served_on->format('Y-m-d'),
                     'minutes' => $record->minutes,
                     'status' => $record->status,
+                    'notification_channel' => $record->notification_channel,
+                    'notified_at' => $record->notified_at?->toJSON(),
                     'corrections' => $record->corrections->map(fn (ClubServiceHourCorrection $correction) => [
                         'minutes_delta' => $correction->minutes_delta,
                         'reason' => $correction->reason,

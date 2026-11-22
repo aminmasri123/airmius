@@ -15,6 +15,7 @@ class ClubServiceHourRecord extends Model
             'minutes' => 'integer',
             'confirmation_snapshot' => 'array',
             'confirmed_at' => 'datetime',
+            'notified_at' => 'datetime',
         ];
     }
 

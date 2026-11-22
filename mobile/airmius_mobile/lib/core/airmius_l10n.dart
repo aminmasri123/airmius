@@ -27976,6 +27976,12 @@ final _strings = {
     'subscriptions.startCheckout': 'Kostenpflichtig bestellen',
     'subscriptions.checkoutHint':
         'Prüfe Zeitraum, Zahlungsart und gegebenenfalls den Verein vor der Bestellung.',
+    'subscriptions.checkoutTitle': 'Plan bestellen',
+    'subscriptions.selectedPlan': 'Ausgewählter Plan',
+    'subscriptions.checkoutSettings': 'Bestellung einrichten',
+    'subscriptions.perMonth': 'pro Monat',
+    'subscriptions.perYear': 'pro Jahr',
+    'subscriptions.totalDue': 'Zu zahlender Betrag',
     'subscriptions.checkoutCreated': 'Der Zahlungsvorgang wurde erstellt.',
     'subscriptions.invalidPaymentUrl':
         'Der Zahlungslink ist ungültig oder nicht sicher.',
@@ -30631,6 +30637,12 @@ final _strings = {
     'subscriptions.startCheckout': 'Place paid order',
     'subscriptions.checkoutHint':
         'Review the interval, payment method and club before ordering.',
+    'subscriptions.checkoutTitle': 'Order plan',
+    'subscriptions.selectedPlan': 'Selected plan',
+    'subscriptions.checkoutSettings': 'Set up your order',
+    'subscriptions.perMonth': 'per month',
+    'subscriptions.perYear': 'per year',
+    'subscriptions.totalDue': 'Amount due',
     'subscriptions.checkoutCreated': 'The payment process was created.',
     'subscriptions.invalidPaymentUrl':
         'The payment link is invalid or insecure.',
@@ -33241,6 +33253,12 @@ final _strings = {
     'subscriptions.startCheckout': 'Commander avec obligation de paiement',
     'subscriptions.checkoutHint':
         'Vérifiez la période, le paiement et le club avant de commander.',
+    'subscriptions.checkoutTitle': 'Commander le forfait',
+    'subscriptions.selectedPlan': 'Forfait sélectionné',
+    'subscriptions.checkoutSettings': 'Configurer la commande',
+    'subscriptions.perMonth': 'par mois',
+    'subscriptions.perYear': 'par an',
+    'subscriptions.totalDue': 'Montant à payer',
     'subscriptions.checkoutCreated': 'Le paiement a été créé.',
     'subscriptions.invalidPaymentUrl':
         'Le lien de paiement est invalide ou non sécurisé.',
@@ -35727,6 +35745,12 @@ final _strings = {
     'subscriptions.termsHint': 'لا يبدأ الطلب المدفوع إلا بعد تأكيدك الصريح.',
     'subscriptions.startCheckout': 'إتمام الطلب المدفوع',
     'subscriptions.checkoutHint': 'راجع الدورة وطريقة الدفع والنادي قبل الطلب.',
+    'subscriptions.checkoutTitle': 'طلب الخطة',
+    'subscriptions.selectedPlan': 'الخطة المختارة',
+    'subscriptions.checkoutSettings': 'إعداد الطلب',
+    'subscriptions.perMonth': 'شهرياً',
+    'subscriptions.perYear': 'سنوياً',
+    'subscriptions.totalDue': 'المبلغ المستحق',
     'subscriptions.checkoutCreated': 'تم إنشاء عملية الدفع.',
     'subscriptions.invalidPaymentUrl': 'رابط الدفع غير صالح أو غير آمن.',
     'subscriptions.browserError': 'تعذر فتح متصفح الدفع الآمن.',

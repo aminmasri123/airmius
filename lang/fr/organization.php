@@ -242,6 +242,8 @@ return [
         'inventory_loan_return_requested_body' => ':user a signalé le retour de :item. Veuillez le vérifier et le confirmer.',
         'inventory_loan_return_confirmed_title' => 'Retour confirmé',
         'inventory_loan_return_confirmed_body' => 'Le retour de :item à :club a été confirmé.',
+        'service_hour_recorded_title' => 'Nouvelle heure de service enregistrée',
+        'service_hour_recorded_body' => ':club a enregistré pour vous l’activité « :activity » du :date, d’une durée de :minutes minutes. L’entrée attend la confirmation de l’administration du club.',
         'inventory_resource_booked_title' => 'Ressource réservée',
         'inventory_resource_booked_body' => ':item a été réservé de :start à :end.',
         'task_assigned_body' => ':user vous a attribué la tâche « :task » dans :club.',

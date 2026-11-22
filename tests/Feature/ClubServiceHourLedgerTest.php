@@ -8,8 +8,10 @@ use App\Models\ClubRoleDefinition;
 use App\Models\ClubServiceHourRecord;
 use App\Models\ClubYearPeriod;
 use App\Models\User;
+use App\Notifications\ServiceHourRecorded;
 use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -126,6 +128,35 @@ class ClubServiceHourLedgerTest extends TestCase
             ->assertJsonPath('data.can_manage', false)
             ->assertDontSee('Private Begründung')
             ->assertDontSee('Anderes Mitglied');
+    }
+
+    public function test_manager_can_choose_app_and_email_notification_for_recorded_service_hours(): void
+    {
+        [$club, $owner, $member, $manager, $period] = $this->fixture();
+        NotificationFacade::fake();
+        Sanctum::actingAs($manager);
+
+        $recordId = $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records", [
+            'period_id' => $period->id,
+            'user_id' => $member->id,
+            'served_on' => '2026-05-12',
+            'minutes' => 90,
+            'title' => 'Turnieraufbau',
+            'notification_channel' => 'app_email',
+        ])->assertCreated()
+            ->assertJsonPath('data.notification_channel', 'app_email')
+            ->assertJson(fn ($json) => $json->whereType('data.notified_at', 'string')->etc())
+            ->json('data.id');
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $member->id,
+            'type' => 'club.service_hour.recorded',
+        ]);
+        $this->assertDatabaseHas('club_service_hour_records', [
+            'id' => $recordId,
+            'notification_channel' => 'app_email',
+        ]);
+        NotificationFacade::assertSentTo($member, ServiceHourRecorded::class);
     }
 
     public function test_roles_permissions_period_scope_and_locked_period_are_enforced(): void

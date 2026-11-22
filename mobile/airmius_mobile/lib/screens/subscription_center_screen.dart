@@ -492,142 +492,11 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
   }
 
   Future<JsonMap?> _checkoutDialog(JsonMap plan, List<JsonMap> clubs) {
-    final t = AirmiusScope.of(context).t;
-    final targetActor = _subscriptionText(
-      plan['target_actor'],
-      fallback: 'sportler',
-    );
-    var interval = 'monthly';
-    var provider = 'bank_transfer';
-    var accepted = false;
-    int? clubId = clubs.isEmpty
-        ? null
-        : _subscriptionNullableInt(clubs.first['id']);
-    return showDialog<JsonMap>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(
-            _subscriptionText(plan['name'], fallback: t('subscriptions.plan')),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  t('subscriptions.checkoutHint'),
-                  style: TextStyle(
-                    color: airmiusMutedColor(context),
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  initialValue: interval,
-                  decoration: InputDecoration(
-                    labelText: t('subscriptions.billingInterval'),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'monthly',
-                      child: Text(t('subscriptions.monthly')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'yearly',
-                      child: Text(t('subscriptions.yearly')),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      setDialogState(() => interval = value ?? interval),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: provider,
-                  decoration: InputDecoration(
-                    labelText: t('subscriptions.paymentMethod'),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'bank_transfer',
-                      child: Text(t('subscriptions.bankTransfer')),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'stripe',
-                      child: Text('Stripe'),
-                    ),
-                    const DropdownMenuItem(
-                      value: 'paypal',
-                      child: Text('PayPal'),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      setDialogState(() => provider = value ?? provider),
-                ),
-                if (targetActor == 'verein') ...[
-                  const SizedBox(height: 12),
-                  if (clubs.isEmpty)
-                    Text(
-                      t('subscriptions.clubRequired'),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    )
-                  else
-                    DropdownButtonFormField<int>(
-                      initialValue: clubId,
-                      decoration: InputDecoration(
-                        labelText: t('subscriptions.club'),
-                      ),
-                      items: [
-                        for (final club in clubs)
-                          DropdownMenuItem(
-                            value: _subscriptionInt(club['id']),
-                            child: Text(
-                              _subscriptionText(
-                                club['name'],
-                                fallback: t('subscriptions.club'),
-                              ),
-                            ),
-                          ),
-                      ],
-                      onChanged: (value) =>
-                          setDialogState(() => clubId = value),
-                    ),
-                ],
-                const SizedBox(height: 12),
-                Material(
-                  color: Colors.transparent,
-                  child: CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: accepted,
-                    controlAffinity: ListTileControlAffinity.leading,
-                    title: Text(t('subscriptions.acceptTerms')),
-                    subtitle: Text(t('subscriptions.termsHint')),
-                    onChanged: (value) =>
-                        setDialogState(() => accepted = value == true),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(t('cancel')),
-            ),
-            FilledButton(
-              onPressed:
-                  !accepted || (targetActor == 'verein' && clubId == null)
-                  ? null
-                  : () => Navigator.pop(context, {
-                      'provider': provider,
-                      'billing_interval': interval,
-                      'club_id': clubId,
-                    }),
-              child: Text(t('subscriptions.startCheckout')),
-            ),
-          ],
+    return Navigator.of(context).push<JsonMap>(
+      MaterialPageRoute<JsonMap>(
+        builder: (_) => _SubscriptionCheckoutScreen(
+          plan: plan,
+          clubs: clubs,
         ),
       ),
     );
@@ -818,6 +687,331 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
   }
+}
+
+class _SubscriptionCheckoutScreen extends StatefulWidget {
+  const _SubscriptionCheckoutScreen({required this.plan, required this.clubs});
+
+  final JsonMap plan;
+  final List<JsonMap> clubs;
+
+  @override
+  State<_SubscriptionCheckoutScreen> createState() =>
+      _SubscriptionCheckoutScreenState();
+}
+
+class _SubscriptionCheckoutScreenState
+    extends State<_SubscriptionCheckoutScreen> {
+  String _interval = 'monthly';
+  String _provider = 'bank_transfer';
+  bool _accepted = false;
+  int? _clubId;
+
+  bool get _needsClub =>
+      _subscriptionText(widget.plan['target_actor'], fallback: 'sportler') ==
+      'verein';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.clubs.isNotEmpty) {
+      _clubId = _subscriptionNullableInt(widget.clubs.first['id']);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    final localized = _subscriptionMap(widget.plan['localized_price']);
+    final currency = _subscriptionText(
+      localized['currency'] ?? widget.plan['currency'],
+      fallback: 'EUR',
+    );
+    final monthly = _subscriptionInt(
+      localized['monthly_price_cents'] ??
+          widget.plan['monthly_price_cents'],
+    );
+    final yearly = _subscriptionInt(
+      localized['yearly_price_cents'] ?? widget.plan['yearly_price_cents'],
+    );
+    final selectedPrice = _interval == 'yearly' ? yearly : monthly;
+    final canContinue = _accepted && (!_needsClub || _clubId != null);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          t('subscriptions.checkoutTitle'),
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AirmiusPanel(
+                gradient: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Eyebrow(t('subscriptions.selectedPlan')),
+                    const SizedBox(height: 8),
+                    Text(
+                      _subscriptionText(
+                        widget.plan['name'],
+                        fallback: t('subscriptions.plan'),
+                      ),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (_subscriptionText(
+                      widget.plan['description'],
+                    ).isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _subscriptionText(widget.plan['description']),
+                        style: TextStyle(
+                          color: airmiusMutedColor(context),
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    Text(
+                      _subscriptionPrice(selectedPrice, currency),
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text(
+                      t(
+                        _interval == 'yearly'
+                            ? 'subscriptions.perYear'
+                            : 'subscriptions.perMonth',
+                      ),
+                      style: TextStyle(color: airmiusMutedColor(context)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              AirmiusPanel(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      t('subscriptions.checkoutSettings'),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      t('subscriptions.checkoutHint'),
+                      style: TextStyle(
+                        color: airmiusMutedColor(context),
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    DropdownButtonFormField<String>(
+                      initialValue: _interval,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: t('subscriptions.billingInterval'),
+                        prefixIcon: const Icon(Icons.calendar_month_outlined),
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: 'monthly',
+                          child: Text(
+                            '${t('subscriptions.monthly')} · '
+                            '${_subscriptionPrice(monthly, currency)}',
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'yearly',
+                          child: Text(
+                            '${t('subscriptions.yearly')} · '
+                            '${_subscriptionPrice(yearly, currency)}',
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          setState(() => _interval = value ?? _interval),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      initialValue: _provider,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: t('subscriptions.paymentMethod'),
+                        prefixIcon: const Icon(Icons.payment_outlined),
+                      ),
+                      items: [
+                        DropdownMenuItem(
+                          value: 'bank_transfer',
+                          child: Text(t('subscriptions.bankTransfer')),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'stripe',
+                          child: Text('Stripe'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'paypal',
+                          child: Text('PayPal'),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          setState(() => _provider = value ?? _provider),
+                    ),
+                    if (_needsClub) ...[
+                      const SizedBox(height: 16),
+                      if (widget.clubs.isEmpty)
+                        _CheckoutWarning(
+                          text: t('subscriptions.clubRequired'),
+                        )
+                      else
+                        DropdownButtonFormField<int>(
+                          initialValue: _clubId,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: t('subscriptions.club'),
+                            prefixIcon: const Icon(Icons.groups_outlined),
+                          ),
+                          items: [
+                            for (final club in widget.clubs)
+                              DropdownMenuItem(
+                                value: _subscriptionInt(club['id']),
+                                child: Text(
+                                  _subscriptionText(
+                                    club['name'],
+                                    fallback: t('subscriptions.club'),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                          ],
+                          onChanged: (value) =>
+                              setState(() => _clubId = value),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              AirmiusPanel(
+                child: CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: _accepted,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Text(
+                    t('subscriptions.acceptTerms'),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: Text(
+                      t('subscriptions.termsHint'),
+                      style: const TextStyle(height: 1.4),
+                    ),
+                  ),
+                  onChanged: (value) =>
+                      setState(() => _accepted = value == true),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            border: Border(
+              top: BorderSide(color: airmiusBorderColor(context)),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    t('subscriptions.totalDue'),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  Text(
+                    _subscriptionPrice(selectedPrice, currency),
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 9),
+              FilledButton.icon(
+                onPressed: canContinue
+                    ? () => Navigator.pop(context, <String, dynamic>{
+                        'provider': _provider,
+                        'billing_interval': _interval,
+                        'club_id': _clubId,
+                      })
+                    : null,
+                icon: const Icon(Icons.lock_outline),
+                label: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text(t('subscriptions.startCheckout')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CheckoutWarning extends StatelessWidget {
+  const _CheckoutWarning({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.errorContainer,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          Icons.warning_amber_rounded,
+          color: Theme.of(context).colorScheme.onErrorContainer,
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onErrorContainer,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _SubscriptionBundle {
