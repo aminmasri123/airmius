@@ -4,6 +4,7 @@ use App\Http\Middleware\ApplySecurityHeaders;
 use App\Http\Middleware\AttachApiContractHeaders;
 use App\Http\Middleware\EnforceApiCachePolicy;
 use App\Http\Middleware\EnsureAccountIsNotSuspended;
+use App\Http\Middleware\EnsureApiAccountIsAvailable;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
 use App\Http\Middleware\EnsureFeatureRollout;
@@ -23,6 +24,7 @@ use App\Support\Api\V1\ApiErrorResponse;
 use App\Support\PermissionDeniedMessage;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -63,7 +65,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->api(append: [
             AttachApiContractHeaders::class,
+            EnsureApiAccountIsAvailable::class,
         ]);
+        $middleware->appendToPriorityList(
+            AuthenticatesRequests::class,
+            EnsureApiAccountIsAvailable::class,
+        );
 
         // Locale must run after the default web session middleware and before Inertia.
         $middleware->web(append: [

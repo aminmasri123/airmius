@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\AccountAccess;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,29 +15,19 @@ class EnsureAccountIsNotSuspended
     {
         $user = $request->user();
 
-        if (! $user || $user->can('system.manage')) {
+        if (! $user) {
             return $next($request);
         }
 
         if ($user->privacy_status === 'anonymized') {
-            Auth::logout();
+            Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return redirect()->route('login');
         }
 
-        if ($user->account_status !== 'suspended') {
-            return $next($request);
-        }
-
-        if ($user->suspended_until && $user->suspended_until->isPast()) {
-            $user->forceFill([
-                'account_status' => 'active',
-                'suspended_until' => null,
-                'suspension_reason' => null,
-            ])->save();
-
+        if (! AccountAccess::isSuspended($user)) {
             return $next($request);
         }
 

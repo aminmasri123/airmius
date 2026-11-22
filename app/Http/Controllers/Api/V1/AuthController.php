@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
 use App\Notifications\MobileVerifyEmail;
+use App\Support\AccountAccess;
 use App\Support\MobileTwoFactorChallenge;
+use App\Support\ProgressiveLoginLockout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -59,7 +61,7 @@ class AuthController extends Controller
             'device_name' => ['nullable', 'string', 'max:120'],
         ]);
 
-        app(\App\Support\ProgressiveLoginLockout::class)->ensureAllowed($credentials['email']);
+        app(ProgressiveLoginLockout::class)->ensureAllowed($credentials['email']);
 
         if (! Auth::attempt($request->only('email', 'password'))) {
             throw ValidationException::withMessages([
@@ -68,6 +70,7 @@ class AuthController extends Controller
         }
 
         $user = $request->user() ?? Auth::user();
+        AccountAccess::ensureAllowed($user);
         $tokenName = $credentials['device_name'] ?? 'mobile';
 
         if ($user->hasEnabledTwoFactorAuthentication()) {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
+use App\Support\AccountAccess;
 use App\Support\AdminTwoFactor;
 use App\Support\MobileTwoFactorChallenge;
 use Illuminate\Http\Request;
@@ -36,6 +37,8 @@ class MobileTwoFactorChallengeController extends Controller
                 'challenge_token' => ['Die Sicherheitsabfrage ist abgelaufen. Bitte melde dich erneut an.'],
             ]);
         }
+
+        AccountAccess::ensureAllowed($user);
 
         $valid = false;
         $recoveryCode = trim((string) ($data['recovery_code'] ?? ''));

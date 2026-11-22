@@ -49,7 +49,12 @@ class _MembersState extends State<AdminMembersScreen> {
         ))['data']
         as Map,
   );
-  void _reload() => setState(() => _future = _load());
+  void _reload() {
+    final future = _load();
+    setState(() {
+      _future = future;
+    });
+  }
 
   Future<void> _edit([int? id]) async {
     final changed = await Navigator.of(
@@ -59,27 +64,39 @@ class _MembersState extends State<AdminMembersScreen> {
   }
 
   Future<void> _delete(Map user) async {
+    if (_busy) return;
+    final userId = (user['id'] as num).toInt();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(t('adminNative.deleteUser')),
-        content: Text('${user['name']}\n${t('adminNative.deleteUserWarning')}'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(t('common.cancel')),
+      builder: (dialogContext) {
+        final colors = Theme.of(dialogContext).colorScheme;
+        return AlertDialog(
+          title: Text(t('adminNative.deleteUser')),
+          content: Text(
+            '${user['name']}\n${user['email']}\n\n'
+            '${t('adminNative.deleteUserWarning')}',
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(t('common.delete')),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(t('common.cancel')),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.error,
+                foregroundColor: colors.onError,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(t('common.delete')),
+            ),
+          ],
+        );
+      },
     );
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted || _busy) return;
     setState(() => _busy = true);
     try {
-      await _client.adminDeleteMember((user['id'] as num).toInt());
+      await _client.adminDeleteMember(userId);
       if (mounted) _reload();
     } on AirmiusApiException catch (error) {
       if (mounted) {

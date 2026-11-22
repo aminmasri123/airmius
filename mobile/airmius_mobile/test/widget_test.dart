@@ -7763,6 +7763,57 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('native admin user deletion requires explicit confirmation', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"users":{"data":[{"id":9,"name":"Test Member","email":"member@example.test","account_status":"active"}],"last_page":1}}}',
+      ),
+    );
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 1,
+        name: 'Admin',
+        email: 'admin@example.test',
+        role: 'admin',
+        roles: ['admin'],
+        permissions: ['system.manage', 'users.view', 'users.delete'],
+        twoFactorEnabled: true,
+      ),
+      transport: transport,
+    );
+    await _pumpAirmiusWidget(tester, container, const AdminMembersScreen());
+    await tester.pumpAndSettle();
+
+    final deleteRequests = transport.requests.where(
+      (request) =>
+          request.method == 'DELETE' &&
+          request.path == '/api/v1/admin/members/9',
+    );
+    final deleteIcon = find.byIcon(Icons.delete_outline);
+    await tester.tap(deleteIcon);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.textContaining('member@example.test'), findsWidgets);
+    expect(deleteRequests, isEmpty);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Abbrechen'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(deleteRequests, isEmpty);
+
+    await tester.tap(deleteIcon);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Löschen'));
+    await tester.pumpAndSettle();
+    expect(deleteRequests, hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
   for (final entry in <(String, Widget, String, String)>[
     (
       'members',

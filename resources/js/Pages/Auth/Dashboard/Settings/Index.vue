@@ -2850,7 +2850,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                             class="rounded-lg border border-warning px-3 py-1 text-xs font-semibold text-warning hover:bg-warning/10"
                                             @click="openPaymentActionModal('cancel', invoice)"
                                         >
-                                            {{ settingsText('actions.cancel', 'Abbrechen') }}
+                                            {{ settingsText('billing.cancel_open_invoice.action', 'Rechnung stornieren') }}
                                         </button>
                                         <button
                                             v-if="canDeleteOpenSubscriptionPayment(invoice)"

@@ -28024,7 +28024,7 @@ final _strings = {
     'subscriptions.cancelCheckoutTitle': 'Zahlungsvorgang abbrechen?',
     'subscriptions.cancelCheckoutConfirm':
         'Der offene Checkout und die zugehörige Rechnung werden storniert.',
-    'subscriptions.cancelCheckout': 'Zahlung abbrechen',
+    'subscriptions.cancelCheckout': 'Rechnung stornieren',
     'subscriptions.checkoutCancelled': 'Der Zahlungsvorgang wurde storniert.',
     'subscriptions.cancelTitle': 'Abo zum Laufzeitende kündigen?',
     'subscriptions.cancelConfirm':
@@ -30687,7 +30687,7 @@ final _strings = {
     'subscriptions.cancelCheckoutTitle': 'Cancel payment process?',
     'subscriptions.cancelCheckoutConfirm':
         'The open checkout and its invoice will be cancelled.',
-    'subscriptions.cancelCheckout': 'Cancel payment',
+    'subscriptions.cancelCheckout': 'Cancel invoice',
     'subscriptions.checkoutCancelled': 'The payment process was cancelled.',
     'subscriptions.cancelTitle': 'Cancel at the end of the term?',
     'subscriptions.cancelConfirm':
@@ -33305,7 +33305,7 @@ final _strings = {
     'subscriptions.cancelCheckoutTitle': 'Annuler le paiement ?',
     'subscriptions.cancelCheckoutConfirm':
         'Le paiement ouvert et sa facture seront annulés.',
-    'subscriptions.cancelCheckout': 'Annuler le paiement',
+    'subscriptions.cancelCheckout': 'Annuler la facture',
     'subscriptions.checkoutCancelled': 'Le paiement a été annulé.',
     'subscriptions.cancelTitle': 'Résilier à la fin de la période ?',
     'subscriptions.cancelConfirm':
@@ -35797,7 +35797,7 @@ final _strings = {
     'subscriptions.cancelCheckoutTitle': 'إلغاء عملية الدفع؟',
     'subscriptions.cancelCheckoutConfirm':
         'سيتم إلغاء عملية الدفع المفتوحة والفاتورة المرتبطة بها.',
-    'subscriptions.cancelCheckout': 'إلغاء الدفع',
+    'subscriptions.cancelCheckout': 'إلغاء الفاتورة',
     'subscriptions.checkoutCancelled': 'تم إلغاء عملية الدفع.',
     'subscriptions.cancelTitle': 'إلغاء الاشتراك عند نهاية الفترة؟',
     'subscriptions.cancelConfirm':
