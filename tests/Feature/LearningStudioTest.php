@@ -559,11 +559,11 @@ class LearningStudioTest extends TestCase
             'status' => 'active',
             'progress_percent' => 100,
             'started_at' => now(),
-            'completed_at' => now(),
         ]);
         $section = $course->sections()->create(['title' => 'Basics', 'position' => 1]);
         $lesson = $course->lessons()->create(['learning_course_section_id' => $section->id, 'title' => 'Completed lesson', 'type' => 'lesson']);
         $enrollment->lessonProgress()->create(['learning_lesson_id' => $lesson->id, 'completed' => true, 'completed_at' => now()]);
+        $enrollment->update(['completed_at' => now()]);
         $certificate = LearningCertificate::query()->create([
             'learning_course_id' => $course->id,
             'learning_enrollment_id' => $enrollment->id,
@@ -724,11 +724,11 @@ class LearningStudioTest extends TestCase
             'user_id' => $student->id,
             'status' => 'active',
             'progress_percent' => 100,
-            'completed_at' => now(),
         ]);
         $section = $course->sections()->create(['title' => 'Basics', 'position' => 1]);
         $lesson = $course->lessons()->create(['learning_course_section_id' => $section->id, 'title' => 'Completed lesson', 'type' => 'lesson']);
         $enrollment->lessonProgress()->create(['learning_lesson_id' => $lesson->id, 'completed' => true, 'completed_at' => now()]);
+        $enrollment->update(['completed_at' => now()]);
         LearningCertificate::query()->create([
             'learning_course_id' => $course->id,
             'learning_enrollment_id' => $enrollment->id,
@@ -766,11 +766,11 @@ class LearningStudioTest extends TestCase
             'user_id' => $student->id,
             'status' => 'active',
             'progress_percent' => 100,
-            'completed_at' => now(),
         ]);
         $section = $course->sections()->create(['title' => 'Basics', 'position' => 1]);
         $lesson = $course->lessons()->create(['learning_course_section_id' => $section->id, 'title' => 'Completed lesson', 'type' => 'lesson']);
         $enrollment->lessonProgress()->create(['learning_lesson_id' => $lesson->id, 'completed' => true, 'completed_at' => now()]);
+        $enrollment->update(['completed_at' => now()]);
         LearningCertificate::query()->create([
             'learning_course_id' => $course->id,
             'learning_enrollment_id' => $enrollment->id,
