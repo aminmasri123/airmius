@@ -51,6 +51,15 @@ const _en = {
       'Phases must be ordered, without overlaps, within the sport year.',
   'events': 'Linked events',
   'noPeriods': 'No sport years available',
+  'seasonIntro':
+      'Create a plan for one team and sport year, divide the season into phases, set goals and link existing events.',
+  'createSeasonPlan': 'Create season plan',
+  'noPeriodsHelp':
+      'First create a sport year under Club management > Club years. A season plan always belongs to a sport year.',
+  'seasonReadOnlyHelp':
+      'You can view published season plans. Creating and editing requires the Training plans permission.',
+  'seasonProRequired':
+      'Season planning is available with the Pro plan. Existing published plans remain visible.',
   'roster': 'Roster',
   'classes': 'Classes',
   'venues': 'Venues',
@@ -179,6 +188,15 @@ const _de = {
       'Phasen müssen geordnet, ohne Überschneidungen und innerhalb des Sportjahrs liegen.',
   'events': 'Verknüpfte Termine',
   'noPeriods': 'Keine Sportjahre vorhanden',
+  'seasonIntro':
+      'Lege für ein Team und Sportjahr einen Plan an, teile die Saison in Phasen, definiere Ziele und verknüpfe vorhandene Termine.',
+  'createSeasonPlan': 'Saisonplanung anlegen',
+  'noPeriodsHelp':
+      'Lege zuerst unter Vereinsverwaltung > Vereinsjahre ein Sportjahr an. Eine Saisonplanung gehört immer zu einem Sportjahr.',
+  'seasonReadOnlyHelp':
+      'Du kannst veröffentlichte Saisonplanungen ansehen. Zum Anlegen und Bearbeiten wird die Berechtigung „Trainingspläne bearbeiten“ benötigt.',
+  'seasonProRequired':
+      'Die Saisonplanung ist im Pro-Tarif verfügbar. Bereits veröffentlichte Planungen bleiben sichtbar.',
   'roster': 'Kader',
   'classes': 'Klassen',
   'venues': 'Austragungsorte',

@@ -161,6 +161,10 @@ class _PlanningWorkspaceScreenState extends State<PlanningWorkspaceScreen> {
     final visible = widget.seasons || teamId == null
         ? rows
         : rows.where((r) => planningId(r['team_id']) == teamId).toList();
+    final hasPeriods = planningRows(club['periods']).isNotEmpty;
+    final seasonEnabled = club['season_planning_enabled'] == true;
+    final canCreateSeason =
+        widget.seasons && canEdit && teamId != null && hasPeriods;
     return Scaffold(
       appBar: AppBar(
         title: Text(t(widget.seasons ? 'seasons' : 'competitions')),
@@ -170,8 +174,7 @@ class _PlanningWorkspaceScreenState extends State<PlanningWorkspaceScreen> {
             onPressed: loading ? null : reload,
             icon: const Icon(Icons.refresh),
           ),
-          if (canEdit &&
-              (!widget.seasons || planningRows(club['periods']).isNotEmpty))
+          if (canEdit && (!widget.seasons || hasPeriods))
             IconButton(
               tooltip: t('new'),
               onPressed: loading ? null : edit,
@@ -179,6 +182,13 @@ class _PlanningWorkspaceScreenState extends State<PlanningWorkspaceScreen> {
             ),
         ],
       ),
+      floatingActionButton: canCreateSeason
+          ? FloatingActionButton.extended(
+              onPressed: loading ? null : edit,
+              icon: const Icon(Icons.add),
+              label: Text(t('createSeasonPlan')),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: reload,
         child: ListView(
@@ -242,18 +252,53 @@ class _PlanningWorkspaceScreenState extends State<PlanningWorkspaceScreen> {
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (error == null) ...[
+              if (widget.seasons && clubs.isNotEmpty && teams.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          t('seasons'),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(t('seasonIntro')),
+                        if (!seasonEnabled) ...[
+                          const SizedBox(height: 12),
+                          Text(t('seasonProRequired')),
+                        ] else if (!hasPeriods) ...[
+                          const SizedBox(height: 12),
+                          Text(t('noPeriodsHelp')),
+                        ] else if (!canEdit) ...[
+                          const SizedBox(height: 12),
+                          Text(t('seasonReadOnlyHelp')),
+                        ] else ...[
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: edit,
+                            icon: const Icon(Icons.add),
+                            label: Text(t('createSeasonPlan')),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (clubs.isEmpty)
                 Text(t('noClubs'))
               else if (widget.seasons && teams.isEmpty)
                 Text(t('noTeams'))
               else ...[
-                if (!canEdit)
+                if (!canEdit && !widget.seasons)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Text(t('readOnly')),
                   ),
-                if (widget.seasons && planningRows(club['periods']).isEmpty)
-                  Text(t('noPeriods')),
+                if (widget.seasons && !hasPeriods) Text(t('noPeriods')),
                 if (visible.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24),

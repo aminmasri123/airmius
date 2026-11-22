@@ -169,6 +169,11 @@ void main() {
     (tester) async {
       final transport = _PlanningTransport();
       await _pump(tester, transport, const SeasonPlanningScreen());
+      expect(find.text('Create season plan'), findsNWidgets(2));
+      expect(
+        find.textContaining('divide the season into phases'),
+        findsOneWidget,
+      );
       await tester.tap(find.byTooltip('Create'));
       await tester.pumpAndSettle();
       await _enter(tester, 'Name', 'Autumn Season');
