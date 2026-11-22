@@ -8,6 +8,34 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/inventory_checkout_dialog.dart';
 import 'club_inventory_qr_scanner_screen.dart';
+
+const _inventoryCategoryValues = <String>[
+  'balls',
+  'training_aids',
+  'goals_nets_field',
+  'clothing_uniforms',
+  'footwear',
+  'protective_equipment',
+  'dance_gardetanz',
+  'costumes_props',
+  'gymnastics_acrobatics',
+  'fitness_strength',
+  'athletics',
+  'racket_sports',
+  'combat_sports',
+  'water_sports',
+  'winter_sports',
+  'cycling_rolling',
+  'timing_measurement',
+  'medical_first_aid',
+  'electronics_media',
+  'event_club',
+  'tools_maintenance',
+  'transport_storage',
+  'cleaning_hygiene',
+  'office_admin',
+  'other',
+];
 import 'club_metadata_subject_screen.dart';
 
 class ClubAssetInventoryCheckoutSuiteScreen extends StatefulWidget {
@@ -1477,7 +1505,7 @@ class _InventoryItemEditorScreenState
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
   late final TextEditingController _quantity;
-  late final TextEditingController _category;
+  late String _category;
   late final TextEditingController _size;
   late final TextEditingController _dimensions;
   late final TextEditingController _location;
@@ -1503,7 +1531,7 @@ class _InventoryItemEditorScreenState
     final item = widget.item ?? const <String, dynamic>{};
     _name = TextEditingController(text: '${item['name'] ?? ''}');
     _quantity = TextEditingController(text: '${item['quantity_total'] ?? 1}');
-    _category = TextEditingController(text: '${item['category'] ?? ''}');
+    _category = '${item['category'] ?? ''}'.trim();
     _size = TextEditingController(text: '${item['size'] ?? ''}');
     _dimensions = TextEditingController(text: '${item['dimensions'] ?? ''}');
     _location = TextEditingController(text: '${item['location'] ?? ''}');
@@ -1523,7 +1551,6 @@ class _InventoryItemEditorScreenState
     for (final controller in [
       _name,
       _quantity,
-      _category,
       _size,
       _dimensions,
       _location,
@@ -1557,7 +1584,7 @@ class _InventoryItemEditorScreenState
       'quantity_total': widget.resourceMode
           ? (_int(widget.item?['quantity_total']) ?? 1)
           : int.parse(_quantity.text.trim()),
-      'category': _optional(_category),
+      'category': _category.isEmpty ? null : _category,
       'size': _optional(_size),
       'dimensions': _optional(_dimensions),
       'location': _optional(_location),
@@ -1598,6 +1625,10 @@ class _InventoryItemEditorScreenState
 
   @override
   Widget build(BuildContext context) {
+    final categoryOptions = _inventoryCategoryValues
+        .map((value) => t('inventory.category.$value'))
+        .toList(growable: false);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -1710,7 +1741,32 @@ class _InventoryItemEditorScreenState
                 style: TextStyle(color: airmiusMutedColor(context)),
               ),
               const SizedBox(height: 12),
-              _field(_category, 'inventory.category', Icons.category_outlined),
+              DropdownButtonFormField<String>(
+                initialValue: _category.isEmpty ? null : _category,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: t('inventory.category'),
+                  prefixIcon: const Icon(Icons.category_outlined),
+                ),
+                hint: Text(t('inventory.category.select')),
+                items: [
+                  if (_category.isNotEmpty &&
+                      !categoryOptions.contains(_category))
+                    DropdownMenuItem(
+                      value: _category,
+                      child: Text(_category),
+                    ),
+                  ...categoryOptions.map(
+                    (label) => DropdownMenuItem(
+                      value: label,
+                      child: Text(label),
+                    ),
+                  ),
+                ],
+                onChanged: (value) =>
+                    setState(() => _category = value ?? ''),
+              ),
+              const SizedBox(height: 12),
               _field(_size, 'inventory.size', Icons.straighten_outlined),
               _field(
                 _dimensions,
