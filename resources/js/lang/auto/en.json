@@ -3806,7 +3806,15 @@
     "Sitzungen suchen": "Search meetings",
     "Sitzungsstatus": "Meeting status",
     "Name (Deutsch)": "Name (German)",
-    "Name (English)": "Name (English)"
+    "Name (English)": "Name (English)",
+    "Beschluss löschen": "Delete resolution",
+    "Anwesenheit & Einladungen": "Attendance & invitations",
+    "Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen erhalten kein Stimmrecht in bestehenden Abstimmungen.": "Attendance and voting rights are separate. People added later do not receive voting rights in existing votes.",
+    "Anwesende Person nachtragen": "Add an attendee",
+    "Anwesenheit erfassen": "Record attendance",
+    "Anwesend": "Present",
+    "Abwesend": "Absent",
+    "Anwesende Person auswählen": "Select an attendee"
   },
   "auto_patterns": [
     {

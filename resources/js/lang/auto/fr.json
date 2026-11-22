@@ -3806,7 +3806,15 @@
     "Sitzungen suchen": "Rechercher des réunions",
     "Sitzungsstatus": "Statut de la réunion",
     "Name (Deutsch)": "Nom (allemand)",
-    "Name (English)": "Nom (anglais)"
+    "Name (English)": "Nom (anglais)",
+    "Beschluss löschen": "Supprimer la résolution",
+    "Anwesenheit & Einladungen": "Présences et invitations",
+    "Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen erhalten kein Stimmrecht in bestehenden Abstimmungen.": "La présence et le droit de vote sont distincts. Les personnes ajoutées après coup ne reçoivent aucun droit de vote pour les votes existants.",
+    "Anwesende Person nachtragen": "Ajouter une personne présente",
+    "Anwesenheit erfassen": "Enregistrer la présence",
+    "Anwesend": "Présent",
+    "Abwesend": "Absent",
+    "Anwesende Person auswählen": "Sélectionner une personne présente"
   },
   "auto_patterns": [
     {

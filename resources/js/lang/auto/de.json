@@ -3806,7 +3806,15 @@
     "Sitzungen suchen": "Sitzungen suchen",
     "Sitzungsstatus": "Sitzungsstatus",
     "Name (Deutsch)": "Name (Deutsch)",
-    "Name (English)": "Name (English)"
+    "Name (English)": "Name (English)",
+    "Beschluss löschen": "Beschluss löschen",
+    "Anwesenheit & Einladungen": "Anwesenheit & Einladungen",
+    "Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen erhalten kein Stimmrecht in bestehenden Abstimmungen.": "Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen erhalten kein Stimmrecht in bestehenden Abstimmungen.",
+    "Anwesende Person nachtragen": "Anwesende Person nachtragen",
+    "Anwesenheit erfassen": "Anwesenheit erfassen",
+    "Anwesend": "Anwesend",
+    "Abwesend": "Abwesend",
+    "Anwesende Person auswählen": "Anwesende Person auswählen"
   },
   "auto_patterns": []
 }

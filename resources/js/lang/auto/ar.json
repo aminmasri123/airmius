@@ -3806,7 +3806,15 @@
     "Sitzungen suchen": "البحث عن اجتماعات",
     "Sitzungsstatus": "حالة الاجتماع",
     "Name (Deutsch)": "الاسم (بالألمانية)",
-    "Name (English)": "الاسم (بالإنجليزية)"
+    "Name (English)": "الاسم (بالإنجليزية)",
+    "Beschluss löschen": "حذف القرار",
+    "Anwesenheit & Einladungen": "الحضور والدعوات",
+    "Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen erhalten kein Stimmrecht in bestehenden Abstimmungen.": "الحضور وحق التصويت منفصلان. لا يحصل الأشخاص المضافون لاحقًا على حق التصويت في عمليات التصويت الحالية.",
+    "Anwesende Person nachtragen": "إضافة شخص حاضر",
+    "Anwesenheit erfassen": "تسجيل الحضور",
+    "Anwesend": "حاضر",
+    "Abwesend": "غائب",
+    "Anwesende Person auswählen": "اختيار شخص حاضر"
   },
   "auto_patterns": [
     {
