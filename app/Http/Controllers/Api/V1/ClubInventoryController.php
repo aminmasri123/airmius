@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Club;
+use App\Models\ClubExternalMember;
 use App\Models\ClubInventoryItem;
 use App\Models\ClubInventoryLoan;
 use App\Models\ClubInventoryLoanComment;
@@ -56,7 +57,7 @@ class ClubInventoryController extends Controller
         $loans = ClubInventoryLoan::query()
             ->where('club_id', $club->id)
             ->whereIn('club_inventory_item_id', $visibleItemIds)
-            ->with(['item:id,club_id,club_department_id,team_id,parent_id,resource_type,name,sku', 'borrower:id,name', 'responsibleUser:id,name', 'requester:id,name', 'comments.user:id,name'])
+            ->with(['item:id,club_id,club_department_id,team_id,parent_id,resource_type,name,sku', 'borrower:id,name', 'externalMember:id,name,email,phone', 'responsibleUser:id,name', 'requester:id,name', 'collateralReceivedBy:id,name', 'collateralReturnedBy:id,name', 'comments.user:id,name'])
             ->latest('id')
             ->limit(200)
             ->get()
@@ -70,6 +71,22 @@ class ClubInventoryController extends Controller
                 $loan->setAttribute('can_return', (int) $loan->borrower_id === (int) $user->id || $canApproveScope);
                 $loan->setAttribute('can_request_return', $loan->status === 'active' && (int) $loan->borrower_id === (int) $user->id);
                 $loan->setAttribute('can_confirm_return', $loan->status === 'return_pending' && $canApproveScope && (int) $loan->borrower_id !== (int) $user->id);
+                $loan->setAttribute('can_direct_return', $loan->status === 'active'
+                    && $canApproveScope
+                    && (int) $loan->borrower_id !== (int) $user->id);
+                $loan->setAttribute('collateral_status', blank($loan->collateral_type)
+                    ? 'none'
+                    : ($loan->collateral_returned_at
+                        ? 'returned'
+                        : ($loan->collateral_received_at ? 'held' : 'planned')));
+                $loan->setAttribute('completion_status', $loan->status === 'returned' && filled($loan->collateral_type) && ! $loan->collateral_returned_at
+                    ? 'collateral_pending'
+                    : $loan->status);
+                $loan->setAttribute('can_return_collateral', in_array($loan->status, ['active', 'return_pending', 'returned'], true)
+                    && filled($loan->collateral_type)
+                    && $loan->collateral_received_at
+                    && ! $loan->collateral_returned_at
+                    && $canApproveScope);
 
                 return $loan;
             })
@@ -94,6 +111,7 @@ class ClubInventoryController extends Controller
         return response()->json([
             'data' => [
                 'can_manage' => $canManage,
+                'borrower_options' => $canManage ? $this->borrowerOptions($club, $user) : [],
                 'can_create' => ClubPermissions::allowsAnyInventoryScope($club, $user, ClubPermissions::INVENTORY_EDIT),
                 'can_manage_metadata' => ClubPermissions::allows(
                     $club,
@@ -273,6 +291,8 @@ class ClubInventoryController extends Controller
         $canApprove = ClubPermissions::allowsForInventoryItem($item, $request->user(), ClubPermissions::INVENTORY_APPROVE);
         $data = $request->validate([
             'borrower_id' => ['nullable', 'integer', 'exists:users,id'],
+            'borrower_kind' => ['nullable', Rule::in(['registered', 'external', 'guest'])],
+            'external_member_id' => ['nullable', 'integer', 'exists:club_external_members,id'],
             'quantity' => ['required', 'integer', 'min:1', 'max:1000'],
             'booking_priority' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'rental_type' => ['nullable', Rule::in(['internal', 'external'])],
@@ -286,6 +306,9 @@ class ClubInventoryController extends Controller
             'starts_at' => ['nullable', 'date', 'after_or_equal:now'],
             'due_at' => ['nullable', 'date', 'after:now'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'collateral_type' => ['nullable', Rule::in(['item', 'cash', 'document', 'other'])],
+            'collateral_description' => ['nullable', 'string', 'max:255'],
+            'collateral_amount_cents' => ['nullable', 'integer', 'min:0', 'max:999999999'],
         ]);
         if (! empty($data['starts_at']) && empty($data['due_at'])) {
             throw ValidationException::withMessages(['due_at' => __('organization.inventory.booking_window_required')]);
@@ -297,17 +320,40 @@ class ClubInventoryController extends Controller
             $data['starts_at'] = Carbon::parse($data['starts_at'])->toDateTimeString();
             $data['due_at'] = Carbon::parse($data['due_at'])->toDateTimeString();
         }
-        $rentalType = $data['rental_type'] ?? 'internal';
-        if ($rentalType === 'external' && empty($data['external_renter_name'])) {
+        $borrowerKind = $data['borrower_kind'] ?? (($data['rental_type'] ?? 'internal') === 'external' ? 'guest' : 'registered');
+        abort_if($borrowerKind !== 'registered' && ! $canApprove, 403);
+        $externalMember = null;
+        if ($borrowerKind === 'external') {
+            $externalMember = ClubExternalMember::query()
+                ->where('club_id', $club->id)
+                ->find($data['external_member_id'] ?? 0);
+            if (! $externalMember) {
+                throw ValidationException::withMessages(['external_member_id' => __('validation.exists')]);
+            }
+            $data['external_renter_name'] = $externalMember->name ?: $externalMember->email;
+            $data['external_renter_email'] = $externalMember->email;
+            $data['external_renter_phone'] = $externalMember->phone;
+        }
+        if ($borrowerKind === 'guest' && empty($data['external_renter_name'])) {
             throw ValidationException::withMessages(['external_renter_name' => __('validation.required')]);
         }
+        if (! empty($data['collateral_type']) && ! $canApprove) {
+            abort(403);
+        }
+        if (in_array($data['collateral_type'] ?? null, ['item', 'document', 'other'], true) && blank($data['collateral_description'] ?? null)) {
+            throw ValidationException::withMessages(['collateral_description' => __('validation.required')]);
+        }
+        if (($data['collateral_type'] ?? null) === 'cash' && empty($data['collateral_amount_cents'])) {
+            throw ValidationException::withMessages(['collateral_amount_cents' => __('validation.required')]);
+        }
+        $rentalType = $borrowerKind === 'registered' ? 'internal' : 'external';
         $borrowerId = null;
-        if ($rentalType === 'internal') {
+        if ($borrowerKind === 'registered') {
             $borrowerId = $canApprove && ! empty($data['borrower_id']) ? (int) $data['borrower_id'] : (int) $request->user()->id;
             $this->ensureActiveMember($club, $borrowerId);
         }
 
-        $loan = DB::transaction(function () use ($request, $club, $item, $data, $borrowerId, $rentalType) {
+        $loan = DB::transaction(function () use ($request, $club, $item, $data, $borrowerId, $borrowerKind, $externalMember, $rentalType) {
             $lockedItem = ClubInventoryItem::query()->lockForUpdate()->findOrFail($item->id);
             abort_unless($lockedItem->is_loanable, 422, __('organization.inventory.item_not_loanable'));
             abort_unless($lockedItem->status === 'active', 422, __('organization.inventory.item_unavailable'));
@@ -347,6 +393,8 @@ class ClubInventoryController extends Controller
                 'club_id' => $club->id,
                 'club_inventory_item_id' => $lockedItem->id,
                 'borrower_id' => $borrowerId,
+                'borrower_kind' => $borrowerKind,
+                'external_member_id' => $externalMember?->id,
                 'responsible_user_id' => $borrowerId,
                 'external_renter_name' => $rentalType === 'external' ? $data['external_renter_name'] : null,
                 'external_renter_email' => $rentalType === 'external' ? ($data['external_renter_email'] ?? null) : null,
@@ -361,6 +409,11 @@ class ClubInventoryController extends Controller
                 'rental_price_cents' => $pricing['price_cents'],
                 'rental_deposit_cents' => $pricing['deposit_cents'],
                 'rental_deposit_held_cents' => $pricing['deposit_cents'],
+                'collateral_type' => $data['collateral_type'] ?? null,
+                'collateral_description' => $data['collateral_description'] ?? null,
+                'collateral_amount_cents' => $data['collateral_amount_cents'] ?? null,
+                'collateral_received_by' => ! $pending && ! empty($data['collateral_type']) ? $request->user()->id : null,
+                'collateral_received_at' => ! $pending && ! empty($data['collateral_type']) ? now() : null,
                 'rental_price_snapshot' => $pricing,
                 'handover_protocol' => $data['handover_protocol'] ?? null,
                 'checked_out_at' => $pending ? null : now(),
@@ -375,6 +428,9 @@ class ClubInventoryController extends Controller
             ClubAuditLog::record($club, $request->user(), 'club.inventory.loan_'.($pending ? 'requested' : 'checked_out'), $loan, [
                 'item_id' => $lockedItem->id,
                 'borrower_id' => $borrowerId,
+                'borrower_kind' => $borrowerKind,
+                'external_member_id' => $externalMember?->id,
+                'collateral_type' => $data['collateral_type'] ?? null,
                 'rental_type' => $rentalType,
                 'rental_price_cents' => $pricing['price_cents'],
                 'rental_deposit_cents' => $pricing['deposit_cents'],
@@ -398,7 +454,7 @@ class ClubInventoryController extends Controller
             'message' => $loan->status === 'pending'
                 ? __('organization.inventory.loan_requested')
                 : __('organization.inventory.item_checked_out'),
-            'data' => $loan->load(['item:id,name,sku', 'borrower:id,name', 'responsibleUser:id,name']),
+            'data' => $loan->load(['item:id,name,sku', 'borrower:id,name', 'externalMember:id,name,email,phone', 'responsibleUser:id,name', 'collateralReceivedBy:id,name']),
         ], 201);
     }
 
@@ -487,6 +543,10 @@ class ClubInventoryController extends Controller
                 $this->reserveQuantity($item, $lockedLoan->quantity);
             }
             $updates = ['status' => 'active', 'checked_out_by' => $request->user()->id, 'checked_out_at' => now(), 'issued_at' => now()];
+            if (filled($lockedLoan->collateral_type)) {
+                $updates['collateral_received_by'] = $request->user()->id;
+                $updates['collateral_received_at'] = now();
+            }
             if (! $lockedLoan->rental_invoice_id && ($lockedLoan->rental_price_cents + $lockedLoan->rental_deposit_cents) > 0) {
                 $updates['rental_invoice_id'] = $this->createRentalInvoice($club, $lockedLoan)->id;
             }
@@ -568,7 +628,23 @@ class ClubInventoryController extends Controller
             'return_protocol' => ['nullable', 'array'],
             'create_claim' => ['boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'collateral_returned' => ['nullable', 'boolean'],
         ]);
+
+        if ($loan->status === 'returned' && filled($loan->collateral_type) && ! $loan->collateral_returned_at) {
+            abort_unless($canApprove && ($data['collateral_returned'] ?? false), 422, __('organization.inventory.loan_not_active'));
+            $loan->forceFill([
+                'collateral_returned_by' => $request->user()->id,
+                'collateral_returned_at' => now(),
+            ])->save();
+            ClubAuditLog::record($club, $request->user(), 'club.inventory.collateral_returned', $loan, [
+                'item_id' => $loan->club_inventory_item_id,
+                'borrower_kind' => $loan->borrower_kind,
+                'collateral_type' => $loan->collateral_type,
+            ]);
+
+            return response()->json(['message' => __('organization.inventory.return_recorded'), 'data' => $loan->refresh()]);
+        }
 
         $isBorrower = (int) $loan->borrower_id === (int) $request->user()->id;
         if ($isBorrower && $loan->status === 'active') {
@@ -638,6 +714,12 @@ class ClubInventoryController extends Controller
                 'rental_deposit_refunded_cents' => $refunded,
                 'rental_deposit_held_cents' => max(0, $deposit - $refunded),
                 'rental_damage_claim_cents' => $damageClaim,
+                'collateral_returned_by' => filled($lockedLoan->collateral_type) && ($data['collateral_returned'] ?? false)
+                    ? $request->user()->id
+                    : $lockedLoan->collateral_returned_by,
+                'collateral_returned_at' => filled($lockedLoan->collateral_type) && ($data['collateral_returned'] ?? false)
+                    ? now()
+                    : $lockedLoan->collateral_returned_at,
                 'return_protocol' => $data['return_protocol'] ?? null,
                 'notes' => $data['notes'] ?? $lockedLoan->notes,
             ]);
@@ -646,9 +728,96 @@ class ClubInventoryController extends Controller
             }
         });
 
-        $this->notifyLoanReturn($loan->refresh()->loadMissing(['club:id,name', 'item', 'borrower:id,name']), 'confirmed', $request->user());
+        $returnedLoan = $loan->refresh();
+        ClubAuditLog::record($club, $request->user(), 'club.inventory.loan_return_confirmed', $returnedLoan, [
+            'item_id' => $returnedLoan->club_inventory_item_id,
+            'borrower_kind' => $returnedLoan->borrower_kind,
+            'outcome' => $returnedLoan->status,
+            'collateral_returned' => (bool) $returnedLoan->collateral_returned_at,
+        ]);
+        if (filled($returnedLoan->collateral_type) && $returnedLoan->collateral_returned_at) {
+            ClubAuditLog::record($club, $request->user(), 'club.inventory.collateral_returned', $returnedLoan, [
+                'item_id' => $returnedLoan->club_inventory_item_id,
+                'borrower_kind' => $returnedLoan->borrower_kind,
+                'collateral_type' => $returnedLoan->collateral_type,
+            ]);
+        }
+
+        $this->notifyLoanReturn($returnedLoan->loadMissing(['club:id,name', 'item', 'borrower:id,name']), 'confirmed', $request->user());
 
         return response()->json(['message' => __('organization.inventory.return_recorded'), 'data' => $loan->refresh()->load(['item:id,name,sku', 'borrower:id,name', 'responsibleUser:id,name'])]);
+    }
+
+    public function returnCollateral(Request $request, Club $club, ClubInventoryLoan $loan)
+    {
+        $this->ensureLoanClub($club, $loan);
+        $this->authorizeItem($request, $loan->item, ClubPermissions::INVENTORY_APPROVE);
+        abort_unless(
+            in_array($loan->status, ['active', 'return_pending', 'returned'], true)
+                && filled($loan->collateral_type)
+                && $loan->collateral_received_at
+                && ! $loan->collateral_returned_at,
+            422,
+            __('organization.inventory.loan_not_active'),
+        );
+
+        $loan->forceFill([
+            'collateral_returned_by' => $request->user()->id,
+            'collateral_returned_at' => now(),
+        ])->save();
+        ClubAuditLog::record($club, $request->user(), 'club.inventory.collateral_returned', $loan, [
+            'item_id' => $loan->club_inventory_item_id,
+            'borrower_kind' => $loan->borrower_kind,
+            'collateral_type' => $loan->collateral_type,
+            'inventory_status' => $loan->status,
+        ]);
+
+        return response()->json([
+            'message' => __('organization.inventory.return_recorded'),
+            'data' => $loan->refresh()->load(['item:id,name,sku', 'borrower:id,name', 'externalMember:id,name,email,phone', 'collateralReturnedBy:id,name']),
+        ]);
+    }
+
+    private function borrowerOptions(Club $club, User $currentUser): array
+    {
+        $registeredPeople = $club->users()
+            ->select(['users.id', 'users.name', 'users.email'])
+            ->get();
+        $registeredPeople = $registeredPeople
+            ->merge(User::query()
+                ->whereHas('teams', fn ($query) => $query->where('teams.club_id', $club->id))
+                ->get(['id', 'name', 'email']))
+            ->merge($club->externalMembers()
+                ->whereNotNull('linked_user_id')
+                ->whereRaw("LOWER(TRIM(membership_status)) = 'active'")
+                ->with('linkedUser:id,name,email')
+                ->get()
+                ->pluck('linkedUser'));
+
+        $registered = $registeredPeople
+            ->push($club->owner()->select(['users.id', 'users.name', 'users.email'])->first())
+            ->filter()
+            ->push($currentUser->only(['id', 'name', 'email']))
+            ->filter(fn ($person) => ClubActiveMembership::allows(
+                $club,
+                (int) (is_array($person) ? $person['id'] : $person->id),
+            ))
+            ->map(fn ($person) => is_array($person) ? $person : $person->only(['id', 'name', 'email']))
+            ->unique('id')
+            ->sortBy(fn (array $person) => mb_strtolower((string) $person['name']))
+            ->values()
+            ->all();
+
+        $external = $club->externalMembers()
+            ->whereNull('linked_user_id')
+            ->whereRaw("LOWER(TRIM(membership_status)) = 'active'")
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'phone'])
+            ->map(fn (ClubExternalMember $person) => $person->only(['id', 'name', 'email', 'phone']))
+            ->values()
+            ->all();
+
+        return ['registered' => $registered, 'external' => $external];
     }
 
     public function storeMaintenance(Request $request, Club $club, ClubInventoryItem $item)
@@ -1769,6 +1938,7 @@ class ClubInventoryController extends Controller
             'checkout_unavailable_reason' => $checkoutUnavailableReason,
             'can_checkout' => $checkoutUnavailableReason === null,
             'can_edit' => ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_EDIT),
+            'can_approve' => ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_APPROVE),
         ];
     }
 

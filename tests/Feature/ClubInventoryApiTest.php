@@ -153,6 +153,7 @@ class ClubInventoryApiTest extends TestCase
             'due_at' => now()->addDay()->toIso8601String(),
         ])->assertCreated()
             ->assertJsonPath('data.status', 'active')
+            ->assertJsonPath('data.borrower_kind', 'registered')
             ->assertJsonPath('data.responsible_user_id', $member->id)
             ->assertJsonPath('data.responsible_user.id', $member->id);
         $loanId = $loan->json('data.id');
@@ -1602,6 +1603,90 @@ class ClubInventoryApiTest extends TestCase
         $this->postJson("/api/v1/clubs/{$club->id}/inventory/scan", [
             'qr_token' => $reissued,
         ])->assertGone();
+    }
+
+    public function test_manager_can_distinguish_borrowers_and_track_physical_collateral_until_returned(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach($member->id, ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active']);
+        $external = ClubExternalMember::query()->create([
+            'club_id' => $club->id,
+            'created_by' => $owner->id,
+            'name' => 'Bekannter Externer',
+            'email' => 'external-inventory@example.test',
+            'membership_status' => 'active',
+        ]);
+        $item = ClubInventoryItem::query()->create([
+            'club_id' => $club->id,
+            'name' => 'Spindschlüssel',
+            'quantity_total' => 2,
+            'quantity_available' => 2,
+            'condition' => 'good',
+            'status' => 'active',
+            'is_loanable' => true,
+        ]);
+
+        Sanctum::actingAs($owner);
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonFragment(['id' => $external->id, 'name' => 'Bekannter Externer']);
+
+        $loanId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", [
+            'quantity' => 1,
+            'borrower_kind' => 'guest',
+            'external_renter_name' => 'Einmaliger Gast',
+            'external_renter_phone' => '+49 123 456',
+            'collateral_type' => 'item',
+            'collateral_description' => 'Autoschlüssel, schwarzer Anhänger',
+        ])->assertCreated()
+            ->assertJsonPath('data.borrower_kind', 'guest')
+            ->assertJsonPath('data.external_renter_name', 'Einmaliger Gast')
+            ->assertJsonPath('data.collateral_type', 'item')
+            ->json('data.id');
+
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/return", [
+            'return_condition' => 'good',
+            'collateral_returned' => false,
+        ])->assertOk()->assertJsonPath('data.status', 'returned');
+
+        $this->getJson("/api/v1/clubs/{$club->id}/inventory")
+            ->assertOk()
+            ->assertJsonPath('data.loans.0.completion_status', 'collateral_pending')
+            ->assertJsonPath('data.loans.0.can_return_collateral', true);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$loanId}/collateral/return")
+            ->assertOk();
+
+        $this->assertDatabaseHas('club_inventory_loans', [
+            'id' => $loanId,
+            'borrower_kind' => 'guest',
+            'collateral_type' => 'item',
+            'collateral_received_by' => $owner->id,
+            'collateral_returned_by' => $owner->id,
+        ]);
+        $this->assertNotNull(ClubInventoryLoan::query()->findOrFail($loanId)->collateral_returned_at);
+
+        $externalLoanId = $this->postJson("/api/v1/clubs/{$club->id}/inventory/{$item->id}/checkout", [
+            'quantity' => 1,
+            'borrower_kind' => 'external',
+            'external_member_id' => $external->id,
+            'collateral_type' => 'item',
+            'collateral_description' => 'Haustürschlüssel',
+        ])->assertCreated()
+            ->assertJsonPath('data.borrower_kind', 'external')
+            ->assertJsonPath('data.external_member_id', $external->id)
+            ->assertJsonPath('data.external_member.name', 'Bekannter Externer')
+            ->json('data.id');
+
+        $this->postJson("/api/v1/clubs/{$club->id}/inventory/loans/{$externalLoanId}/collateral/return")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'active');
+        $this->assertDatabaseHas('club_inventory_loans', [
+            'id' => $externalLoanId,
+            'status' => 'active',
+        ]);
     }
 
     private function inventoryRole(Club $club, string $key, array $permissions): ClubRoleDefinition

@@ -1863,11 +1863,21 @@ class AirmiusApiClient {
     int clubId,
     int loanId, {
     String returnCondition = 'good',
+    bool collateralReturned = false,
   }) => _json(
     'POST',
     '/api/v1/clubs/$clubId/inventory/loans/$loanId/return',
-    body: {'return_condition': returnCondition},
+    body: {
+      'return_condition': returnCondition,
+      'collateral_returned': collateralReturned,
+    },
   );
+
+  Future<AirmiusJson> returnClubInventoryCollateral(int clubId, int loanId) =>
+      _json(
+        'POST',
+        '/api/v1/clubs/$clubId/inventory/loans/$loanId/collateral/return',
+      );
 
   Future<AirmiusJson> createClubInventoryMaintenance(
     int clubId,

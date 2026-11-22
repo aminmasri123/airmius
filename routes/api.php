@@ -804,6 +804,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/inventory/loans/{loan}/reject', [ClubInventoryController::class, 'reject'])->name('clubs.inventory.loans.reject');
         Route::post('/clubs/{club}/inventory/loans/{loan}/comments', [ClubInventoryController::class, 'comment'])->name('clubs.inventory.loans.comments.store');
         Route::post('/clubs/{club}/inventory/loans/{loan}/return', [ClubInventoryController::class, 'returnLoan'])->name('clubs.inventory.loans.return');
+        Route::post('/clubs/{club}/inventory/loans/{loan}/collateral/return', [ClubInventoryController::class, 'returnCollateral'])->name('clubs.inventory.loans.collateral.return');
         Route::post('/clubs/{club}/inventory/{item}/damage-reports', [ClubInventoryController::class, 'reportDamage'])->name('clubs.inventory.damage-reports.store');
         Route::post('/clubs/{club}/inventory/{item}/maintenance', [ClubInventoryController::class, 'storeMaintenance'])->name('clubs.inventory.maintenance.store');
         Route::put('/clubs/{club}/inventory/maintenance/{maintenance}', [ClubInventoryController::class, 'updateMaintenance'])->name('clubs.inventory.maintenance.update');

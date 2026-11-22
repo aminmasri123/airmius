@@ -76,6 +76,7 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
   List<Map<String, dynamic>> _items = const [];
   List<Map<String, dynamic>> _loans = const [];
   List<Map<String, dynamic>> _maintenance = const [];
+  Map<String, dynamic> _borrowerOptions = const {};
   String _tab = 'items';
   String? _error;
   bool _loading = true;
@@ -171,6 +172,7 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
         _items = _maps(data['items']);
         _loans = _maps(data['loans']);
         _maintenance = _maps(data['maintenance']);
+        _borrowerOptions = _map(data['borrower_options']);
         _canManage = data['can_manage'] == true;
         _canManageMetadata = data['can_manage_metadata'] == true;
         _busy = false;
@@ -234,6 +236,9 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
       builder: (_) => InventoryCheckoutDialog(
         name: '${item['name']}',
         scheduled: widget.scheduledCheckout,
+        canAssignBorrower: item['can_approve'] == true,
+        registeredBorrowers: _maps(_borrowerOptions['registered']),
+        externalBorrowers: _maps(_borrowerOptions['external']),
       ),
     );
     if (!mounted || payload == null) return;
@@ -290,11 +295,65 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
     final clubId = _int(_club?['id']);
     final loanId = _int(loan['id']);
     if (clubId == null || loanId == null) return;
+    var collateralReturned = action == 'return_collateral';
+    if (action == 'return_collateral') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(t('inventory.confirmCollateralReturn')),
+          content: Text(t('inventory.confirmCollateralReturnQuestion')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(t('inventory.cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(t('inventory.confirmCollateralReturn')),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || confirmed != true) return;
+    }
+    if (action == 'return' &&
+        _canManage &&
+        loan['collateral_status'] == 'held') {
+      final decision = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(t('inventory.returnWithCollateralTitle')),
+          content: Text(t('inventory.returnWithCollateralQuestion')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('inventory.cancel')),
+            ),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(dialogContext, 'item'),
+              child: Text(t('inventory.returnItemOnly')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, 'both'),
+              child: Text(t('inventory.returnItemAndCollateral')),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || decision == null) return;
+      collateralReturned = decision == 'both';
+    }
     await _run(
       () => switch (action) {
         'approve' => _client.approveClubInventoryLoan(clubId, loanId),
         'reject' => _client.rejectClubInventoryLoan(clubId, loanId),
-        _ => _client.returnClubInventoryLoan(clubId, loanId),
+        'return_collateral' =>
+          _client.returnClubInventoryCollateral(clubId, loanId),
+        _ => _client.returnClubInventoryLoan(
+          clubId,
+          loanId,
+          collateralReturned: collateralReturned,
+        ),
       },
     );
   }
@@ -1429,9 +1488,56 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  '${_map(loan['borrower'])['name'] ?? loan['borrower_name_snapshot'] ?? loan['external_renter_name'] ?? ''} · ${loan['quantity']} ${t('inventory.pieces')} · ${t('inventory.loan.${loan['status']}')}',
+                  '${_map(loan['borrower'])['name'] ?? loan['borrower_name_snapshot'] ?? loan['external_renter_name'] ?? ''} · ${loan['quantity']} ${t('inventory.pieces')} · ${t('inventory.loan.${loan['completion_status'] ?? loan['status']}')}',
                   style: TextStyle(color: airmiusMutedColor(context)),
                 ),
+                const SizedBox(height: 3),
+                Text(
+                  t(switch (loan['borrower_kind']) {
+                    'external' => 'inventory.borrowerExternal',
+                    'guest' => 'inventory.borrowerGuest',
+                    _ => 'inventory.borrowerRegistered',
+                  }),
+                  style: TextStyle(color: airmiusMutedColor(context), fontSize: 12),
+                ),
+                if (loan['collateral_status'] != 'none') ...[
+                  const SizedBox(height: 6),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: loan['collateral_status'] == 'returned'
+                          ? Colors.green.withValues(alpha: 0.12)
+                          : Colors.orange.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(9),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${t(switch (loan['collateral_status']) {
+                              'held' => 'inventory.collateralHeld',
+                              'returned' => 'inventory.collateralReturned',
+                              _ => 'inventory.collateralPlanned',
+                            })}: '
+                            '${loan['collateral_type'] == 'cash' ? '${((_int(loan['collateral_amount_cents']) ?? 0) / 100).toStringAsFixed(2)} €' : loan['collateral_description'] ?? t('inventory.collateralOther')}',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          if (_map(loan['collateral_received_by'])['name'] != null)
+                            Text(
+                              '${t('inventory.collateralReceivedBy')}: ${_map(loan['collateral_received_by'])['name']}',
+                              style: TextStyle(color: airmiusMutedColor(context), fontSize: 12),
+                            ),
+                          if (_map(loan['collateral_returned_by'])['name'] != null)
+                            Text(
+                              '${t('inventory.collateralReturnedBy')}: ${_map(loan['collateral_returned_by'])['name']}',
+                              style: TextStyle(color: airmiusMutedColor(context), fontSize: 12),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 if (DateTime.tryParse('${loan['starts_at']}')
                     case final DateTime start)
                   Text(
@@ -1474,6 +1580,24 @@ class _ClubAssetInventoryCheckoutSuiteScreenState
                     onPressed: _busy ? null : () => _loanAction(loan, 'return'),
                     icon: const Icon(Icons.verified_outlined),
                     label: const Text('Rückgabe bestätigen'),
+                  ),
+                ],
+                if (loan['can_direct_return'] == true) ...[
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    onPressed: _busy ? null : () => _loanAction(loan, 'return'),
+                    icon: const Icon(Icons.assignment_turned_in_outlined),
+                    label: Text(t('inventory.recordReturn')),
+                  ),
+                ],
+                if (loan['can_return_collateral'] == true) ...[
+                  const SizedBox(height: 10),
+                  FilledButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () => _loanAction(loan, 'return_collateral'),
+                    icon: const Icon(Icons.key_outlined),
+                    label: Text(t('inventory.confirmCollateralReturn')),
                   ),
                 ],
                 if ([

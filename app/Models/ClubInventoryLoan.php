@@ -10,11 +10,13 @@ class ClubInventoryLoan extends Model
     use HasFactory;
 
     protected $fillable = [
-        'club_id', 'club_inventory_item_id', 'borrower_id', 'borrower_name_snapshot', 'responsible_user_id', 'external_renter_name',
+        'club_id', 'club_inventory_item_id', 'borrower_id', 'borrower_kind', 'external_member_id', 'borrower_name_snapshot', 'responsible_user_id', 'external_renter_name',
         'external_renter_email', 'external_renter_phone', 'requested_by', 'checked_out_by',
         'returned_to', 'responsibility_transferred_to', 'quantity', 'booking_priority', 'rental_type', 'status',
         'rental_contract_number', 'rental_price_cents', 'rental_deposit_cents', 'rental_deposit_held_cents',
-        'rental_deposit_refunded_cents', 'rental_damage_claim_cents', 'rental_price_snapshot',
+        'rental_deposit_refunded_cents', 'collateral_type', 'collateral_description', 'collateral_amount_cents',
+        'collateral_received_by', 'collateral_received_at', 'collateral_returned_by', 'collateral_returned_at',
+        'rental_damage_claim_cents', 'rental_price_snapshot',
         'handover_protocol', 'return_protocol', 'rental_invoice_id', 'checked_out_at', 'starts_at',
         'issued_at', 'due_at', 'returned_at', 'lost_at', 'damaged_at',
         'responsibility_transferred_at', 'return_condition', 'damage_description', 'notes',
@@ -27,6 +29,7 @@ class ClubInventoryLoan extends Model
         'rental_deposit_cents' => 'integer',
         'rental_deposit_held_cents' => 'integer',
         'rental_deposit_refunded_cents' => 'integer',
+        'collateral_amount_cents' => 'integer',
         'rental_damage_claim_cents' => 'integer',
         'rental_price_snapshot' => 'array',
         'handover_protocol' => 'array',
@@ -36,6 +39,8 @@ class ClubInventoryLoan extends Model
         'issued_at' => 'datetime',
         'due_at' => 'datetime',
         'returned_at' => 'datetime',
+        'collateral_received_at' => 'datetime',
+        'collateral_returned_at' => 'datetime',
         'lost_at' => 'datetime',
         'damaged_at' => 'datetime',
         'responsibility_transferred_at' => 'datetime',
@@ -54,6 +59,21 @@ class ClubInventoryLoan extends Model
     public function borrower()
     {
         return $this->belongsTo(User::class, 'borrower_id');
+    }
+
+    public function externalMember()
+    {
+        return $this->belongsTo(ClubExternalMember::class, 'external_member_id');
+    }
+
+    public function collateralReceivedBy()
+    {
+        return $this->belongsTo(User::class, 'collateral_received_by');
+    }
+
+    public function collateralReturnedBy()
+    {
+        return $this->belongsTo(User::class, 'collateral_returned_by');
     }
 
     public function responsibleUser()
