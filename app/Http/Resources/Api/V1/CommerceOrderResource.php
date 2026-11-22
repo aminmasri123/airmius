@@ -48,6 +48,7 @@ class CommerceOrderResource extends JsonResource
             'tracking_url' => $this->tracking_url,
             'checkout_url' => $this->checkout_url,
             'payment_action' => [
+                'can_change_method' => $this->resource->canChangePaymentMethod(),
                 'type' => $this->provider === 'bank_transfer' ? 'bank_transfer' : 'redirect',
                 'url' => $this->provider === 'bank_transfer' ? null : $this->checkout_url,
             ],

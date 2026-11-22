@@ -91,6 +91,16 @@ class CommerceOrder extends Model
         ];
     }
 
+    public function canChangePaymentMethod(): bool
+    {
+        return in_array($this->type, ['marketplace_product', 'marketplace_cart'], true)
+            && $this->status === 'pending'
+            && in_array($this->provider, ['stripe', 'paypal'], true)
+            && $this->completed_at === null
+            && ! in_array($this->shipping_status, ['shipped', 'delivered'], true)
+            && $this->amount_cents > 0;
+    }
+
     public function orderable()
     {
         return $this->morphTo();

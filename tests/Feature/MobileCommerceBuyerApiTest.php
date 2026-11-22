@@ -10,6 +10,7 @@ use App\Models\SubscriptionCoupon;
 use App\Models\User;
 use App\Notifications\CommerceOrderAwaitingTransfer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -258,6 +259,47 @@ class MobileCommerceBuyerApiTest extends TestCase
         ])->assertForbidden();
         $this->getJson("/api/v1/commerce/orders/{$order->id}/invoice")
             ->assertForbidden();
+    }
+
+    public function test_buyer_can_switch_an_unpaid_stripe_order_to_bank_transfer(): void
+    {
+        Notification::fake();
+        config(['services.stripe.secret' => 'stripe-test']);
+        Setting::setValue('billing_iban', 'DE89370400440532013000');
+        $buyer = User::factory()->create();
+        $order = $this->orderFor($buyer, $this->publishedProduct(User::factory()->create()), [
+            'provider' => 'stripe',
+            'provider_checkout_id' => 'cs_test_previous',
+            'checkout_url' => 'https://checkout.stripe.com/previous',
+            'payload' => ['pricing' => ['amount_cents' => 3900]],
+        ]);
+        $path = "/api/v1/commerce/orders/{$order->id}";
+        Sanctum::actingAs(User::factory()->create());
+        $this->postJson($path.'/payment-method', ['provider' => 'bank_transfer'])->assertForbidden();
+
+        Sanctum::actingAs($buyer);
+        $this->getJson($path)->assertOk()->assertJsonPath('data.payment_action.can_change_method', true);
+        Http::preventStrayRequests();
+        $stripe = 'https://api.stripe.com/v1/checkout/sessions/cs_test_previous';
+        Http::fake([
+            $stripe => Http::sequence()
+                ->push(['status' => 'complete', 'payment_status' => 'paid'])
+                ->push(['status' => 'open', 'payment_status' => 'unpaid']),
+            $stripe.'/expire' => Http::response(['status' => 'expired', 'payment_status' => 'unpaid']),
+        ]);
+        $this->postJson($path.'/payment-method', ['provider' => 'bank_transfer'])->assertUnprocessable();
+        $this->assertSame('stripe', $order->fresh()->provider);
+
+        $this->postJson($path.'/payment-method', ['provider' => 'bank_transfer'])
+            ->assertOk()
+            ->assertJsonPath('data.id', $order->id)
+            ->assertJsonPath('data.status', 'awaiting_transfer')
+            ->assertJsonPath('data.amount_cents', 3900)
+            ->assertJsonPath('data.bank_transfer.iban', 'DE89370400440532013000')
+            ->assertJsonPath('data.payment_action.can_change_method', false);
+        $this->assertNull($order->fresh()->provider_checkout_id);
+        $this->assertSame(3900, data_get($order->fresh()->payload, 'pricing.amount_cents'));
+        $this->assertDatabaseCount('commerce_orders', 1);
     }
 
     private function publishedProduct(User $seller, array $overrides = []): MarketplaceProduct

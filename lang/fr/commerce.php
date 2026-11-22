@@ -65,6 +65,7 @@ return [
         'payment_checkout_cancelled_note' => 'Le paiement a été annulé avant sa confirmation.',
         'marketplace_order_required' => 'Seules les commandes Marketplace peuvent être annulées ici.',
         'order_not_cancellable' => 'Cette commande ne peut plus être annulée.',
+        'payment_method_unavailable' => 'Le mode de paiement ne peut pas être modifié pour le moment. Le paiement précédent est peut-être déjà en cours.',
         'order_already_shipped' => 'L’annulation n’est plus possible après l’expédition. Vous pourrez demander un retour après la livraison.',
         'order_cancellation_unsupported' => 'Cette commande ne peut pas être annulée par cette action.',
         'paid_order_required' => 'Les retours sont possibles uniquement pour les commandes payées.',

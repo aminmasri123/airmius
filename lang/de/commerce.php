@@ -65,6 +65,7 @@ return [
         'payment_checkout_cancelled_note' => 'Die Zahlung wurde vor der Bestätigung abgebrochen.',
         'marketplace_order_required' => 'Nur Marketplace-Bestellungen können hier storniert werden.',
         'order_not_cancellable' => 'Diese Bestellung kann nicht mehr storniert werden.',
+        'payment_method_unavailable' => 'Die Zahlungsart kann momentan nicht geändert werden. Die bisherige Zahlung ist möglicherweise bereits in Bearbeitung.',
         'order_already_shipped' => 'Nach dem Versand ist eine Stornierung nicht mehr möglich. Nach Zustellung kannst du eine Rücksendung anfragen.',
         'order_cancellation_unsupported' => 'Diese Bestellung kann nicht über diesen Storno storniert werden.',
         'paid_order_required' => 'Rücksendungen sind nur für bezahlte Bestellungen möglich.',

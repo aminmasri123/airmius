@@ -65,6 +65,7 @@ return [
         'payment_checkout_cancelled_note' => 'أُلغيت الدفعة قبل تأكيدها.',
         'marketplace_order_required' => 'لا يمكن إلغاء سوى طلبات Marketplace هنا.',
         'order_not_cancellable' => 'لم يعد من الممكن إلغاء هذا الطلب.',
+        'payment_method_unavailable' => 'لا يمكن تغيير طريقة الدفع الآن. قد تكون الدفعة السابقة قيد المعالجة.',
         'order_already_shipped' => 'لا يمكن الإلغاء بعد الشحن. يمكنك طلب الإرجاع بعد التسليم.',
         'order_cancellation_unsupported' => 'لا يمكن إلغاء هذا الطلب عبر هذا الإجراء.',
         'paid_order_required' => 'الإرجاع متاح للطلبات المدفوعة فقط.',

@@ -1677,6 +1677,48 @@ class CommerceCheckoutController extends Controller
         return back()->with('success', __('commerce.flash.issue_reported'));
     }
 
+    public function changeOrderPaymentMethod(Request $request, CommerceOrder $order)
+    {
+        abort_unless($order->user_id === $request->user()->id, 403);
+        $data = $request->validate([
+            'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
+        ]);
+
+        [$updatedOrder, $url] = DB::transaction(function () use ($order, $data) {
+            $current = CommerceOrder::query()->lockForUpdate()->findOrFail($order->id);
+            abort_unless($current->canChangePaymentMethod(), 422, __('commerce.validation.payment_method_unavailable'));
+            if ($current->provider === $data['provider']) {
+                return [$current, $current->checkout_url];
+            }
+
+            $previous = clone $current;
+            $current->update([
+                'provider' => $data['provider'],
+                'provider_checkout_id' => null,
+                'checkout_url' => null,
+                'payload' => [
+                    ...($current->payload ?: []),
+                    'payment_attempt' => (string) Str::uuid(),
+                ],
+            ]);
+            if ($current->provider === 'bank_transfer') {
+                $this->payments->prepareBankTransfer($current);
+                $url = $this->payments->orderRoute($current, 'bank-transfer');
+            } else {
+                $url = $this->payments->createProviderCheckout($current);
+            }
+            abort_unless($this->payments->retireUnpaidCheckout($previous), 422, __('commerce.validation.payment_method_unavailable'));
+
+            return [$current, $url];
+        });
+
+        if ($updatedOrder->provider === 'bank_transfer') {
+            $this->notifyBankTransferBuyer($updatedOrder, $url);
+        }
+
+        return $this->orderJsonResponse($updatedOrder->load(['items.orderable', 'returnRequests']), 200, $url);
+    }
+
     public function cancelOrder(Request $request, CommerceOrder $order)
     {
         abort_unless($order->user_id === $request->user()->id, 403);
@@ -2364,13 +2406,23 @@ class CommerceCheckoutController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id, 403);
 
-        if ($order->provider === 'stripe' && $order->status === 'pending') {
-            $this->payments->syncStripeOrder($order, $request->query('session_id'), fn (CommerceOrder $paidOrder) => $this->activate($paidOrder));
-        }
+        DB::transaction(function () use ($request, $order) {
+            $current = CommerceOrder::query()->lockForUpdate()->findOrFail($order->id);
+            if ($current->status !== 'pending') {
+                return;
+            }
 
-        if ($order->provider === 'paypal' && $order->status === 'pending') {
-            $this->payments->capturePayPalOrder($order, fn (CommerceOrder $paidOrder) => $this->activate($paidOrder));
-        }
+            $sessionId = $request->query('session_id');
+            if ($current->provider === 'stripe' && (! $sessionId || $sessionId === $current->provider_checkout_id)) {
+                $this->payments->syncStripeOrder($current, $sessionId, fn (CommerceOrder $paidOrder) => $this->activate($paidOrder));
+            }
+
+            $token = $request->query('token');
+            if ($current->provider === 'paypal' && ($token === $current->provider_checkout_id
+                || (! $token && ! data_get($current->payload, 'payment_attempt')))) {
+                $this->payments->capturePayPalOrder($current, fn (CommerceOrder $paidOrder) => $this->activate($paidOrder));
+            }
+        });
 
         return redirect()->route('auth.commerce.index')->with('success', __('commerce.flash.order_processed'));
     }
@@ -2379,7 +2431,7 @@ class CommerceCheckoutController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id, 403);
 
-        $this->cancelPendingProviderOrder($order, $request->user()->id);
+        $this->cancelPendingProviderOrder($order, $request->user()->id, $request->query('attempt'));
 
         return redirect()->route('auth.commerce.index')->with('success', __('commerce.flash.order_payment_cancelled'));
     }
@@ -3735,16 +3787,19 @@ class CommerceCheckoutController extends Controller
         $orderId = $resource['supplementary_data']['related_ids']['order_id'] ?? $resource['id'] ?? null;
 
         app(ProviderWebhookEventService::class)->handle('paypal', 'commerce', $event['id'] ?? null, $event['event_type'] ?? null, function () use ($event, $orderId) {
-            if (in_array($event['event_type'] ?? null, ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED'], true)) {
-                $order = CommerceOrder::query()
-                    ->where('provider', 'paypal')
-                    ->where('provider_checkout_id', $orderId)
-                    ->first();
+            if (filled($orderId) && in_array($event['event_type'] ?? null, ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED'], true)) {
+                DB::transaction(function () use ($event, $orderId) {
+                    $order = CommerceOrder::query()
+                        ->where('provider', 'paypal')
+                        ->where('provider_checkout_id', $orderId)
+                        ->lockForUpdate()
+                        ->first();
 
-                if ($order) {
-                    $order->update(['payload' => $event]);
-                    $this->activate($order);
-                }
+                    if ($order) {
+                        $order->update(['payload' => [...($order->payload ?: []), ...$event]]);
+                        $this->activate($order);
+                    }
+                });
             }
 
             return null;
@@ -4328,13 +4383,17 @@ class CommerceCheckoutController extends Controller
         abort_unless($order->access_token && hash_equals($order->access_token, $token), 403);
     }
 
-    private function cancelPendingProviderOrder(CommerceOrder $order, ?int $userId = null): void
+    private function cancelPendingProviderOrder(CommerceOrder $order, ?int $userId = null, mixed $attempt = null): void
     {
-        DB::transaction(function () use ($order, $userId) {
+        DB::transaction(function () use ($order, $userId, $attempt) {
             $lockedOrder = CommerceOrder::query()
                 ->with('orderable')
                 ->lockForUpdate()
                 ->findOrFail($order->id);
+
+            if ($userId !== null && $attempt !== data_get($lockedOrder->payload, 'payment_attempt')) {
+                abort(422, __('commerce.validation.payment_method_unavailable'));
+            }
 
             if ($lockedOrder->status === 'cancelled') {
                 return;

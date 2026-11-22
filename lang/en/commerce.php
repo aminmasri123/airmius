@@ -65,6 +65,7 @@ return [
         'payment_checkout_cancelled_note' => 'The payment was cancelled before confirmation.',
         'marketplace_order_required' => 'Only Marketplace orders can be cancelled here.',
         'order_not_cancellable' => 'This order can no longer be cancelled.',
+        'payment_method_unavailable' => 'The payment method cannot be changed right now. The previous payment may already be processing.',
         'order_already_shipped' => 'Cancellation is no longer possible after shipping. You can request a return after delivery.',
         'order_cancellation_unsupported' => 'This order cannot be cancelled through this action.',
         'paid_order_required' => 'Returns are available only for paid orders.',

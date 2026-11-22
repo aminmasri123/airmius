@@ -1264,6 +1264,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/commerce/cart/checkout', [MobileCommerceCheckoutController::class, 'checkoutCart'])->middleware('throttle:payment-actions')->name('commerce.cart.checkout');
         Route::get('/commerce/orders', [CommerceController::class, 'orders'])->name('commerce.orders.index');
         Route::get('/commerce/orders/{order}', [CommerceController::class, 'showOrder'])->name('commerce.orders.show');
+        Route::post('/commerce/orders/{order}/payment-method', [MobileCommerceCheckoutController::class, 'changeOrderPaymentMethod'])->middleware('throttle:payment-actions')->name('commerce.orders.payment-method.update');
         Route::post('/commerce/orders/{order}/cancel', [MobileCommerceCheckoutController::class, 'cancelOrder'])->middleware('throttle:payment-actions')->name('commerce.orders.cancel');
         Route::post('/commerce/orders/{order}/issue', [MobileCommerceCheckoutController::class, 'reportOrderIssue'])->name('commerce.orders.issue');
         Route::post('/commerce/orders/{order}/returns', [MobileCommerceCheckoutController::class, 'requestReturn'])->name('commerce.orders.returns.store');

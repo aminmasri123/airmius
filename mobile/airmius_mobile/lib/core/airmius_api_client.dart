@@ -4445,6 +4445,15 @@ class AirmiusApiClient {
   Future<AirmiusJson> commerceOrder(int orderId) =>
       _json('GET', '/api/v1/commerce/orders/$orderId');
 
+  Future<AirmiusJson> changeCommerceOrderPaymentMethod(
+    int orderId,
+    String provider,
+  ) => _json(
+    'POST',
+    '/api/v1/commerce/orders/$orderId/payment-method',
+    body: {'provider': provider},
+  );
+
   Future<AirmiusJson> cancelCommerceOrder(int orderId) =>
       _json('POST', '/api/v1/commerce/orders/$orderId/cancel');
 

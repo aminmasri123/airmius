@@ -32,6 +32,38 @@ class CommercePaymentGatewayService
         return $url;
     }
 
+    public function retireUnpaidCheckout(CommerceOrder $order): bool
+    {
+        if (! $order->provider_checkout_id) {
+            return blank($order->checkout_url);
+        }
+
+        if ($order->provider === 'stripe') {
+            $secret = config('services.stripe.secret');
+            if (blank($secret)) {
+                return false;
+            }
+            $client = Http::withToken($secret);
+            $url = 'https://api.stripe.com/v1/checkout/sessions/'.$order->provider_checkout_id;
+            $current = $client->get($url);
+            if ($current->ok() && $current->json('status') === 'expired' && $current->json('payment_status') === 'unpaid') {
+                return true;
+            }
+            if (! $current->ok() || $current->json('status') !== 'open' || $current->json('payment_status') !== 'unpaid') {
+                return false;
+            }
+            $expired = $client->post($url.'/expire');
+
+            return $expired->ok() && $expired->json('status') === 'expired' && $expired->json('payment_status') === 'unpaid';
+        }
+
+        // CAPTURE orders still awaiting approval cannot be paid without our server capturing them.
+        $current = Http::withToken($this->paypalAccessToken())
+            ->get($this->paypalBaseUrl().'/v2/checkout/orders/'.$order->provider_checkout_id);
+
+        return $current->ok() && in_array($current->json('status'), ['CREATED', 'PAYER_ACTION_REQUIRED', 'VOIDED'], true);
+    }
+
     public function syncStripeOrder(CommerceOrder $order, ?string $sessionId, callable $activate): void
     {
         $sessionId = $sessionId ?: $order->provider_checkout_id;
@@ -44,7 +76,7 @@ class CommercePaymentGatewayService
             ->get('https://api.stripe.com/v1/checkout/sessions/'.$sessionId);
 
         if ($response->ok() && $response->json('payment_status') === 'paid') {
-            $order->update(['payload' => $response->json()]);
+            $order->update(['payload' => [...($order->payload ?: []), ...$response->json()]]);
             $activate($order);
         }
     }
@@ -57,7 +89,7 @@ class CommercePaymentGatewayService
             ->post($this->paypalBaseUrl().'/v2/checkout/orders/'.$order->provider_checkout_id.'/capture');
 
         if ($response->ok() && in_array($response->json('status'), ['COMPLETED', 'APPROVED'], true)) {
-            $order->update(['payload' => $response->json()]);
+            $order->update(['payload' => [...($order->payload ?: []), ...$response->json()]]);
             $activate($order);
         }
     }
@@ -110,7 +142,7 @@ class CommercePaymentGatewayService
             'cancel' => URL::temporarySignedRoute(
                 'commerce-checkout.cancel',
                 now()->addDay(),
-                ['order' => $order],
+                ['order' => $order, 'attempt' => data_get($order->payload, 'payment_attempt')],
             ),
             'bank-transfer' => route('commerce-checkout.bank-transfer.show', $order),
         };
@@ -157,7 +189,7 @@ class CommercePaymentGatewayService
 
         $order->update([
             'provider_checkout_id' => $response->json('id'),
-            'payload' => $response->json(),
+            'payload' => [...($order->payload ?: []), 'provider_checkout' => $response->json()],
         ]);
 
         return $response->json('url');
@@ -195,7 +227,7 @@ class CommercePaymentGatewayService
 
         $order->update([
             'provider_checkout_id' => $response->json('id'),
-            'payload' => $response->json(),
+            'payload' => [...($order->payload ?: []), 'provider_checkout' => $response->json()],
         ]);
 
         $approveLink = collect($response->json('links') ?? [])->firstWhere('rel', 'approve');

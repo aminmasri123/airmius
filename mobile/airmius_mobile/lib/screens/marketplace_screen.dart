@@ -3499,9 +3499,8 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
     final creditNote = _marketMap(documents['credit_note']);
     final bank = _marketMap(order['bank_transfer']);
     final returns = _marketMaps(order['return_requests']);
-    final checkoutUrl = _marketNullableText(
-      _marketMap(order['payment_action'])['url'],
-    );
+    final paymentAction = _marketMap(order['payment_action']);
+    final checkoutUrl = _marketNullableText(paymentAction['url']);
     final trackingUrl = _marketNullableText(order['tracking_url']);
 
     return ListView(
@@ -3659,7 +3658,14 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
               AirmiusButton(
                 label: t('market.continuePayment'),
                 icon: Icons.open_in_new,
-                onPressed: () => _openUrl(checkoutUrl),
+                onPressed: _busy ? null : () => _openUrl(checkoutUrl),
+              ),
+            if (_marketBool(paymentAction['can_change_method']))
+              AirmiusButton(
+                label: t('market.changePaymentMethod'),
+                icon: Icons.swap_horiz,
+                secondary: true,
+                onPressed: _busy ? null : () => _changePaymentMethod(order),
               ),
             if (trackingUrl != null)
               AirmiusButton(
@@ -3720,6 +3726,33 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
         ),
       );
     }
+  }
+
+  Future<void> _changePaymentMethod(JsonMap order) async {
+    final t = AirmiusScope.of(context).t;
+    final current = _marketText(order['provider']);
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(t('market.changePaymentMethod')),
+        children: [
+          for (final provider in const ['bank_transfer', 'stripe', 'paypal'])
+            if (provider != current)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(dialogContext, provider),
+                child: Text(t('market.payment.$provider')),
+              ),
+        ],
+      ),
+    );
+    if (!mounted || selected == null || _busy) return;
+    await _action(
+      () => widget.client.changeCommerceOrderPaymentMethod(
+        widget.orderId,
+        selected,
+      ),
+      successMessage: t('market.paymentMethodChanged'),
+    );
   }
 
   Future<void> _cancel(JsonMap order) async {
