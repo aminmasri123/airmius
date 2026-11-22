@@ -11,6 +11,7 @@ class SubscriptionCoupon extends Model
 
     protected $fillable = [
         'code',
+        'scope',
         'name',
         'type',
         'value_cents',

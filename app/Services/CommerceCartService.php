@@ -6,7 +6,9 @@ use App\Models\CommerceCart;
 use App\Models\CommerceCartItem;
 use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductInventory;
+use App\Models\SubscriptionCoupon;
 use App\Models\User;
+use Illuminate\Validation\ValidationException;
 
 class CommerceCartService
 {
@@ -20,7 +22,7 @@ class CommerceCartService
         );
     }
 
-    public function resourceFor(User $user, array $shippingAddress, array $customer = []): array
+    public function resourceFor(User $user, array $shippingAddress, array $customer = [], ?string $couponCode = null): array
     {
         $cart = $this->cartFor($user)->load('items.product');
         $summary = $cart->items->isNotEmpty()
@@ -34,6 +36,7 @@ class CommerceCartService
                 'currency' => 'EUR',
                 'items' => [],
             ];
+        $summary = $this->applyCoupon($summary, $couponCode);
         $summaryForClient = $summary;
         unset($summaryForClient['items']);
 
@@ -143,6 +146,61 @@ class CommerceCartService
         $quote['tax_cents'] = $quote['item_tax_cents'] + (int) ($quote['shipping_tax_cents'] ?? 0);
 
         return $quote;
+    }
+
+    public function applyCoupon(array $summary, ?string $code, bool $reserve = false): array
+    {
+        if (blank($code)) {
+            return $summary;
+        }
+
+        $query = SubscriptionCoupon::query()->where('scope', 'marketplace')
+            ->where('code', strtoupper(trim($code)));
+        $coupon = ($reserve ? $query->lockForUpdate() : $query)->first();
+        $subtotal = (int) $summary['item_gross_cents'];
+        $discount = $coupon?->discountFor($subtotal) ?? 0;
+        if (! $coupon?->isRedeemable() || $discount <= 0
+            || ($coupon->type === 'fixed' && $summary['currency'] !== 'EUR')) {
+            throw ValidationException::withMessages(['coupon_code' => __('subscription.validation.coupon_invalid')]);
+        }
+        if ($discount >= $summary['amount_cents']) {
+            throw ValidationException::withMessages(['coupon_code' => __('commerce.validation.free_checkout')]);
+        }
+
+        $processed = 0;
+        $allocated = 0;
+        $summary['commission_cents'] = 0;
+        foreach ($summary['items'] as &$item) {
+            $quote = &$item['quote'];
+            $gross = (int) $quote['item_gross_cents'];
+            $processed += $gross;
+            $nextAllocation = (int) round($processed * $discount / $subtotal);
+            $lineDiscount = $nextAllocation - $allocated;
+            $allocated = $nextAllocation;
+            $netDiscount = $gross > 0 ? (int) round($lineDiscount * $quote['item_net_cents'] / $gross) : 0;
+            $taxDiscount = $lineDiscount - $netDiscount;
+            $quote['item_gross_cents'] -= $lineDiscount;
+            $quote['item_net_cents'] -= $netDiscount;
+            $quote['item_tax_cents'] -= $taxDiscount;
+            $quote['gross_cents'] -= $lineDiscount;
+            $quote['net_cents'] -= $netDiscount;
+            $quote['tax_cents'] -= $taxDiscount;
+            $summary['net_cents'] -= $netDiscount;
+            $summary['tax_cents'] -= $taxDiscount;
+            $summary['commission_cents'] += $this->pricing->commissionCents($item['product'], $quote['item_gross_cents']);
+        }
+        unset($item, $quote);
+
+        $summary['item_gross_cents'] -= $discount;
+        $summary['gross_cents'] -= $discount;
+        $summary['amount_cents'] -= $discount;
+        $summary['discount_cents'] = $discount;
+        $summary['coupon_code'] = $coupon->code;
+        if ($reserve) {
+            $coupon->increment('redeemed_count');
+        }
+
+        return $summary;
     }
 
     public function hasSellableStock(MarketplaceProduct $product, ?string $country = null, int $quantity = 1): bool

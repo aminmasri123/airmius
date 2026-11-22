@@ -18,6 +18,7 @@ export function useAdminCommerceWorkspace(props) {
     
     const couponForm = useForm({
         code: '',
+        scope: 'subscription',
         name: '',
         type: 'percent',
         percent_off: 50,

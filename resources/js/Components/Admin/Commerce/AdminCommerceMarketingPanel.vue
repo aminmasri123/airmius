@@ -46,6 +46,10 @@ defineProps({
             <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCoupon">
                 <input v-model="couponForm.code" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.code')">
                 <input v-model="couponForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('commerce.ui.name')">
+                <select v-model="couponForm.scope" class="rounded-lg border-border bg-inputBg text-sm text-primary" aria-label="Gutscheinbereich">
+                    <option value="subscription">Abonnement</option>
+                    <option value="marketplace">Marketplace</option>
+                </select>
                 <select v-model="couponForm.type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                     <option value="percent">Prozent</option>
                     <option value="fixed">Festbetrag</option>
@@ -64,7 +68,12 @@ defineProps({
                 <table class="min-w-full text-start text-sm">
                     <tbody class="divide-y divide-border">
                         <tr v-for="coupon in coupons" :key="coupon.id">
-                            <td class="py-3 font-semibold text-primary">{{ coupon.code }}</td>
+                            <td class="py-3 font-semibold text-primary">
+                                {{ coupon.code }}
+                                <span class="block text-xs font-normal text-secondary">
+                                    {{ coupon.scope === 'marketplace' ? 'Marketplace' : 'Abonnement' }}
+                                </span>
+                            </td>
                             <td class="py-3 text-secondary">{{ coupon.type === 'percent' ? `${coupon.percent_off}%` : formatMoney(coupon.value_cents) }}</td>
                             <td class="py-3 text-secondary">{{ coupon.redeemed_count }} genutzt</td>
                             <td class="py-3 text-end" :class="coupon.is_active ? 'text-success' : 'text-secondary'">{{ coupon.is_active ? 'Aktiv' : 'Inaktiv' }}</td>

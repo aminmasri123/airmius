@@ -354,6 +354,7 @@ class CommerceCheckoutController extends Controller
     {
         if ($request->expectsJson()) {
             $preview = $request->validate([
+                'coupon_code' => ['nullable', 'string', 'max:80'],
                 'shipping_country' => ['nullable', 'string', 'size:2'],
                 'shipping_state' => ['nullable', 'string', 'max:80'],
                 'shipping_postal_code' => ['nullable', 'string', 'max:30'],
@@ -954,6 +955,7 @@ class CommerceCheckoutController extends Controller
     public function checkoutCart(Request $request)
     {
         $data = $request->validate([
+            'coupon_code' => ['nullable', 'string', 'max:80'],
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
             'accepted_terms' => ['accepted'],
             'shipping_country' => ['nullable', 'string', 'size:2'],
@@ -1001,6 +1003,7 @@ class CommerceCheckoutController extends Controller
             }
             $lockedCart->setRelation('items', $items);
             $summary = $this->cartService->quote($lockedCart, $shippingAddress, $customer);
+            $summary = $this->cartService->applyCoupon($summary, $data['coupon_code'] ?? null, reserve: true);
 
             $order = CommerceOrder::create([
                 'user_id' => $request->user()->id,

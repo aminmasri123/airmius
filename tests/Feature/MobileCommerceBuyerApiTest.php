@@ -6,6 +6,7 @@ use App\Models\CommerceOrder;
 use App\Models\MarketplaceProduct;
 use App\Models\Notification as AppNotificationModel;
 use App\Models\Setting;
+use App\Models\SubscriptionCoupon;
 use App\Models\User;
 use App\Notifications\CommerceOrderAwaitingTransfer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -91,8 +92,29 @@ class MobileCommerceBuyerApiTest extends TestCase
             'quantity' => 2,
         ])->assertCreated();
 
+        $coupon = SubscriptionCoupon::query()->create([
+            'code' => 'T30-04',
+            'name' => 'Marketplace test',
+            'scope' => 'marketplace',
+            'type' => 'fixed',
+            'value_cents' => 400,
+            'max_redemptions' => 1,
+            'is_active' => true,
+        ]);
+        $originalAmount = $this->getJson('/api/v1/commerce/cart')
+            ->assertOk()->json('data.cart.summary.amount_cents');
+        $this->getJson('/api/v1/commerce/cart?coupon_code=invalid')
+            ->assertUnprocessable()->assertJsonValidationErrors('coupon_code');
+        $this->getJson('/api/v1/commerce/cart?coupon_code=t30-04')
+            ->assertOk()
+            ->assertJsonPath('data.cart.summary.coupon_code', 'T30-04')
+            ->assertJsonPath('data.cart.summary.discount_cents', 400)
+            ->assertJsonPath('data.cart.summary.amount_cents', $originalAmount - 400);
+        $this->assertSame(0, (int) $coupon->fresh()->redeemed_count);
+
         $response = $this->postJson('/api/v1/commerce/cart/checkout', [
             'provider' => 'bank_transfer',
+            'coupon_code' => 'T30-04',
             'accepted_terms' => true,
             'shipping_country' => 'DE',
             'shipping_postal_code' => '10115',
@@ -114,6 +136,9 @@ class MobileCommerceBuyerApiTest extends TestCase
 
         $this->assertStringStartsWith('AIR-COM-', (string) $response->json('data.payment_reference'));
         $order = CommerceOrder::query()->findOrFail((int) $response->json('data.id'));
+        $this->assertSame($originalAmount - 400, (int) $order->amount_cents);
+        $this->assertSame((int) $order->amount_cents, (int) $order->items()->sum('total_cents'));
+        $this->assertSame(1, (int) $coupon->fresh()->redeemed_count);
         $buyerNotification = AppNotificationModel::query()
             ->where('user_id', $buyer->id)
             ->where('type', 'commerce.order.awaiting_transfer')

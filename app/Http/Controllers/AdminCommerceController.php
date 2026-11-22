@@ -1183,6 +1183,7 @@ class AdminCommerceController extends Controller
     private function couponData(Request $request): array
     {
         $data = $request->validate([
+            'scope' => ['sometimes', Rule::in(['subscription', 'marketplace'])],
             'code' => ['required', 'string', 'max:80'],
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::in(['percent', 'fixed'])],

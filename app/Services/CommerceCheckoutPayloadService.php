@@ -164,6 +164,7 @@ class CommerceCheckoutPayloadService
             $request->user(),
             $this->shippingAddressForAuthenticatedUser($request, $data),
             $this->customerFromData($data),
+            $data['coupon_code'] ?? null,
         );
     }
 

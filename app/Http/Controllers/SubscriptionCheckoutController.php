@@ -1100,6 +1100,7 @@ class SubscriptionCheckoutController extends Controller
         }
 
         $coupon = SubscriptionCoupon::query()
+            ->where('scope', 'subscription')
             ->where('code', strtoupper(trim($code)))
             ->first();
 

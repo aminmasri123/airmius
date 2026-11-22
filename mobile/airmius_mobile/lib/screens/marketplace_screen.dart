@@ -2772,6 +2772,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   late final TextEditingController _city;
   final _company = TextEditingController();
   final _vatId = TextEditingController();
+  final _coupon = TextEditingController();
+  String? _appliedCoupon;
+  String? _couponError;
   String _provider = 'bank_transfer';
   String _customerType = 'consumer';
   bool _acceptedTerms = false;
@@ -2810,6 +2813,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     _city.dispose();
     _company.dispose();
     _vatId.dispose();
+    _coupon.dispose();
     super.dispose();
   }
 
@@ -3061,6 +3065,41 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
               ),
             ),
             const SizedBox(height: 8),
+            TextField(
+              controller: _coupon,
+              enabled: !_busy && !_quoteBusy,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.done,
+              maxLength: 80,
+              onSubmitted: (_) => _applyCoupon(),
+              decoration: InputDecoration(
+                labelText: t('market.couponCode'),
+                errorText: _couponError,
+              ),
+            ),
+            Wrap(
+              spacing: 8,
+              children: [
+                OutlinedButton(
+                  onPressed: _busy || _quoteBusy ? null : _applyCoupon,
+                  child: Text(t('market.applyCoupon')),
+                ),
+                if (_appliedCoupon != null)
+                  TextButton(
+                    onPressed: _busy || _quoteBusy
+                        ? null
+                        : () => _refreshQuote(couponChange: ''),
+                    child: Text(t('market.removeCoupon')),
+                  ),
+              ],
+            ),
+            if (_quoteBusy) const LinearProgressIndicator(),
+            if (_appliedCoupon case final code?)
+              Semantics(
+                liveRegion: true,
+                child: Text('${t('market.couponApplied')} $code'),
+              ),
+            const SizedBox(height: 8),
             AirmiusPanel(
               borderColor: _termsError
                   ? Theme.of(context).colorScheme.error
@@ -3069,9 +3108,16 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                 children: [
                   _AmountRow(
                     label: t('market.itemsSubtotal'),
-                    cents: _marketInt(summary['item_gross_cents']),
+                    cents: _marketInt(summary['item_gross_cents']) +
+                        _marketInt(summary['discount_cents']),
                     currency: _marketText(summary['currency'], fallback: 'EUR'),
                   ),
+                  if (_marketInt(summary['discount_cents']) > 0)
+                    _AmountRow(
+                      label: t('market.couponDiscount'),
+                      cents: -_marketInt(summary['discount_cents']),
+                      currency: _marketText(summary['currency'], fallback: 'EUR'),
+                    ),
                   _AmountRow(
                     label: t('market.shipping'),
                     cents: _marketInt(summary['shipping_cents']),
@@ -3169,14 +3215,27 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   String? _required(String Function(String) t, String? value) =>
       value == null || value.trim().isEmpty ? t('market.required') : null;
 
-  Future<void> _refreshQuote() async {
-    if (_quoteBusy) return;
+  void _applyCoupon() {
+    final code = _coupon.text.trim();
+    if (code.isEmpty) {
+      setState(() => _couponError = AirmiusScope.of(context).t('market.required'));
+      return;
+    }
+    _refreshQuote(couponChange: code);
+  }
+
+  Future<void> _refreshQuote({String? couponChange}) async {
+    if (_busy || _quoteBusy) return;
+    final couponCode = couponChange ?? _appliedCoupon;
+    final t = AirmiusScope.of(context).t;
     setState(() {
       _quoteBusy = true;
       _feedbackMessage = null;
+      _couponError = null;
     });
     try {
       final response = await widget.client.commerceCart(
+        couponCode: couponCode,
         shippingCountry: _country.text,
         shippingPostalCode: _postalCode.text,
         shippingCity: _city.text,
@@ -3186,21 +3245,37 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
       );
       if (!mounted) return;
       final data = _marketMap(response['data']);
+      final cart = _marketMap(data['cart']);
+      final applied = _marketText(_marketMap(cart['summary'])['coupon_code']);
+      if (couponCode?.isNotEmpty == true && applied.isEmpty) {
+        setState(() => _couponError = t('market.couponUnavailable'));
+        return;
+      }
       setState(() {
-        _previewCart = _marketMap(data['cart']);
+        _previewCart = cart;
+        _appliedCoupon = applied.isEmpty ? null : applied;
+        if (couponChange != null) _coupon.text = applied;
         _feedbackIsError = false;
       });
     } on AirmiusApiException catch (error) {
       if (!mounted) return;
       setState(() {
         _feedbackIsError = true;
-        _feedbackMessage = error.userMessage;
+        if (couponChange != null) {
+          _couponError = error.userMessage;
+        } else {
+          _feedbackMessage = error.userMessage;
+        }
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _feedbackIsError = true;
-        _feedbackMessage = AirmiusScope.of(context).t('common.errorDetails');
+        if (couponChange != null) {
+          _couponError = t('common.errorDetails');
+        } else {
+          _feedbackMessage = t('common.errorDetails');
+        }
       });
     } finally {
       if (mounted) setState(() => _quoteBusy = false);
@@ -3209,6 +3284,12 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
 
   Future<void> _submit() async {
     final t = AirmiusScope.of(context).t;
+    final enteredCoupon = _coupon.text.trim();
+    if (enteredCoupon.isNotEmpty &&
+        enteredCoupon.toUpperCase() != _appliedCoupon) {
+      setState(() => _couponError = t('market.applyCouponFirst'));
+      return;
+    }
     final fieldsValid = _formKey.currentState!.validate();
     if (!_acceptedTerms) {
       setState(() {
@@ -3233,6 +3314,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     });
     try {
       final response = await widget.client.checkoutCommerceCart({
+        if (_appliedCoupon != null) 'coupon_code': _appliedCoupon,
         'provider': _provider,
         'accepted_terms': true,
         'shipping_country': _country.text.trim().toUpperCase(),

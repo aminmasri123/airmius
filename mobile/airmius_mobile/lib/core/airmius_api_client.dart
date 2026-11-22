@@ -4341,6 +4341,7 @@ class AirmiusApiClient {
       _json('DELETE', '/api/v1/commerce/products/$productId/wishlist');
 
   Future<AirmiusJson> commerceCart({
+    String? couponCode,
     String? shippingCountry,
     String? shippingState,
     String? shippingPostalCode,
@@ -4352,6 +4353,8 @@ class AirmiusApiClient {
     'GET',
     '/api/v1/commerce/cart',
     query: {
+      if (couponCode != null && couponCode.trim().isNotEmpty)
+        'coupon_code': couponCode.trim(),
       if (shippingCountry != null && shippingCountry.trim().isNotEmpty)
         'shipping_country': shippingCountry.trim().toUpperCase(),
       if (shippingState != null && shippingState.trim().isNotEmpty)
