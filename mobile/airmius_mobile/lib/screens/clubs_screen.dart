@@ -27,6 +27,7 @@ import 'team_detail_screen.dart';
 import 'team_invitation_response_screen.dart';
 import 'training_event_detail_screen.dart';
 import 'club_announcement_screen.dart';
+import 'club_newsletter_screen.dart';
 import 'file_manager_screen.dart';
 
 String _safeClubError(BuildContext context, Object error) {
@@ -3248,6 +3249,24 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
                   onVolunteerProfile: profileClub.isMember
                       ? () => _openVolunteerProfile(profileClub)
                       : null,
+                  onNewsletter: () async {
+                    final sent = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ClubNewsletterScreen(clubId: profileClub.id),
+                      ),
+                    );
+                    if (!context.mounted || sent != true) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          AirmiusScope.of(
+                            context,
+                          ).t('guestClubs.newsletterSent'),
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -3780,6 +3799,7 @@ class _ClubProfileHero extends StatelessWidget {
     required this.onUnblock,
     required this.onReport,
     required this.onVolunteerProfile,
+    required this.onNewsletter,
   });
 
   final ClubSummary club;
@@ -3800,6 +3820,7 @@ class _ClubProfileHero extends StatelessWidget {
   final VoidCallback? onUnblock;
   final VoidCallback? onReport;
   final VoidCallback? onVolunteerProfile;
+  final VoidCallback onNewsletter;
 
   @override
   Widget build(BuildContext context) {
@@ -3953,6 +3974,12 @@ class _ClubProfileHero extends StatelessWidget {
                           secondary: true,
                           onPressed: onVolunteerProfile,
                         ),
+                      AirmiusButton(
+                        label: scope.t('guestClubs.newsletterAction'),
+                        icon: Icons.mark_email_unread_outlined,
+                        secondary: true,
+                        onPressed: onNewsletter,
+                      ),
                       if (onRequestTermination != null)
                         AirmiusButton(
                           label: scope.t('clubs.requestTermination'),
@@ -3969,20 +3996,33 @@ class _ClubProfileHero extends StatelessWidget {
                         ),
                     ],
                   )
-                else if (requested)
-                  AirmiusButton(
-                    label: scope.t('withdraw'),
-                    icon: Icons.undo_outlined,
-                    danger: true,
-                    onPressed: onWithdraw,
-                  )
                 else
-                  AirmiusButton(
-                    label: club.acceptsMemberships
-                        ? scope.t('join')
-                        : scope.t('clubs.viewTeams'),
-                    icon: Icons.assignment_outlined,
-                    onPressed: onJoin,
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      if (requested)
+                        AirmiusButton(
+                          label: scope.t('withdraw'),
+                          icon: Icons.undo_outlined,
+                          danger: true,
+                          onPressed: onWithdraw,
+                        )
+                      else
+                        AirmiusButton(
+                          label: club.acceptsMemberships
+                              ? scope.t('join')
+                              : scope.t('clubs.viewTeams'),
+                          icon: Icons.assignment_outlined,
+                          onPressed: onJoin,
+                        ),
+                      AirmiusButton(
+                        label: scope.t('guestClubs.newsletterAction'),
+                        icon: Icons.mark_email_unread_outlined,
+                        secondary: true,
+                        onPressed: onNewsletter,
+                      ),
+                    ],
                   ),
               ],
             ),

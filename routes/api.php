@@ -200,6 +200,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/public/clubs', [PublicClubController::class, 'indexJson'])
             ->middleware('throttle:public-content')
             ->name('public.clubs.index');
+        Route::post('/public/clubs/{club}/newsletter', [ClubNewsletterController::class, 'subscribe'])
+            ->middleware('throttle:5,1')
+            ->name('public.clubs.newsletter.subscribe');
         Route::get('/public/marketplace', [PublicMarketplaceController::class, 'indexJson'])
             ->middleware('throttle:public-content')
             ->name('public.marketplace.index');

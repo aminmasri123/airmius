@@ -3,6 +3,7 @@
 use App\Http\Controllers\BlogPostController;
 use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\KontaktController;
+use App\Http\Controllers\ClubNewsletterPageController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\OrganizationJobController;
 use App\Http\Controllers\PricingController;
@@ -349,6 +350,18 @@ Route::get('/gamification', fn () => Inertia::render('Guest/Gamification', [
 
 Route::get('/vereine', [PublicClubController::class, 'index'])->name('guest.vereine');
 Route::get('/vereine/{club}', [PublicDiscoveryController::class, 'club'])->whereNumber('club')->name('guest.clubs.show');
+Route::post('/vereine/{club}/newsletter', [ClubNewsletterPageController::class, 'subscribe'])
+    ->whereNumber('club')
+    ->middleware('throttle:5,1')
+    ->name('guest.newsletter.subscribe');
+Route::get('/newsletter/bestaetigen/{token}', [ClubNewsletterPageController::class, 'confirm'])
+    ->where('token', '[A-Za-z0-9]+')
+    ->middleware('throttle:20,1')
+    ->name('guest.newsletter.confirm');
+Route::get('/newsletter/abbestellen/{token}', [ClubNewsletterPageController::class, 'unsubscribe'])
+    ->where('token', '[A-Za-z0-9.]+')
+    ->middleware('throttle:20,1')
+    ->name('guest.newsletter.unsubscribe');
 Route::get('/veranstaltungen', [PublicDiscoveryController::class, 'events'])->name('guest.events');
 Route::get('/veranstaltungen/{event}', [PublicDiscoveryController::class, 'event'])->whereNumber('event')->name('guest.events.show');
 Route::get('/sportarten', [PublicDiscoveryController::class, 'sports'])->name('guest.sports');

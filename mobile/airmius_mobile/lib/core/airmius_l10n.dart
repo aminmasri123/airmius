@@ -22695,6 +22695,23 @@ final _guestClubLabelsEn = {
   'guestClubs.membership': 'membership options',
   'guestClubs.noMembership': 'No public membership options',
   'guestClubs.interested': 'Ask about this club',
+  'guestClubs.openProfile': 'Open club profile',
+  'guestClubs.newsletterAction': 'Subscribe to newsletter',
+  'guestClubs.newsletterTitle': 'Club newsletter',
+  'guestClubs.newsletterBody':
+      'Enter your email address. The subscription only starts after you confirm the email link.',
+  'guestClubs.newsletterName': 'Name (optional)',
+  'guestClubs.newsletterEmail': 'Email address',
+  'guestClubs.newsletterConsent':
+      'I want to receive this club newsletter and consent to using my email address for it. I can unsubscribe at any time.',
+  'guestClubs.newsletterCancel': 'Cancel',
+  'guestClubs.newsletterSubmit': 'Request confirmation email',
+  'guestClubs.newsletterSending': 'Sending…',
+  'guestClubs.newsletterSent':
+      'Request processed. If confirmation is required, you will receive an email. Please also check your spam folder.',
+  'guestClubs.newsletterError':
+      'The subscription could not be started. Please try again.',
+  'guestClubs.newsletterEmailError': 'Enter a valid email address.',
 };
 
 final _guestClubLabelsDe = {
@@ -22719,6 +22736,23 @@ final _guestClubLabelsDe = {
   'guestClubs.membership': 'Mitgliedsoptionen',
   'guestClubs.noMembership': 'Keine öffentlichen Mitgliedsoptionen',
   'guestClubs.interested': 'Nach diesem Verein fragen',
+  'guestClubs.openProfile': 'Vereinsprofil öffnen',
+  'guestClubs.newsletterAction': 'Newsletter abonnieren',
+  'guestClubs.newsletterTitle': 'Vereinsnewsletter',
+  'guestClubs.newsletterBody':
+      'Trage deine E-Mail-Adresse ein. Die Anmeldung wird erst nach dem Klick auf den Bestätigungslink aktiv.',
+  'guestClubs.newsletterName': 'Name (optional)',
+  'guestClubs.newsletterEmail': 'E-Mail-Adresse',
+  'guestClubs.newsletterConsent':
+      'Ich möchte den Newsletter dieses Vereins erhalten und stimme der Nutzung meiner E-Mail-Adresse dafür zu. Ich kann mich jederzeit abmelden.',
+  'guestClubs.newsletterCancel': 'Abbrechen',
+  'guestClubs.newsletterSubmit': 'Bestätigungsmail anfordern',
+  'guestClubs.newsletterSending': 'Wird gesendet…',
+  'guestClubs.newsletterSent':
+      'Anfrage verarbeitet. Falls eine Bestätigung nötig ist, erhältst du eine E-Mail. Bitte prüfe auch den Spam-Ordner.',
+  'guestClubs.newsletterError':
+      'Die Anmeldung konnte nicht gestartet werden. Bitte versuche es erneut.',
+  'guestClubs.newsletterEmailError': 'Gib eine gültige E-Mail-Adresse ein.',
 };
 
 final _guestClubLabelsFr = {
@@ -22742,6 +22776,23 @@ final _guestClubLabelsFr = {
   'guestClubs.membership': 'options d’adhésion',
   'guestClubs.noMembership': 'Aucune option d’adhésion publique',
   'guestClubs.interested': 'Demander des informations',
+  'guestClubs.openProfile': 'Ouvrir le profil du club',
+  'guestClubs.newsletterAction': 'S’abonner à la newsletter',
+  'guestClubs.newsletterTitle': 'Newsletter du club',
+  'guestClubs.newsletterBody':
+      'Saisissez votre adresse e-mail. L’inscription ne devient active qu’après confirmation du lien reçu.',
+  'guestClubs.newsletterName': 'Nom (facultatif)',
+  'guestClubs.newsletterEmail': 'Adresse e-mail',
+  'guestClubs.newsletterConsent':
+      'Je souhaite recevoir la newsletter de ce club et consens à l’utilisation de mon adresse e-mail. Je peux me désabonner à tout moment.',
+  'guestClubs.newsletterCancel': 'Annuler',
+  'guestClubs.newsletterSubmit': 'Demander l’e-mail de confirmation',
+  'guestClubs.newsletterSending': 'Envoi…',
+  'guestClubs.newsletterSent':
+      'Demande traitée. Si une confirmation est nécessaire, vous recevrez un e-mail. Vérifiez aussi les courriers indésirables.',
+  'guestClubs.newsletterError':
+      'Impossible de démarrer l’inscription. Veuillez réessayer.',
+  'guestClubs.newsletterEmailError': 'Saisissez une adresse e-mail valide.',
 };
 
 final _guestClubLabelsAr = {
@@ -22765,6 +22816,22 @@ final _guestClubLabelsAr = {
   'guestClubs.membership': 'خيارات عضوية',
   'guestClubs.noMembership': 'لا توجد خيارات عضوية عامة',
   'guestClubs.interested': 'اسأل عن النادي',
+  'guestClubs.openProfile': 'فتح ملف النادي',
+  'guestClubs.newsletterAction': 'الاشتراك في النشرة',
+  'guestClubs.newsletterTitle': 'نشرة النادي',
+  'guestClubs.newsletterBody':
+      'أدخل بريدك الإلكتروني. لا يصبح الاشتراك فعالاً إلا بعد تأكيد الرابط المرسل.',
+  'guestClubs.newsletterName': 'الاسم (اختياري)',
+  'guestClubs.newsletterEmail': 'البريد الإلكتروني',
+  'guestClubs.newsletterConsent':
+      'أرغب في تلقي نشرة هذا النادي وأوافق على استخدام بريدي الإلكتروني لهذا الغرض. يمكنني إلغاء الاشتراك في أي وقت.',
+  'guestClubs.newsletterCancel': 'إلغاء',
+  'guestClubs.newsletterSubmit': 'طلب رسالة التأكيد',
+  'guestClubs.newsletterSending': 'جارٍ الإرسال…',
+  'guestClubs.newsletterSent':
+      'تمت معالجة الطلب. إذا كان التأكيد مطلوباً فستصلك رسالة. تحقق أيضاً من مجلد الرسائل غير المرغوب فيها.',
+  'guestClubs.newsletterError': 'تعذر بدء الاشتراك. حاول مرة أخرى.',
+  'guestClubs.newsletterEmailError': 'أدخل بريداً إلكترونياً صالحاً.',
 };
 
 final _guestLearningLabelsEn = {

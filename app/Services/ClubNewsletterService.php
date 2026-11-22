@@ -18,14 +18,24 @@ class ClubNewsletterService
     public function requestOptIn(Club $club, string $email, ?string $name = null, ?User $user = null): array
     {
         $email = Str::lower(trim($email));
+        $existing = ClubNewsletterSubscription::query()
+            ->where('club_id', $club->id)
+            ->where('email', $email)
+            ->first();
+        $isSuppressed = ClubNewsletterSuppression::query()
+            ->where('club_id', $club->id)
+            ->where('email', $email)
+            ->exists();
+
+        // A third party must not be able to move an already confirmed address
+        // back to "pending" simply by submitting the public form again.
+        if ($existing?->status === 'confirmed' && ! $isSuppressed) {
+            return [$existing, null];
+        }
+
         $token = Str::random(64);
 
         $subscription = DB::transaction(function () use ($club, $email, $name, $user, $token) {
-            ClubNewsletterSuppression::query()
-                ->where('club_id', $club->id)
-                ->where('email', $email)
-                ->delete();
-
             return ClubNewsletterSubscription::query()->updateOrCreate(
                 ['club_id' => $club->id, 'email' => $email],
                 [
@@ -41,6 +51,15 @@ class ClubNewsletterService
             );
         });
 
+        $confirmationUrl = route('guest.newsletter.confirm', ['token' => $token]);
+        Mail::raw(
+            "Bitte bestätige deine Newsletter-Anmeldung für {$club->name}:\n\n{$confirmationUrl}\n\n".
+            "Wenn du dich nicht angemeldet hast, kannst du diese E-Mail ignorieren.",
+            function ($message) use ($club, $email): void {
+                $message->to($email)->subject('Newsletter-Anmeldung für '.$club->name.' bestätigen');
+            },
+        );
+
         return [$subscription, $token];
     }
 
@@ -54,6 +73,10 @@ class ClubNewsletterService
             return null;
         }
 
+        if (! $subscription->confirmation_sent_at || $subscription->confirmation_sent_at->lt(now()->subDay())) {
+            return null;
+        }
+
         if ($subscription->status !== 'confirmed') {
             $subscription->forceFill([
                 'status' => 'confirmed',
@@ -62,6 +85,10 @@ class ClubNewsletterService
                 'unsubscribe_token_hash' => hash('sha256', Str::random(64)),
                 'unsubscribed_at' => null,
             ])->save();
+            ClubNewsletterSuppression::query()
+                ->where('club_id', $subscription->club_id)
+                ->where('email', $subscription->email)
+                ->delete();
         }
 
         return $subscription->fresh();

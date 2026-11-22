@@ -16,16 +16,20 @@ class ClubNewsletterController extends Controller
 
     public function subscribe(Request $request, Club $club)
     {
+        abort_unless($club->verification_status === 'verified' && $club->is_listed, 404);
+
         $data = $request->validate([
             'email' => ['required', 'email:rfc,dns', 'max:255'],
             'name' => ['nullable', 'string', 'max:160'],
+            'privacy_consent' => ['accepted'],
+            'website' => ['nullable', 'max:0'],
         ]);
 
         [$subscription] = $this->newsletters->requestOptIn($club, $data['email'], $data['name'] ?? null, $request->user());
 
         return response()->json([
             'message' => 'newsletter_confirmation_required',
-            'data' => ['id' => $subscription->id, 'status' => $subscription->status],
+            'data' => ['status' => 'pending'],
         ], 202);
     }
 

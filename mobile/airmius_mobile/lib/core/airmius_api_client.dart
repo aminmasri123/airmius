@@ -3841,6 +3841,21 @@ class AirmiusApiClient {
     },
   );
 
+  Future<AirmiusJson> subscribeClubNewsletter({
+    required int clubId,
+    required String email,
+    String name = '',
+  }) => _json(
+    'POST',
+    '/api/v1/public/clubs/$clubId/newsletter',
+    body: {
+      'email': email.trim(),
+      if (name.trim().isNotEmpty) 'name': name.trim(),
+      'privacy_consent': true,
+      'website': '',
+    },
+  );
+
   Future<AirmiusJson> publicMarketplace({
     String? query,
     String? category,
