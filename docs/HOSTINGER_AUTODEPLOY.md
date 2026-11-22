@@ -9,6 +9,21 @@ Actions nicht; der Runner benötigt einen eigenen SSH-Zugang.
 
 ## Ablauf
 
+### Lokale Prüfung vor dem Push
+
+Einmal je Checkout `npm run setup:hooks` ausführen. Der Git-Pre-Push-Hook gilt auch
+für VS Code und prüft jeden gepushten Commit in einer separaten temporären Kopie.
+Er prüft Übersetzungen, mobile API-Pfade, Barrierefreiheit, Web-Build,
+Build-Manifest und die vollständige Backend-Testsuite. Fehler stoppen den Push.
+`npm run check:push` prüft den aktuellen Commit auch ohne Push. PHP ab 8.2,
+installierte Composer-/npm-Abhängigkeiten und Node.js werden benötigt.
+`AIRMIUS_PHP` kann einen abweichenden PHP-Pfad festlegen. Die lokale Windows-
+Installation unter dem benachbarten Ordner `airmius-tools` wird automatisch erkannt.
+Serverzugänge, SMTP-Zustellung und Hostinger-Kontingente werden weiterhin bei der
+Bereitstellung beziehungsweise mit Live-Prüfungen geprüft.
+
+### Veröffentlichung auf Hostinger
+
 1. Derselbe Commit wird getestet, Composer-Abhängigkeiten werden installiert und
    Vite wird frisch gebaut. Alle Manifestdateien und referenzierten Assets werden geprüft.
 2. Ein Archiv enthält gemeinsam `app`, `bootstrap`, `config`, `database`, `lang`,

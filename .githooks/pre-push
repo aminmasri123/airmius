@@ -1,0 +1,10 @@
+#!/bin/sh
+root=$(git rev-parse --show-toplevel) || exit 1
+if command -v node >/dev/null 2>&1; then
+    exec node "$root/scripts/check-before-push.mjs" --hook
+fi
+if test -x "$root/../airmius-tools/bin/node.exe"; then
+    exec "$root/../airmius-tools/bin/node.exe" "$root/scripts/check-before-push.mjs" --hook
+fi
+echo 'Push stopped: Node.js is required for the local checks.' >&2
+exit 1

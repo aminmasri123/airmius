@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "check:push": "node scripts/check-before-push.mjs",
+        "setup:hooks": "node scripts/install-git-hooks.mjs"
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0",
