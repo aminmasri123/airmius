@@ -210,8 +210,9 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
   Future<void> execute(
     String title,
     String resource,
-    Map<String, dynamic> result,
-  ) async {
+    Map<String, dynamic> result, {
+    String? successMessage,
+  }) async {
     setState(() {
       busy = true;
       error = null;
@@ -222,7 +223,9 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('$title gespeichert.')));
+        ).showSnackBar(
+          SnackBar(content: Text(successMessage ?? '$title gespeichert.')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -410,6 +413,36 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
     } finally {
       if (mounted) setState(() => busy = false);
     }
+  }
+
+  Future<void> unconfirmRecord(Map<String, dynamic> record) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bestätigung aufheben?'),
+        content: Text(
+          '„${record['title']}“ wird wieder als offen markiert. Danach kannst du den Dienst bearbeiten oder entfernen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Bestätigung aufheben'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    await execute(
+      'Bestätigung aufgehoben',
+      'service-hour-records/${record['id']}/unconfirm',
+      {},
+      successMessage: 'Bestätigung aufgehoben. Der Dienst ist wieder offen.',
+    );
   }
 
   @override
@@ -631,21 +664,29 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                           ),
                         ],
                         if (record['status'] == 'confirmed')
-                          TextButton(
-                            onPressed: () => action(
-                              'Korrektur',
-                              'service-hour-records/${record['id']}/corrections',
-                              [
-                                _Field(
-                                  'minutes_delta',
-                                  'Änderung in Minuten (+/−)',
-                                  number: true,
-                                ),
-                                _Field('reason', 'Begründung'),
-                              ],
+                          ...[
+                            if ((record['corrections'] as List? ?? []).isEmpty)
+                              TextButton.icon(
+                                onPressed: () => unconfirmRecord(record),
+                                icon: const Icon(Icons.undo),
+                                label: const Text('Bestätigung aufheben'),
+                              ),
+                            TextButton(
+                              onPressed: () => action(
+                                'Korrektur',
+                                'service-hour-records/${record['id']}/corrections',
+                                [
+                                  _Field(
+                                    'minutes_delta',
+                                    'Änderung in Minuten (+/−)',
+                                    number: true,
+                                  ),
+                                  _Field('reason', 'Begründung'),
+                                ],
+                              ),
+                              child: const Text('Korrigieren'),
                             ),
-                            child: const Text('Korrigieren'),
-                          ),
+                          ],
                       ],
                     ),
                 ],

@@ -56,6 +56,10 @@ class ClubServiceHourLedgerTest extends TestCase
             ->assertJsonPath('data.previous_total_minutes', 240)
             ->assertJsonPath('data.corrected_total_minutes', 210);
 
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/unconfirm")
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('record');
+
         $this->postJson("/api/v1/clubs/{$club->id}/service-hour-exemptions", [
             'period_id' => $period->id,
             'user_id' => $member->id,
@@ -201,7 +205,7 @@ class ClubServiceHourLedgerTest extends TestCase
         $this->assertDatabaseMissing('club_service_hour_records', ['id' => $recordId]);
     }
 
-    public function test_confirmed_service_hour_records_must_use_corrections_instead_of_update_or_delete(): void
+    public function test_manager_can_unconfirm_then_update_or_delete_a_confirmed_service_hour_record(): void
     {
         [$club, $owner, $member, $manager, $period] = $this->fixture();
         Sanctum::actingAs($manager);
@@ -225,12 +229,24 @@ class ClubServiceHourLedgerTest extends TestCase
         $this->deleteJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}")
             ->assertUnprocessable()->assertJsonValidationErrors('record');
 
-        $this->assertDatabaseHas('club_service_hour_records', [
-            'id' => $recordId,
-            'status' => 'confirmed',
-            'minutes' => 90,
-            'title' => 'Turnieraufbau',
-        ]);
+        $this->postJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}/unconfirm")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.confirmed_at', null)
+            ->assertJsonPath('data.confirmation_snapshot', null);
+
+        $this->putJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}", [
+            'user_id' => $member->id,
+            'served_on' => '2026-05-13',
+            'minutes' => 120,
+            'title' => 'Jetzt zulässig',
+        ])->assertOk()
+            ->assertJsonPath('data.minutes', 120)
+            ->assertJsonPath('data.title', 'Jetzt zulässig');
+
+        $this->deleteJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}")
+            ->assertOk();
+        $this->assertDatabaseMissing('club_service_hour_records', ['id' => $recordId]);
     }
 
     public function test_roles_permissions_period_scope_and_locked_period_are_enforced(): void

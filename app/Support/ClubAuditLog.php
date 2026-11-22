@@ -44,6 +44,7 @@ class ClubAuditLog
         'club.year_period.deleted' => 'Vereinsjahr gelöscht',
         'club.service_hour.updated' => 'Dienststunde aktualisiert',
         'club.service_hour.deleted' => 'Dienststunde entfernt',
+        'club.service_hour.unconfirmed' => 'Bestätigung einer Dienststunde aufgehoben',
         'club.policy_document.created' => 'Vereinsdokumentfassung angelegt',
         'club.policy_document.updated' => 'Vereinsdokumentfassung aktualisiert',
         'club.policy_document.deleted' => 'Vereinsdokumentfassung gelöscht',

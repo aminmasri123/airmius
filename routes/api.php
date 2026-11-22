@@ -831,6 +831,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/clubs/{club}/service-hour-records/{record}', [ClubServiceHourController::class, 'updateRecord'])->name('clubs.service-hour-records.update');
         Route::delete('/clubs/{club}/service-hour-records/{record}', [ClubServiceHourController::class, 'destroyRecord'])->name('clubs.service-hour-records.destroy');
         Route::post('/clubs/{club}/service-hour-records/{record}/confirm', [ClubServiceHourController::class, 'confirmRecord'])->name('clubs.service-hour-records.confirm');
+        Route::post('/clubs/{club}/service-hour-records/{record}/unconfirm', [ClubServiceHourController::class, 'unconfirmRecord'])->name('clubs.service-hour-records.unconfirm');
         Route::post('/clubs/{club}/service-hour-records/{record}/corrections', [ClubServiceHourController::class, 'correctRecord'])->name('clubs.service-hour-records.corrections.store');
         Route::post('/clubs/{club}/service-hour-exemptions', [ClubServiceHourController::class, 'storeExemption'])->name('clubs.service-hour-exemptions.store');
         Route::get('/clubs/{club}/permission-delegations', [ClubPermissionDelegationController::class, 'index'])->name('clubs.permission-delegations.index');

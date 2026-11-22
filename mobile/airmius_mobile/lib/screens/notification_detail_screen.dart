@@ -8,7 +8,6 @@ import '../core/airmius_theme.dart';
 import '../core/airmius_theme_mode_scope.dart';
 import '../navigation/airmius_deep_link_navigator.dart';
 import '../widgets/airmius_widgets.dart';
-import 'notification_preferences_screen.dart';
 import 'friends_social_graph_screen.dart';
 import 'team_invitation_response_screen.dart';
 import 'member_removal_screen.dart';
@@ -170,8 +169,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       ),
       body: PageFrame(
         title: widget.notification.title,
-        subtitle: widget.notification.body,
-        trailing: StatusPill(widget.typeLabel),
+        subtitle: '',
         showHeader: true,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -233,17 +231,6 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                   onPressed: _busy || !widget.notification.unread
                       ? null
                       : _markRead,
-                ),
-                AirmiusButton(
-                  label: 'Push',
-                  icon: Icons.tune_outlined,
-                  secondary: true,
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationPreferencesScreen(),
-                    ),
-                  ),
                 ),
                 AirmiusButton(
                   label: scope.t('notifications.delete'),

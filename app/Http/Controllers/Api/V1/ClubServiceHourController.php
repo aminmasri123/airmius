@@ -141,6 +141,33 @@ class ClubServiceHourController extends Controller
         return response()->json(['data' => $this->recordPayload($ledger->confirm($record, $request->user()))]);
     }
 
+    public function unconfirmRecord(Request $request, Club $club, ClubServiceHourRecord $record)
+    {
+        $this->authorizeRecord($request, $club, $record, ClubPermissions::MEMBERS_MANAGE);
+        $this->ensurePeriodOpen($this->period($club, (int) $record->club_year_period_id));
+        if ($record->status !== 'confirmed') {
+            throw ValidationException::withMessages(['record' => 'Diese Dienststunde ist nicht bestätigt.']);
+        }
+        if ($record->corrections()->exists()) {
+            throw ValidationException::withMessages([
+                'record' => 'Die Bestätigung kann nicht aufgehoben werden, weil bereits Korrekturen vorhanden sind.',
+            ]);
+        }
+
+        $snapshot = $record->confirmation_snapshot;
+        $record->forceFill([
+            'status' => 'pending',
+            'confirmed_by' => null,
+            'confirmed_at' => null,
+            'confirmation_snapshot' => null,
+        ])->save();
+        ClubAuditLog::record($club, $request->user(), 'club.service_hour.unconfirmed', $record, [
+            'previous_confirmation_snapshot' => $snapshot,
+        ]);
+
+        return response()->json(['data' => $this->recordPayload($record->refresh())]);
+    }
+
     public function updateRecord(Request $request, Club $club, ClubServiceHourRecord $record)
     {
         $this->authorizeRecord($request, $club, $record, ClubPermissions::MEMBERS_MANAGE);

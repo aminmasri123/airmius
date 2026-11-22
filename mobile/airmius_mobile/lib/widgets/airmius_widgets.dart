@@ -386,18 +386,20 @@ class PageFrame extends StatelessWidget {
                                   height: 1.05,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                subtitle,
-                                textScaler: textScaler,
-                                softWrap: true,
-                                style: TextStyle(
-                                  color: muted,
-                                  fontSize: 14,
-                                  height: 1.5,
-                                  fontWeight: FontWeight.w600,
+                              if (subtitle.trim().isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  subtitle,
+                                  textScaler: textScaler,
+                                  softWrap: true,
+                                  style: TextStyle(
+                                    color: muted,
+                                    fontSize: 14,
+                                    height: 1.5,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           );
                           final trailing = trailingWidgets.isEmpty

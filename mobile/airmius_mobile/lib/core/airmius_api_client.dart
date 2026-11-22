@@ -992,6 +992,10 @@ class AirmiusApiClient {
         .hasMatch(resource)) {
       final recordId = resource.split('/')[1];
       path = '/api/v1/clubs/$clubId/service-hour-records/$recordId/confirm';
+    } else if (RegExp(r'^service-hour-records/\d+/unconfirm$')
+        .hasMatch(resource)) {
+      final recordId = resource.split('/')[1];
+      path = '/api/v1/clubs/$clubId/service-hour-records/$recordId/unconfirm';
     } else if (RegExp(r'^service-hour-records/\d+/corrections$')
         .hasMatch(resource)) {
       final recordId = resource.split('/')[1];
