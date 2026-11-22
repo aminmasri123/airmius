@@ -207,20 +207,44 @@ class AdminCommerceController extends Controller
 
     public function updateProduct(Request $request, MarketplaceProduct $product)
     {
-        $before = $product->only(['title', 'price_cents', 'status', 'stock_quantity', 'tax_class']);
+        $fields = ['title', 'price_cents', 'status', 'moderation_status', 'stock_quantity', 'tax_class'];
+        $before = $product->only($fields);
+        $request->validate(['override_quality' => ['sometimes', 'boolean']]);
+        $publishing = $request->input('status') === 'published';
+        $overrideQuality = $publishing && $request->boolean('override_quality');
+        if ($publishing && ($product->moderation_status === 'removed'
+            || ($overrideQuality && array_intersect(['seller', 'seller_verified'], MarketplaceProductQualityGate::evaluate($product)['blocks'])))) {
+            throw ValidationException::withMessages([
+                'status' => 'Ein gesperrtes Produkt oder ein Produkt ohne freigegebenen Anbieter kann nicht veröffentlicht werden.',
+            ]);
+        }
         $data = $this->productData($request);
         if (! $product->user_id) {
             $data['commission_percent'] = 0;
             $data['payout_status'] = 'not_applicable';
         }
 
-        $product->update($data);
-        if (($data['status'] ?? null) === 'published') {
-            MarketplaceProductQualityGate::applyPublicationGate($product->fresh(['user.approvedSellerApplications', 'club', 'inventories']));
-        }
-        $this->audit->log('product.updated', $product, $before, $product->fresh()->only(['title', 'price_cents', 'status', 'stock_quantity', 'tax_class']));
+        DB::transaction(function () use ($product, $data, $overrideQuality, $before, $fields): void {
+            $product->update($data);
+            if ($data['status'] === 'published') {
+                if (! $overrideQuality) {
+                    MarketplaceProductQualityGate::applyPublicationGate($product);
+                }
+                if ($product->status === 'published' && $product->moderation_status !== 'removed') {
+                    $product->update(['moderation_status' => 'approved', 'rejection_reason' => null]);
+                }
+            }
+            $this->audit->log(
+                $overrideQuality ? 'product.published_with_quality_override' : 'product.updated',
+                $product,
+                $before,
+                $product->only($fields),
+            );
+        });
 
-        return back()->with('success', 'Marketplace-Produkt aktualisiert.');
+        return back()->with('success', $data['status'] === 'published' && $product->status === 'review'
+            ? 'Marketplace-Produkt gespeichert. Die Qualitätsprüfung ist noch offen.'
+            : 'Marketplace-Produkt aktualisiert.');
     }
 
     public function destroyProduct(Request $request, MarketplaceProduct $product)

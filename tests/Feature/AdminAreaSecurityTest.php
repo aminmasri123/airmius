@@ -167,6 +167,43 @@ class AdminAreaSecurityTest extends TestCase
         $this->assertNotSame(route('password.confirm'), $response->headers->get('Location'));
     }
 
+    public function test_platform_admin_can_explicitly_publish_a_product_with_quality_issues(): void
+    {
+        [$user] = $this->platformAdmin([
+            'two_factor_secret' => 'encrypted-test-secret',
+            'two_factor_confirmed_at' => now(),
+        ]);
+        Permission::findOrCreate('subscriptions.manage', 'web');
+        $user->givePermissionTo('subscriptions.manage');
+
+        $payload = [
+            'title' => 'Laufschuhe Airmius',
+            'description' => 'Kurze Beschreibung',
+            'category' => 'product',
+            'price_cents' => 3999,
+            'currency' => 'EUR',
+            'status' => 'published',
+        ];
+
+        $this->actingAs($user)->post(route('admin.commerce.products.store'), $payload)
+            ->assertSessionHasNoErrors();
+        $product = \App\Models\MarketplaceProduct::query()->where('title', $payload['title'])->sole();
+        $this->assertSame('review', $product->status);
+
+        $url = route('admin.commerce.products.update', $product);
+        $this->withSession(['auth.password_confirmed_at' => time()])
+            ->put($url, $payload)
+            ->assertSessionHasNoErrors();
+        $this->assertSame('review', $product->fresh()->status);
+
+        $this->put($url, [...$payload, 'override_quality' => true])
+            ->assertSessionHasNoErrors();
+        $product->refresh();
+        $this->assertSame('published', $product->status);
+        $this->assertSame('approved', $product->moderation_status);
+        $this->assertNull($product->rejection_reason);
+    }
+
     public function test_platform_admin_api_can_create_product_without_mobile_step_up(): void
     {
         [$user] = $this->platformAdmin([

@@ -261,7 +261,8 @@ export function useAdminCommerceProducts() {
             return
         }
 
-        if (status === 'published' && product.quality_issues?.length) {
+        const overrideQuality = status === 'published' && Boolean(product.quality_issues?.length)
+        if (overrideQuality) {
             const confirmed = await confirmDialog({
                 title: 'Produkt trotzdem freigeben?',
                 message: `Dieses Produkt hat noch ${product.quality_issues.length} Qualitätsproblem(e):\n\n${product.quality_issues.join('\n')}\n\nTrotzdem freigeben?`,
@@ -274,7 +275,10 @@ export function useAdminCommerceProducts() {
             }
         }
 
-        router.put(route('admin.commerce.products.update', product.id), productPayload(product, { status }), { preserveScroll: true })
+        router.put(route('admin.commerce.products.update', product.id), productPayload(product, {
+            status,
+            override_quality: overrideQuality,
+        }), { preserveScroll: true })
     }
 
     const submitRejection = () => {
