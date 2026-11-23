@@ -2,14 +2,6 @@ name: Airmius Mobile iOS
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "mobile/airmius_mobile/**"
-      - ".github/workflows/airmius-mobile-ios.yml"
-  pull_request:
-    paths:
-      - "mobile/airmius_mobile/**"
-      - ".github/workflows/airmius-mobile-ios.yml"
 
 jobs:
   flutter-ios:
