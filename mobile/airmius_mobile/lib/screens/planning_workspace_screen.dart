@@ -310,7 +310,7 @@ class _PlanningWorkspaceScreenState extends State<PlanningWorkspaceScreen> {
                     contentPadding: EdgeInsets.zero,
                     title: Text('${row['name']}'),
                     subtitle: Text(
-                      '${t('${row['status']}')} ${widget.seasons ? '' : '· ${planningDay(row['starts_on'])} – ${planningDay(row['ends_on'])}'}',
+                      '${t('${row['status']}')} ${widget.seasons ? '' : '· ${planningDay(row['starts_on'])} ${row['calendar_start_time'] ?? ''} – ${planningDay(row['ends_on'])} ${row['calendar_end_time'] ?? ''}'}',
                     ),
                     trailing: widget.seasons
                         ? (canEdit
@@ -398,11 +398,38 @@ PlanningEditor competitionPlanningEditor(
     'participation_fee_type': 'unknown',
     'participation_fee_cents': null,
     'participation_fee_basis': null,
-    'calendar_enabled': false,
+    'calendar_enabled': true,
     'calendar_scope': 'club',
     'calendar_user_ids': <dynamic>[],
     'calendar_start_time': '09:00',
     'calendar_end_time': '18:00',
+    'meeting_at': '',
+    'meeting_point': '',
+    'departure_at': '',
+    'expected_return_at': '',
+    'travel_mode': 'individual',
+    'responsible_user_id': null,
+    'responsible_name': '',
+    'responsible_phone': '',
+    'description': '',
+    'equipment_notes': '',
+    'document_url': '',
+    'schedule_url': '',
+    'participant_list_url': '',
+    'website_url': '',
+    'transport_notes': '',
+    'drivers_needed': null,
+    'seats_needed': null,
+    'accommodation_required': false,
+    'accommodation_name': '',
+    'accommodation_address': '',
+    'accommodation_notes': '',
+    'accommodation_check_in_at': '',
+    'accommodation_check_out_at': '',
+    'accommodation_cost_cents': null,
+    'notify_participants': true,
+    'reminder_hours_before': 24,
+    'cancellation_reason': '',
     ...?row,
   };
   initial['starts_on'] = planningApiDay(initial['starts_on']);
@@ -417,6 +444,8 @@ PlanningEditor competitionPlanningEditor(
       final venueKnown = f.values['venue_status'] == 'known';
       final paid = f.values['participation_fee_type'] == 'paid';
       final calendarEnabled = f.values['calendar_enabled'] == true;
+      final accommodationRequired = f.values['accommodation_required'] == true;
+      final cancelled = f.values['status'] == 'cancelled';
       final calendarScope = '${f.values['calendar_scope'] ?? 'club'}';
       final calendarUserIds = (f.values['calendar_user_ids'] as List? ?? []);
       return [
@@ -429,9 +458,59 @@ PlanningEditor competitionPlanningEditor(
         ),
         f.text('season_name', max: 120),
         f.status(['planned', 'open', 'closed', 'completed', 'cancelled']),
+        if (cancelled)
+          f.text('cancellation_reason', required: true, max: 1000, lines: 3),
         f.date('starts_on'),
         f.date('ends_on'),
+        Row(
+          children: [
+            Expanded(
+              child: f.text('calendar_start_time', required: true, max: 5),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: f.text('calendar_end_time', required: true, max: 5),
+            ),
+          ],
+        ),
         f.date('registration_deadline_at', time: true, required: false),
+        const Divider(),
+        Text(
+          f.t('scheduleAndMeeting'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        f.date('meeting_at', time: true, required: false),
+        f.text('meeting_point', required: false, max: 500),
+        f.date('departure_at', time: true, required: false),
+        f.date('expected_return_at', time: true, required: false),
+        f.options('travel_mode', [
+          {'id': 'individual', 'name': f.t('travelIndividual')},
+          {'id': 'club', 'name': f.t('travelClub')},
+          {'id': 'carpool', 'name': f.t('travelCarpool')},
+          {'id': 'public_transport', 'name': f.t('travelPublic')},
+          {'id': 'other', 'name': f.t('other')},
+        ]),
+        const Divider(),
+        Text(
+          f.t('responsibilityAndInfo'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        f.options(
+          'responsible_user_id',
+          planningRows(club['members']),
+          label: f.t('responsible_user_id'),
+          nullable: true,
+        ),
+        f.text('responsible_name', required: false, max: 120),
+        f.text('responsible_phone', required: false, max: 60),
+        f.text('description', required: false, max: 5000, lines: 4),
+        f.text('equipment_notes', required: false, max: 3000, lines: 3),
+        f.text('document_url', required: false, max: 2048),
+        f.text('schedule_url', required: false, max: 2048),
+        f.text('participant_list_url', required: false, max: 2048),
+        f.text('website_url', required: false, max: 2048),
         Text(
           f.t('locationAndAddress'),
           style: Theme.of(context).textTheme.titleMedium,
@@ -465,7 +544,35 @@ PlanningEditor competitionPlanningEditor(
           ], label: f.t('participation_fee_basis')),
         ],
         const Divider(),
+        Text(
+          f.t('transportAndStay'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        f.number('drivers_needed', required: false, min: 0, max: 100),
+        f.number('seats_needed', required: false, min: 0, max: 1000),
+        f.text('transport_notes', required: false, max: 3000, lines: 3),
+        f.check('accommodation_required', f.t('accommodation_required')),
+        if (accommodationRequired) ...[
+          f.text('accommodation_name', required: true, max: 200),
+          f.text('accommodation_address', required: true, max: 500),
+          f.date('accommodation_check_in_at', time: true, required: false),
+          f.date('accommodation_check_out_at', time: true, required: false),
+          f.money('accommodation_cost_cents', required: false),
+          f.text('accommodation_notes', required: false, max: 3000, lines: 3),
+        ],
+        const Divider(),
         f.check('calendar_enabled', f.t('calendarPublish')),
+        f.check('notify_participants', f.t('notify_participants')),
+        f.options('reminder_hours_before', [
+          {'id': 2, 'name': f.t('reminder2h')},
+          {'id': 6, 'name': f.t('reminder6h')},
+          {'id': 12, 'name': f.t('reminder12h')},
+          {'id': 24, 'name': f.t('reminder24h')},
+          {'id': 48, 'name': f.t('reminder48h')},
+          {'id': 72, 'name': f.t('reminder72h')},
+          {'id': 168, 'name': f.t('reminder7d')},
+        ]),
         if (calendarEnabled) ...[
           f.options(
             'calendar_scope',
@@ -480,18 +587,6 @@ PlanningEditor competitionPlanningEditor(
                 f.change('calendar_user_ids', <dynamic>[]);
               }
             },
-          ),
-          f.text(
-            'calendar_start_time',
-            label: f.t('calendarStartTime'),
-            required: true,
-            max: 5,
-          ),
-          f.text(
-            'calendar_end_time',
-            label: f.t('calendarEndTime'),
-            required: true,
-            max: 5,
           ),
           if (calendarScope == 'people') ...[
             Text(
@@ -521,6 +616,27 @@ PlanningEditor competitionPlanningEditor(
       if (planningDate(v['ends_on'])!.isBefore(planningDate(v['starts_on'])!)) {
         return planningText(context, 'dateOrder');
       }
+      final timePattern = RegExp(r'^(?:[01]\d|2[0-3]):[0-5]\d$');
+      if (!timePattern.hasMatch('${v['calendar_start_time']}') ||
+          !timePattern.hasMatch('${v['calendar_end_time']}')) {
+        return planningText(context, 'calendarTimeInvalid');
+      }
+      final startsAt = planningDate(
+        '${planningApiDay(v['starts_on'])} ${v['calendar_start_time']}',
+      );
+      final endsAt = planningDate(
+        '${planningApiDay(v['ends_on'])} ${v['calendar_end_time']}',
+      );
+      if (startsAt == null || endsAt == null || !endsAt.isAfter(startsAt)) {
+        return planningText(context, 'dateOrder');
+      }
+      final departure = planningDate(v['departure_at']);
+      final expectedReturn = planningDate(v['expected_return_at']);
+      if (departure != null &&
+          expectedReturn != null &&
+          expectedReturn.isBefore(departure)) {
+        return planningText(context, 'dateOrder');
+      }
       final deadline = planningDate(v['registration_deadline_at']);
       if (deadline != null && deadline.isAfter(planningDate(v['ends_on'])!)) {
         return planningText(context, 'dateOrder');
@@ -532,11 +648,6 @@ PlanningEditor competitionPlanningEditor(
         if (v['calendar_scope'] == 'people' &&
             (v['calendar_user_ids'] as List? ?? []).isEmpty) {
           return planningText(context, 'calendarPeopleRequired');
-        }
-        final timePattern = RegExp(r'^(?:[01]\d|2[0-3]):[0-5]\d$');
-        if (!timePattern.hasMatch('${v['calendar_start_time']}') ||
-            !timePattern.hasMatch('${v['calendar_end_time']}')) {
-          return planningText(context, 'calendarTimeInvalid');
         }
       }
       return null;
@@ -570,6 +681,33 @@ PlanningEditor competitionPlanningEditor(
         'calendar_user_ids',
         'calendar_start_time',
         'calendar_end_time',
+        'meeting_at',
+        'meeting_point',
+        'departure_at',
+        'expected_return_at',
+        'travel_mode',
+        'responsible_user_id',
+        'responsible_name',
+        'responsible_phone',
+        'description',
+        'equipment_notes',
+        'document_url',
+        'schedule_url',
+        'participant_list_url',
+        'website_url',
+        'transport_notes',
+        'drivers_needed',
+        'seats_needed',
+        'accommodation_required',
+        'accommodation_name',
+        'accommodation_address',
+        'accommodation_notes',
+        'accommodation_check_in_at',
+        'accommodation_check_out_at',
+        'accommodation_cost_cents',
+        'notify_participants',
+        'reminder_hours_before',
+        'cancellation_reason',
       ])
         key: v[key],
     }, id: planningId(row?['id'])),

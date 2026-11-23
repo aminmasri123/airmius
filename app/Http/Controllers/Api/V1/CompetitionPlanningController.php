@@ -15,11 +15,14 @@ use App\Models\CompetitionTournamentStanding;
 use App\Models\CompetitionVenue;
 use App\Models\Event;
 use App\Models\Team;
+use App\Models\User;
 use App\Services\CompetitionRegistrationWorkflowService;
 use App\Services\CompetitionSportPlanningService;
 use App\Services\PlanningWorkspaceService;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
+use App\Support\AppNotification;
+use App\Support\LocalDateTime;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -414,6 +417,35 @@ class CompetitionPlanningController extends Controller
                 ->where(fn ($query) => $query->whereNull('membership_status')->orWhere('membership_status', 'active'))],
             'calendar_start_time' => ['nullable', 'date_format:H:i'],
             'calendar_end_time' => ['nullable', 'date_format:H:i'],
+            'meeting_at' => ['nullable', 'date'],
+            'meeting_point' => ['nullable', 'string', 'max:500'],
+            'departure_at' => ['nullable', 'date'],
+            'expected_return_at' => ['nullable', 'date', 'after_or_equal:departure_at'],
+            'travel_mode' => ['nullable', Rule::in(['individual', 'club', 'carpool', 'public_transport', 'other'])],
+            'responsible_user_id' => ['nullable', 'integer', Rule::exists('club_user', 'user_id')
+                ->where('club_id', $request->route('club')?->id ?? $request->route('competition')?->club_id)
+                ->where(fn ($query) => $query->whereNull('membership_status')->orWhere('membership_status', 'active'))],
+            'responsible_name' => ['nullable', 'string', 'max:120'],
+            'responsible_phone' => ['nullable', 'string', 'max:60'],
+            'description' => ['nullable', 'string', 'max:5000'],
+            'equipment_notes' => ['nullable', 'string', 'max:3000'],
+            'document_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'schedule_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'participant_list_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'website_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'transport_notes' => ['nullable', 'string', 'max:3000'],
+            'drivers_needed' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'seats_needed' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'accommodation_required' => ['sometimes', 'boolean'],
+            'accommodation_name' => ['nullable', 'string', 'max:200'],
+            'accommodation_address' => ['nullable', 'string', 'max:500'],
+            'accommodation_notes' => ['nullable', 'string', 'max:3000'],
+            'accommodation_check_in_at' => ['nullable', 'date'],
+            'accommodation_check_out_at' => ['nullable', 'date', 'after_or_equal:accommodation_check_in_at'],
+            'accommodation_cost_cents' => ['nullable', 'integer', 'min:0', 'max:100000000'],
+            'notify_participants' => ['sometimes', 'boolean'],
+            'reminder_hours_before' => ['nullable', 'integer', Rule::in([2, 6, 12, 24, 48, 72, 168])],
+            'cancellation_reason' => ['nullable', 'string', 'max:1000', 'required_if:status,cancelled'],
         ]);
     }
 
@@ -424,7 +456,17 @@ class CompetitionPlanningController extends Controller
         }
 
         $metadata = $competition->metadata ?? [];
-        foreach (['venue_status', 'participation_fee_type', 'participation_fee_cents', 'participation_fee_basis', 'calendar_enabled', 'calendar_scope', 'calendar_user_ids', 'calendar_start_time', 'calendar_end_time'] as $key) {
+        foreach ([
+            'venue_status', 'participation_fee_type', 'participation_fee_cents', 'participation_fee_basis',
+            'calendar_enabled', 'calendar_scope', 'calendar_user_ids', 'calendar_start_time', 'calendar_end_time',
+            'meeting_at', 'meeting_point', 'departure_at', 'expected_return_at', 'travel_mode',
+            'responsible_user_id', 'responsible_name', 'responsible_phone', 'description', 'equipment_notes',
+            'document_url', 'schedule_url', 'participant_list_url', 'website_url', 'transport_notes', 'drivers_needed', 'seats_needed',
+            'accommodation_required', 'accommodation_name', 'accommodation_address', 'accommodation_notes',
+            'accommodation_check_in_at', 'accommodation_check_out_at', 'accommodation_cost_cents',
+            'notify_participants', 'reminder_hours_before',
+            'cancellation_reason',
+        ] as $key) {
             if (array_key_exists($key, $details)) {
                 $metadata[$key] = $details[$key];
             }
@@ -478,6 +520,33 @@ class CompetitionPlanningController extends Controller
             'calendar_user_ids' => $metadata['calendar_user_ids'] ?? [],
             'calendar_start_time' => $metadata['calendar_start_time'] ?? '09:00',
             'calendar_end_time' => $metadata['calendar_end_time'] ?? '18:00',
+            'meeting_at' => $metadata['meeting_at'] ?? null,
+            'meeting_point' => $metadata['meeting_point'] ?? null,
+            'departure_at' => $metadata['departure_at'] ?? null,
+            'expected_return_at' => $metadata['expected_return_at'] ?? null,
+            'travel_mode' => $metadata['travel_mode'] ?? 'individual',
+            'responsible_user_id' => $metadata['responsible_user_id'] ?? null,
+            'responsible_name' => $metadata['responsible_name'] ?? null,
+            'responsible_phone' => $metadata['responsible_phone'] ?? null,
+            'description' => $metadata['description'] ?? null,
+            'equipment_notes' => $metadata['equipment_notes'] ?? null,
+            'document_url' => $metadata['document_url'] ?? null,
+            'schedule_url' => $metadata['schedule_url'] ?? null,
+            'participant_list_url' => $metadata['participant_list_url'] ?? null,
+            'website_url' => $metadata['website_url'] ?? null,
+            'transport_notes' => $metadata['transport_notes'] ?? null,
+            'drivers_needed' => $metadata['drivers_needed'] ?? null,
+            'seats_needed' => $metadata['seats_needed'] ?? null,
+            'accommodation_required' => (bool) ($metadata['accommodation_required'] ?? false),
+            'accommodation_name' => $metadata['accommodation_name'] ?? null,
+            'accommodation_address' => $metadata['accommodation_address'] ?? null,
+            'accommodation_notes' => $metadata['accommodation_notes'] ?? null,
+            'accommodation_check_in_at' => $metadata['accommodation_check_in_at'] ?? null,
+            'accommodation_check_out_at' => $metadata['accommodation_check_out_at'] ?? null,
+            'accommodation_cost_cents' => $metadata['accommodation_cost_cents'] ?? null,
+            'notify_participants' => (bool) ($metadata['notify_participants'] ?? true),
+            'reminder_hours_before' => $metadata['reminder_hours_before'] ?? 24,
+            'cancellation_reason' => $metadata['cancellation_reason'] ?? null,
         ];
     }
 
@@ -506,7 +575,7 @@ class CompetitionPlanningController extends Controller
             throw ValidationException::withMessages(['calendar_user_ids' => 'Wähle mindestens eine Person für den Kalendereintrag aus.']);
         }
 
-        $timezone = config('app.timezone', 'UTC');
+        $timezone = LocalDateTime::timezoneFor(User::query()->find($actorId));
         $startTime = $metadata['calendar_start_time'] ?? '09:00';
         $endTime = $metadata['calendar_end_time'] ?? '18:00';
         $startsAt = CarbonImmutable::parse($competition->starts_on->format('Y-m-d').' '.$startTime, $timezone);
@@ -516,10 +585,17 @@ class CompetitionPlanningController extends Controller
         }
 
         $venue = $competition->venues->sortBy('id')->first();
+        $responsibleName = filled($metadata['responsible_name'] ?? null)
+            ? $metadata['responsible_name']
+            : User::query()->whereKey($metadata['responsible_user_id'] ?? 0)->value('name');
         $event = $eventId
             ? Event::query()->where('competition_id', $competition->id)->whereKey($eventId)->first()
             : null;
         $event ??= new Event(['competition_id' => $competition->id]);
+        $isNewEvent = ! $event->exists;
+        $previousEvent = $event->exists ? $event->only([
+            'title', 'team_id', 'visibility', 'status', 'start_time', 'end_time', 'location_name', 'notes',
+        ]) : [];
         $event->fill([
             'club_id' => $competition->club_id,
             'user_id' => $actorId,
@@ -540,14 +616,103 @@ class CompetitionPlanningController extends Controller
             'location_country' => $venue?->country,
             'participant_response_required' => true,
             'participant_response_deadline_at' => $competition->registration_deadline_at,
+            'notes' => collect([
+                $metadata['description'] ?? null,
+                filled($metadata['meeting_at'] ?? null) ? 'Treffzeit: '.$metadata['meeting_at'] : null,
+                filled($metadata['meeting_point'] ?? null) ? 'Treffpunkt: '.$metadata['meeting_point'] : null,
+                filled($metadata['departure_at'] ?? null) ? 'Abfahrt: '.$metadata['departure_at'] : null,
+                filled($metadata['expected_return_at'] ?? null) ? 'Rückkehr: '.$metadata['expected_return_at'] : null,
+                $metadata['equipment_notes'] ?? null,
+                $metadata['transport_notes'] ?? null,
+                filled($responsibleName) ? 'Kontakt: '.$responsibleName.(filled($metadata['responsible_phone'] ?? null) ? ' · '.$metadata['responsible_phone'] : '') : null,
+                filled($metadata['accommodation_name'] ?? null) ? 'Unterkunft: '.$metadata['accommodation_name'].(filled($metadata['accommodation_address'] ?? null) ? ' · '.$metadata['accommodation_address'] : '') : null,
+                filled($metadata['accommodation_check_in_at'] ?? null) ? 'Check-in: '.$metadata['accommodation_check_in_at'] : null,
+                filled($metadata['accommodation_check_out_at'] ?? null) ? 'Check-out: '.$metadata['accommodation_check_out_at'] : null,
+                isset($metadata['accommodation_cost_cents']) ? 'Unterkunftskosten: '.number_format(((int) $metadata['accommodation_cost_cents']) / 100, 2, ',', '.').' €' : null,
+                $metadata['accommodation_notes'] ?? null,
+                filled($metadata['document_url'] ?? null) ? 'Dokumente: '.$metadata['document_url'] : null,
+                filled($metadata['schedule_url'] ?? null) ? 'Zeitplan: '.$metadata['schedule_url'] : null,
+                filled($metadata['participant_list_url'] ?? null) ? 'Teilnehmerliste: '.$metadata['participant_list_url'] : null,
+                filled($metadata['website_url'] ?? null) ? 'Webseite: '.$metadata['website_url'] : null,
+            ])->filter()->implode("\n\n") ?: null,
+            'reminder_at' => $startsAt->subHours((int) ($metadata['reminder_hours_before'] ?? 24))->utc(),
+            'cancelled_at' => $competition->status === 'cancelled' ? ($event->cancelled_at ?? now()) : null,
+            'cancelled_by' => $competition->status === 'cancelled' ? $actorId : null,
+            'cancellation_reason' => $competition->status === 'cancelled' ? ($metadata['cancellation_reason'] ?? null) : null,
         ])->save();
 
-        $event->participants()->sync($scope === 'people'
-            ? $userIds->mapWithKeys(fn (int $userId) => [$userId => ['status' => 'maybe']])->all()
-            : []);
+        if ($scope === 'people') {
+            $existingIds = $event->participants()->pluck('users.id')->map(fn ($id) => (int) $id);
+            $event->participants()->detach($existingIds->diff($userIds));
+            $event->participants()->attach(
+                $userIds->diff($existingIds)->mapWithKeys(fn (int $userId) => [$userId => ['status' => 'maybe']])->all(),
+            );
+        } else {
+            $event->participants()->detach();
+        }
         if ($eventId !== (int) $event->id) {
             $metadata['calendar_event_id'] = $event->id;
             $competition->update(['metadata' => $metadata]);
         }
+
+        $notificationFingerprint = hash('sha256', json_encode([
+            $competition->only(['team_id', 'name', 'status', 'starts_on', 'ends_on', 'registration_deadline_at']),
+            collect($metadata)->except(['calendar_event_id', 'notification_fingerprint'])->sortKeys()->all(),
+        ], JSON_THROW_ON_ERROR));
+        $eventChanged = $isNewEvent
+            || ($metadata['notification_fingerprint'] ?? null) !== $notificationFingerprint
+            || collect($previousEvent)->contains(
+            fn ($value, $key) => (string) $value !== (string) $event->getAttribute($key),
+        );
+        if (($metadata['notify_participants'] ?? true) && $eventChanged) {
+            $this->notifyCompetitionAudience($competition, $event, $scope, $userIds, $actorId, $isNewEvent);
+        }
+        if (($metadata['notification_fingerprint'] ?? null) !== $notificationFingerprint) {
+            $metadata['notification_fingerprint'] = $notificationFingerprint;
+            $competition->update(['metadata' => $metadata]);
+        }
+    }
+
+    private function notifyCompetitionAudience(
+        Competition $competition,
+        Event $event,
+        string $scope,
+        $userIds,
+        int $actorId,
+        bool $created,
+    ): void {
+        $recipients = match ($scope) {
+            'people' => User::query()->whereKey($userIds)->get(),
+            'team' => $competition->team?->users()->get() ?? collect(),
+            default => $competition->club->users()
+                ->where(fn ($query) => $query->whereNull('club_user.membership_status')->orWhere('club_user.membership_status', 'active'))
+                ->get(),
+        };
+        $scopeName = $scope === 'team' ? ($competition->team?->name ?? $competition->club->name) : $competition->club->name;
+        $date = $event->start_time?->timezone($event->event_timezone ?: config('app.timezone', 'UTC'))->format('d.m.Y H:i');
+
+        $recipients->unique('id')->reject(fn (User $user) => (int) $user->id === $actorId)->each(
+            fn (User $user) => AppNotification::sendLocalized(
+                $user,
+                $created ? 'competition.created' : 'competition.updated',
+                $created
+                    ? 'server.events.notifications.competition_created_title'
+                    : 'server.events.notifications.competition_updated_title',
+                $created
+                    ? 'server.events.notifications.competition_created_body'
+                    : 'server.events.notifications.competition_updated_body',
+                ['event' => $event->title, 'scope' => $scopeName, 'date' => $date],
+                [
+                    'url' => route('auth.events.show', $event),
+                    'mobile_url' => 'airmius://events/'.$event->id,
+                    'deep_link' => 'airmius://events/'.$event->id,
+                    'event_id' => $event->id,
+                    'competition_id' => $competition->id,
+                    'club_id' => $competition->club_id,
+                    'team_id' => $event->team_id,
+                    'dedupe_key' => 'competition:'.$competition->id.':event-change:'.($event->updated_at?->format('YmdHisv') ?? 'new'),
+                ],
+            ),
+        );
     }
 }

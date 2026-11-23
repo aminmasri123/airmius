@@ -3,6 +3,8 @@
 namespace App\Services\Subscriptions;
 
 use App\Models\PaymentCheckout;
+use App\Models\Club;
+use App\Models\SubscriptionPlan;
 use App\Notifications\SubscriptionInvoicePaid;
 use App\Services\UserSubscriptionActivationService;
 use App\Support\AppNotification;
@@ -14,6 +16,27 @@ use Throwable;
 final class SubscriptionCheckoutActivationService
 {
     public function __construct(private readonly UserSubscriptionActivationService $userSubscriptionActivator) {}
+
+    /** Called inside the transaction that creates the checkout. */
+    public static function guardClubPlanChange(?Club $club, SubscriptionPlan $plan): void
+    {
+        if (! $club) {
+            return;
+        }
+        $locked = Club::query()->lockForUpdate()->findOrFail($club->id);
+        $current = $locked->subscriptionPlan();
+        $pending = PaymentCheckout::where('club_id', $locked->id)->whereIn('status', ['pending', 'awaiting_transfer']);
+        $switchingToShop = $plan->slug === 'verein-komplett';
+        if (! $switchingToShop) {
+            $pending->whereHas('plan', fn ($q) => $q->where('slug', 'verein-komplett'));
+        }
+        if ($pending->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['checkout' => 'Für diesen Verein ist bereits ein Tarifabschluss offen.']);
+        }
+        if (($switchingToShop || $current?->slug === 'verein-komplett') && $current?->monthly_price_cents > 0) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['checkout' => 'Der Verein hat bereits einen laufenden kostenpflichtigen Tarif. Ein neuer Abschluss ist nach Ablauf möglich.']);
+        }
+    }
 
     /** @return array{checkout: PaymentCheckout, subscription: Model|null, activated: bool} */
     public function activate(PaymentCheckout $checkout): array

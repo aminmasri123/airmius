@@ -12,6 +12,7 @@ class MarketplaceProduct extends Model
     protected $fillable = [
         'user_id',
         'club_id',
+        'is_club_shop_product',
         'learning_course_id',
         'title',
         'description',
@@ -56,6 +57,7 @@ class MarketplaceProduct extends Model
     protected function casts(): array
     {
         return [
+            'is_club_shop_product' => 'boolean',
             'sports' => 'array',
             'is_shippable' => 'boolean',
             'features' => 'array',
@@ -82,6 +84,12 @@ class MarketplaceProduct extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function shopAcceptsOrders(): bool
+    {
+        return ! $this->is_club_shop_product || ($this->club
+            && app(\App\Services\PlanFeatureService::class)->allows($this->club, 'club_commerce'));
     }
 
     public function club()

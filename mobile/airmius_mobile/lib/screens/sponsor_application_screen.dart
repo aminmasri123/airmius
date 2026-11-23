@@ -173,6 +173,8 @@ class _SponsorApplicationScreenState extends State<SponsorApplicationScreen> {
         _privacy = false;
       });
       _toast(t('sponsorApplication.submitted'));
+    } on AirmiusApiException catch (error) {
+      if (mounted) _toast(error.userMessage);
     } catch (error) {
       if (mounted) _toast(error.toString());
     } finally {
@@ -192,7 +194,8 @@ class _SponsorApplicationScreenState extends State<SponsorApplicationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final approved = _status == 'approved';
+    final approved = _status == 'approved' ||
+        AirmiusServicesScope.of(context).authState.user?.hasAnyRole(const ['sponsor']) == true;
     return Scaffold(
       appBar: AppBar(title: Text(t('sponsorApplication.title'))),
       body: _loading

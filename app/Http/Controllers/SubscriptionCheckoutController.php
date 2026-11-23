@@ -46,13 +46,16 @@ class SubscriptionCheckoutController extends Controller
 
         $data = $request->validate([
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
-            'billing_interval' => ['required', Rule::in(['monthly', 'yearly'])],
+            'billing_interval' => ['required', Rule::in($subscriptionPlan->slug === 'verein-komplett' ? ['monthly'] : ['monthly', 'yearly'])],
             'club_id' => ['nullable', 'integer', 'min:1'],
             'coupon_code' => ['nullable', 'string', 'max:80'],
             'accepted_terms' => ['accepted'],
         ], [
             'accepted_terms.accepted' => __('subscription.validation.accept_terms'),
         ]);
+        if ($subscriptionPlan->slug === 'verein-komplett') {
+            $request->validate(['club_id' => ['required', 'integer', 'min:1']]);
+        }
 
         $club = $this->resolveClub($request, $subscriptionPlan, $data['club_id'] ?? null);
         $country = $visitorCountry->resolve($request, $club?->country ?: $request->user()->country);
@@ -84,6 +87,7 @@ class SubscriptionCheckoutController extends Controller
         $this->ensureProviderIsConfigured($data['provider']);
 
         $checkout = DB::transaction(function () use ($request, $subscriptionPlan, $club, $coupon, $data, $amountCents, $discountCents, $payableCents, $price, $country) {
+            SubscriptionCheckoutActivationService::guardClubPlanChange($club, $subscriptionPlan);
             $checkout = PaymentCheckout::query()->create([
                 'user_id' => $request->user()->id,
                 'club_id' => $club?->id,

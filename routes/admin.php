@@ -178,6 +178,12 @@ Route::middleware([
     Route::put('/admin/commerce/payout-profiles/{profile}', [AdminCommerceController::class, 'updatePayoutProfile'])->middleware('can:subscriptions.manage')->name('admin.commerce.payout-profiles.update');
 
     // SPORT CLOTHING SUBSCRIPTIONS
+    Route::middleware('can:subscriptions.manage')->prefix('admin/commerce/club-payouts')->name('admin.club-payouts.')->controller(\App\Http\Controllers\ClubPayoutController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::put('/accounts/{account}', 'review')->name('review');
+        Route::post('/items/{item}', 'transfer')->name('transfer');
+    });
+
     Route::get('/admin/outfit-subscriptions', [AdminOutfitSubscriptionPlanController::class, 'index'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.index');
     Route::post('/admin/outfit-subscriptions/{subscription}/mark-paid', [AdminOutfitSubscriptionPlanController::class, 'markSubscriptionPaid'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.mark-paid');
     Route::post('/admin/outfit-subscriptions/{subscription}/mark-unpaid', [AdminOutfitSubscriptionPlanController::class, 'markSubscriptionUnpaid'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.mark-unpaid');

@@ -304,6 +304,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/commerce/orders/{order}/credit-note', [CommerceCheckoutController::class, 'downloadCreditNote'])->name('auth.commerce.orders.credit-note');
     Route::post('/commerce/seller-application', [CommerceCheckoutController::class, 'storeSellerApplication'])->name('auth.commerce.seller-application.store');
     Route::post('/commerce/provider-profile', [CommerceCheckoutController::class, 'storeProviderProfile'])->name('auth.commerce.provider-profile.store');
+    Route::get('/clubs/{club}/shop', [CommerceCheckoutController::class, 'clubShop'])->name('auth.club-shop');
+    Route::put('/clubs/{club}/shop/payout-account', [\App\Http\Controllers\ClubPayoutController::class, 'store'])->middleware('throttle:payment-actions')->name('auth.club-shop.account');
+    Route::patch('/clubs/{club}/shop/items/{item}', [CommerceCheckoutController::class, 'fulfillClubShopItem'])->name('auth.club-shop.fulfill');
     Route::post('/commerce/provider-locations', [CommerceCheckoutController::class, 'storeProviderLocation'])->name('auth.commerce.provider-locations.store');
     Route::put('/commerce/provider-locations/{location}', [CommerceCheckoutController::class, 'updateProviderLocation'])->name('auth.commerce.provider-locations.update');
     Route::delete('/commerce/provider-locations/{location}', [CommerceCheckoutController::class, 'destroyProviderLocation'])->name('auth.commerce.provider-locations.destroy');

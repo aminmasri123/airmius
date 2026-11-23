@@ -1163,7 +1163,7 @@ PROMPT;
 
         $slugs = $this->activeSubscriptionSlugs($user);
 
-        if ($slugs->intersect(['sportler-pro', 'trainer-pro', 'club', 'pro', 'elite'])->isNotEmpty()) {
+        if ($slugs->intersect(['sportler-pro', 'trainer-pro', 'club', 'pro', 'elite', 'verein-komplett'])->isNotEmpty()) {
             return [
                 'allowed' => true,
                 'reason' => null,
@@ -1193,7 +1193,7 @@ PROMPT;
             ];
         }
 
-        if ($slugs->intersect(['sportler-pro', 'trainer-pro', 'club', 'pro', 'elite'])->isNotEmpty()) {
+        if ($slugs->intersect(['sportler-pro', 'trainer-pro', 'club', 'pro', 'elite', 'verein-komplett'])->isNotEmpty()) {
             return [
                 'key' => 'pro',
                 'label' => 'Pro',
@@ -1213,7 +1213,7 @@ PROMPT;
     private function hasPremiumTrainerOrClubPlan(User $user): bool
     {
         return $this->activeSubscriptionSlugs($user)
-            ->intersect(['trainer-pro', 'club', 'pro', 'elite'])
+            ->intersect(['trainer-pro', 'club', 'pro', 'elite', 'verein-komplett'])
             ->isNotEmpty();
     }
 

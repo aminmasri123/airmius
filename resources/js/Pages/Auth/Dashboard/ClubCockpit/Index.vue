@@ -25,6 +25,7 @@ watch(() => props.clubs, (clubs) => {
 })
 
 const selectedClub = computed(() => props.clubs.find((club) => club.id === selectedClubId.value) || props.clubs[0] || null)
+const subscriptionStatuses = { active: 'Aktiv', trialing: 'Testphase', past_due: 'Zahlung überfällig', cancelled: 'Gekündigt', cancels_at_period_end: 'Kündigung zum Laufzeitende', expired: 'Abgelaufen' }
 const volunteerCandidates = ref([])
 const volunteerCandidatesLoading = ref(false)
 const volunteerCandidatesError = ref('')
@@ -486,14 +487,26 @@ async function uploadClubTaskAttachments(task, event) {
                         <h2 class="text-lg font-bold text-primary">{{ selectedClub.name }}</h2>
                         <p class="text-sm text-secondary">
                             {{ t('Aktueller Plan') }}: {{ selectedClub.plan?.name || t('Free') }}
+                            <span v-if="selectedClub.subscription_term?.status"> · {{ t(subscriptionStatuses[selectedClub.subscription_term.status] || selectedClub.subscription_term.status) }}</span>
+                        </p>
+                        <p v-if="selectedClub.subscription_term?.period_end" class="text-sm text-secondary">
+                            {{ t('Aktueller Zeitraum endet') }} · {{ formatDate(selectedClub.subscription_term.period_end) }}
+                        </p>
+                        <p v-if="selectedClub.subscription_term?.cancels_at" class="text-sm text-secondary">
+                            {{ t('Gekündigt zum') }} {{ formatDate(selectedClub.subscription_term.cancels_at) }}
                         </p>
                     </div>
                     <Link
-                        :href="route('guest.pricing', { audience: 'verein' })"
+                        v-if="selectedClub.can_open_shop"
+                        :href="route('auth.club-shop', selectedClub.id)"
+                        class="rounded-lg border border-border px-4 py-2 font-bold"
+                    >{{ t('Shop-Verwaltung') }}</Link>
+                    <Link
+                        :href="route('guest.pricing', { audience: 'verein', club_id: selectedClub.id })"
                         class="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-bold text-primary transition hover:border-borderHover"
                     >
                         <i class="las la-rocket"></i>
-                        {{ selectedClub.locked ? t('Club-Plan aktivieren') : t('Plan prüfen') }}
+                        {{ selectedClub.can_book_shop ? t('Verein Komplett · 39 € pro Monat') : selectedClub.locked ? t('Club-Plan aktivieren') : t('Plan prüfen') }}
                     </Link>
                 </div>
             </div>

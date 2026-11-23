@@ -18,6 +18,87 @@ class MobileCommerceSellerApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_purchase_records_the_club_on_the_order_line_and_expiry_rejects_a_second_purchase(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        \App\Models\Setting::setValue('billing_iban', 'DE89370400440532013000');
+        $owner = User::factory()->create();
+        $buyer = User::factory()->create();
+        $club = \App\Models\Club::factory()->create(['owner_id' => $owner->id]);
+        $sub = $club->currentSubscription()->updateOrCreate(['club_id' => $club->id], [
+            'subscription_plan_id' => \App\Models\SubscriptionPlan::where('slug', 'verein-komplett')->sole()->id, 'status' => 'active',
+        ]);
+        $product = $this->productFor($owner, 'Vereinstrikot');
+        $product->update(['user_id' => null, 'club_id' => $club->id, 'is_club_shop_product' => true]);
+        $payload = ['provider' => 'bank_transfer', 'accepted_terms' => true, 'quantity' => 1, 'shipping_country' => 'DE',
+            'shipping_city' => 'Berlin', 'shipping_street' => 'Sportweg', 'shipping_house_number' => '1', 'shipping_postal_code' => '10115'];
+        $this->actingAs($buyer)->postJson(route('auth.commerce.products.checkout', $product), $payload)->assertCreated();
+        $line = \App\Models\CommerceOrderItem::where('orderable_id', $product->id)->sole();
+        $this->assertEquals($club->id, $line->shop_club_id);
+        $sub->update(['access_restricted_at' => now()]);
+        $this->postJson(route('auth.commerce.products.checkout', $product), $payload)->assertNotFound();
+        $this->assertSame(1, CommerceOrder::count());
+        Sanctum::actingAs($owner);
+        $this->getJson("/api/v1/clubs/{$club->id}/shop")->assertOk()->assertJsonPath('data.orders.0.items.0.id', $line->id);
+    }
+
+    public function test_club_shop_is_scoped_to_the_selected_paid_club_on_web_and_mobile(): void
+    {
+        $owner = User::factory()->create();
+        $club = \App\Models\Club::factory()->create(['owner_id' => $owner->id]);
+        $other = \App\Models\Club::factory()->create(['owner_id' => $owner->id]);
+        $plan = \App\Models\SubscriptionPlan::where('slug', 'verein-komplett')->firstOrFail();
+        $sub = $club->currentSubscription()->updateOrCreate(['club_id' => $club->id], [
+            'subscription_plan_id' => $plan->id, 'status' => 'active',
+        ]);
+        MarketplaceSellerApplication::create(['user_id' => $owner->id, 'applicant_type' => 'club',
+            'business_name' => $club->name, 'status' => 'approved']);
+        Sanctum::actingAs($owner);
+        $this->postJson('/api/v1/commerce/seller/products', [
+            'club_shop' => true, 'club_id' => $club->id, 'title' => 'Vereinsschal',
+            'category' => 'equipment', 'price_cents' => 1200, 'stock_quantity' => 3,
+        ])->assertSuccessful();
+        $product = MarketplaceProduct::where('title', 'Vereinsschal')->firstOrFail();
+        $this->assertNull($product->user_id);
+        $this->assertTrue($product->shopAcceptsOrders());
+        $this->getJson("/api/v1/clubs/{$club->id}/shop")->assertOk()->assertJsonPath('data.products.0.id', $product->id);
+        $this->get(route('auth.club-shop', $club))->assertOk();
+        $this->getJson("/api/v1/clubs/{$other->id}/shop")->assertForbidden();
+        $this->getJson('/api/v1/commerce/seller')->assertJsonCount(0, 'data.products');
+        $this->putJson('/api/v1/commerce/seller/provider-profile', [
+            'club_id' => $club->id, 'display_name' => 'Vereinsladen', 'provider_type' => 'club', 'legal_country' => 'DE',
+        ])->assertOk();
+        $this->postJson('/api/v1/commerce/seller/provider-locations', [
+            'club_id' => $club->id, 'name' => 'Vereinsheim', 'type' => 'pickup', 'country' => 'DE',
+        ])->assertSuccessful();
+        $this->getJson("/api/v1/clubs/{$club->id}/shop")
+            ->assertJsonPath('data.provider_profile.display_name', 'Vereinsladen')
+            ->assertJsonPath('data.provider_locations.0.name', 'Vereinsheim');
+        $member = User::factory()->create();
+        $club->users()->attach($member->id, ['role' => 'member', 'membership_status' => 'active']);
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}/shop")->assertForbidden();
+        Sanctum::actingAs($owner);
+        $this->deleteJson("/api/v1/commerce/seller/products/{$product->id}", ['club_id' => $other->id])->assertForbidden();
+        $order = CommerceOrder::create([
+            'user_id' => $owner->id, 'type' => 'marketplace_cart', 'provider' => 'bank_transfer',
+            'amount_cents' => 2400, 'currency' => 'EUR', 'status' => 'completed',
+        ]);
+        $this->addOrderItem($order, $product, 1200);
+        $line = $order->items()->firstOrFail();
+        $line->update(['shop_club_id' => $club->id]);
+        $this->addOrderItem($order, $this->productFor($owner, 'Privater Artikel'), 1200);
+        $sub->update(['access_restricted_at' => now()]);
+        $this->assertTrue($club->fresh()->canOpenShop($owner));
+        $this->getJson("/api/v1/clubs/{$club->id}/shop")->assertOk()->assertJsonPath('data.active', false)
+            ->assertJsonCount(1, 'data.orders.0.items')->assertJsonMissing(['title' => 'Privater Artikel']);
+        $this->patchJson("/api/v1/clubs/{$club->id}/shop/items/{$line->id}", ['status' => 'shipped'])
+            ->assertOk()->assertJsonPath('data.club_fulfillment_status', 'shipped');
+        $this->patchJson("/api/v1/clubs/{$other->id}/shop/items/{$line->id}", ['status' => 'delivered'])->assertForbidden();
+        $this->assertFalse($product->fresh()->shopAcceptsOrders());
+        $this->postJson("/commerce/products/{$product->id}", [])->assertNotFound();
+    }
+
     public function test_seller_dashboard_returns_only_owned_products_and_order_lines(): void
     {
         $seller = User::factory()->create();

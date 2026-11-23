@@ -219,6 +219,7 @@ class _MembersState extends State<AdminMembersScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _status,
                 items: [
                   for (final status in ['all', 'active', 'suspended'])
@@ -235,6 +236,7 @@ class _MembersState extends State<AdminMembersScreen> {
               ),
               if (_section == 'inactivity')
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _inactiveStage,
                   items: [
                     for (final value in [
@@ -308,9 +310,56 @@ class _MembersState extends State<AdminMembersScreen> {
                       as Map? ??
                   {};
               final users = (page['data'] as List? ?? []).whereType<Map>();
+              final inactivityRules =
+                  (snapshot.data?['inactiveRules'] as List? ?? [])
+                      .whereType<Map>();
               return ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  if (_section == 'inactivity' &&
+                      inactivityRules.isNotEmpty) ...[
+                    Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.schedule_outlined),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    t('adminNative.inactivityRules'),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              t('adminNative.inactivityRulesHelp'),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 12),
+                            for (final rule in inactivityRules) ...[
+                              Text(
+                                '${rule['month'] ?? ''} · ${rule['title'] ?? ''}',
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 3),
+                              Text('${rule['description'] ?? ''}'),
+                              if (rule != inactivityRules.last)
+                                const Divider(height: 20),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   if (users.isEmpty) Text(t('platformAdmin.noUsers')),
                   for (final user in users) ...[
                     ListTile(

@@ -18,6 +18,7 @@ const emit = defineEmits(['create-payout', 'update-payout-profile', 'mark-payout
         <div class="border-b border-border p-5">
             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
             <h2 class="mt-1 text-lg font-semibold text-primary">Auszahlungen</h2>
+            <a :href="route('admin.club-payouts.index')" class="text-air-blue underline">Vereinskonten prüfen und Vereinserlöse auszahlen</a>
             <p class="mt-1 text-sm text-secondary">Offene Marketplace-Erlöse sammeln, Provision abziehen und Auszahlung vorbereiten.</p>
         </div>
 

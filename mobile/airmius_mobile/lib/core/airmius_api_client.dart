@@ -963,13 +963,8 @@ class AirmiusApiClient {
     body: payload,
   );
 
-  Future<AirmiusJson> deleteClubServiceHourRecord(
-    int clubId,
-    int recordId,
-  ) => _json(
-    'DELETE',
-    '/api/v1/clubs/$clubId/service-hour-records/$recordId',
-  );
+  Future<AirmiusJson> deleteClubServiceHourRecord(int clubId, int recordId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/service-hour-records/$recordId');
 
   Future<AirmiusJson> respondToClubServiceHourRecord(
     int clubId,
@@ -997,29 +992,33 @@ class AirmiusApiClient {
       path = '/api/v1/clubs/$clubId/service-hour-records';
     } else if (resource == 'service-hour-exemptions') {
       path = '/api/v1/clubs/$clubId/service-hour-exemptions';
-    } else if (RegExp(r'^service-hour-requirements/\d+/lock$')
-        .hasMatch(resource)) {
+    } else if (RegExp(
+      r'^service-hour-requirements/\d+/lock$',
+    ).hasMatch(resource)) {
       final requirementId = resource.split('/')[1];
       path =
           '/api/v1/clubs/$clubId/service-hour-requirements/$requirementId/lock';
-    } else if (RegExp(r'^service-hour-records/\d+/confirm$')
-        .hasMatch(resource)) {
+    } else if (RegExp(
+      r'^service-hour-records/\d+/confirm$',
+    ).hasMatch(resource)) {
       final recordId = resource.split('/')[1];
       path = '/api/v1/clubs/$clubId/service-hour-records/$recordId/confirm';
-    } else if (RegExp(r'^service-hour-records/\d+/unconfirm$')
-        .hasMatch(resource)) {
+    } else if (RegExp(
+      r'^service-hour-records/\d+/unconfirm$',
+    ).hasMatch(resource)) {
       final recordId = resource.split('/')[1];
       path = '/api/v1/clubs/$clubId/service-hour-records/$recordId/unconfirm';
-    } else if (RegExp(r'^service-hour-records/\d+/member-response$')
-        .hasMatch(resource)) {
+    } else if (RegExp(
+      r'^service-hour-records/\d+/member-response$',
+    ).hasMatch(resource)) {
       final recordId = resource.split('/')[1];
       path =
           '/api/v1/clubs/$clubId/service-hour-records/$recordId/member-response';
-    } else if (RegExp(r'^service-hour-records/\d+/corrections$')
-        .hasMatch(resource)) {
+    } else if (RegExp(
+      r'^service-hour-records/\d+/corrections$',
+    ).hasMatch(resource)) {
       final recordId = resource.split('/')[1];
-      path =
-          '/api/v1/clubs/$clubId/service-hour-records/$recordId/corrections';
+      path = '/api/v1/clubs/$clubId/service-hour-records/$recordId/corrections';
     } else {
       throw ArgumentError.value(resource);
     }
@@ -4484,10 +4483,33 @@ class AirmiusApiClient {
     },
   );
 
-  Future<AirmiusJson> commerceSellerDashboard({int? sponsorId}) => _json(
-    'GET',
-    '/api/v1/commerce/seller',
-    query: {if (sponsorId != null) 'sponsor_id': '$sponsorId'},
+  Future<AirmiusJson> commerceSellerDashboard({int? sponsorId, int? clubId}) =>
+      _json(
+        'GET',
+        clubId == null
+            ? '/api/v1/commerce/seller'
+            : '/api/v1/clubs/$clubId/shop',
+        query: {if (sponsorId != null) 'sponsor_id': '$sponsorId'},
+      );
+
+  Future<AirmiusJson> submitClubBankAccount(
+    int clubId,
+    String holder,
+    String iban,
+  ) => _json(
+    'PUT',
+    '/api/v1/clubs/$clubId/shop/payout-account',
+    body: {'holder': holder, 'iban': iban},
+  );
+
+  Future<AirmiusJson> fulfillClubOrderItem(
+    int clubId,
+    int itemId,
+    String status,
+  ) => _json(
+    'PATCH',
+    '/api/v1/clubs/$clubId/shop/items/$itemId',
+    body: {'status': status},
   );
 
   Future<AirmiusJson> submitCommerceSellerApplication(AirmiusJson body) =>
@@ -4508,8 +4530,14 @@ class AirmiusApiClient {
     body: body,
   );
 
-  Future<AirmiusJson> deleteCommerceProviderLocation(int locationId) =>
-      _json('DELETE', '/api/v1/commerce/seller/provider-locations/$locationId');
+  Future<AirmiusJson> deleteCommerceProviderLocation(
+    int locationId, {
+    int? clubId,
+  }) => _json(
+    'DELETE',
+    '/api/v1/commerce/seller/provider-locations/$locationId',
+    query: {if (clubId != null) 'club_id': '$clubId'},
+  );
 
   Future<AirmiusJson> updateCommercePayoutProfile(AirmiusJson body) =>
       _json('PUT', '/api/v1/commerce/seller/payout-profile', body: body);
@@ -4536,15 +4564,22 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> updateCommerceSellerProductStatus(
     int productId,
-    String status,
-  ) => _json(
+    String status, {
+    int? clubId,
+  }) => _json(
     'PATCH',
     '/api/v1/commerce/seller/products/$productId/status',
-    body: {'status': status},
+    body: {'status': status, if (clubId != null) 'club_id': clubId},
   );
 
-  Future<AirmiusJson> deleteCommerceSellerProduct(int productId) =>
-      _json('DELETE', '/api/v1/commerce/seller/products/$productId');
+  Future<AirmiusJson> deleteCommerceSellerProduct(
+    int productId, {
+    int? clubId,
+  }) => _json(
+    'DELETE',
+    '/api/v1/commerce/seller/products/$productId',
+    query: {if (clubId != null) 'club_id': '$clubId'},
+  );
 
   Future<AirmiusJson> createCommerceCampaign(AirmiusJson body) =>
       _json('POST', '/api/v1/commerce/seller/campaigns', body: body);

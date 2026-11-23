@@ -306,7 +306,9 @@ const requestCheckout = (plan, provider) => {
         accepted: false,
         processing: false,
         error: '',
-        clubId: plan.target_actor === 'verein' ? (props.checkoutClubs[0]?.id || '') : '',
+        clubId: plan.target_actor === 'verein'
+            ? (props.checkoutClubs.find(club => String(club.id) === new URL(page.url, 'http://localhost').searchParams.get('club_id'))?.id || props.checkoutClubs[0]?.id || '')
+            : '',
         requestId: newRequestId(),
     }
 }

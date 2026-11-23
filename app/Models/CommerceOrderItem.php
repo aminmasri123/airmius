@@ -11,6 +11,8 @@ class CommerceOrderItem extends Model
 
     protected $fillable = [
         'commerce_order_id',
+        'shop_club_id',
+        'club_commission_cents',
         'commerce_warehouse_id',
         'orderable_type',
         'orderable_id',

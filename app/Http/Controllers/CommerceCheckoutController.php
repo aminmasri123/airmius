@@ -240,6 +240,48 @@ class CommerceCheckoutController extends Controller
         ]);
     }
 
+    public function clubShop(Request $request, Club $club)
+    {
+        abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::COMMERCE_PRODUCTS_EDIT), 403);
+        $active = app(\App\Services\PlanFeatureService::class)->allows($club, 'club_commerce');
+        $clubProducts = fn ($query) => $query->where('club_id', $club->id)->where('is_club_shop_product', true);
+        $orders = CommerceOrder::query()->whereIn('type', ['marketplace_product', 'marketplace_cart'])
+            ->where(fn ($query) => $query->whereHasMorph('orderable', [MarketplaceProduct::class], $clubProducts)
+                ->orWhereHas('items', fn ($items) => $items->where('shop_club_id', $club->id)))
+            ->with(['items.orderable', 'orderable', 'returnRequests', 'user:id,name,email'])
+            ->latest('id')->limit(100)->get();
+        abort_unless($active || $orders->isNotEmpty(), 403);
+        $profile = MarketplaceProviderProfile::where('club_id', $club->id)->first();
+        $data = [
+            'club' => $club->only('id', 'name'),
+            'can_manage_bank' => $canManageBank = ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_MANAGE),
+            'bank_account' => $canManageBank ? \App\Models\ClubPayoutAccount::where('club_id', $club->id)->latest('id')->first(['holder', 'last_four', 'status']) : null,
+            'active' => $active,
+            'seller_can_sell' => $active && ($club->verification_status === 'verified' || $this->userCanSellInMarketplace($request->user())),
+            'products' => $active ? $clubProducts(MarketplaceProduct::query())->latest('id')->get() : [],
+            'provider_profile' => $active ? $this->marketplaceProviderProfileResource($profile) : null,
+            'provider_locations' => $active && $profile ? $profile->locations()->orderBy('sort_order')->get()
+                ->map(fn ($location) => $this->marketplaceProviderLocationResource($location)) : [],
+            'orders' => $orders->map(fn ($order) => $this->sellerOrderResource($order, $request->user(), $club)),
+        ];
+        return $request->routeIs('auth.club-shop')
+            ? Inertia::render('Auth/Dashboard/ClubCockpit/Shop', $data)
+            : response()->json(['data' => $data]);
+    }
+
+    public function fulfillClubShopItem(Request $request, Club $club, CommerceOrderItem $item)
+    {
+        abort_unless((int) $item->shop_club_id === (int) $club->id
+            && ClubPermissions::allows($club, $request->user(), ClubPermissions::COMMERCE_PRODUCTS_EDIT), 403);
+        $data = $request->validate(['status' => ['required', Rule::in(['open', 'prepared', 'shipped', 'delivered'])]]);
+        $item->club_fulfillment_status = $data['status'];
+        if ($item->isDirty('club_fulfillment_status')) {
+            $item->club_delivered_at = $data['status'] === 'delivered' ? now() : null;
+        }
+        $item->save();
+        return $request->expectsJson() ? response()->json(['data' => $item->only('id', 'club_fulfillment_status')]) : back();
+    }
+
     public function sellerDashboard(Request $request)
     {
         $user = $request->user();
@@ -551,10 +593,11 @@ class CommerceCheckoutController extends Controller
     public function storeProviderProfile(Request $request)
     {
         $data = $request->validate($this->providerProfileRules());
-        $profile = $this->providerProfileForUser($request->user());
+        $profile = $this->providerProfileForRequest($request);
 
         $profile->forceFill([
             ...$data,
+            'provider_type' => $profile->club_id ? 'club' : $data['provider_type'],
             'legal_country' => strtoupper((string) ($data['legal_country'] ?? 'DE')),
             'status' => 'active',
         ])->save();
@@ -571,7 +614,7 @@ class CommerceCheckoutController extends Controller
 
     public function storeProviderLocation(Request $request)
     {
-        $profile = $this->providerProfileForUser($request->user());
+        $profile = $this->providerProfileForRequest($request);
         $data = $request->validate($this->providerLocationRules());
 
         $location = $profile->locations()->create([
@@ -788,6 +831,7 @@ class CommerceCheckoutController extends Controller
 
     public function storeProduct(Request $request, MarketplaceProduct $product)
     {
+        abort_unless($product->shopAcceptsOrders(), 404);
         abort_unless($product->status === 'published' && $product->moderation_status === 'approved', 404);
         $data = $request->validate([
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
@@ -1055,7 +1099,8 @@ class CommerceCheckoutController extends Controller
 
     public function storeOwnProduct(Request $request)
     {
-        if (! $this->userCanSellInMarketplace($request->user())) {
+        $shopClub = $request->boolean('club_shop') ? $this->authorizedShopClub($request) : null;
+        if ($shopClub?->verification_status !== 'verified' && ! $this->userCanSellInMarketplace($request->user())) {
             throw ValidationException::withMessages([
                 'seller_application' => 'Bitte stelle zuerst einen Shop-Antrag und warte auf die Freigabe.',
             ]);
@@ -1248,6 +1293,7 @@ class CommerceCheckoutController extends Controller
         $product = DB::transaction(function () use ($request, $data, $attributesText, $attributeOptions, $variants, $teamwearRules, $offerType, $courseOutlineText, $learningGoalsText, $inventories) {
             $product = app(ClubShopProductNumberService::class)->create([
                 ...$data,
+                'is_club_shop_product' => $request->boolean('club_shop'),
                 'product_attributes' => MarketplaceProductInput::attributesFromText($attributesText),
                 'attribute_options' => $attributeOptions,
                 'variants' => ($data['product_type'] ?? 'single') === 'variable' ? $variants : [],
@@ -1260,7 +1306,7 @@ class CommerceCheckoutController extends Controller
                 'learning_goals' => MarketplaceProductInput::linesFromText($learningGoalsText, 12),
                 'coaching_enabled' => $offerType === 'training_plan' ? (bool) ($data['coaching_enabled'] ?? true) : (bool) ($data['coaching_enabled'] ?? false),
                 'coach_feedback_instructions' => $data['coach_feedback_instructions'] ?? null,
-                'user_id' => $request->user()->id,
+                'user_id' => $request->boolean('club_shop') ? null : $request->user()->id,
                 'currency' => 'EUR',
                 'is_shippable' => ($data['product_type'] ?? 'single') === 'digital' ? false : (bool) ($data['is_shippable'] ?? $data['category'] === 'product'),
                 'manages_stock' => (bool) ($data['manages_stock'] ?? false),
@@ -1472,6 +1518,16 @@ class CommerceCheckoutController extends Controller
     public function updateOwnProduct(Request $request, MarketplaceProduct $product)
     {
         $this->authorizeOwnProduct($request, $product);
+
+        if ($product->is_club_shop_product && $request->routeIs('auth.commerce.my-products.update')) {
+            $changes = $request->validate([
+                'title' => ['required', 'string', 'max:255'],
+                'description' => ['nullable', 'string', 'max:2000'],
+                'price_cents' => ['required', 'integer', 'min:'.(int) $product->teamwear_funded_share_cents],
+            ]);
+            $product->update([...$changes, 'status' => $product->status === 'archived' ? 'archived' : 'review', 'rejection_reason' => null]);
+            return back()->with('success', __('commerce.flash.product_updated'));
+        }
 
         $data = $request->validate([
             ...MarketplaceTaxonomy::productRules($request),
@@ -3981,13 +4037,16 @@ class CommerceCheckoutController extends Controller
         }
     }
 
-    private function sellerOrderResource(CommerceOrder $order, User $seller): array
+    private function sellerOrderResource(CommerceOrder $order, User $seller, ?Club $club = null): array
     {
-        $ownsDirectProduct = $order->orderable instanceof MarketplaceProduct
-            && (int) $order->orderable->user_id === (int) $seller->id;
+        $owns = fn ($product) => $product instanceof MarketplaceProduct && ($club
+            ? $product->is_club_shop_product && (int) $product->club_id === (int) $club->id
+            : (int) $product->user_id === (int) $seller->id);
+        $ownsDirectProduct = $owns($order->orderable);
         $items = $order->items
-            ->filter(fn (CommerceOrderItem $item) => $item->orderable instanceof MarketplaceProduct
-                && (int) $item->orderable->user_id === (int) $seller->id)
+            ->filter(fn (CommerceOrderItem $item) => $club
+                ? (int) $item->shop_club_id === (int) $club->id
+                : $owns($item->orderable))
             ->values();
         $itemIds = $items->pluck('id');
         $shippingAddress = collect((array) data_get($order->payload, 'shipping_address'))
@@ -4026,6 +4085,7 @@ class CommerceCheckoutController extends Controller
             'items' => $items->map(fn (CommerceOrderItem $item) => [
                 'id' => $item->id,
                 'product_id' => $item->orderable_id,
+                'club_fulfillment_status' => $item->club_fulfillment_status ?: 'open',
                 'title' => $item->title,
                 'sku' => $item->sku,
                 'quantity' => $item->quantity,
@@ -4039,14 +4099,14 @@ class CommerceCheckoutController extends Controller
                 'sku' => $order->orderable->sku,
                 'is_shippable' => (bool) $order->orderable->is_shippable,
             ] : null,
-            'issue' => [
+            'issue' => $club && ! $ownsDirectProduct ? null : [
                 'status' => $order->issue_status ?: 'none',
                 'note' => $order->issue_note,
                 'response' => $order->issue_response,
             ],
             'return_requests' => $order->returnRequests
                 ->filter(fn (CommerceReturnRequest $returnRequest) => $ownsDirectProduct
-                    || $returnRequest->commerce_order_item_id === null
+                    || (! $club && $returnRequest->commerce_order_item_id === null)
                     || $itemIds->contains($returnRequest->commerce_order_item_id))
                 ->map(fn (CommerceReturnRequest $returnRequest) => [
                     'id' => $returnRequest->id,
@@ -4195,7 +4255,19 @@ class CommerceCheckoutController extends Controller
 
     private function authorizeOwnProduct(Request $request, MarketplaceProduct $product): void
     {
+        if ($product->is_club_shop_product || $request->boolean('club_shop')) {
+            $club = $this->authorizedShopClub($request);
+            abort_unless($product->is_club_shop_product && (int) $product->club_id === (int) $club->id, 403);
+            return;
+        }
         abort_unless((int) $product->user_id === (int) $request->user()->id, 403);
+    }
+
+    private function authorizedShopClub(Request $request): Club
+    {
+        $club = $this->authorizedCommerceClub($request, $request->input('club_id'), ClubPermissions::COMMERCE_PRODUCTS_EDIT);
+        abort_unless($club && app(\App\Services\PlanFeatureService::class)->allows($club, 'club_commerce'), 403);
+        return $club;
     }
 
     private function purchaseStatusLabel(?string $status): string
@@ -4557,6 +4629,8 @@ class CommerceCheckoutController extends Controller
         $unitGrossCents = (int) round(((int) ($quote['item_gross_cents'] ?? $product->price_cents)) / max(1, $quantity));
 
         $order->items()->create([
+            'shop_club_id' => $product->is_club_shop_product ? $product->club_id : null,
+            'club_commission_cents' => $product->is_club_shop_product ? $this->pricing->commissionCents($product, (int) $quote['item_gross_cents']) : null,
             'orderable_type' => $product::class,
             'orderable_id' => $product->id,
             'commerce_warehouse_id' => data_get($quote, 'fulfillment_inventory.commerce_warehouse_id'),
@@ -4575,8 +4649,20 @@ class CommerceCheckoutController extends Controller
         ]);
     }
 
-    private function providerProfileForUser(User $user): MarketplaceProviderProfile
+    private function providerProfileForRequest(Request $request): MarketplaceProviderProfile
     {
+        $club = $this->authorizedCommerceClub($request, $request->input('club_id'), ClubPermissions::COMMERCE_PRODUCTS_EDIT);
+        if ($club) {
+            abort_unless(app(\App\Services\PlanFeatureService::class)->allows($club, 'club_commerce'), 403);
+
+            return MarketplaceProviderProfile::firstOrCreate(['club_id' => $club->id], [
+                'display_name' => $club->name,
+                'provider_type' => 'club',
+                'status' => 'draft',
+            ]);
+        }
+
+        $user = $request->user();
         return MarketplaceProviderProfile::query()->firstOrCreate(
             ['user_id' => $user->id],
             [
@@ -4712,7 +4798,13 @@ class CommerceCheckoutController extends Controller
 
     private function authorizeProviderLocation(Request $request, MarketplaceProviderLocation $location): void
     {
-        $location->loadMissing('providerProfile:id,user_id');
+        $location->loadMissing('providerProfile:id,user_id,club_id');
+        if ($request->filled('club_id') || $location->providerProfile?->club_id) {
+            $club = $this->authorizedCommerceClub($request, $request->input('club_id'), ClubPermissions::COMMERCE_PRODUCTS_EDIT);
+            abort_unless($club && (int) $location->providerProfile?->club_id === (int) $club->id
+                && app(\App\Services\PlanFeatureService::class)->allows($club, 'club_commerce'), 403);
+            return;
+        }
         abort_unless((int) $location->providerProfile?->user_id === (int) $request->user()->id, 403);
     }
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'commerce_center_screen.dart';
+import 'subscription_center_screen.dart';
 
 import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
@@ -580,6 +582,10 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     final theme = Theme.of(context);
     final management = club.management;
     final subscription = management?.subscription ?? const <String, dynamic>{};
+    final term = subscription['term'];
+    final termEnd = term is Map
+        ? DateTime.tryParse('${term['cancels_at'] ?? term['period_end'] ?? ''}')
+        : null;
     final plan = subscription['plan'] is JsonMap
         ? subscription['plan'] as JsonMap
         : const <String, dynamic>{};
@@ -648,6 +654,24 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
               ),
             ],
           ),
+          if (subscription['can_open_shop'] == true)
+            OutlinedButton.icon(
+              icon: const Icon(Icons.storefront_outlined),
+              label: Text(t('seller.title')),
+              onPressed: () => _open(
+                CommerceCenterScreen(
+                  clubId: club.id,
+                  initialSection: 'products',
+                ),
+              ),
+            ),
+          if (subscription['can_book_shop'] == true)
+            OutlinedButton.icon(
+              icon: const Icon(Icons.shopping_bag_outlined),
+              label: const Text('Verein Komplett · 39 € / Monat'),
+              onPressed: () =>
+                  _open(SubscriptionCenterScreen(initialClubId: club.id)),
+            ),
           ExpansionTile(
             dense: true,
             tilePadding: EdgeInsets.zero,
@@ -657,6 +681,10 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
               style: theme.textTheme.bodySmall,
             ),
             children: [
+              if (term is Map && termEnd != null)
+                Text(
+                  "${t('subscriptions.status.${term['status']}')} · ${t('subscriptions.periodEnd')}: ${MaterialLocalizations.of(context).formatMediumDate(termEnd)}",
+                ),
               Text(
                 '${t('clubHub.memberPlaces')}: '
                 '${_clubUsage(occupied, _clubNullableInt(subscription['member_limit']), t('clubHub.unlimited'))}\n'

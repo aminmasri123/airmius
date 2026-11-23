@@ -740,6 +740,10 @@ class PublicMarketplaceController extends Controller
 
     private function hasSellableStock(MarketplaceProduct $product, ?string $country = null, int $quantity = 1): bool
     {
+        if (! $product->shopAcceptsOrders()) {
+            return false;
+        }
+
         if (in_array($product->offer_type, ['online_course', 'training_plan', 'service'], true) || $product->product_type === 'digital') {
             return true;
         }
@@ -1239,6 +1243,8 @@ class PublicMarketplaceController extends Controller
         $unitGrossCents = (int) round(((int) ($quote['item_gross_cents'] ?? $product->price_cents)) / max(1, $quantity));
 
         $order->items()->create([
+            'shop_club_id' => $product->is_club_shop_product ? $product->club_id : null,
+            'club_commission_cents' => $product->is_club_shop_product ? $this->pricing->commissionCents($product, (int) $quote['item_gross_cents']) : null,
             'orderable_type' => $product::class,
             'orderable_id' => $product->id,
             'commerce_warehouse_id' => data_get($quote, 'fulfillment_inventory.commerce_warehouse_id'),

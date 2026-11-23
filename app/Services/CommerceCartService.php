@@ -205,6 +205,10 @@ class CommerceCartService
 
     public function hasSellableStock(MarketplaceProduct $product, ?string $country = null, int $quantity = 1): bool
     {
+        if (! $product->shopAcceptsOrders()) {
+            return false;
+        }
+
         if (in_array($product->offer_type, ['online_course', 'training_plan', 'service'], true) || $product->product_type === 'digital') {
             return true;
         }

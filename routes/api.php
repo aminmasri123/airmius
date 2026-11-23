@@ -1280,6 +1280,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/outfit-subscriptions/{subscription}/cancel', [MobileOutfitSubscriptionController::class, 'cancel'])->name('outfit-subscriptions.cancel');
         Route::post('/outfit-deliveries/{delivery}/issue', [MobileOutfitSubscriptionController::class, 'requestDeliveryIssue'])->name('outfit-deliveries.issue.store');
         Route::get('/commerce/seller', [MobileCommerceCheckoutController::class, 'sellerDashboard'])->name('commerce.seller.show');
+        Route::get('/clubs/{club}/shop', [MobileCommerceCheckoutController::class, 'clubShop'])->name('commerce.club-shop');
+        Route::put('/clubs/{club}/shop/payout-account', [\App\Http\Controllers\ClubPayoutController::class, 'store'])->middleware('throttle:payment-actions')->name('commerce.club-shop.account');
+        Route::patch('/clubs/{club}/shop/items/{item}', [MobileCommerceCheckoutController::class, 'fulfillClubShopItem'])->name('commerce.club-shop.fulfill');
         Route::post('/commerce/seller/application', [MobileCommerceCheckoutController::class, 'storeSellerApplication'])->name('commerce.seller.application.store');
         Route::put('/commerce/seller/provider-profile', [MobileCommerceCheckoutController::class, 'storeProviderProfile'])->name('commerce.seller.provider-profile.update');
         Route::post('/commerce/seller/provider-locations', [MobileCommerceCheckoutController::class, 'storeProviderLocation'])->name('commerce.seller.provider-locations.store');

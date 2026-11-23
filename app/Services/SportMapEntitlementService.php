@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 
 class SportMapEntitlementService
 {
-    private const PREMIUM_SLUGS = ['sportler-pro', 'trainer-pro', 'club', 'pro', 'elite'];
+    private const PREMIUM_SLUGS = ['sportler-pro', 'trainer-pro', 'club', 'pro', 'elite', 'verein-komplett'];
 
     public function capabilities(User $user): array
     {

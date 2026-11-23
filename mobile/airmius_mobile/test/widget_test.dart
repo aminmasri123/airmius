@@ -2040,7 +2040,8 @@ void main() {
       responsesByPath: {
         '/api/v1/clubs/8': const AirmiusApiResponse(
           statusCode: 200,
-          body: '{"data":{"id":8,"name":"Airmius Running Club","city":"Berlin"}}',
+          body:
+              '{"data":{"id":8,"name":"Airmius Running Club","city":"Berlin"}}',
         ),
         subscriptionPath: unsubscribed,
       },
@@ -2083,7 +2084,10 @@ void main() {
     await tester.tap(unsubscribe);
     await tester.pumpAndSettle();
     expect(find.byType(ClubNewsletterScreen), findsOneWidget);
-    expect(transport.requests.where((r) => r.path == subscriptionPath), isEmpty);
+    expect(
+      transport.requests.where((r) => r.path == subscriptionPath),
+      isEmpty,
+    );
 
     await tester.tap(unsubscribe);
     await tester.pumpAndSettle();
@@ -6782,6 +6786,28 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('club shop opens selected club products without personal payout tools', (tester) async {
+    _setTestViewport(tester, const Size(390, 1200));
+    final transport = _RecordingTransport(const AirmiusApiResponse(statusCode: 200,
+      body: '{"data":{"club":{"id":9,"name":"Verein Neun"},"active":true,"can_manage_bank":true,"bank_account":{"holder":"Verein Neun","last_four":"3000","status":"verified"},"seller_can_sell":true,"products":[{"id":4,"title":"Vereinsschal","price_cents":1200}]}}'));
+    await _pumpAirmiusWidget(tester, _widgetTestContainer(transport: transport),
+        const CommerceCenterScreen(clubId: 9, initialSection: 'products'));
+    await tester.pumpAndSettle();
+    expect(transport.paths, contains('/api/v1/clubs/9/shop'));
+    expect(find.text('Verein Neun'), findsOneWidget);
+    expect(find.text('Vereinsschal'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Auszahlungen'), findsNothing);
+    final bankButton = find.text('Auszahlungskonto des Vereins');
+    await tester.ensureVisible(bankButton);
+    await tester.tap(bankButton);
+    await tester.pumpAndSettle();
+    expect(find.text('IBAN endet auf 3000 · Verifiziert'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, 'DE89370400440532013000');
+    await tester.tap(find.text('Zur Prüfung einreichen'));
+    await tester.pumpAndSettle();
+    expect(transport.paths, contains('/api/v1/clubs/9/shop/payout-account'));
+  });
+
   testWidgets('seller commerce screen renders real shop data', (
     WidgetTester tester,
   ) async {
@@ -6861,22 +6887,35 @@ void main() {
     expect(find.widgetWithText(ChoiceChip, 'Website'), findsOneWidget);
     expect(find.widgetWithText(ChoiceChip, 'Produkte'), findsNothing);
     expect(
-      tester.widget<SegmentedButton<bool>>(
-        find.widgetWithText(SegmentedButton<bool>, 'Jetzt bezahlen'),
-      ).selected,
+      tester
+          .widget<SegmentedButton<bool>>(
+            find.widgetWithText(SegmentedButton<bool>, 'Jetzt bezahlen'),
+          )
+          .selected,
       {false},
     );
-    final placement = find.widgetWithText(DropdownButtonFormField<String>, 'Platzierung');
+    final placement = find.widgetWithText(
+      DropdownButtonFormField<String>,
+      'Platzierung',
+    );
     await tester.ensureVisible(placement);
     await tester.tap(placement);
     await tester.pumpAndSettle();
-    for (final label in ['Marketplace-Karte', 'Feed', 'Seitenbereich', 'Sponsorenbereich']) {
+    for (final label in [
+      'Marketplace-Karte',
+      'Feed',
+      'Seitenbereich',
+      'Sponsorenbereich',
+    ]) {
       expect(find.text(label).hitTestable(), findsWidgets);
     }
     expect(find.text('Premium').hitTestable(), findsNothing);
     await tester.tap(find.text('Sponsorenbereich').hitTestable().last);
     await tester.pumpAndSettle();
-    expect(find.widgetWithText(DropdownButton<String>, 'Sponsorenbereich'), findsOneWidget);
+    expect(
+      find.widgetWithText(DropdownButton<String>, 'Sponsorenbereich'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('campaign editor previews the uploaded image of a saved draft', (
@@ -7915,6 +7954,51 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Löschen'));
     await tester.pumpAndSettle();
     expect(deleteRequests, hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('native admin inactivity tab shows lifecycle rules', (
+    tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"users":{"data":[]},"inactiveUsers":{"data":[{"id":9,"name":"Inactive Member","email":"inactive@example.test","account_status":"active","inactive_days":380}]},"inactiveRules":[{"month":"12 Monate","title":"Erste Erinnerung","description":"Der Nutzer erhält eine Erinnerungs-E-Mail."},{"month":"18 Monate","title":"Zweite Erinnerung","description":"Der Nutzer erhält eine zweite Erinnerungs-E-Mail."},{"month":"24 Monate","title":"Profil ausblenden","description":"Das Profil wird privat gestellt."},{"month":"36 Monate","title":"Anonymisieren","description":"Personenbezogene Daten werden anonymisiert."}]}}',
+      ),
+    );
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 1,
+        name: 'Admin',
+        email: 'admin@example.test',
+        role: 'admin',
+        roles: ['admin'],
+        permissions: ['system.manage', 'users.view'],
+        twoFactorEnabled: true,
+      ),
+      transport: transport,
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      container,
+      const AdminMembersScreen(),
+      textScaler: const TextScaler.linear(1.35),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byType(SingleChildScrollView).first,
+      const Offset(-420, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Inaktivität'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Regeln zur Inaktivität'), findsOneWidget);
+    expect(find.text('12 Monate · Erste Erinnerung'), findsOneWidget);
+    expect(find.text('36 Monate · Anonymisieren'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -9235,17 +9319,51 @@ void main() {
       await tester.tap(find.byTooltip('Menü'));
       await tester.pumpAndSettle();
 
-
       await tester.ensureVisible(find.text('Verwaltung'));
       final management = find.widgetWithText(ExpansionTile, 'Verwaltung');
       expect(management, findsOneWidget);
-      expect(find.descendant(of: management, matching: find.text('Vereins-Cockpit', skipOffstage: false), skipOffstage: false), findsWidgets);
+      expect(
+        find.descendant(
+          of: management,
+          matching: find.text('Vereins-Cockpit', skipOffstage: false),
+          skipOffstage: false,
+        ),
+        findsWidgets,
+      );
       expect(find.text('Arbeitsbereiche'), findsWidgets);
       expect(find.text('Events & Training'), findsWidgets);
-      expect(find.descendant(of: management, matching: find.text('Trainer-Cockpit', skipOffstage: false), skipOffstage: false), findsNothing);
-      expect(find.descendant(of: management, matching: find.text('Sponsoren', skipOffstage: false), skipOffstage: false), findsWidgets);
-      expect(find.descendant(of: management, matching: find.text('Commerce', skipOffstage: false), skipOffstage: false), findsNothing);
-      expect(find.descendant(of: management, matching: find.text('Admin', skipOffstage: false), skipOffstage: false), findsNothing);
+      expect(
+        find.descendant(
+          of: management,
+          matching: find.text('Trainer-Cockpit', skipOffstage: false),
+          skipOffstage: false,
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: management,
+          matching: find.text('Sponsoren', skipOffstage: false),
+          skipOffstage: false,
+        ),
+        findsWidgets,
+      );
+      expect(
+        find.descendant(
+          of: management,
+          matching: find.text('Commerce', skipOffstage: false),
+          skipOffstage: false,
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: management,
+          matching: find.text('Admin', skipOffstage: false),
+          skipOffstage: false,
+        ),
+        findsNothing,
+      );
       expect(tester.takeException(), isNull);
     },
   );
@@ -11965,30 +12083,58 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('club profile application submits through all seven tabs', (tester) async {
+  testWidgets('club profile application submits through all seven tabs', (
+    tester,
+  ) async {
     _setTestViewport(tester, const Size(500, 1800));
     final transport = _SequencedTransport([
-      AirmiusApiResponse(statusCode: 200, body: jsonEncode({
-        'data': {
-          'id': 4, 'name': 'Testverein', 'accepts_membership_applications': true,
-          'management': {
-            'membership_types': [{'id': 7, 'slug': 'aktiv', 'name': 'Aktiv'}],
-            'settings': {
-              'membership_application_documents': [
-                {'id': 'photo', 'title': 'Vereinsfoto', 'is_required': false},
+      AirmiusApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'data': {
+            'id': 4,
+            'name': 'Testverein',
+            'accepts_membership_applications': true,
+            'management': {
+              'membership_types': [
+                {'id': 7, 'slug': 'aktiv', 'name': 'Aktiv'},
               ],
+              'settings': {
+                'membership_application_documents': [
+                  {'id': 'photo', 'title': 'Vereinsfoto', 'is_required': false},
+                ],
+              },
             },
           },
-        },
-      })),
-      const AirmiusApiResponse(statusCode: 201, body: '{"data":{"id":17,"club_id":4,"status":"pending"}}'),
+        }),
+      ),
+      const AirmiusApiResponse(
+        statusCode: 201,
+        body: '{"data":{"id":17,"club_id":4,"status":"pending"}}',
+      ),
     ]);
-    final services = await _authenticatedWidgetTestContainer(AirmiusUser.fromJson({
-      'id': 3, 'name': 'Test Person', 'first_name': 'Test', 'last_name': 'Person',
-      'birth_date': '1990-01-01', 'gender': 'diverse', 'email': 'person@example.test',
-      'country': 'DE', 'street': 'Testweg', 'house_number': '1', 'postal_code': '10115', 'city': 'Berlin',
-    }), transport: transport);
-    await _pumpAirmiusWidget(tester, services, const MembershipApplicationFormScreen(clubId: 4));
+    final services = await _authenticatedWidgetTestContainer(
+      AirmiusUser.fromJson({
+        'id': 3,
+        'name': 'Test Person',
+        'first_name': 'Test',
+        'last_name': 'Person',
+        'birth_date': '1990-01-01',
+        'gender': 'diverse',
+        'email': 'person@example.test',
+        'country': 'DE',
+        'street': 'Testweg',
+        'house_number': '1',
+        'postal_code': '10115',
+        'city': 'Berlin',
+      }),
+      transport: transport,
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      services,
+      const MembershipApplicationFormScreen(clubId: 4),
+    );
     await tester.pumpAndSettle();
     for (var tab = 1; tab <= 7; tab++) {
       expect(find.text('$tab / 7'), findsOneWidget);
@@ -11997,7 +12143,9 @@ void main() {
       await tester.tap(action);
       await tester.pumpAndSettle();
     }
-    final request = transport.requests.singleWhere((r) => r.method == 'POST' && r.path.endsWith('/membership-requests'));
+    final request = transport.requests.singleWhere(
+      (r) => r.method == 'POST' && r.path.endsWith('/membership-requests'),
+    );
     expect(request.body?['club_membership_type_id'], 7);
     expect(request.body?['accepted_documents'], {'photo': false});
     expect(find.byType(MembershipRequestStatusScreen), findsOneWidget);

@@ -268,6 +268,9 @@ class MarketplacePayoutService
             }
 
             $before = $lockedPayout->only(['status', 'paid_at', 'notes']);
+            if ($lockedPayout->orders()->whereHas('items', fn ($items) => $items->whereNotNull('shop_club_id'))->exists()) {
+                throw ValidationException::withMessages(['payout' => 'Diese Auszahlung enthält Vereinserlöse und muss getrennt abgerechnet werden.']);
+            }
             $lockedPayout->update([
                 'status' => 'paid',
                 'paid_at' => now(),
@@ -313,6 +316,8 @@ class MarketplacePayoutService
 
         return CommerceOrder::query()
             ->whereIn('type', ['marketplace_product', 'marketplace_cart'])
+            ->whereDoesntHave('items', fn ($items) => $items->whereNotNull('shop_club_id'))
+            ->whereDoesntHaveMorph('orderable', [MarketplaceProduct::class], fn ($products) => $products->where('is_club_shop_product', true))
             ->where('status', 'completed')
             ->where('payout_status', 'pending')
             ->where(fn (Builder $query) => $query->whereNull('issue_status')->orWhere('issue_status', 'none'))
@@ -345,6 +350,7 @@ class MarketplacePayoutService
     private function scopeSellerOrders(Builder $query, int $sellerId): void
     {
         $query
+            ->whereDoesntHave('items', fn ($items) => $items->whereNotNull('shop_club_id'))
             ->where(function (Builder $owned) use ($sellerId) {
                 $owned
                     ->whereHasMorph('orderable', [MarketplaceProduct::class], fn (Builder $product) => $product->where('user_id', $sellerId))

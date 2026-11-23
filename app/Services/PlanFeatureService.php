@@ -24,6 +24,7 @@ class PlanFeatureService
         'club' => 20,
         'pro' => 30,
         'elite' => 40,
+        'verein-komplett' => 50,
     ];
 
     private const FEATURE_MINIMUM_PLANS = [
@@ -52,6 +53,7 @@ class PlanFeatureService
         'sponsor_crm' => 'elite',
         'custom_rules' => 'elite',
         'api' => 'elite',
+        'club_commerce' => 'verein-komplett',
     ];
 
     public function allows(Club $club, string $feature): bool
@@ -249,6 +251,7 @@ class PlanFeatureService
     {
         return [
             'external_members' => $this->allows($club, 'external_members'),
+            'club_commerce' => $this->allows($club, 'club_commerce'),
             'member_import' => $this->allows($club, 'member_import'),
             'member_invitations' => $this->allows($club, 'member_invitations'),
             'invoices' => $this->allows($club, 'invoices'),

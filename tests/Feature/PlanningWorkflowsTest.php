@@ -392,6 +392,32 @@ class PlanningWorkflowsTest extends TestCase
             'calendar_scope' => 'club',
             'calendar_start_time' => '08:30',
             'calendar_end_time' => '17:15',
+            'meeting_at' => '2026-12-05T07:45:00+01:00',
+            'meeting_point' => 'Vereinsheim, Haupteingang',
+            'departure_at' => '2026-12-05T08:00:00+01:00',
+            'expected_return_at' => '2026-12-06T19:30:00+01:00',
+            'travel_mode' => 'club',
+            'responsible_user_id' => $selected->id,
+            'responsible_name' => 'Turnierleitung',
+            'responsible_phone' => '+49 123 456',
+            'description' => 'Bitte 30 Minuten vor dem ersten Start anmelden.',
+            'equipment_notes' => 'Vereinstrikot und Trinkflasche mitbringen.',
+            'document_url' => 'https://example.test/ausschreibung.pdf',
+            'schedule_url' => 'https://example.test/zeitplan.pdf',
+            'participant_list_url' => 'https://example.test/teilnehmer.pdf',
+            'website_url' => 'https://example.test/calendar-cup',
+            'transport_notes' => 'Fahrzeuge am Vereinsheim beladen.',
+            'drivers_needed' => 2,
+            'seats_needed' => 8,
+            'accommodation_required' => true,
+            'accommodation_name' => 'Sporthotel',
+            'accommodation_address' => 'Hotelweg 1, Berlin',
+            'accommodation_notes' => 'Vier Doppelzimmer reserviert.',
+            'accommodation_check_in_at' => '2026-12-05T19:00:00+01:00',
+            'accommodation_check_out_at' => '2026-12-06T08:00:00+01:00',
+            'accommodation_cost_cents' => 8900,
+            'notify_participants' => true,
+            'reminder_hours_before' => 48,
         ];
 
         Sanctum::actingAs($owner);
@@ -399,11 +425,18 @@ class PlanningWorkflowsTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.calendar_enabled', true)
             ->assertJsonPath('data.calendar_scope', 'club')
+            ->assertJsonPath('data.meeting_point', 'Vereinsheim, Haupteingang')
+            ->assertJsonPath('data.responsible_user_id', $selected->id)
+            ->assertJsonPath('data.accommodation_required', true)
+            ->assertJsonPath('data.accommodation_cost_cents', 8900)
+            ->assertJsonPath('data.reminder_hours_before', 48)
             ->json('data');
         $event = Event::query()->where('competition_id', $competition['id'])->sole();
         $this->assertSame('organization', $event->visibility);
         $this->assertSame('Calendar Cup', $event->title);
         $this->assertSame('Sporthalle Nord', $event->location_name);
+        $this->assertSame('2026-12-03 08:30', $event->reminder_at?->format('Y-m-d H:i'));
+        $this->assertStringContainsString('Treffpunkt: Vereinsheim, Haupteingang', (string) $event->notes);
 
         $updated = $payload + [];
         $updated['name'] = 'Calendar Cup Updated';
@@ -425,12 +458,21 @@ class PlanningWorkflowsTest extends TestCase
         $this->getJson('/api/v1/family-calendar?month=2026-12')
             ->assertOk()
             ->assertJsonPath('data.events.0.title', 'Calendar Cup Updated');
+        $this->postJson("/api/v1/events/{$event->id}/participation", ['status' => 'yes'])
+            ->assertOk();
         Sanctum::actingAs($other);
         $this->getJson('/api/v1/family-calendar?month=2026-12')
             ->assertOk()
             ->assertJsonCount(0, 'data.events');
 
         Sanctum::actingAs($owner);
+        $updated['description'] = 'Aktualisierte organisatorische Hinweise.';
+        $this->putJson("/api/v1/competitions/{$competition['id']}", $updated)->assertOk();
+        $this->assertDatabaseHas('event_participants', [
+            'event_id' => $event->id,
+            'user_id' => $selected->id,
+            'status' => 'yes',
+        ]);
         $updated['calendar_enabled'] = false;
         $this->putJson("/api/v1/competitions/{$competition['id']}", $updated)->assertOk();
         $this->assertDatabaseMissing('events', ['id' => $event->id]);

@@ -1814,6 +1814,18 @@ class _ModerationDecisionDialogState extends State<_ModerationDecisionDialog> {
               subtitle: Text(t('platformAdmin.removeContentBody')),
             ),
             const SizedBox(height: 10),
+            PopupMenuButton<String>(
+              tooltip: t('platformAdmin.templates'),
+              onSelected: (value) {
+                _reason.text = [_reason.text.trim(), value]
+                    .where((part) => part.isNotEmpty).join(' ');
+              },
+              itemBuilder: (_) => ['context', 'rules']
+                  .map((key) => t('platformAdmin.template.$key'))
+                  .map((value) => PopupMenuItem(value: value, child: Text(value)))
+                  .toList(),
+              child: Text(t('platformAdmin.templates')),
+            ),
             TextField(
               controller: _reason,
               minLines: 3,
@@ -1886,6 +1898,18 @@ class _AppealDecisionDialogState extends State<_AppealDecisionDialog> {
               onChanged: (value) => setState(() => _status = value ?? _status),
             ),
             const SizedBox(height: 10),
+            PopupMenuButton<String>(
+              tooltip: t('platformAdmin.templates'),
+              onSelected: (value) {
+                _decision.text = [_decision.text.trim(), value]
+                    .where((part) => part.isNotEmpty).join(' ');
+              },
+              itemBuilder: (_) => ['review', 'newInfo']
+                  .map((key) => t('platformAdmin.template.$key'))
+                  .map((value) => PopupMenuItem(value: value, child: Text(value)))
+                  .toList(),
+              child: Text(t('platformAdmin.templates')),
+            ),
             TextField(
               controller: _decision,
               minLines: 3,

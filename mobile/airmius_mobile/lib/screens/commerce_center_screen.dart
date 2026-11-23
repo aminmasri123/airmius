@@ -18,11 +18,13 @@ class CommerceCenterScreen extends StatefulWidget {
     this.initialSection = 'overview',
     this.openCampaignComposer = false,
     this.sponsorId,
+    this.clubId,
   });
 
   final String initialSection;
   final bool openCampaignComposer;
   final int? sponsorId;
+  final int? clubId;
 
   @override
   State<CommerceCenterScreen> createState() => _CommerceCenterScreenState();
@@ -59,6 +61,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
   Future<Map<String, dynamic>> _load() async => _map(
     (await _client.commerceSellerDashboard(
       sponsorId: widget.sponsorId,
+      clubId: widget.clubId,
     ))['data'],
   );
 
@@ -92,6 +95,61 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
       }
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _editClubBank(Map<String, dynamic> data) async {
+    final account = _map(data['bank_account']);
+    var holder = _text(
+      account['holder'],
+      fallback: _text(_map(data['club'])['name']),
+    );
+    var iban = '';
+    final submit = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Auszahlungskonto des Vereins'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (account.isNotEmpty)
+                Text(
+                  "IBAN endet auf ${account['last_four']} · ${const {'pending': 'In Prüfung', 'verified': 'Verifiziert', 'rejected': 'Abgelehnt'}[account['status']] ?? ''}",
+                ),
+              TextFormField(
+                initialValue: holder,
+                decoration: const InputDecoration(
+                  labelText: 'Kontoinhaber laut Bank',
+                ),
+                onChanged: (value) => holder = value,
+              ),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'IBAN des Vereins',
+                ),
+                autocorrect: false,
+                onChanged: (value) => iban = value,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('Zur Prüfung einreichen'),
+          ),
+        ],
+      ),
+    );
+    if (submit == true && mounted) {
+      await _run(() async {
+        await _client.submitClubBankAccount(widget.clubId!, holder, iban);
+      }, success: 'Vereinskonto zur Prüfung eingereicht.');
     }
   }
 
@@ -147,20 +205,36 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 36),
               children: [
-                if (_sponsorTools)
+                if (widget.clubId != null)
+                  Text(
+                    '${_map(data['club'])['name']}',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  )
+                else if (_sponsorTools)
                   const _SponsorToolsHeader()
                 else
                   _Header(data: data),
                 const SizedBox(height: 14),
-                _SectionPicker(
-                  selected: _section,
-                  sponsorTools: _sponsorTools,
-                  onSelected: (value) => setState(() => _section = value),
-                ),
+                if (widget.clubId == null || data['active'] == true)
+                  _SectionPicker(
+                    selected: _section,
+                    sponsorTools: _sponsorTools,
+                    clubShop: widget.clubId != null,
+                    onSelected: (value) => setState(() => _section = value),
+                  ),
                 const SizedBox(height: 14),
                 if (_busy) const LinearProgressIndicator(minHeight: 3),
                 if (_busy) const SizedBox(height: 10),
-                _buildSection(data),
+                if (widget.clubId != null && data['active'] != true)
+                  _orders(data)
+                else
+                  _buildSection(data),
+                if (widget.clubId != null && data['can_manage_bank'] == true)
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : () => _editClubBank(data),
+                    icon: const Icon(Icons.account_balance),
+                    label: const Text('Auszahlungskonto des Vereins'),
+                  ),
               ],
             ),
           );
@@ -358,6 +432,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
                   await _client.updateCommerceSellerProductStatus(
                     _int(product['id']),
                     status,
+                    clubId: widget.clubId,
                   );
                 }, success: t('seller.productUpdated')),
                 onDelete: () => _confirmDeleteProduct(product),
@@ -383,9 +458,52 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
           .map(
             (order) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: _SellerOrderCard(
-                order: order,
-                onTap: () => _showOrder(order),
+              child: Column(
+                children: [
+                  _SellerOrderCard(
+                    order: order,
+                    onTap: () => _showOrder(order),
+                  ),
+                  if (widget.clubId != null)
+                    for (final item in _maps(order['items']))
+                      DropdownButtonFormField<String>(
+                        key: ValueKey(
+                          '${item['id']}:${item['club_fulfillment_status']}',
+                        ),
+                        initialValue: _text(
+                          item['club_fulfillment_status'],
+                          fallback: 'open',
+                        ),
+                        decoration: InputDecoration(
+                          labelText: _text(item['title']),
+                        ),
+                        items: [
+                          for (final status in [
+                            'open',
+                            'prepared',
+                            'shipped',
+                            'delivered',
+                          ])
+                            DropdownMenuItem(
+                              value: status,
+                              child: Text(t('adminHub.shipping.$status')),
+                            ),
+                        ],
+                        onChanged: _busy
+                            ? null
+                            : (status) {
+                                if (status != null) {
+                                  _run(() async {
+                                    await _client.fulfillClubOrderItem(
+                                      widget.clubId!,
+                                      _int(item['id']),
+                                      status,
+                                    );
+                                  });
+                                }
+                              },
+                      ),
+                ],
               ),
             ),
           )
@@ -728,6 +846,10 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     if (payload == null || !mounted) return;
     await _run(
       () async {
+        if (widget.clubId != null) {
+          payload['club_id'] = widget.clubId;
+          payload['club_shop'] = true;
+        }
         if (product == null) {
           await _client.createCommerceSellerProduct(payload);
         } else {
@@ -752,7 +874,10 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     );
     if (payload == null || !mounted) return;
     await _run(
-      () async => _client.updateCommerceProviderProfile(payload),
+      () async => _client.updateCommerceProviderProfile({
+        ...payload,
+        if (widget.clubId != null) 'club_id': widget.clubId,
+      }),
       success: AirmiusScope.of(context).t('seller.providerSaved'),
     );
   }
@@ -766,6 +891,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     );
     if (payload == null || !mounted) return;
     await _run(() async {
+      if (widget.clubId != null) payload['club_id'] = widget.clubId;
       if (location == null) {
         await _client.createCommerceProviderLocation(payload);
       } else {
@@ -976,7 +1102,10 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     );
     if (confirmed != true) return;
     await _run(
-      () async => _client.deleteCommerceSellerProduct(_int(product['id'])),
+      () async => _client.deleteCommerceSellerProduct(
+        _int(product['id']),
+        clubId: widget.clubId,
+      ),
       success: t('seller.productDeleted'),
     );
   }
@@ -1002,7 +1131,10 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     );
     if (confirmed != true) return;
     await _run(
-      () async => _client.deleteCommerceProviderLocation(_int(location['id'])),
+      () async => _client.deleteCommerceProviderLocation(
+        _int(location['id']),
+        clubId: widget.clubId,
+      ),
       success: t('seller.locationDeleted'),
     );
   }
@@ -1162,16 +1294,24 @@ class _SectionPicker extends StatelessWidget {
     required this.selected,
     required this.onSelected,
     this.sponsorTools = false,
+    this.clubShop = false,
   });
 
   final String selected;
   final ValueChanged<String> onSelected;
   final bool sponsorTools;
+  final bool clubShop;
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    final sections = sponsorTools
+    final sections = clubShop
+        ? {
+            'products': t('seller.products'),
+            'orders': t('seller.orders'),
+            'provider': t('seller.provider'),
+          }
+        : sponsorTools
         ? {'ads': t('commerceAdv.ads'), 'websites': t('commerceAdv.websites')}
         : {
             'overview': t('seller.overview'),
@@ -2085,7 +2225,8 @@ class _CampaignSheetState extends State<_CampaignSheet> {
     _imageUrl = TextEditingController(
       text: _text(campaign['creative_image_url']),
     );
-    _useImageUpload = _text(campaign['creative_image_path']).isNotEmpty &&
+    _useImageUpload =
+        _text(campaign['creative_image_path']).isNotEmpty &&
         _imageUrl.text.isEmpty;
     _budget = TextEditingController(
       text: _int(campaign['budget_cents']) > 0
@@ -2257,8 +2398,8 @@ class _CampaignSheetState extends State<_CampaignSheet> {
                     _text(campaign?['creative_image_path']).isNotEmpty ||
                     _text(campaign?['creative_image_url']).isEmpty;
                 final link = value.text.trim();
-                final showSavedUpload = hasSavedUpload &&
-                    (_useImageUpload || link.isEmpty);
+                final showSavedUpload =
+                    hasSavedUpload && (_useImageUpload || link.isEmpty);
                 final previewUrl = resolveAirmiusImageUrl(
                   showSavedUpload ? savedPreview : link,
                 );

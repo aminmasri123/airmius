@@ -19,6 +19,43 @@ class ClubSubscriptionPermissionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_komplett_monthly_payment_activation_and_period_end_for_each_checkout(): void
+    {
+        Notification::fake();
+        Setting::setValue('billing_iban', 'DE89370400440532013000');
+        $owner = User::factory()->create();
+        Sanctum::actingAs($owner);
+        $plan = SubscriptionPlan::where('slug', 'verein-komplett')->firstOrFail();
+        foreach (['web', 'mobile'] as $surface) {
+            $club = Club::factory()->create(['owner_id' => $owner->id]);
+            $url = $surface === 'mobile' ? "/api/v1/subscription-plans/{$plan->id}/checkout" : route('subscription-checkout.store', $plan);
+            $payload = ['provider' => 'bank_transfer', 'club_id' => $club->id, 'accepted_terms' => true, 'billing_interval' => 'monthly'];
+            $this->withHeaders(['Referer' => route('guest.pricing'), 'X-Checkout-Mode' => 'json'])
+                ->postJson($url, [...$payload, 'billing_interval' => 'yearly'])->assertUnprocessable();
+            $this->postJson($url, $payload)->assertSuccessful();
+            $this->postJson($url, $payload)->assertUnprocessable();
+            $checkout = \App\Models\PaymentCheckout::where('club_id', $club->id)->sole();
+            $this->assertEquals(3900, $checkout->amount_cents);
+            $this->assertFalse($club->fresh()->canOpenShop($owner));
+            $activate = app(\App\Services\Subscriptions\SubscriptionCheckoutActivationService::class);
+            $this->assertTrue($activate->activate($checkout)['activated']);
+            $this->assertFalse($activate->activate($checkout)['activated']);
+            $this->assertTrue($club->fresh()->canOpenShop($owner));
+            $this->postJson($url, $payload)->assertUnprocessable();
+            $sub = $club->fresh()->currentSubscription;
+            $this->postJson("/api/v1/clubs/{$club->id}/subscriptions/{$sub->id}/cancel", ['mode' => 'period_end'])->assertOk();
+            $this->assertEquals($sub->fresh()->current_period_ends_at->toDateString(), $club->fresh()->subscriptionTermFor($owner)['cancels_at']);
+            $this->assertNull($club->fresh()->subscriptionTermFor(User::factory()->create()));
+            $this->postJson("/api/v1/clubs/{$club->id}/subscriptions/{$sub->id}/renew", [])->assertOk();
+            $this->assertNull($club->fresh()->subscriptionTermFor($owner)['cancels_at']);
+            $this->postJson("/api/v1/clubs/{$club->id}/subscriptions/{$sub->id}/cancel", ['mode' => 'period_end'])->assertOk();
+            $this->assertTrue($club->fresh()->canOpenShop($owner));
+            $this->travelTo($sub->fresh()->cancels_at->copy()->addSecond());
+            $this->assertFalse($club->fresh()->canOpenShop($owner));
+            $this->travelBack();
+        }
+    }
+
     public function test_subscription_view_and_edit_rights_are_independent_and_used_by_the_api(): void
     {
         Notification::fake();

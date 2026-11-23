@@ -63,6 +63,7 @@ const searchModel = computed({
                                 {{ club.plan?.name || 'Free' }}
                             </span>
                             <p v-if="club.subscription?.payment_provider" class="mt-1 text-xs text-secondary">{{ club.subscription.payment_provider }}</p>
+                            <p v-if="club.plan?.slug === 'verein-komplett'" class="mt-1 text-xs">Vereinsshop freigeschaltet</p>
                         </td>
                         <td class="px-5 py-3">
                             <select v-model="formForClub(club).subscription_plan_id" class="min-w-40 rounded-lg border-border bg-inputBg text-sm text-primary">

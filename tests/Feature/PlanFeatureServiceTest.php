@@ -18,6 +18,26 @@ class PlanFeatureServiceTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_komplett_grants_commerce_only_for_the_subscribed_club_and_entitled_period(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $other = Club::factory()->create(['owner_id' => $owner->id]);
+        $plan = SubscriptionPlan::where('slug', 'verein-komplett')->firstOrFail();
+        $this->assertEquals(3900, $plan->monthly_price_cents);
+        $subscription = ClubSubscription::updateOrCreate(['club_id' => $club->id], [
+            'subscription_plan_id' => $plan->id,
+            'status' => 'cancels_at_period_end',
+            'cancels_at' => now()->addDay(),
+        ]);
+        $service = app(PlanFeatureService::class);
+        $this->assertTrue($service->allows($club->fresh(), 'club_commerce'));
+        $this->assertTrue($service->allows($club->fresh(), 'sponsor_crm'));
+        $this->assertFalse($service->allows($other, 'club_commerce'));
+        $subscription->update(['cancels_at' => now()->subMinute()]);
+        $this->assertFalse($service->allows($club->fresh(), 'club_commerce'));
+    }
+
     public function test_free_clubs_have_three_member_invitations_per_day(): void
     {
         $owner = User::factory()->create();

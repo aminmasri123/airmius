@@ -876,7 +876,8 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                         : t('sponsorCockpit.editProfile'),
                   ),
                 ),
-              if (_text(profile?['verification_status']) != 'verified')
+              if (_text(profile?['verification_status']) != 'verified' &&
+                  AirmiusServicesScope.of(context).authState.user?.hasAnyRole(const ['sponsor']) != true)
                 OutlinedButton.icon(
                   onPressed: () => _open(const SponsorApplicationScreen()),
                   icon: const Icon(Icons.fact_check_outlined),

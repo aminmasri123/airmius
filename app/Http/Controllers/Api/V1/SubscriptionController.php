@@ -100,13 +100,16 @@ class SubscriptionController extends Controller
 
         $data = $request->validate([
             'provider' => ['required', Rule::in(['bank_transfer', 'stripe', 'paypal'])],
-            'billing_interval' => ['required', Rule::in(['monthly', 'yearly'])],
+            'billing_interval' => ['required', Rule::in($subscriptionPlan->slug === 'verein-komplett' ? ['monthly'] : ['monthly', 'yearly'])],
             'club_id' => ['nullable', 'integer', 'min:1'],
             'accepted_terms' => ['accepted'],
         ], [
             'provider.in' => __('subscription.validation.provider_mobile_unsupported'),
             'accepted_terms.accepted' => __('subscription.validation.accept_terms'),
         ]);
+        if ($subscriptionPlan->slug === 'verein-komplett') {
+            $request->validate(['club_id' => ['required', 'integer', 'min:1']]);
+        }
         $subscriptionPlan->loadMissing('countryPrices');
         $club = $this->resolveClub($request, $subscriptionPlan, $data['club_id'] ?? null);
         $country = strtoupper((string) ($club?->country ?: $request->user()->country));
@@ -134,6 +137,7 @@ class SubscriptionController extends Controller
         $this->ensureProviderIsConfigured($data['provider']);
 
         $checkout = DB::transaction(function () use ($request, $subscriptionPlan, $club, $data, $price, $amountCents) {
+            \App\Services\Subscriptions\SubscriptionCheckoutActivationService::guardClubPlanChange($club, $subscriptionPlan);
             $checkout = PaymentCheckout::query()->create([
                 'user_id' => $request->user()->id,
                 'club_id' => $club?->id,

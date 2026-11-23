@@ -2084,6 +2084,10 @@ class ClubController extends Controller
         ]);
         $subscription = [
             'plan' => $club->subscriptionPlan(),
+            'can_open_shop' => $actor && $club->canOpenShop($actor),
+            'term' => $club->subscriptionTermFor($actor),
+            'can_book_shop' => ($effectivePermissions[ClubPermissions::SUBSCRIPTIONS_EDIT] ?? false)
+                && ! $this->planFeatures->allows($club, 'club_commerce'),
             'member_usage' => $club->memberUsageCount(),
             'member_limit' => $club->subscriptionPlan()?->member_limit,
             'team_limit' => $club->subscriptionPlan()?->team_limit,

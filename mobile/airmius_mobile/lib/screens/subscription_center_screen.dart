@@ -33,7 +33,9 @@ IconData _planAudienceIcon(String audience) => switch (audience) {
 };
 
 class SubscriptionCenterScreen extends StatefulWidget {
-  const SubscriptionCenterScreen({super.key});
+  const SubscriptionCenterScreen({super.key, this.initialClubId});
+
+  final int? initialClubId;
 
   @override
   State<SubscriptionCenterScreen> createState() =>
@@ -62,6 +64,10 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
         AirmiusServicesScope.of(context).authState.user,
       );
       _planAudience = _recommendedAudience;
+      if (widget.initialClubId != null) {
+        _planAudience = 'verein';
+        _section = 'plans';
+      }
     }
     _future ??= _load();
   }
@@ -298,7 +304,10 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
               const SizedBox(height: 5),
               Text(
                 t('subscriptions.planFilterHint'),
-                style: TextStyle(color: airmiusMutedColor(context), height: 1.35),
+                style: TextStyle(
+                  color: airmiusMutedColor(context),
+                  height: 1.35,
+                ),
               ),
               const SizedBox(height: 12),
               SingleChildScrollView(
@@ -460,7 +469,15 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
   }
 
   Future<void> _startCheckout(JsonMap plan, List<JsonMap> clubs) async {
-    final payload = await _checkoutDialog(plan, clubs);
+    final orderedClubs = [
+      ...clubs.where(
+        (club) => _subscriptionNullableInt(club['id']) == widget.initialClubId,
+      ),
+      ...clubs.where(
+        (club) => _subscriptionNullableInt(club['id']) != widget.initialClubId,
+      ),
+    ];
+    final payload = await _checkoutDialog(plan, orderedClubs);
     if (payload == null || !mounted) return;
     final t = AirmiusScope.of(context).t;
     setState(() => _busy = true);
@@ -494,10 +511,7 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
   Future<JsonMap?> _checkoutDialog(JsonMap plan, List<JsonMap> clubs) {
     return Navigator.of(context).push<JsonMap>(
       MaterialPageRoute<JsonMap>(
-        builder: (_) => _SubscriptionCheckoutScreen(
-          plan: plan,
-          clubs: clubs,
-        ),
+        builder: (_) => _SubscriptionCheckoutScreen(plan: plan, clubs: clubs),
       ),
     );
   }
@@ -728,8 +742,7 @@ class _SubscriptionCheckoutScreenState
       fallback: 'EUR',
     );
     final monthly = _subscriptionInt(
-      localized['monthly_price_cents'] ??
-          widget.plan['monthly_price_cents'],
+      localized['monthly_price_cents'] ?? widget.plan['monthly_price_cents'],
     );
     final yearly = _subscriptionInt(
       localized['yearly_price_cents'] ?? widget.plan['yearly_price_cents'],
@@ -835,13 +848,14 @@ class _SubscriptionCheckoutScreenState
                             '${_subscriptionPrice(monthly, currency)}',
                           ),
                         ),
-                        DropdownMenuItem(
-                          value: 'yearly',
-                          child: Text(
-                            '${t('subscriptions.yearly')} · '
-                            '${_subscriptionPrice(yearly, currency)}',
+                        if (widget.plan['slug'] != 'verein-komplett')
+                          DropdownMenuItem(
+                            value: 'yearly',
+                            child: Text(
+                              '${t('subscriptions.yearly')} · '
+                              '${_subscriptionPrice(yearly, currency)}',
+                            ),
                           ),
-                        ),
                       ],
                       onChanged: (value) =>
                           setState(() => _interval = value ?? _interval),
@@ -874,9 +888,7 @@ class _SubscriptionCheckoutScreenState
                     if (_needsClub) ...[
                       const SizedBox(height: 16),
                       if (widget.clubs.isEmpty)
-                        _CheckoutWarning(
-                          text: t('subscriptions.clubRequired'),
-                        )
+                        _CheckoutWarning(text: t('subscriptions.clubRequired'))
                       else
                         DropdownButtonFormField<int>(
                           initialValue: _clubId,
@@ -898,8 +910,7 @@ class _SubscriptionCheckoutScreenState
                                 ),
                               ),
                           ],
-                          onChanged: (value) =>
-                              setState(() => _clubId = value),
+                          onChanged: (value) => setState(() => _clubId = value),
                         ),
                     ],
                   ],
@@ -936,9 +947,7 @@ class _SubscriptionCheckoutScreenState
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
-            border: Border(
-              top: BorderSide(color: airmiusBorderColor(context)),
-            ),
+            border: Border(top: BorderSide(color: airmiusBorderColor(context))),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1268,9 +1277,10 @@ class _PlanCard extends StatelessWidget {
                 '${_subscriptionPrice(monthly, currency)} / ${t('subscriptions.monthShort')}',
                 color: Theme.of(context).colorScheme.secondary,
               ),
-              StatusPill(
-                '${_subscriptionPrice(yearly, currency)} / ${t('subscriptions.yearShort')}',
-              ),
+              if (plan['slug'] != 'verein-komplett')
+                StatusPill(
+                  '${_subscriptionPrice(yearly, currency)} / ${t('subscriptions.yearShort')}',
+                ),
               StatusPill(
                 t(
                   _subscriptionText(plan['target_actor']) == 'verein'

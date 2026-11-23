@@ -422,6 +422,26 @@ class Club extends Model
         return $this->hasMany(SubscriptionInvoice::class);
     }
 
+    public function canOpenShop(User $user): bool
+    {
+        return \App\Support\ClubPermissions::allows($this, $user, \App\Support\ClubPermissions::COMMERCE_PRODUCTS_EDIT)
+            && (app(\App\Services\PlanFeatureService::class)->allows($this, 'club_commerce')
+                || CommerceOrderItem::where('shop_club_id', $this->id)->exists());
+    }
+
+    public function subscriptionTermFor(?User $user): ?array
+    {
+        $subscription = $this->currentSubscription;
+        if (! $subscription || ! $user || ! \App\Support\ClubPermissions::allows($this, $user, \App\Support\ClubPermissions::SUBSCRIPTIONS_VIEW)) {
+            return null;
+        }
+        return [
+            'status' => $subscription->status,
+            'period_end' => $subscription->current_period_ends_at?->toDateString(),
+            'cancels_at' => $subscription->cancels_at?->toDateString(),
+        ];
+    }
+
     public function subscriptionPlan(): ?SubscriptionPlan
     {
         $subscription = $this->currentSubscription;

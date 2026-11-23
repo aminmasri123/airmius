@@ -227,7 +227,7 @@ class AdminCommerceController extends Controller
             ]);
         }
         $data = $this->productData($request);
-        if (! $product->user_id) {
+        if (! $product->user_id && ! $product->is_club_shop_product) {
             $data['commission_percent'] = 0;
             $data['payout_status'] = 'not_applicable';
         }
