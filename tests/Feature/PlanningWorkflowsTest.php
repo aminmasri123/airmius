@@ -369,6 +369,73 @@ class PlanningWorkflowsTest extends TestCase
             ->assertJsonPath('data.0.participation_fee_basis', 'person');
     }
 
+    public function test_competition_calendar_entry_is_created_synchronized_scoped_and_removed_without_duplicates(): void
+    {
+        [$owner, $club, $team] = $this->fixture();
+        $selected = User::factory()->create();
+        $other = User::factory()->create();
+        $club->users()->attach([
+            $selected->id => ['role' => 'member', 'membership_status' => 'active'],
+            $other->id => ['role' => 'member', 'membership_status' => 'active'],
+        ]);
+        $payload = [
+            'name' => 'Calendar Cup',
+            'team_id' => $team->id,
+            'status' => 'planned',
+            'starts_on' => '2026-12-05',
+            'ends_on' => '2026-12-06',
+            'venue_status' => 'known',
+            'venue_name' => 'Sporthalle Nord',
+            'city' => 'Berlin',
+            'participation_fee_type' => 'free',
+            'calendar_enabled' => true,
+            'calendar_scope' => 'club',
+            'calendar_start_time' => '08:30',
+            'calendar_end_time' => '17:15',
+        ];
+
+        Sanctum::actingAs($owner);
+        $competition = $this->postJson("/api/v1/clubs/{$club->id}/competitions", $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.calendar_enabled', true)
+            ->assertJsonPath('data.calendar_scope', 'club')
+            ->json('data');
+        $event = Event::query()->where('competition_id', $competition['id'])->sole();
+        $this->assertSame('organization', $event->visibility);
+        $this->assertSame('Calendar Cup', $event->title);
+        $this->assertSame('Sporthalle Nord', $event->location_name);
+
+        $updated = $payload + [];
+        $updated['name'] = 'Calendar Cup Updated';
+        $updated['calendar_scope'] = 'people';
+        $updated['calendar_user_ids'] = [$selected->id];
+        $this->putJson("/api/v1/competitions/{$competition['id']}", $updated)
+            ->assertOk()
+            ->assertJsonPath('data.calendar_user_ids.0', $selected->id);
+        $this->assertDatabaseCount('events', 1);
+        $this->assertDatabaseHas('events', [
+            'id' => $event->id,
+            'competition_id' => $competition['id'],
+            'title' => 'Calendar Cup Updated',
+            'visibility' => 'private',
+        ]);
+        $this->assertDatabaseHas('event_participants', ['event_id' => $event->id, 'user_id' => $selected->id, 'status' => 'maybe']);
+
+        Sanctum::actingAs($selected);
+        $this->getJson('/api/v1/family-calendar?month=2026-12')
+            ->assertOk()
+            ->assertJsonPath('data.events.0.title', 'Calendar Cup Updated');
+        Sanctum::actingAs($other);
+        $this->getJson('/api/v1/family-calendar?month=2026-12')
+            ->assertOk()
+            ->assertJsonCount(0, 'data.events');
+
+        Sanctum::actingAs($owner);
+        $updated['calendar_enabled'] = false;
+        $this->putJson("/api/v1/competitions/{$competition['id']}", $updated)->assertOk();
+        $this->assertDatabaseMissing('events', ['id' => $event->id]);
+    }
+
     public function test_paid_competition_requires_amount_and_basis_but_unknown_location_is_allowed(): void
     {
         [$owner, $club] = $this->fixture();

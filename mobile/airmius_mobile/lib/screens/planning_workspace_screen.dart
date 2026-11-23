@@ -398,6 +398,11 @@ PlanningEditor competitionPlanningEditor(
     'participation_fee_type': 'unknown',
     'participation_fee_cents': null,
     'participation_fee_basis': null,
+    'calendar_enabled': false,
+    'calendar_scope': 'club',
+    'calendar_user_ids': <dynamic>[],
+    'calendar_start_time': '09:00',
+    'calendar_end_time': '18:00',
     ...?row,
   };
   initial['starts_on'] = planningApiDay(initial['starts_on']);
@@ -411,6 +416,9 @@ PlanningEditor competitionPlanningEditor(
     fields: (f) {
       final venueKnown = f.values['venue_status'] == 'known';
       final paid = f.values['participation_fee_type'] == 'paid';
+      final calendarEnabled = f.values['calendar_enabled'] == true;
+      final calendarScope = '${f.values['calendar_scope'] ?? 'club'}';
+      final calendarUserIds = (f.values['calendar_user_ids'] as List? ?? []);
       return [
         f.text('name', required: true),
         f.options(
@@ -456,6 +464,57 @@ PlanningEditor competitionPlanningEditor(
             {'id': 'flat', 'name': f.t('flat')},
           ], label: f.t('participation_fee_basis')),
         ],
+        const Divider(),
+        f.check('calendar_enabled', f.t('calendarPublish')),
+        if (calendarEnabled) ...[
+          f.options(
+            'calendar_scope',
+            [
+              {'id': 'club', 'name': f.t('calendarClub')},
+              {'id': 'team', 'name': f.t('calendarTeam')},
+              {'id': 'people', 'name': f.t('calendarPeople')},
+            ],
+            label: f.t('calendarAudience'),
+            after: () {
+              if (f.values['calendar_scope'] != 'people') {
+                f.change('calendar_user_ids', <dynamic>[]);
+              }
+            },
+          ),
+          f.text(
+            'calendar_start_time',
+            label: f.t('calendarStartTime'),
+            required: true,
+            max: 5,
+          ),
+          f.text(
+            'calendar_end_time',
+            label: f.t('calendarEndTime'),
+            required: true,
+            max: 5,
+          ),
+          if (calendarScope == 'people') ...[
+            Text(
+              f.t('calendarSelectPeople'),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            for (final member in planningRows(club['members']))
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('${member['name']}'),
+                value: calendarUserIds.contains(member['id']),
+                onChanged: f.busy
+                    ? null
+                    : (selected) => f.update(() {
+                        if (selected == true) {
+                          calendarUserIds.add(member['id']);
+                        } else {
+                          calendarUserIds.remove(member['id']);
+                        }
+                      }),
+              ),
+          ],
+        ],
       ];
     },
     validate: (v) {
@@ -465,6 +524,20 @@ PlanningEditor competitionPlanningEditor(
       final deadline = planningDate(v['registration_deadline_at']);
       if (deadline != null && deadline.isAfter(planningDate(v['ends_on'])!)) {
         return planningText(context, 'dateOrder');
+      }
+      if (v['calendar_enabled'] == true) {
+        if (v['calendar_scope'] == 'team' && v['team_id'] == null) {
+          return planningText(context, 'calendarTeamRequired');
+        }
+        if (v['calendar_scope'] == 'people' &&
+            (v['calendar_user_ids'] as List? ?? []).isEmpty) {
+          return planningText(context, 'calendarPeopleRequired');
+        }
+        final timePattern = RegExp(r'^(?:[01]\d|2[0-3]):[0-5]\d$');
+        if (!timePattern.hasMatch('${v['calendar_start_time']}') ||
+            !timePattern.hasMatch('${v['calendar_end_time']}')) {
+          return planningText(context, 'calendarTimeInvalid');
+        }
       }
       return null;
     },
@@ -492,6 +565,11 @@ PlanningEditor competitionPlanningEditor(
         'participation_fee_type',
         'participation_fee_cents',
         'participation_fee_basis',
+        'calendar_enabled',
+        'calendar_scope',
+        'calendar_user_ids',
+        'calendar_start_time',
+        'calendar_end_time',
       ])
         key: v[key],
     }, id: planningId(row?['id'])),

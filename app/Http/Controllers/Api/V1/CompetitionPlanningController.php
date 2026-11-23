@@ -13,16 +13,19 @@ use App\Models\CompetitionRosterEntry;
 use App\Models\CompetitionTournamentMatch;
 use App\Models\CompetitionTournamentStanding;
 use App\Models\CompetitionVenue;
+use App\Models\Event;
 use App\Models\Team;
 use App\Services\CompetitionRegistrationWorkflowService;
 use App\Services\CompetitionSportPlanningService;
 use App\Services\PlanningWorkspaceService;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CompetitionPlanningController extends Controller
 {
@@ -95,6 +98,7 @@ class CompetitionPlanningController extends Controller
         $competition = DB::transaction(function () use ($request, $club, $details) {
             $competition = Competition::create(['club_id' => $club->id] + $this->competitionData($request, $club));
             $this->saveCompetitionDetails($competition, $details);
+            $this->syncCalendarEvent($competition, $request->user()->id);
 
             return $competition->fresh('venues');
         });
@@ -109,9 +113,10 @@ class CompetitionPlanningController extends Controller
         $data = $this->competitionData($request, $competition->club);
         $details = $this->competitionDetails($request);
         abort_if(Schema::hasTable('competition_games') && $competition->games()->exists() && (int) ($data['team_id'] ?? 0) !== (int) $competition->team_id, 422, 'The team cannot be changed after games have been created.');
-        DB::transaction(function () use ($competition, $data, $details): void {
+        DB::transaction(function () use ($request, $competition, $data, $details): void {
             $competition->update($data);
             $this->saveCompetitionDetails($competition, $details);
+            $this->syncCalendarEvent($competition, $request->user()->id);
         });
         ClubAuditLog::record($competition->club, $request->user(), 'club.competition.updated', $competition, []);
 
@@ -122,8 +127,12 @@ class CompetitionPlanningController extends Controller
     {
         app(PlanningWorkspaceService::class)->authorizeClub($competition->club, $request->user());
         abort_unless(ClubPermissions::allows($competition->club, $request->user(), ClubPermissions::EVENTS_DELETE), 403);
-        abort_if($competition->registrations()->exists() || $competition->tournamentMatches()->exists() || (Schema::hasTable('competition_games') && $competition->games()->exists()) || $competition->events()->exists(), 422, 'Cancel competitions with registrations, fixtures or events instead of deleting them.');
+        $calendarEventId = (int) data_get($competition->metadata, 'calendar_event_id', 0);
+        abort_if($competition->registrations()->exists() || $competition->tournamentMatches()->exists() || (Schema::hasTable('competition_games') && $competition->games()->exists()) || $competition->events()->when($calendarEventId, fn ($query) => $query->whereKeyNot($calendarEventId))->exists(), 422, 'Cancel competitions with registrations, fixtures or events instead of deleting them.');
         ClubAuditLog::record($competition->club, $request->user(), 'club.competition.deleted', $competition, []);
+        if ($calendarEventId) {
+            Event::query()->where('competition_id', $competition->id)->whereKey($calendarEventId)->delete();
+        }
         $competition->delete();
 
         return response()->json(['data' => ['deleted' => true]]);
@@ -397,6 +406,14 @@ class CompetitionPlanningController extends Controller
             'participation_fee_type' => ['sometimes', Rule::in(['unknown', 'free', 'paid'])],
             'participation_fee_cents' => ['nullable', 'integer', 'min:1', 'max:100000000', 'required_if:participation_fee_type,paid'],
             'participation_fee_basis' => ['nullable', Rule::in(['person', 'team', 'flat']), 'required_if:participation_fee_type,paid'],
+            'calendar_enabled' => ['sometimes', 'boolean'],
+            'calendar_scope' => ['nullable', Rule::in(['club', 'team', 'people'])],
+            'calendar_user_ids' => ['nullable', 'array', 'max:500'],
+            'calendar_user_ids.*' => ['integer', 'distinct', Rule::exists('club_user', 'user_id')
+                ->where('club_id', $request->route('club')?->id ?? $request->route('competition')?->club_id)
+                ->where(fn ($query) => $query->whereNull('membership_status')->orWhere('membership_status', 'active'))],
+            'calendar_start_time' => ['nullable', 'date_format:H:i'],
+            'calendar_end_time' => ['nullable', 'date_format:H:i'],
         ]);
     }
 
@@ -407,7 +424,7 @@ class CompetitionPlanningController extends Controller
         }
 
         $metadata = $competition->metadata ?? [];
-        foreach (['venue_status', 'participation_fee_type', 'participation_fee_cents', 'participation_fee_basis'] as $key) {
+        foreach (['venue_status', 'participation_fee_type', 'participation_fee_cents', 'participation_fee_basis', 'calendar_enabled', 'calendar_scope', 'calendar_user_ids', 'calendar_start_time', 'calendar_end_time'] as $key) {
             if (array_key_exists($key, $details)) {
                 $metadata[$key] = $details[$key];
             }
@@ -456,6 +473,81 @@ class CompetitionPlanningController extends Controller
             'participation_fee_type' => $metadata['participation_fee_type'] ?? 'unknown',
             'participation_fee_cents' => $metadata['participation_fee_cents'] ?? null,
             'participation_fee_basis' => $metadata['participation_fee_basis'] ?? null,
+            'calendar_enabled' => (bool) ($metadata['calendar_enabled'] ?? false),
+            'calendar_scope' => $metadata['calendar_scope'] ?? ($competition->team_id ? 'team' : 'club'),
+            'calendar_user_ids' => $metadata['calendar_user_ids'] ?? [],
+            'calendar_start_time' => $metadata['calendar_start_time'] ?? '09:00',
+            'calendar_end_time' => $metadata['calendar_end_time'] ?? '18:00',
         ];
+    }
+
+    private function syncCalendarEvent(Competition $competition, int $actorId): void
+    {
+        $competition->refresh()->load('venues');
+        $metadata = $competition->metadata ?? [];
+        $eventId = (int) ($metadata['calendar_event_id'] ?? 0);
+
+        if (! ($metadata['calendar_enabled'] ?? false)) {
+            if ($eventId) {
+                Event::query()->where('competition_id', $competition->id)->whereKey($eventId)->delete();
+                unset($metadata['calendar_event_id']);
+                $competition->update(['metadata' => $metadata]);
+            }
+
+            return;
+        }
+
+        $scope = $metadata['calendar_scope'] ?? ($competition->team_id ? 'team' : 'club');
+        if ($scope === 'team' && ! $competition->team_id) {
+            throw ValidationException::withMessages(['calendar_scope' => 'Für die Team-Sichtbarkeit muss ein Team ausgewählt werden.']);
+        }
+        $userIds = collect($metadata['calendar_user_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        if ($scope === 'people' && $userIds->isEmpty()) {
+            throw ValidationException::withMessages(['calendar_user_ids' => 'Wähle mindestens eine Person für den Kalendereintrag aus.']);
+        }
+
+        $timezone = config('app.timezone', 'UTC');
+        $startTime = $metadata['calendar_start_time'] ?? '09:00';
+        $endTime = $metadata['calendar_end_time'] ?? '18:00';
+        $startsAt = CarbonImmutable::parse($competition->starts_on->format('Y-m-d').' '.$startTime, $timezone);
+        $endsAt = CarbonImmutable::parse(($competition->ends_on ?? $competition->starts_on)->format('Y-m-d').' '.$endTime, $timezone);
+        if (! $endsAt->isAfter($startsAt)) {
+            throw ValidationException::withMessages(['calendar_end_time' => 'Das Kalenderende muss nach dem Beginn liegen.']);
+        }
+
+        $venue = $competition->venues->sortBy('id')->first();
+        $event = $eventId
+            ? Event::query()->where('competition_id', $competition->id)->whereKey($eventId)->first()
+            : null;
+        $event ??= new Event(['competition_id' => $competition->id]);
+        $event->fill([
+            'club_id' => $competition->club_id,
+            'user_id' => $actorId,
+            'team_id' => $scope === 'team' ? $competition->team_id : null,
+            'title' => $competition->name,
+            'type' => 'match',
+            'visibility' => $scope === 'club' ? 'organization' : 'private',
+            'status' => $competition->status === 'cancelled' ? 'cancelled' : 'scheduled',
+            'start_time' => $startsAt->utc(),
+            'end_time' => $endsAt->utc(),
+            'event_timezone' => $timezone,
+            'location' => $venue?->name,
+            'location_name' => $venue?->name,
+            'location_street' => $venue?->street,
+            'location_house_number' => $venue?->house_number,
+            'location_postal_code' => $venue?->postal_code,
+            'location_city' => $venue?->city,
+            'location_country' => $venue?->country,
+            'participant_response_required' => true,
+            'participant_response_deadline_at' => $competition->registration_deadline_at,
+        ])->save();
+
+        $event->participants()->sync($scope === 'people'
+            ? $userIds->mapWithKeys(fn (int $userId) => [$userId => ['status' => 'maybe']])->all()
+            : []);
+        if ($eventId !== (int) $event->id) {
+            $metadata['calendar_event_id'] = $event->id;
+            $competition->update(['metadata' => $metadata]);
+        }
     }
 }
