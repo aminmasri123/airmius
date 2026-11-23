@@ -53,7 +53,7 @@ final class WorkAutomationAccess
     {
         return self::canCreate($job->club, $user)
             && ($job->payload['template'] ?? null) === null
-            && ! in_array($job->status, [WorkAutomationJob::STATUS_QUEUED, WorkAutomationJob::STATUS_RUNNING], true);
+            && $job->status !== WorkAutomationJob::STATUS_RUNNING;
     }
 
     public static function clubs(User $user): Collection

@@ -179,7 +179,8 @@ void main() {
       );
       await tester.pumpWidget(screen());
       await tester.pumpAndSettle();
-      expect(find.textContaining('Failed · Attempts: 1'), findsOneWidget);
+      expect(find.text('Failed'), findsOneWidget);
+      expect(find.text('Attempts: 1'), findsOneWidget);
       await tester.tap(find.byTooltip('Create job'));
       await tester.pumpAndSettle();
       expect(find.text('Authorized recipients: 1'), findsOneWidget);
@@ -202,7 +203,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.pumpWidget(screen());
       await tester.pumpAndSettle();
-      expect(find.text('Persisted reminder #4'), findsOneWidget);
+      expect(find.text('Persisted reminder'), findsOneWidget);
       await tester.tap(find.text('Retry').first);
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Retry'));

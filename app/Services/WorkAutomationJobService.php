@@ -280,7 +280,7 @@ class WorkAutomationJobService
     {
         DB::transaction(function () use ($job, $actor) {
             $job = WorkAutomationJob::query()->whereKey($job->id)->lockForUpdate()->firstOrFail();
-            abort_unless(WorkAutomationAccess::canDelete($job, $actor), 409, 'Queued or running jobs cannot be deleted.');
+            abort_unless(WorkAutomationAccess::canDelete($job, $actor), 409, 'Running jobs cannot be deleted.');
             ClubAuditLog::record($job->club, $actor, 'club.work_automation.deleted', $job, [
                 'job_id' => $job->id,
                 'kind' => $job->kind,

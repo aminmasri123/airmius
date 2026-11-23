@@ -309,6 +309,11 @@ class WorkAutomationJobTest extends TestCase
         $this->assertDatabaseMissing('work_automation_jobs', ['id' => $id]);
         $this->assertDatabaseHas('activities', ['club_id' => $club->id, 'type' => 'club.work_automation.deleted']);
 
+        $queued = app(WorkAutomationJobService::class)->enqueue($club, 'reminder', 'queued-deletable', $owner);
+        $this->deleteJson("$path/{$queued->id}")->assertNoContent();
+        $this->assertDatabaseMissing('work_automation_jobs', ['id' => $queued->id]);
+        (new RunWorkAutomationJob($queued->id, $queued->execution_token))->handle(app(WorkAutomationJobService::class));
+
         $completed = app(WorkAutomationJobService::class)->enqueue($club, 'reminder', 'completed-immutable', $owner);
         app(WorkAutomationJobService::class)->run($completed->id);
         $this->patchJson("$path/{$completed->id}", [

@@ -51,6 +51,39 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
       ? _t('noAccess')
       : _t('error');
 
+  String _recipientSummary(AirmiusJson job) {
+    final roles = ((job['recipient_roles'] as List?) ?? []).cast<String>();
+    return roles.isEmpty ? _t('defaultRecipients') : roles.join(', ');
+  }
+
+  String _timeLabel(AirmiusJson job) {
+    final status = '${job['status']}';
+    final key = switch (status) {
+      'scheduled' => 'scheduledFor',
+      'completed' => 'sentAt',
+      'failed' => 'failedAt',
+      'running' => 'started',
+      _ => 'waitingSince',
+    };
+    final value = switch (status) {
+      'scheduled' => job['scheduled_at'],
+      'completed' => job['completed_at'],
+      'failed' => job['failed_at'] ?? job['queued_at'],
+      'running' => job['started_at'] ?? job['queued_at'],
+      _ => job['queued_at'],
+    };
+    return '${_t(key)}: ${_date(value)}';
+  }
+
+  String _statusExplanation(AirmiusJson job) => switch ('${job['status']}') {
+    'scheduled' => _t('scheduledHelp'),
+    'queued' => _t('queuedHelp'),
+    'running' => _t('runningHelp'),
+    'completed' => _t('completedHelp'),
+    'failed' => _t('failedHelp'),
+    _ => '',
+  };
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -329,14 +362,16 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
               : () => _clubId == null ? _initialize() : _load(),
           icon: const Icon(Icons.refresh),
         ),
-        if (_canCreate && _pending == null)
-          IconButton(
-            tooltip: _t('new'),
-            onPressed: _busy ? null : _create,
-            icon: const Icon(Icons.add),
-          ),
       ],
     ),
+    floatingActionButton: _canCreate && _pending == null
+        ? FloatingActionButton.extended(
+            onPressed: _busy ? null : _create,
+            tooltip: _t('new'),
+            icon: const Icon(Icons.add),
+            label: Text(_t('new')),
+          )
+        : null,
     body: RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -431,86 +466,113 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
               padding: const EdgeInsets.all(24),
               child: Text(_t('empty')),
             ),
-          for (final job in _jobs) ...[
-            const Divider(),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('${job['title'] ?? _t(job['kind'])} #${job['id']}'),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${_t(job['status'])} · ${_t('attempts')}: ${job['attempts']}',
-                  ),
-                  Text(_date(job['scheduled_at'] ?? job['queued_at'])),
-                  if (job['error_code'] != null)
-                    Text(
-                      _t(_failureLabel(job['error_code'])),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
+          for (final job in _jobs)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Card(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _details(job),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${job['title'] ?? _t(job['kind'])}',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                            Chip(label: Text(_t(job['status']))),
+                          ],
+                        ),
+                        Text('${_t(job['kind'])} · ${_recipientSummary(job)}'),
+                        const SizedBox(height: 8),
+                        Text(_statusExplanation(job)),
+                        Text(_timeLabel(job)),
+                        if ((job['attempts'] as num? ?? 0) > 0)
+                          Text('${_t('attempts')}: ${job['attempts']}'),
+                        if (job['error_code'] != null)
+                          Text(
+                            _t(_failureLabel(job['error_code'])),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        if (job['can_retry'] != true &&
+                            job['can_edit'] != true &&
+                            job['can_delete'] != true &&
+                            const ['queued', 'running'].contains(job['status']))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              _t('processingLocked'),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        if (job['can_retry'] == true ||
+                            job['can_edit'] == true ||
+                            job['can_delete'] == true)
+                          Wrap(
+                            spacing: 4,
+                            children: [
+                              if (job['can_retry'] == true)
+                                TextButton.icon(
+                                  onPressed: _busy ? null : () => _retry(job),
+                                  icon: const Icon(Icons.replay),
+                                  label: Text(_t('retry')),
+                                ),
+                              if (job['can_edit'] == true)
+                                TextButton.icon(
+                                  onPressed: _busy ? null : () => _edit(job),
+                                  icon: const Icon(Icons.edit_outlined),
+                                  label: Text(_t('edit')),
+                                ),
+                              if (job['can_delete'] == true)
+                                TextButton.icon(
+                                  onPressed: _busy ? null : () => _delete(job),
+                                  icon: const Icon(Icons.delete_outline),
+                                  label: Text(_t('delete')),
+                                ),
+                            ],
+                          ),
+                      ],
                     ),
-                ],
+                  ),
+                ),
               ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _details(job),
             ),
-            if (job['can_retry'] == true)
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: TextButton.icon(
-                  onPressed: _busy ? null : () => _retry(job),
-                  icon: const Icon(Icons.replay),
-                  label: Text(_t('retry')),
+          if (_lastPage > 1)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  tooltip: _t('previous'),
+                  onPressed: _page <= 1 || _loading || _busy
+                      ? null
+                      : () {
+                          _page--;
+                          _load();
+                        },
+                  icon: const Icon(Icons.chevron_left),
                 ),
-              ),
-            if (job['can_edit'] == true || job['can_delete'] == true)
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: Wrap(
-                  children: [
-                    if (job['can_edit'] == true)
-                      TextButton.icon(
-                        onPressed: _busy ? null : () => _edit(job),
-                        icon: const Icon(Icons.edit_outlined),
-                        label: Text(_t('edit')),
-                      ),
-                    if (job['can_delete'] == true)
-                      TextButton.icon(
-                        onPressed: _busy ? null : () => _delete(job),
-                        icon: const Icon(Icons.delete_outline),
-                        label: Text(_t('delete')),
-                      ),
-                  ],
+                Text('$_page / $_lastPage'),
+                IconButton(
+                  tooltip: _t('next'),
+                  onPressed: _page >= _lastPage || _loading || _busy
+                      ? null
+                      : () {
+                          _page++;
+                          _load();
+                        },
+                  icon: const Icon(Icons.chevron_right),
                 ),
-              ),
-          ],
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                tooltip: _t('previous'),
-                onPressed: _page <= 1 || _loading || _busy
-                    ? null
-                    : () {
-                        _page--;
-                        _load();
-                      },
-                icon: const Icon(Icons.chevron_left),
-              ),
-              Text('$_page / $_lastPage'),
-              IconButton(
-                tooltip: _t('next'),
-                onPressed: _page >= _lastPage || _loading || _busy
-                    ? null
-                    : () {
-                        _page++;
-                        _load();
-                      },
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     ),
@@ -724,8 +786,19 @@ class _WorkAutomationCreateDialogState
             ),
             if (_count == null)
               const LinearProgressIndicator()
-            else
+            else ...[
               Text('${_t('recipientCount')}: $_count'),
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    '${_t('preview')}: ${_t(_kind)} · $_count ${_t('people')} · '
+                    '${_scheduled == null ? _t('immediate') : DateFormat.yMd().add_Hm().format(_scheduled!)}',
+                  ),
+                ),
+              ),
+            ],
             if (_error != null)
               Text(
                 _error!,

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Services\WorkAutomationJobService;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
 
@@ -21,7 +22,11 @@ class RunWorkAutomationJob implements ShouldQueue
 
     public function handle(WorkAutomationJobService $service): void
     {
-        $service->run($this->jobId, $this->executionToken);
+        try {
+            $service->run($this->jobId, $this->executionToken);
+        } catch (ModelNotFoundException) {
+            // A manager may remove a queued notification before a worker claims it.
+        }
     }
 
     public function failed(?Throwable $exception): void
