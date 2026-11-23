@@ -15,7 +15,12 @@ import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
 
 class AdminCommerceOperationsScreen extends StatefulWidget {
-  const AdminCommerceOperationsScreen({super.key});
+  const AdminCommerceOperationsScreen({
+    super.key,
+    this.initialSection = 'catalog',
+  });
+
+  final String initialSection;
 
   @override
   State<AdminCommerceOperationsScreen> createState() =>
@@ -25,7 +30,7 @@ class AdminCommerceOperationsScreen extends StatefulWidget {
 class _AdminCommerceOperationsScreenState
     extends State<AdminCommerceOperationsScreen> {
   Future<_CommerceOpsData>? _future;
-  String _section = 'catalog';
+  late String _section = widget.initialSection;
   final Map<String, String> _queries = {};
   final Map<String, TextEditingController> _searches = {};
   final Set<String> _invalidSearches = {};

@@ -233,6 +233,12 @@ final class NotificationRouting
             return self::withAction($data, '/rides?ride='.$rideId, 'airmius://rides/'.$rideId, false);
         }
 
+        $webAction = self::existingWebAction($data);
+        if (str_starts_with($type, 'commerce.order.')
+            && str_ends_with((string) parse_url($webAction ?? '', PHP_URL_PATH), '/admin/commerce')) {
+            return self::withAction($data, $webAction, 'airmius://admin/commerce?tab=orders', false);
+        }
+
         $entityActions = [
             ['training_plan_id', '/training?plan=', 'airmius://training/plans/'],
             ['training_log_id', '/training/logs/', 'airmius://training/logs/'],
