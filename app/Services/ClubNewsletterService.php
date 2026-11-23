@@ -88,11 +88,19 @@ class ClubNewsletterService
                 $sender = $mail->transportFor('security');
             }
             if (! app()->environment('production') || $this->canDeliverConfirmation($sender['mailer'])) {
-                $message = Mail::mailer($sender['mailer'])->raw(
-                    "Bitte bestätige deine Newsletter-Anmeldung für {$club->name}:\n\n{$confirmationUrl}\n\n".
-                    'Wenn du dich nicht angemeldet hast, kannst du diese E-Mail ignorieren.',
+                $message = Mail::mailer($sender['mailer'])->send(
+                    [
+                        'html' => 'emails.club-newsletter-confirmation',
+                        'text' => 'emails.club-newsletter-confirmation-text',
+                    ],
+                    [
+                        'subscriberName' => $subscription->name,
+                        'clubName' => $club->name,
+                        'confirmationUrl' => $confirmationUrl,
+                        'expiresHours' => 24,
+                    ],
                     fn ($message) => $message->from($sender['address'], $sender['name'])
-                        ->to($email)->subject('Newsletter-Anmeldung für '.$club->name.' bestätigen'),
+                        ->to($email)->subject('Bitte bestätige deine Anmeldung – '.$club->name),
                 );
                 $sent = $message !== null || app()->environment('testing');
             }

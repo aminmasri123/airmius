@@ -15,6 +15,28 @@ class PublicClubNewsletterSubscriptionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_confirmation_email_has_a_professional_html_button_and_clickable_fallback_link(): void
+    {
+        $url = 'https://airmius.com/newsletter/bestaetigen/test-token';
+        $html = view('emails.club-newsletter-confirmation', [
+            'subscriberName' => 'Anna Beispiel',
+            'clubName' => 'Verein Test',
+            'confirmationUrl' => $url,
+            'expiresHours' => 24,
+        ])->render();
+        $text = view('emails.club-newsletter-confirmation-text', [
+            'subscriberName' => 'Anna Beispiel',
+            'clubName' => 'Verein Test',
+            'confirmationUrl' => $url,
+            'expiresHours' => 24,
+        ])->render();
+
+        $this->assertStringContainsString('Newsletter-Anmeldung bestätigen', $html);
+        $this->assertSame(2, substr_count($html, 'href="'.$url.'"'));
+        $this->assertStringContainsString('Hallo Anna Beispiel,', $html);
+        $this->assertStringContainsString($url, $text);
+    }
+
     public function test_public_mobile_endpoint_starts_double_opt_in_for_a_listed_verified_club(): void
     {
         Mail::fake();

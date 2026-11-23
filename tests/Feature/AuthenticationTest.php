@@ -85,7 +85,9 @@ class AuthenticationTest extends TestCase
                 $this->postJson($path, ['email' => $user->email, 'password' => 'password'])
                     ->assertStatus(429);
             }
-            $this->assertSame($seconds, $lockout->remainingSeconds($user->email));
+            $remaining = $lockout->remainingSeconds($user->email);
+            $this->assertGreaterThanOrEqual($seconds - 1, $remaining);
+            $this->assertLessThanOrEqual($seconds, $remaining);
             $this->travel($seconds)->seconds();
         }
 

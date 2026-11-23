@@ -413,7 +413,7 @@ class TariffAccountAccessTest extends TestCase
     {
         $user = $this->accountForPlan($slug);
         $existing = $user->clubs()->first();
-        foreach ($existing ? [$slug] : ['free', 'club'] as $clubSlug) {
+        foreach ($existing ? [$slug] : ['free', 'starter', 'club', 'pro', 'elite'] as $clubSlug) {
             $club = $existing ?? Club::factory()->create();
             $club->currentSubscription()->updateOrCreate([], [
                 'subscription_plan_id' => SubscriptionPlan::where('slug', $clubSlug)->firstOrFail()->id,

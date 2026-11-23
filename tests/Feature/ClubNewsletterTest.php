@@ -27,10 +27,15 @@ class ClubNewsletterTest extends TestCase
             ]);
         });
         $club = Club::factory()->create();
-        app(ClubNewsletterService::class)->requestOptIn($club, 'reader@example.org');
+        app(ClubNewsletterService::class)->requestOptIn($club, 'reader@example.org', 'Alex');
         $messages = Mail::mailer('array')->getSymfonyTransport()->messages();
         $this->assertCount(1, $messages);
-        $this->assertSame('support@example.org', $messages->first()->getOriginalMessage()->getFrom()[0]->getAddress());
+        $email = $messages->first()->getOriginalMessage();
+        $this->assertSame('support@example.org', $email->getFrom()[0]->getAddress());
+        $this->assertStringContainsString('Bitte bestätige deine Anmeldung', $email->getSubject());
+        $this->assertStringContainsString('Newsletter-Anmeldung bestätigen', $email->getHtmlBody());
+        $this->assertStringContainsString('<a href="http', $email->getHtmlBody());
+        $this->assertStringContainsString('Hallo Alex,', $email->getTextBody());
     }
 
     public function test_subscriber_table_is_paginated_club_scoped_and_hides_tokens(): void
