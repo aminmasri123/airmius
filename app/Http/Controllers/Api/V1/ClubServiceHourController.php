@@ -102,7 +102,9 @@ class ClubServiceHourController extends Controller
             'replacement_for_user_id' => ['nullable', 'integer', 'exists:users,id', 'different:user_id'],
             'kind' => ['nullable', Rule::in(['service', 'replacement'])],
             'served_on' => ['required', 'date_format:Y-m-d'],
-            'minutes' => ['required', 'integer', 'min:1', 'max:1440'],
+            'start_time' => ['nullable', 'required_with:end_time', 'date_format:H:i'],
+            'end_time' => ['nullable', 'required_with:start_time', 'date_format:H:i', 'different:start_time'],
+            'minutes' => ['required_without:start_time', 'integer', 'min:1', 'max:1440'],
             'title' => ['required', 'string', 'max:160'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'notification_channel' => ['nullable', Rule::in(['none', 'app', 'email', 'app_email'])],
@@ -124,7 +126,7 @@ class ClubServiceHourController extends Controller
             'status' => 'pending',
             'member_response_status' => 'pending',
             'served_on' => $data['served_on'],
-            'minutes' => $data['minutes'],
+            ...$this->recordTimes($data),
             'title' => $data['title'],
             'notes' => $data['notes'] ?? null,
             'notification_channel' => $data['notification_channel'] ?? 'none',
@@ -133,6 +135,20 @@ class ClubServiceHourController extends Controller
         $this->notifyMember($club, $member, $record);
 
         return response()->json(['data' => $this->recordPayload($record)], 201);
+    }
+
+    private function recordTimes(array $data, ?ClubServiceHourRecord $record = null): array
+    {
+        if (empty($data['start_time'])) {
+            $minutes = (int) $data['minutes'];
+            if ($record && $minutes === $record->minutes) {
+                return ['minutes' => $minutes];
+            }
+            return ['start_time' => null, 'end_time' => null, 'minutes' => $minutes];
+        }
+        $toMinutes = static fn (string $time): int => (int) substr($time, 0, 2) * 60 + (int) substr($time, 3);
+        $minutes = ($toMinutes($data['end_time']) - $toMinutes($data['start_time']) + 1440) % 1440;
+        return ['start_time' => $data['start_time'], 'end_time' => $data['end_time'], 'minutes' => $minutes];
     }
 
     public function confirmRecord(Request $request, Club $club, ClubServiceHourRecord $record, ClubServiceHourLedger $ledger)
@@ -232,7 +248,9 @@ class ClubServiceHourController extends Controller
             'replacement_for_user_id' => ['nullable', 'integer', 'exists:users,id', 'different:user_id'],
             'kind' => ['nullable', Rule::in(['service', 'replacement'])],
             'served_on' => ['required', 'date_format:Y-m-d'],
-            'minutes' => ['required', 'integer', 'min:1', 'max:1440'],
+            'start_time' => ['nullable', 'required_with:end_time', 'date_format:H:i'],
+            'end_time' => ['nullable', 'required_with:start_time', 'date_format:H:i', 'different:start_time'],
+            'minutes' => ['required_without:start_time', 'integer', 'min:1', 'max:1440'],
             'title' => ['required', 'string', 'max:160'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'notification_channel' => ['nullable', Rule::in(['none', 'app', 'email', 'app_email'])],
@@ -242,14 +260,14 @@ class ClubServiceHourController extends Controller
             $this->member($club, (int) $data['replacement_for_user_id']);
         }
 
-        $fields = ['user_id', 'replacement_for_user_id', 'kind', 'served_on', 'minutes', 'title', 'notes'];
+        $fields = ['user_id', 'replacement_for_user_id', 'kind', 'served_on', 'start_time', 'end_time', 'minutes', 'title', 'notes'];
         $before = $record->only($fields);
         $record->fill([
             'user_id' => $data['user_id'],
             'replacement_for_user_id' => $data['replacement_for_user_id'] ?? null,
             'kind' => $data['kind'] ?? (empty($data['replacement_for_user_id']) ? 'service' : 'replacement'),
             'served_on' => $data['served_on'],
-            'minutes' => $data['minutes'],
+            ...$this->recordTimes($data, $record),
             'title' => $data['title'],
             'notes' => $data['notes'] ?? null,
             'notification_channel' => $data['notification_channel'] ?? 'none',
@@ -480,6 +498,8 @@ class ClubServiceHourController extends Controller
             'member_response_reason' => $record->member_response_reason,
             'member_responded_at' => $record->member_responded_at?->toJSON(),
             'served_on' => $record->served_on->format('Y-m-d'),
+            'start_time' => $record->start_time,
+            'end_time' => $record->end_time,
             'minutes' => $record->minutes,
             'title' => $record->title,
             'notes' => $record->notes,

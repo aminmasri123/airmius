@@ -203,20 +203,24 @@ class ClubServiceHourLedgerTest extends TestCase
             'period_id' => $period->id,
             'user_id' => $member->id,
             'served_on' => '2026-05-12',
-            'minutes' => 90,
+            'start_time' => '08:15',
+            'end_time' => '09:45',
             'title' => 'Turnieraufbau',
             'notes' => 'Alte Notiz',
-        ])->assertCreated()->json('data.id');
+        ])->assertCreated()->assertJsonPath('data.minutes', 90)->json('data.id');
 
         $this->putJson("/api/v1/clubs/{$club->id}/service-hour-records/{$recordId}", [
             'user_id' => $other->id,
             'served_on' => '2026-05-13',
-            'minutes' => 120,
+            'start_time' => '23:30',
+            'end_time' => '01:30',
             'title' => 'Turnierabbau',
             'notes' => 'Aktualisierte Notiz',
         ])->assertOk()
             ->assertJsonPath('data.user_id', $other->id)
             ->assertJsonPath('data.served_on', '2026-05-13')
+            ->assertJsonPath('data.start_time', '23:30')
+            ->assertJsonPath('data.end_time', '01:30')
             ->assertJsonPath('data.minutes', 120)
             ->assertJsonPath('data.title', 'Turnierabbau')
             ->assertJsonPath('data.notes', 'Aktualisierte Notiz');

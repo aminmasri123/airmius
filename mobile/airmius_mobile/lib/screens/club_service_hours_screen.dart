@@ -11,8 +11,7 @@ List<Map<String, dynamic>> serviceHourContributionPeriods(Object? value) {
       .whereType<Map<String, dynamic>>()
       // The endpoint is contribution-only. Older servers omitted `type`.
       .where(
-        (period) =>
-            period['type'] == null || period['type'] == 'contribution',
+        (period) => period['type'] == null || period['type'] == 'contribution',
       )
       .toList();
 }
@@ -252,9 +251,7 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
       await client.writeClubServiceHours(widget.club.id, resource, result);
       await load();
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(successMessage ?? '$title gespeichert.')),
         );
       }
@@ -298,7 +295,8 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
     choice('user_id', 'Mitglied', items('members'), 'user_id', 'name'),
     _Field('title', 'Tätigkeit'),
     _Field('served_on', 'Datum (TT.MM.JJJJ)', date: true),
-    _Field('minutes', 'Dauer in Minuten', number: true),
+    _Field('start_time', 'Beginnzeit (HH:MM)', time: true),
+    _Field('end_time', 'Endzeit (HH:MM)', time: true),
     _Field('notes', 'Notiz', optional: true),
     _Field(
       'notification_channel',
@@ -332,10 +330,7 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
               initial: '${record['user_id']}',
               options: [
                 for (final member in items('members'))
-                  (
-                    value: '${member['user_id']}',
-                    label: '${member['name']}',
-                  ),
+                  (value: '${member['user_id']}', label: '${member['name']}'),
               ],
             ),
             _Field('title', 'Tätigkeit', initial: '${record['title'] ?? ''}'),
@@ -345,12 +340,24 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
               date: true,
               initial: serviceHourDisplayDate(record['served_on']),
             ),
-            _Field(
-              'minutes',
-              'Dauer in Minuten',
-              number: true,
-              initial: '${record['minutes'] ?? ''}',
-            ),
+            for (final entry in {
+              'start_time': 'Beginnzeit',
+              'end_time': 'Endzeit',
+            }.entries)
+              _Field(
+                entry.key,
+                '${entry.value} (HH:MM)',
+                time: true,
+                optional: record['start_time'] == null,
+                initial: record[entry.key]?.toString(),
+              ),
+            if (record['start_time'] == null)
+              _Field(
+                'minutes',
+                'Dauer in Minuten',
+                number: true,
+                initial: '${record['minutes'] ?? ''}',
+              ),
             _Field(
               'notes',
               'Notiz',
@@ -429,9 +436,9 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
       );
       await load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dienststunde entfernt.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Dienststunde entfernt.')));
       }
     } catch (e) {
       if (mounted) {
@@ -725,7 +732,9 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                       '${record['title']} · ${nameFor(record['user_id'])}',
                     ),
                     subtitle: Text(
-                      '${serviceHourDisplayDate(record['served_on'])} · ${hours(record['minutes'])} · '
+                      '${serviceHourDisplayDate(record['served_on'])} · '
+                      '${record['start_time'] == null ? '' : "${record['start_time']}–${record['end_time']} · "}'
+                      '${hours(record['minutes'])} · '
                       '${record['status'] == 'confirmed' ? 'Bestätigt' : 'Offen'}',
                     ),
                   ),
@@ -749,15 +758,13 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        switch (record['member_response_status'] ?? 'pending') {
-                          'accepted' => 'Rückmeldung: Vom Mitglied bestätigt',
-                          'disputed' =>
-                            'Rückmeldung: Beanstandet${record['member_response_reason'] == null ? '' : ' – ${record['member_response_reason']}'}',
-                          _ => 'Rückmeldung: Ausstehend',
-                        },
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                      child: Text(switch (record['member_response_status'] ??
+                          'pending') {
+                        'accepted' => 'Rückmeldung: Vom Mitglied bestätigt',
+                        'disputed' =>
+                          'Rückmeldung: Beanstandet${record['member_response_reason'] == null ? '' : ' – ${record['member_response_reason']}'}',
+                        _ => 'Rückmeldung: Ausstehend',
+                      }, style: Theme.of(context).textTheme.bodySmall),
                     ),
                   ),
                   for (final correction
@@ -789,10 +796,10 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                           if (record['member_response_status'] == 'accepted')
                             TextButton(
                               onPressed: () => action(
-                                    'Dienst bestätigen',
-                                    'service-hour-records/${record['id']}/confirm',
-                                    [],
-                                  ),
+                                'Dienst bestätigen',
+                                'service-hour-records/${record['id']}/confirm',
+                                [],
+                              ),
                               child: const Text('Endgültig bestätigen'),
                             )
                           else
@@ -808,30 +815,29 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
                               ),
                             ),
                         ],
-                        if (record['status'] == 'confirmed')
-                          ...[
-                            if ((record['corrections'] as List? ?? []).isEmpty)
-                              TextButton.icon(
-                                onPressed: () => unconfirmRecord(record),
-                                icon: const Icon(Icons.undo),
-                                label: const Text('Bestätigung aufheben'),
-                              ),
-                            TextButton(
-                              onPressed: () => action(
-                                'Korrektur',
-                                'service-hour-records/${record['id']}/corrections',
-                                [
-                                  _Field(
-                                    'minutes_delta',
-                                    'Änderung in Minuten (+/−)',
-                                    number: true,
-                                  ),
-                                  _Field('reason', 'Begründung'),
-                                ],
-                              ),
-                              child: const Text('Korrigieren'),
+                        if (record['status'] == 'confirmed') ...[
+                          if ((record['corrections'] as List? ?? []).isEmpty)
+                            TextButton.icon(
+                              onPressed: () => unconfirmRecord(record),
+                              icon: const Icon(Icons.undo),
+                              label: const Text('Bestätigung aufheben'),
                             ),
-                          ],
+                          TextButton(
+                            onPressed: () => action(
+                              'Korrektur',
+                              'service-hour-records/${record['id']}/corrections',
+                              [
+                                _Field(
+                                  'minutes_delta',
+                                  'Änderung in Minuten (+/−)',
+                                  number: true,
+                                ),
+                                _Field('reason', 'Begründung'),
+                              ],
+                            ),
+                            child: const Text('Korrigieren'),
+                          ),
+                        ],
                       ],
                     ),
                   if (AirmiusServicesScope.of(context).authState.user?.id ==
@@ -878,13 +884,14 @@ class _Field {
     this.label, {
     this.number = false,
     this.date = false,
+    this.time = false,
     this.optional = false,
     this.fixed,
     this.initial,
     this.options,
   });
   final String key, label;
-  final bool number, date, optional;
+  final bool number, date, time, optional;
   final int? fixed;
   final String? initial;
   final List<({String value, String label})>? options;
@@ -908,6 +915,14 @@ class _ServiceHourFormState extends State<_ServiceHourForm> {
   final values = <String, String>{};
   bool saving = false;
   String? error;
+
+  int? clockMinutes(String? value) {
+    if (value == null ||
+        !RegExp(r'^(?:[01]\d|2[0-3]):[0-5]\d$').hasMatch(value))
+      return null;
+    return int.parse(value.substring(0, 2)) * 60 +
+        int.parse(value.substring(3));
+  }
 
   @override
   void initState() {
@@ -950,6 +965,52 @@ class _ServiceHourFormState extends State<_ServiceHourForm> {
                   validator: (value) =>
                       value == null ? 'Bitte auswählen.' : null,
                 )
+              else if (field.time)
+                TextFormField(
+                  key: ValueKey('${field.key}-${values[field.key]}'),
+                  initialValue: values[field.key],
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: field.label,
+                    hintText: '08:30',
+                    suffixIcon: const Icon(Icons.schedule),
+                  ),
+                  onTap: () async {
+                    final minutes =
+                        clockMinutes(values[field.key]) ??
+                        clockMinutes(values['start_time']);
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: minutes == null
+                          ? TimeOfDay.now()
+                          : TimeOfDay(
+                              hour: minutes ~/ 60,
+                              minute: minutes % 60,
+                            ),
+                    );
+                    if (time == null || !mounted) return;
+                    setState(
+                      () => values[field.key] =
+                          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                    );
+                  },
+                  validator: (value) {
+                    if (field.optional &&
+                        (value ?? '').isEmpty &&
+                        (values[field.key == 'start_time'
+                                    ? 'end_time'
+                                    : 'start_time'] ??
+                                '')
+                            .isEmpty)
+                      return null;
+                    if (clockMinutes(value) == null)
+                      return 'Bitte eine Uhrzeit von 00:00 bis 23:59 eingeben.';
+                    if (field.key == 'end_time' &&
+                        value == values['start_time'])
+                      return 'Beginn und Ende müssen verschieden sein.';
+                    return null;
+                  },
+                )
               else
                 TextFormField(
                   initialValue: field.initial,
@@ -973,6 +1034,11 @@ class _ServiceHourFormState extends State<_ServiceHourForm> {
                   },
                 ),
             ],
+          if (clockMinutes(values['start_time']) case final int start)
+            if (clockMinutes(values['end_time']) case final int end)
+              Text(
+                'Dauer: ${(end - start + 1440) % 1440} Minuten${end < start ? ' · Ende am Folgetag' : ''}',
+              ),
           const SizedBox(height: 24),
           FilledButton(
             onPressed: saving
@@ -986,8 +1052,8 @@ class _ServiceHourFormState extends State<_ServiceHourForm> {
                       payload[field.key] = field.date
                           ? serviceHourApiDate('$value')
                           : field.number ||
-                              field.fixed != null ||
-                              field.options != null
+                                field.fixed != null ||
+                                field.options != null
                           ? int.tryParse('$value') ?? value
                           : value;
                     }

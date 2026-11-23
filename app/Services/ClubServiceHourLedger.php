@@ -77,6 +77,8 @@ class ClubServiceHourLedger
                     'kind' => $record->kind,
                     'title' => $record->title,
                     'notes' => $record->notes,
+                    'start_time' => $record->start_time,
+                    'end_time' => $record->end_time,
                     'served_on' => $record->served_on->format('Y-m-d'),
                     'minutes' => $record->minutes,
                     'status' => $record->status,
@@ -131,6 +133,8 @@ class ClubServiceHourLedger
                 'confirmed_at' => now(),
                 'confirmation_snapshot' => [
                     'minutes' => (int) $record->minutes,
+                    'start_time' => $record->start_time,
+                    'end_time' => $record->end_time,
                     'served_on' => $record->served_on->format('Y-m-d'),
                     'kind' => $record->kind,
                     'replacement_for_user_id' => $record->replacement_for_user_id,
