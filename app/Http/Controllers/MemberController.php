@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AccountWarning;
 use App\Models\MailDelivery;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Notifications\AccountSuspendedNotification;
 use App\Notifications\InactiveAccountNotice;
@@ -220,6 +221,10 @@ class MemberController extends Controller
         $this->authorize('update', $user);
 
         $canManageRoles = request()->user()->can('assignRoles', $user);
+        $canManageSubscriptions = request()->user()->can('subscriptions.manage');
+        $subscription = $canManageSubscriptions
+            ? $user->currentSubscription()->with('plan:id,name,target_actor')->first()
+            : null;
 
         $payload = [
             'user' => array_merge($user->only([
@@ -234,6 +239,7 @@ class MemberController extends Controller
                 'account_status',
                 'suspended_until',
                 'suspension_reason',
+                'created_at',
             ]), [
                 'birth_date' => $user->birth_date?->toDateString(),
                 'suspended_until' => $user->suspended_until?->toDateTimeString(),
@@ -254,6 +260,19 @@ class MemberController extends Controller
                 ? Permission::query()->orderBy('name')->pluck('name')->values()
                 : [],
             'canManageRoles' => $canManageRoles,
+            'canManageSubscriptions' => $canManageSubscriptions,
+            'subscription' => $canManageSubscriptions ? $subscription : null,
+            'subscriptionPlans' => $canManageSubscriptions
+                ? SubscriptionPlan::query()
+                    ->where('target_actor', '!=', 'verein')
+                    ->where(fn ($query) => $query
+                        ->where('is_active', true)
+                        ->when($subscription, fn ($query) => $query
+                            ->orWhere('id', $subscription->subscription_plan_id)))
+                    ->orderBy('sort_order')
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'target_actor'])
+                : [],
         ];
 
         return request()->expectsJson()

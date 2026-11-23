@@ -12,6 +12,7 @@ use App\Models\Post;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\Sport;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Models\UserRoleApplication;
 use App\Support\AdminTwoFactor;
@@ -58,6 +59,56 @@ class MobilePlatformAdminApiTest extends TestCase
         Sanctum::actingAs($member);
         $this->getJson('/api/v1/admin/members')->assertForbidden();
         $this->putJson("/api/v1/admin/members/{$admin->id}", ['name' => 'No'])->assertForbidden();
+    }
+
+    public function test_native_member_detail_exposes_registration_and_manages_personal_subscription(): void
+    {
+        $admin = $this->systemAdmin(twoFactor: true);
+        $admin->givePermissionTo(Permission::findOrCreate('subscriptions.manage', 'web'));
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+
+        $currentPlan = SubscriptionPlan::query()->create([
+            'slug' => 'member-detail-current',
+            'name' => 'Sportler Basis Test',
+            'target_actor' => 'sportler',
+            'is_active' => true,
+            'sort_order' => 900,
+        ]);
+        $nextPlan = SubscriptionPlan::query()->create([
+            'slug' => 'member-detail-next',
+            'name' => 'Sportler Pro Test',
+            'target_actor' => 'sportler',
+            'is_active' => true,
+            'sort_order' => 901,
+        ]);
+        $member = User::factory()->create(['created_at' => '2026-01-15 12:30:00']);
+        $subscription = $member->subscriptions()->create([
+            'subscription_plan_id' => $currentPlan->id,
+            'status' => 'active',
+            'payment_provider' => 'manual',
+        ]);
+
+        $this->getJson("/api/v1/admin/members/{$member->id}")
+            ->assertOk()
+            ->assertJsonPath('data.user.created_at', fn ($value) => str_starts_with($value, '2026-01-15T'))
+            ->assertJsonPath('data.canManageSubscriptions', true)
+            ->assertJsonPath('data.subscription.id', $subscription->id)
+            ->assertJsonPath('data.subscription.plan.name', 'Sportler Basis Test')
+            ->assertJsonFragment(['name' => 'Sportler Pro Test']);
+
+        $this->putJson("/api/v1/admin/backoffice/users/{$member->id}/subscription", [
+            'user_subscription_id' => $subscription->id,
+            'subscription_plan_id' => $nextPlan->id,
+            'status' => 'active',
+            'payment_provider' => 'manual',
+        ])->assertOk()->assertJsonPath('data.plan.name', 'Sportler Pro Test');
+
+        $this->assertDatabaseHas('user_subscriptions', [
+            'id' => $subscription->id,
+            'user_id' => $member->id,
+            'subscription_plan_id' => $nextPlan->id,
+            'status' => 'active',
+        ]);
     }
 
     public function test_native_club_list_uses_web_filters_and_pagination(): void

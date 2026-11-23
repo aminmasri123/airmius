@@ -425,6 +425,14 @@ class _EditorState extends State<_MemberEditor> {
   List<String> _availableRoles = [];
   Set<String> _roles = {};
   bool _canManageRoles = false;
+  bool _canManageSubscriptions = false;
+  List<Map<String, dynamic>> _subscriptionPlans = [];
+  Map<String, dynamic>? _subscription;
+  int _selectedPlanId = 0;
+  int _originalPlanId = 0;
+  String _subscriptionStatus = 'active';
+  String _originalSubscriptionStatus = 'active';
+  String _registeredAt = '';
   String _visibility = 'private';
   String _suspension = '';
   bool _sendCredentials = false;
@@ -465,6 +473,22 @@ class _EditorState extends State<_MemberEditor> {
     _roles = (user['roles'] as List? ?? []).cast<String>().toSet();
     _availableRoles = (data['availableRoles'] as List? ?? []).cast<String>();
     _canManageRoles = data['canManageRoles'] == true;
+    _registeredAt = formatAirmiusDate(
+      parseAirmiusDate('${user['created_at'] ?? ''}'),
+    );
+    _canManageSubscriptions = data['canManageSubscriptions'] == true;
+    _subscriptionPlans = (data['subscriptionPlans'] as List? ?? [])
+        .whereType<Map>()
+        .map((plan) => Map<String, dynamic>.from(plan))
+        .toList();
+    if (data['subscription'] is Map) {
+      _subscription = Map<String, dynamic>.from(data['subscription'] as Map);
+      _selectedPlanId =
+          (_subscription?['subscription_plan_id'] as num?)?.toInt() ?? 0;
+      _subscriptionStatus = '${_subscription?['status'] ?? 'active'}';
+    }
+    _originalPlanId = _selectedPlanId;
+    _originalSubscriptionStatus = _subscriptionStatus;
   }
 
   Future<void> _save() async {
@@ -511,6 +535,19 @@ class _EditorState extends State<_MemberEditor> {
         }
       } else {
         await _client.adminUpdateMember(widget.id!, payload);
+        if (_canManageSubscriptions &&
+            _selectedPlanId > 0 &&
+            (_selectedPlanId != _originalPlanId ||
+                _subscriptionStatus != _originalSubscriptionStatus)) {
+          await _client.adminAssignUserSubscription(widget.id!, {
+            'user_subscription_id': _subscription?['id'],
+            'subscription_plan_id': _selectedPlanId,
+            'status': _subscriptionStatus,
+            'trial_ends_at': _subscription?['trial_ends_at'],
+            'current_period_ends_at': _subscription?['current_period_ends_at'],
+            'payment_provider': _subscription?['payment_provider'] ?? 'manual',
+          });
+        }
       }
       if (mounted) Navigator.pop(context, true);
     } on AirmiusApiException catch (error) {
@@ -627,7 +664,13 @@ class _EditorState extends State<_MemberEditor> {
                   for (final value in ['private', 'public', 'friends'])
                     DropdownMenuItem(
                       value: value,
-                      child: Text(t(value == 'friends' ? 'privacy.friendsOnly' : 'adminNative.visibility_$value')),
+                      child: Text(
+                        t(
+                          value == 'friends'
+                              ? 'privacy.friendsOnly'
+                              : 'adminNative.visibility_$value',
+                        ),
+                      ),
                     ),
                 ],
                 onChanged: _busy
@@ -643,6 +686,75 @@ class _EditorState extends State<_MemberEditor> {
                       : (value) => setState(() => _sendCredentials = value),
                 ),
               if (widget.id != null) ...[
+                if (_registeredAt.isNotEmpty) ...[
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_month_outlined),
+                    title: Text(t('adminNative.registrationDate')),
+                    subtitle: Text(_registeredAt),
+                  ),
+                  const Divider(),
+                ],
+                if (_canManageSubscriptions) ...[
+                  Text(
+                    t('adminNative.subscription'),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    initialValue: _selectedPlanId,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: t('adminNative.subscriptionPlan'),
+                    ),
+                    items: [
+                      if (_originalPlanId == 0)
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text(t('adminNative.noSubscription')),
+                        ),
+                      for (final plan in _subscriptionPlans)
+                        DropdownMenuItem(
+                          value: (plan['id'] as num).toInt(),
+                          child: Text('${plan['name']}'),
+                        ),
+                    ],
+                    onChanged: _busy
+                        ? null
+                        : (value) =>
+                              setState(() => _selectedPlanId = value ?? 0),
+                  ),
+                  if (_selectedPlanId > 0) ...[
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      initialValue: _subscriptionStatus,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: t('adminNative.subscriptionStatus'),
+                      ),
+                      items: [
+                        for (final status in [
+                          'trialing',
+                          'active',
+                          'past_due',
+                          'cancels_at_period_end',
+                          'cancelled',
+                        ])
+                          DropdownMenuItem(
+                            value: status,
+                            child: Text(t('adminNative.subscription_$status')),
+                          ),
+                      ],
+                      onChanged: _busy
+                          ? null
+                          : (value) => setState(
+                              () => _subscriptionStatus = value ?? 'active',
+                            ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  const Divider(),
+                ],
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
                   initialValue: _suspension,

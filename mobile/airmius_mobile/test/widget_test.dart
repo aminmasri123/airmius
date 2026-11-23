@@ -7918,6 +7918,57 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'native admin member detail shows registration and edits subscription',
+    (tester) async {
+      _setTestViewport(tester, const Size(390, 1100));
+      final transport = _AdminMemberSubscriptionTransport();
+      final container = await _authenticatedWidgetTestContainer(
+        const AirmiusUser(
+          id: 1,
+          name: 'Admin',
+          email: 'admin@example.test',
+          role: 'admin',
+          roles: ['admin'],
+          permissions: [
+            'system.manage',
+            'users.view',
+            'users.edit',
+            'subscriptions.manage',
+          ],
+          twoFactorEnabled: true,
+        ),
+        transport: transport,
+      );
+
+      await _pumpAirmiusWidget(tester, container, const AdminMembersScreen());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Test Member'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Registrierungsdatum'), findsOneWidget);
+      expect(find.text('15.01.2026'), findsOneWidget);
+      expect(find.text('Persönliches Abo'), findsOneWidget);
+      expect(find.text('Sportler Basis Test'), findsOneWidget);
+
+      await tester.tap(find.text('Sportler Basis Test'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sportler Pro Test').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Speichern'));
+      await tester.pumpAndSettle();
+
+      final assignment = transport.requests.singleWhere(
+        (request) =>
+            request.method == 'PUT' &&
+            request.path == '/api/v1/admin/backoffice/users/9/subscription',
+      );
+      expect(assignment.body?['user_subscription_id'], 41);
+      expect(assignment.body?['subscription_plan_id'], 12);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final entry in <(String, Widget, String, String)>[
     (
       'members',
@@ -12984,6 +13035,46 @@ class _RecordingTransport implements AirmiusApiTransport {
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     requests.add(request);
     return response;
+  }
+}
+
+class _AdminMemberSubscriptionTransport implements AirmiusApiTransport {
+  final List<AirmiusApiRequest> requests = <AirmiusApiRequest>[];
+
+  @override
+  Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    requests.add(request);
+    if (request.method == 'GET' && request.path == '/api/v1/admin/members') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"users":{"data":[{"id":9,"name":"Test Member","email":"member@example.test","account_status":"active"}],"last_page":1}}}',
+      );
+    }
+    if (request.method == 'GET' && request.path == '/api/v1/admin/members/9') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"user":{"id":9,"name":"Test Member","first_name":"Test","last_name":"Member","email":"member@example.test","birth_date":null,"profile_visibility":"private","bio":null,"account_status":"active","created_at":"2026-01-15T12:30:00Z","roles":[]},"availableRoles":[],"canManageRoles":false,"canManageSubscriptions":true,"subscription":{"id":41,"subscription_plan_id":11,"status":"active","payment_provider":"manual","trial_ends_at":null,"current_period_ends_at":null,"plan":{"id":11,"name":"Sportler Basis Test","target_actor":"sportler"}},"subscriptionPlans":[{"id":11,"name":"Sportler Basis Test","target_actor":"sportler"},{"id":12,"name":"Sportler Pro Test","target_actor":"sportler"}]}}',
+      );
+    }
+    if (request.method == 'PUT' && request.path == '/api/v1/admin/members/9') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":{"id":9}}',
+      );
+    }
+    if (request.method == 'PUT' &&
+        request.path == '/api/v1/admin/backoffice/users/9/subscription') {
+      return const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":41,"status":"active","plan":{"id":12,"name":"Sportler Pro Test"}}}',
+      );
+    }
+    throw StateError(
+      'Unexpected admin member request: ${request.method} ${request.path}',
+    );
   }
 }
 
