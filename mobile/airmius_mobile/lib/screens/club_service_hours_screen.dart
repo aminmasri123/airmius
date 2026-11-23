@@ -50,6 +50,18 @@ String serviceHourDisplayDate(Object? value) {
   return '${match.group(3)}.${match.group(2)}.${match.group(1)}';
 }
 
+String serviceHourDuration(Object? value) {
+  final minutes = (value as num?)?.round() ?? 0;
+  final sign = minutes < 0 ? '-' : '';
+  final absoluteMinutes = minutes.abs();
+  final wholeHours = absoluteMinutes ~/ 60;
+  final remainingMinutes = absoluteMinutes % 60;
+
+  if (remainingMinutes == 0) return '$sign$wholeHours Std.';
+  if (wholeHours == 0) return '$sign$remainingMinutes Min.';
+  return '$sign$wholeHours Std. $remainingMinutes Min.';
+}
+
 class ServiceHourDateInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -196,8 +208,7 @@ class _ClubServiceHoursScreenState extends State<ClubServiceHoursScreen> {
           .map((m) => '${m['name']}')
           .firstOrNull ??
       'Mitglied #$id';
-  String hours(Object? minutes) =>
-      '${((minutes as num?)?.toDouble() ?? 0) / 60} Std.';
+  String hours(Object? minutes) => serviceHourDuration(minutes);
   bool get locked => items('requirements').any((r) => r['locked'] == true);
 
   Future<void> action(

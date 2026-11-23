@@ -7,6 +7,14 @@ void main() {
     expect(serviceHourDisplayDate('unbekannt'), 'unbekannt');
   });
 
+  test('formats service-hour durations without floating-point artifacts', () {
+    expect(serviceHourDuration(140), '2 Std. 20 Min.');
+    expect(serviceHourDuration(120), '2 Std.');
+    expect(serviceHourDuration(20), '20 Min.');
+    expect(serviceHourDuration(0), '0 Std.');
+    expect(serviceHourDuration(-75), '-1 Std. 15 Min.');
+  });
+
   test('accepts contribution periods from current and older API responses', () {
     final periods = serviceHourContributionPeriods([
       {'id': 1, 'name': 'Beitragsjahr ohne Typ'},
