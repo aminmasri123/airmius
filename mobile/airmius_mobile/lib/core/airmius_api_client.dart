@@ -3990,6 +3990,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> clubNewsletterStatus(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/newsletter/status');
 
+  Future<AirmiusJson> unsubscribeClubNewsletter(int clubId) =>
+      _json('DELETE', '/api/v1/clubs/$clubId/newsletter/subscription');
+
   Future<AirmiusJson> subscribeClubNewsletter({
     required int clubId,
     required String email,

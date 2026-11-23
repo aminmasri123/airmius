@@ -10,6 +10,7 @@ use App\Models\ClubNewsletterSuppression;
 use App\Models\User;
 use App\Support\EmailTemplate;
 use App\Support\TransactionalMail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -130,15 +131,38 @@ class ClubNewsletterService
 
     public function statusFor(Club $club, User $user): array
     {
-        $subscription = ClubNewsletterSubscription::query()
+        return $this->accountStatus($this->subscriptionsFor($club, $user)->first());
+    }
+
+    public function unsubscribeFor(Club $club, User $user): array
+    {
+        return DB::transaction(function () use ($club, $user): array {
+            $subscription = $this->subscriptionsFor($club, $user)->lockForUpdate()->first();
+
+            if ($subscription?->status === 'confirmed') {
+                $this->markUnsubscribed($subscription, 'unsubscribe');
+            }
+
+            return $this->accountStatus($subscription);
+        });
+    }
+
+    /** @return Builder<ClubNewsletterSubscription> */
+    private function subscriptionsFor(Club $club, User $user): Builder
+    {
+        return ClubNewsletterSubscription::query()
             ->where('club_id', $club->id)
             ->where(function ($query) use ($user): void {
-                $query->where('user_id', $user->id)
-                    ->orWhere('email', Str::lower(trim($user->email)));
+                $query->where('user_id', $user->id);
+                if ($user->hasVerifiedEmail()) {
+                    $query->orWhere('email', Str::lower(trim($user->email)));
+                }
             })
-            ->latest('id')
-            ->first();
+            ->latest('id');
+    }
 
+    private function accountStatus(?ClubNewsletterSubscription $subscription): array
+    {
         return [
             ...$this->confirmationStatus($subscription),
             'email' => $subscription?->status === 'pending' ? $subscription->email : null,
@@ -219,16 +243,29 @@ class ClubNewsletterService
             return null;
         }
 
-        DB::transaction(function () use ($subscription, $reason): void {
-            $subscription->forceFill([
-                'status' => 'unsubscribed',
-                'unsubscribed_at' => $subscription->unsubscribed_at ?? now(),
-            ])->save();
-
-            $this->suppress($subscription->club_id, $subscription->email, $reason);
-        });
+        DB::transaction(fn () => $this->markUnsubscribed($subscription, $reason));
 
         return $subscription->fresh();
+    }
+
+    private function markUnsubscribed(ClubNewsletterSubscription $subscription, string $reason): void
+    {
+        $subscription->forceFill([
+            'status' => 'unsubscribed',
+            'unsubscribed_at' => $subscription->unsubscribed_at ?? now(),
+        ])->save();
+
+        if ($reason === 'unsubscribe') {
+            $suppression = ClubNewsletterSuppression::query()
+                ->where('club_id', $subscription->club_id)
+                ->where('email', $subscription->email)
+                ->lockForUpdate()->first();
+            if (in_array($suppression?->reason, ['hard_bounce', 'complaint'], true)) {
+                return;
+            }
+        }
+
+        $this->suppress($subscription->club_id, $subscription->email, $reason);
     }
 
     public function suppress(int $clubId, string $email, string $reason = 'manual', array $metadata = []): ClubNewsletterSuppression

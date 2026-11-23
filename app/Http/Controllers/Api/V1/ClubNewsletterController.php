@@ -44,9 +44,12 @@ class ClubNewsletterController extends Controller
 
     public function status(Request $request, Club $club)
     {
-        abort_unless($club->verification_status === 'verified' && $club->is_listed, 404);
+        return $this->accountStatusResponse($club, $this->newsletters->statusFor($club, $request->user()));
+    }
 
-        return response()->json(['data' => $this->newsletters->statusFor($club, $request->user())]);
+    public function unsubscribeMine(Request $request, Club $club)
+    {
+        return $this->accountStatusResponse($club, $this->newsletters->unsubscribeFor($club, $request->user()));
     }
 
     public function subscribers(Request $request, Club $club)
@@ -125,6 +128,13 @@ class ClubNewsletterController extends Controller
             'status' => $delivery->status,
             'bounce_type' => $delivery->bounce_type,
         ]]);
+    }
+
+    private function accountStatusResponse(Club $club, array $status)
+    {
+        abort_unless($status['status'] !== 'none' || ($club->verification_status === 'verified' && $club->is_listed), 404);
+
+        return response()->json(['data' => $status]);
     }
 
     private function authorizeManage(Request $request, Club $club): void

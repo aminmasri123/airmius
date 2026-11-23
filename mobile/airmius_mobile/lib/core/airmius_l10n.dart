@@ -22922,6 +22922,10 @@ final _guestClubLabelsEn = {
   'guestClubs.interested': 'Ask about this club',
   'guestClubs.openProfile': 'Open club profile',
   'guestClubs.newsletterAction': 'Subscribe to newsletter',
+  'guestClubs.newsletterUnsubscribe': 'Unsubscribe from newsletter',
+  'guestClubs.newsletterUnsubscribed': 'You unsubscribed from the newsletter.',
+  'guestClubs.newsletterUnsubscribeError':
+      'Could not unsubscribe from the newsletter. Please try again.',
   'guestClubs.newsletterTitle': 'Club newsletter',
   'guestClubs.newsletterBody':
       'Enter your email address. The subscription only starts after you confirm the email link.',
@@ -22975,6 +22979,10 @@ final _guestClubLabelsDe = {
   'guestClubs.interested': 'Nach diesem Verein fragen',
   'guestClubs.openProfile': 'Vereinsprofil öffnen',
   'guestClubs.newsletterAction': 'Newsletter abonnieren',
+  'guestClubs.newsletterUnsubscribe': 'Newsletter deabonnieren',
+  'guestClubs.newsletterUnsubscribed': 'Du hast den Newsletter deabonniert.',
+  'guestClubs.newsletterUnsubscribeError':
+      'Die Abmeldung vom Newsletter ist fehlgeschlagen. Bitte versuche es erneut.',
   'guestClubs.newsletterTitle': 'Vereinsnewsletter',
   'guestClubs.newsletterBody':
       'Trage deine E-Mail-Adresse ein. Die Anmeldung wird erst nach dem Klick auf den Bestätigungslink aktiv.',
@@ -23027,6 +23035,10 @@ final _guestClubLabelsFr = {
   'guestClubs.interested': 'Demander des informations',
   'guestClubs.openProfile': 'Ouvrir le profil du club',
   'guestClubs.newsletterAction': 'S’abonner à la newsletter',
+  'guestClubs.newsletterUnsubscribe': 'Se désabonner de la newsletter',
+  'guestClubs.newsletterUnsubscribed': 'Tu es désabonné de la newsletter.',
+  'guestClubs.newsletterUnsubscribeError':
+      'Impossible de se désabonner de la newsletter. Réessaie.',
   'guestClubs.newsletterTitle': 'Newsletter du club',
   'guestClubs.newsletterBody':
       'Saisissez votre adresse e-mail. L’inscription ne devient active qu’après confirmation du lien reçu.',
@@ -23079,6 +23091,10 @@ final _guestClubLabelsAr = {
   'guestClubs.interested': 'اسأل عن النادي',
   'guestClubs.openProfile': 'فتح ملف النادي',
   'guestClubs.newsletterAction': 'الاشتراك في النشرة',
+  'guestClubs.newsletterUnsubscribe': 'إلغاء الاشتراك في النشرة',
+  'guestClubs.newsletterUnsubscribed': 'تم إلغاء اشتراكك في النشرة.',
+  'guestClubs.newsletterUnsubscribeError':
+      'تعذّر إلغاء الاشتراك في النشرة. حاول مرة أخرى.',
   'guestClubs.newsletterTitle': 'نشرة النادي',
   'guestClubs.newsletterBody':
       'أدخل بريدك الإلكتروني. لا يصبح الاشتراك فعالاً إلا بعد تأكيد الرابط المرسل.',

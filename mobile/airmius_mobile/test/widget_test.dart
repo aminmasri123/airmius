@@ -2021,6 +2021,89 @@ void main() {
     },
   );
 
+  testWidgets('club profile updates its newsletter action after unsubscribing', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    const statusPath = '/api/v1/clubs/8/newsletter/status';
+    const subscriptionPath = '/api/v1/clubs/8/newsletter/subscription';
+    const confirmed = AirmiusApiResponse(
+      statusCode: 200,
+      body: '{"data":{"status":"confirmed"}}',
+    );
+    const unsubscribed = AirmiusApiResponse(
+      statusCode: 200,
+      body: '{"data":{"status":"unsubscribed"}}',
+    );
+    final transport = _SequencedTransport(
+      [confirmed, confirmed, unsubscribed],
+      responsesByPath: {
+        '/api/v1/clubs/8': const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":{"id":8,"name":"Airmius Running Club","city":"Berlin"}}',
+        ),
+        subscriptionPath: unsubscribed,
+      },
+    );
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 7,
+        name: 'Sam Sportler',
+        email: 'sam@example.test',
+        role: 'athlete',
+      ),
+      transport: transport,
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      container,
+      const ClubProfileScreen(
+        club: ClubSummary(
+          id: 8,
+          name: 'Airmius Running Club',
+          city: 'Berlin',
+          members: 0,
+          teams: 0,
+          posts: 0,
+          acceptsMemberships: true,
+          hasPendingMembershipRequest: false,
+          isMember: false,
+          verified: true,
+        ),
+        requested: false,
+        onRequest: _noopClubChange,
+        onWithdraw: _noopClubChange,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final unsubscribe = find.text('Newsletter deabonnieren');
+    expect(unsubscribe, findsOneWidget);
+    expect(find.text('Newsletter abonnieren'), findsNothing);
+    await tester.tap(unsubscribe);
+    await tester.pumpAndSettle();
+    expect(find.byType(ClubNewsletterScreen), findsOneWidget);
+    expect(transport.requests.where((r) => r.path == subscriptionPath), isEmpty);
+
+    await tester.tap(unsubscribe);
+    await tester.pumpAndSettle();
+    expect(find.text('Du hast den Newsletter deabonniert.'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Newsletter abonnieren'), findsOneWidget);
+    expect(unsubscribe, findsNothing);
+    expect(transport.requests.where((r) => r.path == statusPath), hasLength(3));
+    final request = transport.requests.singleWhere(
+      (request) => request.path == subscriptionPath,
+    );
+    expect(request.method, 'DELETE');
+    expect(
+      request.headers,
+      containsPair('Authorization', 'Bearer role-test-token'),
+    );
+  });
+
   testWidgets('guest jobs navigation renders live public recruiting data', (
     WidgetTester tester,
   ) async {

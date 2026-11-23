@@ -226,6 +226,8 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
         path.startsWith('/api/v1/admin/support/tickets') ||
         path.startsWith('/api/v1/admin/commerce/coupons') ||
         path == '/api/v1/country-catalog' ||
+        path.endsWith('/newsletter/status') ||
+        path.endsWith('/newsletter/subscription') ||
         RegExp(r'^/api/v1/clubs/\d+(/deletion)?$').hasMatch(path) &&
             request.method == 'DELETE' ||
         RegExp(

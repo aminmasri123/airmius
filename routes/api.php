@@ -304,6 +304,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::middleware(['auth:sanctum', EnsureGuardianConsentResolved::class, EnsureIdempotentApiRequest::class, EnsureApiProcessingPurpose::class])->group(function () {
         Route::get('/clubs/{club}/newsletter/status', [ClubNewsletterController::class, 'status'])
             ->name('clubs.newsletter.status');
+        Route::delete('/clubs/{club}/newsletter/subscription', [ClubNewsletterController::class, 'unsubscribeMine'])
+            ->name('clubs.newsletter.subscription.destroy');
         Route::middleware(PlanningNoStore::class)->group(function () {
             require __DIR__.'/planning-api.php';
         });

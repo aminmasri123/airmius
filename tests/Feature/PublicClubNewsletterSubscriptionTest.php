@@ -133,6 +133,7 @@ class PublicClubNewsletterSubscriptionTest extends TestCase
 
     public function test_confirmation_transport_failure_is_reported_to_the_mobile_app(): void
     {
+        $this->freezeSecond();
         Mail::shouldReceive('mailer')->once()->andThrow(new \RuntimeException('Transport unavailable'));
         $club = Club::factory()->create(['verification_status' => 'verified', 'is_listed' => true]);
 
@@ -163,5 +164,49 @@ class PublicClubNewsletterSubscriptionTest extends TestCase
         $this->getJson("/api/v1/clubs/{$club->id}/newsletter/status")
             ->assertOk()
             ->assertJsonPath('data.status', 'confirmed');
+    }
+
+    public function test_verified_email_owner_can_unsubscribe_from_a_legacy_subscription(): void
+    {
+        $user = User::factory()->create(['email' => 'reader@gmail.com']);
+        $club = Club::factory()->create(['verification_status' => 'verified', 'is_listed' => false]);
+        $subscription = ClubNewsletterSubscription::query()->create([
+            'club_id' => $club->id,
+            'email' => $user->email,
+            'status' => 'confirmed',
+            'confirmed_at' => now(),
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/newsletter/status")
+            ->assertOk()->assertJsonPath('data.status', 'confirmed');
+        $url = "/api/v1/clubs/{$club->id}/newsletter/subscription";
+        $this->deleteJson($url)->assertOk()->assertJsonPath('data.status', 'unsubscribed');
+        $this->deleteJson($url)->assertOk()->assertJsonPath('data.status', 'unsubscribed');
+
+        $this->assertNotNull($subscription->fresh()->unsubscribed_at);
+        $this->assertDatabaseHas('club_newsletter_suppressions', [
+            'club_id' => $club->id,
+            'email' => $user->email,
+            'reason' => 'unsubscribe',
+        ]);
+    }
+
+    public function test_unverified_email_does_not_grant_control_of_a_legacy_subscription(): void
+    {
+        $user = User::factory()->unverified()->create(['email' => 'reader@gmail.com']);
+        $club = Club::factory()->create(['verification_status' => 'verified', 'is_listed' => true]);
+        $subscription = ClubNewsletterSubscription::query()->create([
+            'club_id' => $club->id,
+            'email' => $user->email,
+            'status' => 'confirmed',
+            'confirmed_at' => now(),
+        ]);
+        $url = "/api/v1/clubs/{$club->id}/newsletter/subscription";
+        $this->deleteJson($url)->assertUnauthorized();
+        Sanctum::actingAs($user);
+        $this->deleteJson($url)->assertOk()->assertJsonPath('data.status', 'none');
+
+        $this->assertSame('confirmed', $subscription->fresh()->status);
     }
 }

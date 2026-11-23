@@ -28,6 +28,7 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
   bool _sending = false;
   bool _loadingStatus = false;
   bool _initialized = false;
+  bool _canUnsubscribe = false;
   String _status = 'none';
   String? _emailError;
   String? _submitError;
@@ -58,7 +59,8 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
   }
 
   Future<void> _submit() async {
-    if (_sending ||
+    if (_loadingStatus ||
+        _sending ||
         (_status == 'pending' && (_waitingToResend || _supportRequired))) {
       return;
     }
@@ -95,6 +97,43 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
     }
   }
 
+  Future<void> _unsubscribe() async {
+    final services = AirmiusServicesScope.of(context);
+    final session = services.authState.session;
+    if (_sending || !_canUnsubscribe || session == null) return;
+    setState(() {
+      _sending = true;
+      _submitError = null;
+    });
+    try {
+      final response = await services
+          .clientForSession(session)
+          .unsubscribeClubNewsletter(widget.clubId);
+      if (!mounted) return;
+      final data = response['data'];
+      if (data is! Map<String, dynamic> || data['status'] is! String) {
+        throw const FormatException('Missing newsletter status');
+      }
+      setState(() {
+        _sending = false;
+        _consent = false;
+        _updateStatus(data);
+        _canUnsubscribe = _status == 'confirmed';
+      });
+      if (_status == 'unsubscribed') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(t('guestClubs.newsletterUnsubscribed'))),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _sending = false;
+        _submitError = t('guestClubs.newsletterUnsubscribeError');
+      });
+    }
+  }
+
   Future<void> _loadStatus() async {
     setState(() => _loadingStatus = true);
     try {
@@ -103,7 +142,10 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
           .clientForSession(services.authState.session)
           .clubNewsletterStatus(widget.clubId);
       if (!mounted) return;
-      setState(() => _updateStatus(response['data']));
+      setState(() {
+        _updateStatus(response['data']);
+        _canUnsubscribe = _status == 'confirmed';
+      });
     } catch (_) {
       // The form remains available if the optional status lookup fails.
     } finally {
@@ -164,6 +206,19 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
               body: t('guestClubs.newsletterConfirmedBody'),
               color: Theme.of(context).colorScheme.secondary,
             ),
+            if (_canUnsubscribe) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _sending ? null : _unsubscribe,
+                icon: const Icon(Icons.unsubscribe_outlined),
+                label: Text(t('guestClubs.newsletterUnsubscribe')),
+              ),
+              if (_submitError case final error?)
+                Text(
+                  error,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+            ],
           ] else if (_status == 'pending') ...[
             _StatusPanel(
               icon: Icons.mark_email_unread_outlined,
@@ -252,7 +307,9 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
             ],
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: _sending || !_consent ? null : _submit,
+              onPressed: _loadingStatus || _sending || !_consent
+                  ? null
+                  : _submit,
               child: Text(
                 _sending
                     ? t('guestClubs.newsletterSending')

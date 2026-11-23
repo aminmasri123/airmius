@@ -3129,9 +3129,11 @@ class ClubProfileScreen extends StatefulWidget {
   State<ClubProfileScreen> createState() => _ClubProfileScreenState();
 }
 
-class _ClubProfileScreenState extends State<ClubProfileScreen> {
+class _ClubProfileScreenState extends State<ClubProfileScreen>
+    with WidgetsBindingObserver {
   String _activeTab = 'struktur';
   Future<ClubSummary>? _clubDetailFuture;
+  Future<bool>? _newsletterStatusFuture;
   bool? _requestStatusOverride;
   bool? _followingOverride;
   bool? _blockedOverride;
@@ -3142,15 +3144,74 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
   ClubSummary get club => widget.club;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _clubDetailFuture ??= _loadClubDetail();
+    _newsletterStatusFuture ??= _loadNewsletterStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        ModalRoute.of(context)?.isCurrent == true) {
+      _refreshNewsletterStatus();
+    }
   }
 
   Future<ClubSummary> _loadClubDetail() async {
     final services = AirmiusServicesScope.of(context);
     final detail = await services.repositories.clubs.club(widget.club.id);
     return ClubSummary.fromAirmiusClub(detail);
+  }
+
+  Future<bool> _loadNewsletterStatus() async {
+    final services = AirmiusServicesScope.of(context);
+    final session = services.authState.session;
+    if (session == null) return false;
+    final response = await services
+        .clientForSession(session)
+        .clubNewsletterStatus(club.id);
+    final data = response['data'];
+    return data is Map<String, dynamic> && data['status'] == 'confirmed';
+  }
+
+  void _refreshNewsletterStatus() {
+    final statusFuture = _loadNewsletterStatus();
+    setState(() {
+      _newsletterStatusFuture = statusFuture;
+    });
+  }
+
+  Future<void> _openNewsletter(ClubSummary profileClub) async {
+    final sent = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ClubNewsletterScreen(
+          clubId: profileClub.id,
+          canManage: profileClub.canPublishAnnouncements,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    _refreshNewsletterStatus();
+    if (sent == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AirmiusScope.of(context).t('guestClubs.newsletterSent')),
+        ),
+      );
+    }
   }
 
   @override
@@ -3250,24 +3311,33 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
                   onVolunteerProfile: profileClub.isMember
                       ? () => _openVolunteerProfile(profileClub)
                       : null,
-                  onNewsletter: () async {
-                    final sent = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            ClubNewsletterScreen(clubId: profileClub.id, canManage: profileClub.canPublishAnnouncements),
-                      ),
-                    );
-                    if (!context.mounted || sent != true) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          AirmiusScope.of(
-                            context,
-                          ).t('guestClubs.newsletterSent'),
+                  newsletterAction: FutureBuilder<bool>(
+                    future: _newsletterStatusFuture,
+                    builder: (context, status) {
+                      final subscribed = status.data == true;
+                      final loading =
+                          !status.hasData &&
+                          status.connectionState == ConnectionState.waiting;
+                      return AirmiusButton(
+                        label: t(
+                          loading
+                              ? 'clubs.memberHome.loading'
+                              : subscribed
+                              ? 'guestClubs.newsletterUnsubscribe'
+                              : status.hasError
+                              ? 'guestClubs.newsletterTitle'
+                              : 'guestClubs.newsletterAction',
                         ),
-                      ),
-                    );
-                  },
+                        icon: subscribed
+                            ? Icons.unsubscribe_outlined
+                            : Icons.mark_email_unread_outlined,
+                        secondary: true,
+                        onPressed: loading
+                            ? null
+                            : () => _openNewsletter(profileClub),
+                      );
+                    },
+                  ),
                 );
               },
             ),
@@ -3800,7 +3870,7 @@ class _ClubProfileHero extends StatelessWidget {
     required this.onUnblock,
     required this.onReport,
     required this.onVolunteerProfile,
-    required this.onNewsletter,
+    required this.newsletterAction,
   });
 
   final ClubSummary club;
@@ -3821,7 +3891,7 @@ class _ClubProfileHero extends StatelessWidget {
   final VoidCallback? onUnblock;
   final VoidCallback? onReport;
   final VoidCallback? onVolunteerProfile;
-  final VoidCallback onNewsletter;
+  final Widget newsletterAction;
 
   @override
   Widget build(BuildContext context) {
@@ -3975,12 +4045,7 @@ class _ClubProfileHero extends StatelessWidget {
                           secondary: true,
                           onPressed: onVolunteerProfile,
                         ),
-                      AirmiusButton(
-                        label: scope.t('guestClubs.newsletterAction'),
-                        icon: Icons.mark_email_unread_outlined,
-                        secondary: true,
-                        onPressed: onNewsletter,
-                      ),
+                      newsletterAction,
                       if (onRequestTermination != null)
                         AirmiusButton(
                           label: scope.t('clubs.requestTermination'),
@@ -4017,12 +4082,7 @@ class _ClubProfileHero extends StatelessWidget {
                           icon: Icons.assignment_outlined,
                           onPressed: onJoin,
                         ),
-                      AirmiusButton(
-                        label: scope.t('guestClubs.newsletterAction'),
-                        icon: Icons.mark_email_unread_outlined,
-                        secondary: true,
-                        onPressed: onNewsletter,
-                      ),
+                      newsletterAction,
                     ],
                   ),
               ],
