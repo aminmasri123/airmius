@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_services_scope.dart';
 import 'planning_widgets.dart';
+import 'volunteer_shift_task_planner_suite_screen.dart';
 
 class FamilyCalendarScreen extends StatefulWidget {
   const FamilyCalendarScreen({super.key});
@@ -245,6 +246,11 @@ class _FamilyCalendarScreenState extends State<FamilyCalendarScreen> {
       (person == 'self'
           ? e['child_user_id'] == null
           : '${e['child_user_id']}:${e['club_id']}' == person);
+  bool visibleService(AirmiusJson e) =>
+      person == null ||
+      (person == 'self'
+          ? e['person_id'] == (data['self'] as Map)['id']
+          : '${e['person_id']}' == person!.split(':').first);
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -348,6 +354,39 @@ class _FamilyCalendarScreenState extends State<FamilyCalendarScreen> {
                         icon: const Icon(Icons.how_to_reg_outlined),
                       )
                     : const Icon(Icons.lock_outline),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Text('Dienste', style: Theme.of(context).textTheme.titleMedium),
+            if (planningRows(data['services']).where(visibleService).isEmpty)
+              Text(t('empty')),
+            for (final service in planningRows(
+              data['services'],
+            ).where(visibleService)) ...[
+              const Divider(),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.volunteer_activism_outlined),
+                title: Text('${service['title']}'),
+                subtitle: Text(
+                  '${service['person_name']} · ${planningTime(service['starts_at'])} – ${planningTime(service['ends_at'])}\n'
+                  '${service['club_name'] ?? ''}${service['location'] == null ? '' : ' · ${service['location']}'}',
+                ),
+                trailing: Chip(
+                  label: Text(
+                    service['slot_type'] == 'reserve' ? 'Ersatz' : 'Helfer',
+                  ),
+                ),
+                onTap: () {
+                  final clubId = planningId(service['club_id']);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => VolunteerShiftTaskPlannerSuiteScreen(
+                        initialClubId: clubId,
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
             const SizedBox(height: 16),

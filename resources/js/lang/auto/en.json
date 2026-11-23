@@ -3815,7 +3815,18 @@
     "Anwesenheit erfassen": "Record attendance",
     "Anwesend": "Present",
     "Abwesend": "Absent",
-    "Anwesende Person auswählen": "Select an attendee"
+    "Anwesende Person auswählen": "Select an attendee",
+    "Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen und externe Gäste erhalten kein Stimmrecht in bestehenden Abstimmungen.": "Attendance and voting rights are separate. Added people and external guests do not receive voting rights in existing votes.",
+    "Vereinsperson auswählen": "Select a club member",
+    "Vereinsperson nachtragen": "Add club member",
+    "Externen Gast hinzufügen": "Add external guest",
+    "Name *": "Name *",
+    "Organisation": "Organization",
+    "E-Mail (optional)": "Email (optional)",
+    "Der Gast wird nur für diese Sitzung dokumentiert, erhält keinen Vereinszugriff und standardmäßig kein Stimmrecht.": "The guest is documented for this meeting only, receives no club access and has no voting rights by default.",
+    "Als anwesend hinzufügen": "Add as present",
+    "z. B. Rechtsanwalt": "e.g. lawyer",
+    "z. B. Kanzlei Müller": "e.g. Müller law firm"
   },
   "auto_patterns": [
     {

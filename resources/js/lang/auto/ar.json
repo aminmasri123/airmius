@@ -3815,7 +3815,18 @@
     "Anwesenheit erfassen": "تسجيل الحضور",
     "Anwesend": "حاضر",
     "Abwesend": "غائب",
-    "Anwesende Person auswählen": "اختيار شخص حاضر"
+    "Anwesende Person auswählen": "اختيار شخص حاضر",
+    "Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen und externe Gäste erhalten kein Stimmrecht in bestehenden Abstimmungen.": "الحضور وحق التصويت منفصلان. لا يحصل الأشخاص المضافون والضيوف الخارجيون على حق التصويت في عمليات التصويت القائمة.",
+    "Vereinsperson auswählen": "اختيار عضو من النادي",
+    "Vereinsperson nachtragen": "إضافة عضو من النادي",
+    "Externen Gast hinzufügen": "إضافة ضيف خارجي",
+    "Name *": "الاسم *",
+    "Organisation": "المنظمة",
+    "E-Mail (optional)": "البريد الإلكتروني (اختياري)",
+    "Der Gast wird nur für diese Sitzung dokumentiert, erhält keinen Vereinszugriff und standardmäßig kein Stimmrecht.": "يُسجَّل الضيف لهذا الاجتماع فقط، ولا يحصل على صلاحية دخول إلى النادي ولا على حق التصويت افتراضياً.",
+    "Als anwesend hinzufügen": "إضافة كحاضر",
+    "z. B. Rechtsanwalt": "مثلاً محامٍ",
+    "z. B. Kanzlei Müller": "مثلاً مكتب مولر للمحاماة"
   },
   "auto_patterns": [
     {

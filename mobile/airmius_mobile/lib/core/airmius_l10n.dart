@@ -22935,6 +22935,12 @@ final _guestClubLabelsEn = {
   'guestClubs.newsletterSent':
       'Request processed. If confirmation is required, you will receive an email. Please also check your spam folder.',
   'guestClubs.newsletterPendingTitle': 'Confirmation pending',
+  'guestClubs.newsletterCheckInbox': 'Open the confirmation link in your inbox or spam folder.',
+  'guestClubs.newsletterDeliveryFailed': 'The confirmation email could not be sent. You can try again after five minutes.',
+  'guestClubs.newsletterResend': 'Resend confirmation email',
+  'guestClubs.newsletterResendWait': 'Resend available after five minutes',
+  'guestClubs.newsletterContactSupport': 'Contact support',
+  'guestClubs.newsletterResendUnavailable': 'If the email is missing, contact support.',
   'guestClubs.newsletterPendingBody':
       'A confirmation email has already been requested. Open the link in your inbox. Another tap will not immediately send another email.',
   'guestClubs.newsletterConfirmedTitle': 'Newsletter subscribed ✓',
@@ -22982,6 +22988,12 @@ final _guestClubLabelsDe = {
   'guestClubs.newsletterSent':
       'Anfrage verarbeitet. Falls eine Bestätigung nötig ist, erhältst du eine E-Mail. Bitte prüfe auch den Spam-Ordner.',
   'guestClubs.newsletterPendingTitle': 'Bestätigung ausstehend',
+  'guestClubs.newsletterCheckInbox': 'Öffne den Bestätigungslink im Posteingang oder Spamordner.',
+  'guestClubs.newsletterDeliveryFailed': 'Die Bestätigungsmail konnte nicht gesendet werden. Du kannst es nach fünf Minuten erneut versuchen.',
+  'guestClubs.newsletterResend': 'Bestätigungsmail erneut senden',
+  'guestClubs.newsletterResendWait': 'Erneut senden nach fünf Minuten',
+  'guestClubs.newsletterContactSupport': 'Support kontaktieren',
+  'guestClubs.newsletterResendUnavailable': 'Falls die E-Mail fehlt, wende dich an den Support.',
   'guestClubs.newsletterPendingBody':
       'Die Bestätigungsmail wurde bereits angefordert. Öffne den Link in deinem E-Mail-Postfach. Ein weiterer Klick versendet nicht sofort eine neue E-Mail.',
   'guestClubs.newsletterConfirmedTitle': 'Newsletter abonniert ✓',
@@ -23028,6 +23040,12 @@ final _guestClubLabelsFr = {
   'guestClubs.newsletterSent':
       'Demande traitée. Si une confirmation est nécessaire, vous recevrez un e-mail. Vérifiez aussi les courriers indésirables.',
   'guestClubs.newsletterPendingTitle': 'Confirmation en attente',
+  'guestClubs.newsletterCheckInbox': 'Ouvre le lien de confirmation dans ta boîte de réception ou dans les courriers indésirables.',
+  'guestClubs.newsletterDeliveryFailed': 'Le courriel de confirmation n’a pas pu être envoyé. Réessaie après cinq minutes.',
+  'guestClubs.newsletterResend': 'Renvoyer le courriel de confirmation',
+  'guestClubs.newsletterResendWait': 'Renvoi possible après cinq minutes',
+  'guestClubs.newsletterContactSupport': 'Contacter le support',
+  'guestClubs.newsletterResendUnavailable': 'Si tu n’as pas reçu le courriel, contacte le support.',
   'guestClubs.newsletterPendingBody':
       'Un e-mail de confirmation a déjà été demandé. Ouvrez le lien reçu. Un nouveau clic n’envoie pas immédiatement un autre e-mail.',
   'guestClubs.newsletterConfirmedTitle': 'Newsletter confirmée ✓',
@@ -23074,6 +23092,12 @@ final _guestClubLabelsAr = {
   'guestClubs.newsletterSent':
       'تمت معالجة الطلب. إذا كان التأكيد مطلوباً فستصلك رسالة. تحقق أيضاً من مجلد الرسائل غير المرغوب فيها.',
   'guestClubs.newsletterPendingTitle': 'التأكيد قيد الانتظار',
+  'guestClubs.newsletterCheckInbox': 'افتح رابط التأكيد في صندوق الوارد أو مجلد البريد غير المرغوب فيه.',
+  'guestClubs.newsletterDeliveryFailed': 'تعذّر إرسال رسالة التأكيد. يمكنك المحاولة مجددًا بعد خمس دقائق.',
+  'guestClubs.newsletterResend': 'إعادة إرسال رسالة التأكيد',
+  'guestClubs.newsletterResendWait': 'إعادة الإرسال متاحة بعد خمس دقائق',
+  'guestClubs.newsletterContactSupport': 'التواصل مع الدعم',
+  'guestClubs.newsletterResendUnavailable': 'إذا لم تصلك الرسالة، فتواصل مع الدعم.',
   'guestClubs.newsletterPendingBody':
       'تم طلب رسالة تأكيد بالفعل. افتح الرابط في بريدك الإلكتروني. لن يؤدي النقر مرة أخرى إلى إرسال رسالة جديدة فورًا.',
   'guestClubs.newsletterConfirmedTitle': 'تم الاشتراك في النشرة ✓',

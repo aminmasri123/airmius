@@ -86,7 +86,41 @@ class PublicClubNewsletterSubscriptionTest extends TestCase
             ->assertJsonPath('data.confirmation_sent', false);
 
         $this->assertSame($firstHash, ClubNewsletterSubscription::query()->sole()->confirmation_token_hash);
+
+        $this->travel(4)->minutes();
+        $this->postJson("/api/v1/public/clubs/{$club->id}/newsletter", $payload)
+            ->assertAccepted()
+            ->assertJsonPath('data.confirmation_sent', true)
+            ->assertJsonPath('data.retry_after_seconds', 300);
+        $this->assertNotSame($firstHash, ClubNewsletterSubscription::query()->sole()->confirmation_token_hash);
+
+        $this->travel(5)->minutes();
+        $this->postJson("/api/v1/public/clubs/{$club->id}/newsletter", $payload)
+            ->assertAccepted()
+            ->assertJsonPath('data.confirmation_sent', true)
+            ->assertJsonPath('data.support_required', true);
+
+        $this->travel(5)->minutes();
+        $this->postJson("/api/v1/public/clubs/{$club->id}/newsletter", $payload)
+            ->assertAccepted()
+            ->assertJsonPath('data.confirmation_sent', false)
+            ->assertJsonPath('data.support_required', true);
+        $this->assertSame(3, ClubNewsletterSubscription::query()->sole()->metadata['confirmation_attempts']);
         Carbon::setTestNow();
+    }
+
+    public function test_confirmation_transport_failure_is_reported_to_the_mobile_app(): void
+    {
+        Mail::shouldReceive('mailer')->once()->andThrow(new \RuntimeException('Transport unavailable'));
+        $club = Club::factory()->create(['verification_status' => 'verified', 'is_listed' => true]);
+
+        $this->postJson("/api/v1/public/clubs/{$club->id}/newsletter", [
+            'email' => 'reader@gmail.com',
+            'privacy_consent' => true,
+        ])->assertAccepted()
+            ->assertJsonPath('data.confirmation_sent', false)
+            ->assertJsonPath('data.confirmation_delivery_failed', true)
+            ->assertJsonPath('data.retry_after_seconds', 300);
     }
 
     public function test_authenticated_user_can_read_own_subscription_status(): void

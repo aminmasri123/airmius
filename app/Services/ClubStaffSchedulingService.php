@@ -148,6 +148,7 @@ class ClubStaffSchedulingService
             'id' => $assignment->id,
             'club_id' => $assignment->club_id,
             'shift_key' => $assignment->shift_key,
+            'slot_type' => $assignment->slot_type ?: 'primary',
             'event_id' => $assignment->event_id,
             'event_title' => $assignment->event?->title,
             'team_id' => $assignment->team_id,

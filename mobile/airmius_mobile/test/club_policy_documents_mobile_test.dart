@@ -10,6 +10,7 @@ import 'package:airmius/core/airmius_service_container.dart';
 import 'package:airmius/core/airmius_services_scope.dart';
 import 'package:airmius/models/club_summary.dart';
 import 'package:airmius/screens/club_policy_documents_screen.dart';
+import 'package:airmius/screens/file_manager_screen.dart';
 import 'package:airmius/screens/club_membership_management_screen.dart';
 
 void main() {
@@ -390,6 +391,15 @@ void main() {
     expect(find.text('Beitragsmodelle'), findsOneWidget);
     expect(find.text('satzung.pdf'), findsOneWidget);
     expect(find.byTooltip('Fassung anlegen'), findsOneWidget);
+
+    await tester.tap(find.text('satzung.pdf'));
+    await tester.pumpAndSettle();
+    final files = tester.widget<FileManagerScreen>(find.byType(FileManagerScreen));
+    expect(files.initialScope, 'club');
+    expect(files.initialClubId, 7);
+    expect(files.initialSearch, 'satzung.pdf');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Fassung anlegen'));
     await tester.pumpAndSettle();

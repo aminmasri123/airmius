@@ -3815,7 +3815,18 @@
     "Anwesenheit erfassen": "Anwesenheit erfassen",
     "Anwesend": "Anwesend",
     "Abwesend": "Abwesend",
-    "Anwesende Person auswählen": "Anwesende Person auswählen"
+    "Anwesende Person auswählen": "Anwesende Person auswählen",
+    "Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen und externe Gäste erhalten kein Stimmrecht in bestehenden Abstimmungen.": "Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen und externe Gäste erhalten kein Stimmrecht in bestehenden Abstimmungen.",
+    "Vereinsperson auswählen": "Vereinsperson auswählen",
+    "Vereinsperson nachtragen": "Vereinsperson nachtragen",
+    "Externen Gast hinzufügen": "Externen Gast hinzufügen",
+    "Name *": "Name *",
+    "Organisation": "Organisation",
+    "E-Mail (optional)": "E-Mail (optional)",
+    "Der Gast wird nur für diese Sitzung dokumentiert, erhält keinen Vereinszugriff und standardmäßig kein Stimmrecht.": "Der Gast wird nur für diese Sitzung dokumentiert, erhält keinen Vereinszugriff und standardmäßig kein Stimmrecht.",
+    "Als anwesend hinzufügen": "Als anwesend hinzufügen",
+    "z. B. Rechtsanwalt": "z. B. Rechtsanwalt",
+    "z. B. Kanzlei Müller": "z. B. Kanzlei Müller"
   },
   "auto_patterns": []
 }

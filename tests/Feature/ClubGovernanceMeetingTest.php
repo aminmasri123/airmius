@@ -49,6 +49,45 @@ class ClubGovernanceMeetingTest extends TestCase
         $this->deleteJson("$base/decisions/$decisionId")->assertNoContent();
     }
 
+    public function test_manager_can_add_a_meeting_only_external_guest_without_membership_or_voting_rights(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $meeting = $club->governanceMeetings()->create([
+            'type' => 'board',
+            'title' => 'Rechtsberatung',
+            'status' => 'held',
+            'participant_scope' => 'custom',
+        ]);
+        Sanctum::actingAs($owner);
+
+        $response = $this->postJson("/api/v1/clubs/{$club->id}/governance/meetings/{$meeting->id}/attendees", [
+            'guest_name' => 'Dr. Lea Beispiel',
+            'guest_role' => 'Rechtsanwältin',
+            'guest_organization' => 'Kanzlei Beispiel',
+            'guest_email' => 'lea@example.test',
+        ])->assertCreated()
+            ->assertJsonPath('data.person.name', 'Dr. Lea Beispiel')
+            ->assertJsonPath('data.person.kind', 'guest')
+            ->assertJsonPath('data.person.role', 'Rechtsanwältin')
+            ->assertJsonPath('data.person.organization', 'Kanzlei Beispiel')
+            ->assertJsonPath('data.was_present', true)
+            ->assertJsonPath('data.voting_eligible', false)
+            ->assertJsonMissingPath('data.person.email');
+
+        $this->assertDatabaseHas('club_governance_meeting_recipients', [
+            'id' => $response->json('data.id'),
+            'club_id' => $club->id,
+            'guest_name' => 'Dr. Lea Beispiel',
+            'guest_email' => 'lea@example.test',
+            'user_id' => null,
+            'club_external_member_id' => null,
+            'voting_eligible' => false,
+            'was_present' => true,
+        ]);
+        $this->assertDatabaseCount('club_external_members', 0);
+    }
+
     public function test_decision_with_a_vote_or_closed_result_cannot_be_deleted(): void
     {
         $owner = User::factory()->create();

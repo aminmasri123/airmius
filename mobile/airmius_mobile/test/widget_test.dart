@@ -151,6 +151,7 @@ import 'package:airmius/screens/lesson_detail_screen.dart';
 import 'package:airmius/screens/marketplace_screen.dart';
 import 'package:airmius/screens/media_guidelines_screen.dart';
 import 'package:airmius/screens/membership_request_status_screen.dart';
+import 'package:airmius/screens/membership_application_form_screen.dart';
 import 'package:airmius/screens/maturity_center_screen.dart';
 import 'package:airmius/screens/modal_sheet_overlay_parity_suite_screen.dart';
 import 'package:airmius/screens/mobile_table_action_parity_suite_screen.dart';
@@ -4082,6 +4083,10 @@ void main() {
     expect(find.text('Öffentliche Sponsoren'), findsOneWidget);
     expect(find.text('Gemeinsam mehr Sport'), findsOneWidget);
     expect(find.text('Mehr erfahren'), findsOneWidget);
+    final adRequest = transport.requests.singleWhere(
+      (request) => request.path == '/ads/active',
+    );
+    expect(adRequest.query, {'placement': 'feed'});
 
     await tester.tap(find.byKey(const ValueKey('public-growth-leads')));
     await tester.pumpAndSettle();
@@ -4685,6 +4690,9 @@ void main() {
     expect(find.text('68%'), findsOneWidget);
     expect(find.text('Mira Runner'), findsOneWidget);
     expect(find.text('RPE 9'), findsOneWidget);
+    expect(find.text('Schmerz 3'), findsOneWidget);
+    expect(find.text('Hohe Belastung 1'), findsOneWidget);
+    expect(find.text('55'), findsWidgets);
     expect(transport.paths, contains('/api/v1/trainer-cockpit'));
 
     await tester.tap(find.widgetWithText(ChoiceChip, 'Feedback'));
@@ -6770,9 +6778,22 @@ void main() {
     expect(find.widgetWithText(ChoiceChip, 'Website'), findsOneWidget);
     expect(find.widgetWithText(ChoiceChip, 'Produkte'), findsNothing);
     expect(
-      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
-      false,
+      tester.widget<SegmentedButton<bool>>(
+        find.widgetWithText(SegmentedButton<bool>, 'Jetzt bezahlen'),
+      ).selected,
+      {false},
     );
+    final placement = find.widgetWithText(DropdownButtonFormField<String>, 'Platzierung');
+    await tester.ensureVisible(placement);
+    await tester.tap(placement);
+    await tester.pumpAndSettle();
+    for (final label in ['Marketplace-Karte', 'Feed', 'Seitenbereich', 'Sponsorenbereich']) {
+      expect(find.text(label).hitTestable(), findsWidgets);
+    }
+    expect(find.text('Premium').hitTestable(), findsNothing);
+    await tester.tap(find.text('Sponsorenbereich').hitTestable().last);
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(DropdownButton<String>, 'Sponsorenbereich'), findsOneWidget);
   });
 
   testWidgets('campaign editor previews the uploaded image of a saved draft', (
@@ -9047,6 +9068,7 @@ void main() {
   testWidgets(
     'club-scoped finance does not expose trainer sponsor or platform admin',
     (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(390, 2600));
       _setTestViewport(tester, const Size(390, 2200));
       final container = await _authenticatedWidgetTestContainer(
         const AirmiusUser(
@@ -9079,14 +9101,17 @@ void main() {
       await tester.tap(find.byTooltip('Menü'));
       await tester.pumpAndSettle();
 
-      expect(find.text('VEREINSVERWALTUNG'), findsOneWidget);
-      expect(find.text('Vereins-Cockpit'), findsWidgets);
-      expect(find.text('Arbeitsbereiche'), findsNothing);
-      expect(find.text('Events & Training'), findsNothing);
-      expect(find.text('Trainer-Cockpit'), findsNothing);
-      expect(find.text('Sponsoren'), findsWidgets);
-      expect(find.text('Commerce'), findsNothing);
-      expect(find.text('Admin'), findsNothing);
+
+      await tester.ensureVisible(find.text('Verwaltung'));
+      final management = find.widgetWithText(ExpansionTile, 'Verwaltung');
+      expect(management, findsOneWidget);
+      expect(find.descendant(of: management, matching: find.text('Vereins-Cockpit', skipOffstage: false), skipOffstage: false), findsWidgets);
+      expect(find.text('Arbeitsbereiche'), findsWidgets);
+      expect(find.text('Events & Training'), findsWidgets);
+      expect(find.descendant(of: management, matching: find.text('Trainer-Cockpit', skipOffstage: false), skipOffstage: false), findsNothing);
+      expect(find.descendant(of: management, matching: find.text('Sponsoren', skipOffstage: false), skipOffstage: false), findsWidgets);
+      expect(find.descendant(of: management, matching: find.text('Commerce', skipOffstage: false), skipOffstage: false), findsNothing);
+      expect(find.descendant(of: management, matching: find.text('Admin', skipOffstage: false), skipOffstage: false), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );
@@ -11806,6 +11831,44 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('club profile application submits through all seven tabs', (tester) async {
+    _setTestViewport(tester, const Size(500, 1800));
+    final transport = _SequencedTransport([
+      AirmiusApiResponse(statusCode: 200, body: jsonEncode({
+        'data': {
+          'id': 4, 'name': 'Testverein', 'accepts_membership_applications': true,
+          'management': {
+            'membership_types': [{'id': 7, 'slug': 'aktiv', 'name': 'Aktiv'}],
+            'settings': {
+              'membership_application_documents': [
+                {'id': 'photo', 'title': 'Vereinsfoto', 'is_required': false},
+              ],
+            },
+          },
+        },
+      })),
+      const AirmiusApiResponse(statusCode: 201, body: '{"data":{"id":17,"club_id":4,"status":"pending"}}'),
+    ]);
+    final services = await _authenticatedWidgetTestContainer(AirmiusUser.fromJson({
+      'id': 3, 'name': 'Test Person', 'first_name': 'Test', 'last_name': 'Person',
+      'birth_date': '1990-01-01', 'gender': 'diverse', 'email': 'person@example.test',
+      'country': 'DE', 'street': 'Testweg', 'house_number': '1', 'postal_code': '10115', 'city': 'Berlin',
+    }), transport: transport);
+    await _pumpAirmiusWidget(tester, services, const MembershipApplicationFormScreen(clubId: 4));
+    await tester.pumpAndSettle();
+    for (var tab = 1; tab <= 7; tab++) {
+      expect(find.text('$tab / 7'), findsOneWidget);
+      final action = find.text(tab == 7 ? 'Anfrage senden' : 'Weiter').last;
+      await tester.ensureVisible(action);
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+    }
+    final request = transport.requests.singleWhere((r) => r.method == 'POST' && r.path.endsWith('/membership-requests'));
+    expect(request.body?['club_membership_type_id'], 7);
+    expect(request.body?['accepted_documents'], {'photo': false});
+    expect(find.byType(MembershipRequestStatusScreen), findsOneWidget);
+  });
+
   testWidgets('membership application supports large RTL text', (
     WidgetTester tester,
   ) async {
@@ -12895,6 +12958,15 @@ class _AuthenticatedShellTransport implements AirmiusApiTransport {
             'roles': user.roles,
             'permissions': user.permissions,
             'two_factor_enabled': user.twoFactorEnabled,
+            'first_name': user.firstName,
+            'last_name': user.lastName,
+            'birth_date': user.birthDate?.toIso8601String(),
+            'gender': user.gender,
+            'country': user.country,
+            'street': user.street,
+            'house_number': user.houseNumber,
+            'postal_code': user.postalCode,
+            'city': user.city,
             'clubs': [
               for (final club in user.clubs)
                 {

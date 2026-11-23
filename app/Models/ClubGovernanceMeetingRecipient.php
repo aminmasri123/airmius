@@ -13,6 +13,7 @@ class ClubGovernanceMeetingRecipient extends Model
 
     protected $fillable = [
         'club_id', 'club_governance_meeting_id', 'user_id', 'club_external_member_id',
+        'guest_name', 'guest_role', 'guest_organization', 'guest_email',
         'attendance_eligible', 'voting_eligible', 'eligibility_source', 'eligibility_role', 'delivery_status', 'delivered_at',
         'responded_at', 'response_status', 'was_present',
     ];

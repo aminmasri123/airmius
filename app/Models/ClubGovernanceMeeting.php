@@ -83,10 +83,13 @@ class ClubGovernanceMeeting extends Model
             'decision_templates' => $this->decision_templates ?? [],
             'notes' => $this->notes,
             'recipient_snapshot' => $this->recipients()
-                ->get(['user_id', 'club_external_member_id', 'attendance_eligible', 'voting_eligible', 'eligibility_source', 'eligibility_role'])
+                ->get(['user_id', 'club_external_member_id', 'guest_name', 'guest_role', 'guest_organization', 'attendance_eligible', 'voting_eligible', 'eligibility_source', 'eligibility_role'])
                 ->map(fn (ClubGovernanceMeetingRecipient $recipient) => [
                     'user_id' => $recipient->user_id,
                     'club_external_member_id' => $recipient->club_external_member_id,
+                    'guest_name' => $recipient->guest_name,
+                    'guest_role' => $recipient->guest_role,
+                    'guest_organization' => $recipient->guest_organization,
                     'attendance_eligible' => (bool) $recipient->attendance_eligible,
                     'voting_eligible' => (bool) $recipient->voting_eligible,
                     'eligibility_source' => $recipient->eligibility_source,

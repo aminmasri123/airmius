@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventParticipant;
 use App\Models\FamilyCalendarEntry;
+use App\Models\ClubStaffAssignment;
 use App\Models\User;
 use App\Services\FamilyCalendarService;
 use App\Support\EventAttendance;
@@ -27,6 +28,7 @@ class FamilyCalendarController extends Controller
         $end = $localStart->endOfMonth()->utc();
         $relationships = $calendar->relationships($request->user());
         $events = collect();
+        $services = collect();
         $append = function (User $person, ?int $clubId = null) use ($calendar, $start, $end, &$events): void {
             $rows = $calendar->participantEvents($person)
                 ->when($clubId, fn ($q) => $q->where(fn ($q) => $q->where('club_id', $clubId)->orWhereHas('team', fn ($t) => $t->where('club_id', $clubId))))
@@ -55,8 +57,36 @@ class FamilyCalendarController extends Controller
             $events = $events->concat($rows);
         };
         $append($request->user());
+        $appendServices = function (User $person, ?int $clubId = null) use ($start, $end, &$services): void {
+            $rows = ClubStaffAssignment::query()
+                ->with('club:id,name')
+                ->where('user_id', $person->id)
+                ->whereIn('status', ['planned', 'confirmed', 'swap_requested'])
+                ->when($clubId, fn ($query) => $query->where('club_id', $clubId))
+                ->where('starts_at', '<=', $end)
+                ->where('ends_at', '>=', $start)
+                ->orderBy('starts_at')
+                ->get()
+                ->map(fn (ClubStaffAssignment $assignment) => [
+                    'id' => $assignment->id,
+                    'club_id' => $assignment->club_id,
+                    'club_name' => $assignment->club?->name,
+                    'person_id' => $person->id,
+                    'person_name' => $person->name,
+                    'title' => $assignment->role,
+                    'starts_at' => $assignment->starts_at?->toJSON(),
+                    'ends_at' => $assignment->ends_at?->toJSON(),
+                    'location' => $assignment->location,
+                    'status' => $assignment->status,
+                    'slot_type' => $assignment->slot_type ?: 'primary',
+                    'mobile_url' => "airmius://clubs/{$assignment->club_id}/staff-scheduling",
+                ]);
+            $services = $services->concat($rows);
+        };
+        $appendServices($request->user());
         foreach ($relationships->unique(fn ($row) => $row->child_user_id.':'.$row->club_id) as $relationship) {
             $append($relationship->child, $relationship->club_id);
+            $appendServices($relationship->child, $relationship->club_id);
         }
         $entries = FamilyCalendarEntry::where('user_id', $request->user()->id)
             ->where('starts_at', '<=', $end)->where('ends_at', '>=', $start)->orderBy('starts_at')->get()
@@ -66,6 +96,7 @@ class FamilyCalendarController extends Controller
             'month' => $month, 'self' => ['id' => $request->user()->id, 'name' => $request->user()->name],
             'children' => $relationships->map(fn ($row) => ['id' => $row->child_user_id, 'name' => $row->child->name, 'club_id' => $row->club_id])->values(),
             'events' => $events->unique(fn ($row) => $row['id'].':'.$row['person_id'])->sortBy('starts_at')->values(),
+            'services' => $services->unique(fn ($row) => $row['id'].':'.$row['person_id'])->sortBy('starts_at')->values(),
             'entries' => $entries,
         ]]);
     }

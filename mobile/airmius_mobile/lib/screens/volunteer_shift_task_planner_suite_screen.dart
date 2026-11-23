@@ -204,7 +204,8 @@ class _VolunteerShiftTaskPlannerSuiteScreenState
           members: _members,
           audiencePeople: _audiencePeople,
           initial: group.items.first,
-          capacity: group.capacity,
+          capacity: group.primaryCapacity,
+          reserveCapacity: group.reserveCapacity,
         ),
       ),
     );
@@ -727,6 +728,7 @@ class _CreateShiftScreen extends StatefulWidget {
     required this.audiencePeople,
     this.initial,
     this.capacity,
+    this.reserveCapacity,
   });
 
   final List<Map<String, dynamic>> clubs;
@@ -737,6 +739,7 @@ class _CreateShiftScreen extends StatefulWidget {
   final List<Map<String, dynamic>> audiencePeople;
   final Map<String, dynamic>? initial;
   final int? capacity;
+  final int? reserveCapacity;
 
   @override
   State<_CreateShiftScreen> createState() => _CreateShiftScreenState();
@@ -755,6 +758,7 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
   TimeOfDay _start = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _end = const TimeOfDay(hour: 12, minute: 0);
   int _capacity = 2;
+  int _reserveCapacity = 0;
   int? _eventId;
   String _visibility = 'club';
   final Set<int> _teamIds = {};
@@ -790,6 +794,7 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
     }
     if (end != null) _end = TimeOfDay.fromDateTime(end);
     _capacity = widget.capacity ?? 1;
+    _reserveCapacity = widget.reserveCapacity ?? 0;
     _eventId = _int(initial['event_id']);
     _visibility = '${initial['visibility_scope'] ?? 'club'}';
     _teamIds.addAll(_ints(initial['audience_team_ids']));
@@ -946,6 +951,7 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
       'starts_at': startsAt.toUtc().toIso8601String(),
       'ends_at': endsAt.toUtc().toIso8601String(),
       'capacity': _capacity,
+      'reserve_capacity': _reserveCapacity,
       'status': 'open',
       'event_id': _eventId,
       'location': _optional(_location),
@@ -1206,35 +1212,22 @@ class _CreateShiftScreenState extends State<_CreateShiftScreen> {
               onChanged: (value) => setState(() => _notifyAudience = value),
             ),
             const SizedBox(height: 18),
-            Text('Kapazität', style: Theme.of(context).textTheme.titleMedium),
+            Text('Besetzung', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                IconButton.filledTonal(
-                  tooltip: 'Kapazität verringern',
-                  onPressed: _capacity > 1
-                      ? () => setState(() => _capacity--)
-                      : null,
-                  icon: const Icon(Icons.remove),
-                ),
-                SizedBox(
-                  width: 76,
-                  child: Text(
-                    '$_capacity',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-                IconButton.filledTonal(
-                  tooltip: 'Kapazität erhöhen',
-                  onPressed: _capacity < 100
-                      ? () => setState(() => _capacity++)
-                      : null,
-                  icon: const Icon(Icons.add),
-                ),
-              ],
+            _CapacityCounter(
+              label: 'Benötigte Helfer',
+              help: 'Diese Zusagen besetzen den Dienst verbindlich.',
+              value: _capacity,
+              minimum: 1,
+              onChanged: (value) => setState(() => _capacity = value),
+            ),
+            const SizedBox(height: 12),
+            _CapacityCounter(
+              label: 'Ersatzplätze',
+              help: 'Rücken automatisch nach, wenn ein Helfer absagt.',
+              value: _reserveCapacity,
+              minimum: 0,
+              onChanged: (value) => setState(() => _reserveCapacity = value),
             ),
           ],
         ),
@@ -1276,6 +1269,57 @@ class _TimeTile extends StatelessWidget {
     title: Text(label),
     subtitle: Text(value),
     onTap: onTap,
+  );
+}
+
+class _CapacityCounter extends StatelessWidget {
+  const _CapacityCounter({
+    required this.label,
+    required this.help,
+    required this.value,
+    required this.minimum,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String help;
+  final int value;
+  final int minimum;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: Theme.of(context).textTheme.titleSmall),
+            Text(help, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+      ),
+      IconButton.filledTonal(
+        tooltip: '$label verringern',
+        onPressed: value > minimum ? () => onChanged(value - 1) : null,
+        icon: const Icon(Icons.remove),
+      ),
+      SizedBox(
+        width: 44,
+        child: Text(
+          '$value',
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+        ),
+      ),
+      IconButton.filledTonal(
+        tooltip: '$label erhöhen',
+        onPressed: value < 100 ? () => onChanged(value + 1) : null,
+        icon: const Icon(Icons.add),
+      ),
+    ],
   );
 }
 
@@ -1435,7 +1479,9 @@ class _ShiftCard extends StatelessWidget {
                   ),
                 ),
                 StatusPill(
-                  '${group.occupiedCount}/${group.capacity}',
+                  group.reserveCapacity == 0
+                      ? '${group.primaryOccupied}/${group.primaryCapacity}'
+                      : '${group.primaryOccupied}/${group.primaryCapacity} + ${group.reserveOccupied}/${group.reserveCapacity}',
                   color: full
                       ? Theme.of(context).colorScheme.tertiary
                       : Theme.of(context).colorScheme.secondary,
@@ -1488,7 +1534,9 @@ class _ShiftCard extends StatelessWidget {
                 for (final assignment in group.confirmed)
                   InputChip(
                     avatar: const Icon(Icons.person_outline, size: 18),
-                    label: Text('${assignment['user_name'] ?? 'Mitglied'}'),
+                    label: Text(
+                      '${assignment['user_name'] ?? 'Mitglied'}${assignment['slot_type'] == 'reserve' ? ' · Ersatz' : ''}',
+                    ),
                     onPressed: canEdit
                         ? () => _showManageMenu(context, assignment)
                         : null,
@@ -1577,7 +1625,9 @@ class _ShiftCard extends StatelessWidget {
                     child: _MessagePanel(
                       message: isWaitlisted
                           ? 'Du stehst auf der Warteliste.'
-                          : 'Du bist für diesen Einsatz angemeldet.',
+                          : own['slot_type'] == 'reserve'
+                          ? 'Du hast einen Ersatzplatz und rückst bei Bedarf automatisch nach.'
+                          : 'Du bist für diesen Einsatz verbindlich angemeldet.',
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1663,6 +1713,11 @@ class _ShiftGroup {
       items.where((item) => item['status'] == 'waitlisted').toList();
   List<Map<String, dynamic>> get capacitySlots =>
       items.where((item) => item['status'] != 'waitlisted').toList();
+  List<Map<String, dynamic>> get primarySlots => capacitySlots
+      .where((item) => '${item['slot_type'] ?? 'primary'}' != 'reserve')
+      .toList();
+  List<Map<String, dynamic>> get reserveSlots =>
+      capacitySlots.where((item) => item['slot_type'] == 'reserve').toList();
   List<Map<String, dynamic>> get confirmed => capacitySlots
       .where(
         (item) =>
@@ -1680,16 +1735,28 @@ class _ShiftGroup {
             item['external_member_id'] != null && item['status'] == 'confirmed',
       )
       .toList();
-  List<Map<String, dynamic>> get openSlots => capacitySlots
-      .where(
-        (item) =>
-            item['user_id'] == null &&
-            item['external_member_id'] == null &&
-            const {'open', 'planned'}.contains('${item['status']}'),
-      )
-      .toList();
+  List<Map<String, dynamic>> get openSlots =>
+      capacitySlots
+          .where(
+            (item) =>
+                item['user_id'] == null &&
+                item['external_member_id'] == null &&
+                const {'open', 'planned'}.contains('${item['status']}'),
+          )
+          .toList()
+        ..sort(
+          (a, b) => (a['slot_type'] == 'reserve' ? 1 : 0).compareTo(
+            b['slot_type'] == 'reserve' ? 1 : 0,
+          ),
+        );
   int get capacity => capacitySlots.length;
   int get occupiedCount => confirmed.length + externalConfirmed.length;
+  int get primaryCapacity => primarySlots.length;
+  int get reserveCapacity => reserveSlots.length;
+  int get primaryOccupied => primarySlots.where(_occupied).length;
+  int get reserveOccupied => reserveSlots.where(_occupied).length;
+  bool _occupied(Map<String, dynamic> item) =>
+      item['user_id'] != null || item['external_member_id'] != null;
   bool get externalCandidatesAllowed => true;
   bool get canEdit => items.any((item) => item['can_edit'] == true);
 }

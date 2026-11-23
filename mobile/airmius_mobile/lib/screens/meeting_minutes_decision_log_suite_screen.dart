@@ -357,16 +357,6 @@ class _MeetingMinutesDecisionLogSuiteScreenState
         return id != null &&
             !existing.any((recipient) => governanceInt(recipient[field]) == id);
       }).toList();
-      if (options.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Alle verfügbaren Mitglieder stehen bereits in der Liste.',
-            ),
-          ),
-        );
-        return;
-      }
       AirmiusJson? selected;
       selected = await showDialog<AirmiusJson>(
         context: context,
@@ -385,6 +375,17 @@ class _MeetingMinutesDecisionLogSuiteScreenState
                     title: Text('${person['name']}'),
                     onTap: () => Navigator.pop(dialogContext, person),
                   ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.person_add_alt_1_outlined),
+                  title: const Text('Externen Gast hinzufügen'),
+                  subtitle: const Text(
+                    'Zum Beispiel Anwalt, Gewerkschaft oder IT-Experte',
+                  ),
+                  onTap: () => Navigator.pop(dialogContext, <String, dynamic>{
+                    'kind': 'guest',
+                  }),
+                ),
               ],
             ),
           ),
@@ -397,6 +398,10 @@ class _MeetingMinutesDecisionLogSuiteScreenState
         ),
       );
       if (!mounted || selected == null) return;
+      if (selected['kind'] == 'guest') {
+        await _addExternalGuest();
+        return;
+      }
       final field = selected['kind'] == 'external'
           ? 'club_external_member_id'
           : 'user_id';
@@ -413,6 +418,94 @@ class _MeetingMinutesDecisionLogSuiteScreenState
         context,
       ).showSnackBar(SnackBar(content: Text(governanceError(error))));
     }
+  }
+
+  Future<void> _addExternalGuest() async {
+    final name = TextEditingController();
+    final role = TextEditingController();
+    final organization = TextEditingController();
+    final email = TextEditingController();
+    final payload = await showDialog<AirmiusJson>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Externen Gast hinzufügen'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Der Gast wird nur für diese Sitzung dokumentiert und erhält keinen Vereinszugriff und kein Stimmrecht.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: name,
+                autofocus: true,
+                maxLength: 160,
+                decoration: const InputDecoration(labelText: 'Name *'),
+              ),
+              TextField(
+                controller: role,
+                maxLength: 160,
+                decoration: const InputDecoration(
+                  labelText: 'Funktion',
+                  hintText: 'z. B. Rechtsanwalt',
+                ),
+              ),
+              TextField(
+                controller: organization,
+                maxLength: 180,
+                decoration: const InputDecoration(
+                  labelText: 'Organisation',
+                  hintText: 'z. B. Kanzlei Müller',
+                ),
+              ),
+              TextField(
+                controller: email,
+                keyboardType: TextInputType.emailAddress,
+                maxLength: 254,
+                decoration: const InputDecoration(
+                  labelText: 'E-Mail (optional)',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (name.text.trim().isEmpty) return;
+              Navigator.pop(dialogContext, <String, dynamic>{
+                'guest_name': name.text.trim(),
+                'guest_role': role.text.trim().isEmpty ? null : role.text.trim(),
+                'guest_organization': organization.text.trim().isEmpty
+                    ? null
+                    : organization.text.trim(),
+                'guest_email': email.text.trim().isEmpty
+                    ? null
+                    : email.text.trim(),
+              });
+            },
+            child: const Text('Als anwesend hinzufügen'),
+          ),
+        ],
+      ),
+    );
+    name.dispose();
+    role.dispose();
+    organization.dispose();
+    email.dispose();
+    if (!mounted || payload == null) return;
+    await _write(
+      () => _client.addClubGovernanceAttendee(
+        _clubId,
+        governanceInt(_meeting?['id'])!,
+        payload,
+      ),
+    );
   }
 
   @override
@@ -619,7 +712,7 @@ class _MeetingMinutesDecisionLogSuiteScreenState
       for (final decision in decisions) _decision(decision),
       _heading('Anwesenheit & Einladungen'),
       const Text(
-        'Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen erhalten kein Stimmrecht in bestehenden Abstimmungen.',
+        'Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen und externe Gäste erhalten kein Stimmrecht in bestehenden Abstimmungen.',
       ),
       if (_canManage)
         TextButton.icon(
@@ -637,6 +730,14 @@ class _MeetingMinutesDecisionLogSuiteScreenState
                 '${governanceMap(recipient['person'])['name'] ?? 'Mitglied'}',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
+              if (governanceMap(recipient['person'])['kind'] == 'guest')
+                Text(
+                  [
+                    'Externer Gast',
+                    governanceMap(recipient['person'])['role'],
+                    governanceMap(recipient['person'])['organization'],
+                  ].where((value) => value != null && '$value'.trim().isNotEmpty).join(' · '),
+                ),
               Text(
                 recipient['voting_eligible'] == true
                     ? 'Stimmberechtigt'

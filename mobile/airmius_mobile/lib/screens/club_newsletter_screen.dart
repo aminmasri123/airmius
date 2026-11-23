@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import 'club_newsletter_subscribers_screen.dart';
+import 'support_helpdesk_screen.dart';
 
 class ClubNewsletterScreen extends StatefulWidget {
   const ClubNewsletterScreen({
@@ -28,6 +31,10 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
   String _status = 'none';
   String? _emailError;
   String? _submitError;
+  Timer? _resendTimer;
+  bool _waitingToResend = false;
+  bool _supportRequired = false;
+  bool _deliveryFailed = false;
 
   String t(String key) => AirmiusScope.of(context).t(key);
 
@@ -44,12 +51,17 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
 
   @override
   void dispose() {
+    _resendTimer?.cancel();
     _name.dispose();
     _email.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
+    if (_sending ||
+        (_status == 'pending' && (_waitingToResend || _supportRequired))) {
+      return;
+    }
     final email = _email.text.trim();
     if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
       setState(() => _emailError = t('guestClubs.newsletterEmailError'));
@@ -70,12 +82,9 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
             name: _name.text.trim(),
           );
       if (!mounted) return;
-      final data = response['data'];
       setState(() {
         _sending = false;
-        _status = data is Map<String, dynamic>
-            ? '${data['status'] ?? 'pending'}'
-            : 'pending';
+        _updateStatus(response['data']);
       });
     } catch (_) {
       if (!mounted) return;
@@ -93,17 +102,32 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
       final response = await services
           .clientForSession(services.authState.session)
           .clubNewsletterStatus(widget.clubId);
-      final data = response['data'];
       if (!mounted) return;
-      setState(() {
-        _status = data is Map<String, dynamic>
-            ? '${data['status'] ?? 'none'}'
-            : 'none';
-      });
+      setState(() => _updateStatus(response['data']));
     } catch (_) {
       // The form remains available if the optional status lookup fails.
     } finally {
       if (mounted) setState(() => _loadingStatus = false);
+    }
+  }
+
+  void _updateStatus(Object? data) {
+    if (data is! Map<String, dynamic>) return;
+    _status = data['status'] as String? ?? 'none';
+    _supportRequired = data['support_required'] == true;
+    _deliveryFailed = data['confirmation_delivery_failed'] == true;
+    if (data['email'] case final String email) _email.text = email;
+    _resendTimer?.cancel();
+    final resendAt = DateTime.tryParse('${data['can_resend_at'] ?? ''}');
+    final seconds = data['retry_after_seconds'];
+    final delay = seconds is int
+        ? Duration(seconds: seconds)
+        : resendAt?.difference(DateTime.now()) ?? Duration.zero;
+    _waitingToResend = _status == 'pending' && delay > Duration.zero;
+    if (_waitingToResend) {
+      _resendTimer = Timer(delay, () {
+        if (mounted) setState(() => _waitingToResend = false);
+      });
     }
   }
 
@@ -144,9 +168,41 @@ class _ClubNewsletterScreenState extends State<ClubNewsletterScreen> {
             _StatusPanel(
               icon: Icons.mark_email_unread_outlined,
               title: t('guestClubs.newsletterPendingTitle'),
-              body: t('guestClubs.newsletterPendingBody'),
+              body: t(
+                _supportRequired
+                    ? 'guestClubs.newsletterResendUnavailable'
+                    : _deliveryFailed
+                    ? 'guestClubs.newsletterDeliveryFailed'
+                    : 'guestClubs.newsletterCheckInbox',
+              ),
               color: Theme.of(context).colorScheme.primary,
             ),
+            const SizedBox(height: 16),
+            if (_supportRequired)
+              FilledButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SupportHelpdeskScreen(),
+                  ),
+                ),
+                child: Text(t('guestClubs.newsletterContactSupport')),
+              )
+            else
+              FilledButton(
+                onPressed: _sending || _waitingToResend ? null : _submit,
+                child: Text(
+                  t(
+                    _waitingToResend
+                        ? 'guestClubs.newsletterResendWait'
+                        : 'guestClubs.newsletterResend',
+                  ),
+                ),
+              ),
+            if (_submitError case final error?)
+              Text(
+                error,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
           ] else ...[
             Text(
               t('guestClubs.newsletterBody'),
@@ -234,9 +290,8 @@ class _StatusPanel extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(context).textTheme.titleLarge
+                ?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(body),

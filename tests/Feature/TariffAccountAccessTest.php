@@ -159,7 +159,7 @@ class TariffAccountAccessTest extends TestCase
             foreach (['club' => $club->id, 'team' => $team->id] as $scope => $id) {
                 foreach (['web', 'api'] as $surface) {
                     $api = $surface === 'api';
-                    $name = "$role-$scope-$surface.pdf";
+                    $name = "$slug-$role-$scope-$surface.pdf";
                     $upload = ['scope' => $scope, $scope.'_id' => $id,
                         'file' => \Illuminate\Http\UploadedFile::fake()->createWithContent($name, "%PDF-1.4\nTestinhalt\n")];
                     $response = $this->postJson($api ? '/api/v1/uploads' : route('auth.files.store'), $upload);
@@ -200,18 +200,42 @@ class TariffAccountAccessTest extends TestCase
                         if ($role === 'share') {
                             $link->assertCreated();
                             $url = $link->json('data.url');
+                            $laterUrl = $this->postJson($endpoint)->assertCreated()->json('data.url');
+                            $otherFile = $file->replicate();
+                            $otherFile->display_name = 'Andere-Datei.pdf';
+                            $otherFile->save();
+                            $otherEndpoint = "/api/v1/uploads/{$otherFile->id}/public-share";
+                            $otherUrl = $this->postJson($otherEndpoint)->assertCreated()->json('data.url');
+                            $colleague = User::factory()->create();
+                            $club->users()->attach($colleague, ['role' => 'member', 'membership_status' => 'active',
+                                'permission_overrides' => $rights]);
+                            $team->users()->attach($colleague, ['role' => 'member']);
+                            $colleagueUrl = $this->actingAs($colleague)->postJson($endpoint)->assertCreated()->json('data.url');
                             auth()->forgetGuards();
                             auth()->shouldUse('web');
                             $this->assertGuest();
                             $publicDownload = $this->get($url)->assertOk()->assertDownload($name);
                             $this->assertSame('Testinhalt', $publicDownload->streamedContent());
+                            $this->travelTo(now()->addHours(25), function () use ($url) {
+                                $expired = $this->get($url)->assertStatus(410);
+                                $this->assertNull($expired->headers->get('Content-Disposition'));
+                                $this->assertFalse(str_starts_with(
+                                    (string) $expired->headers->get('Content-Type'),
+                                    'application/pdf',
+                                ));
+                            });
                             $this->actingAs($user->fresh());
                             $this->assertDatabaseHas('file_shares', ['file_id' => $file->id, 'email' => 'public-link']);
-                            $this->deleteJson($endpoint)->assertOk()->assertJsonPath('data.count', 1);
+                            $this->deleteJson($endpoint)->assertOk()->assertJsonPath('data.count', 2);
+                            $this->deleteJson($endpoint)->assertOk()->assertJsonPath('data.count', 0);
                             auth()->forgetGuards();
                             auth()->shouldUse('web');
                             $this->assertGuest();
                             $this->get($url)->assertNotFound();
+                            $this->get($laterUrl)->assertNotFound();
+                            $this->get($otherUrl)->assertOk()->assertDownload('Andere-Datei.pdf');
+                            $this->assertSame('Testinhalt', $this->get($colleagueUrl)->assertOk()->assertDownload($name)->streamedContent());
+                            $this->actingAs($colleague)->deleteJson($endpoint)->assertOk()->assertJsonPath('data.count', 1);
                             $this->actingAs($user->fresh());
                         } else {
                             $link->assertForbidden();
@@ -228,6 +252,40 @@ class TariffAccountAccessTest extends TestCase
                     if ($role === 'share') {
                         $api ? $share->assertSuccessful() : $share->assertRedirect();
                         $this->assertDatabaseHas('files', $copy);
+                        $received = \App\Models\File::where($copy)->sole();
+                        $publicShares = "/api/v1/uploads/{$file->id}/public-share";
+                        $publicUrl = $this->postJson($publicShares)->assertCreated()->json('data.url');
+                        $this->deleteJson($publicShares)->assertOk()->assertJsonPath('data.count', 1);
+                        auth()->forgetGuards();
+                        auth()->shouldUse('web');
+                        $this->assertGuest();
+                        $this->get($publicUrl)->assertNotFound();
+                        $this->actingAs($friend);
+                        $this->getJson('/api/v1/files?scope=user')->assertOk()->assertJsonPath('data.files.0.id', $received->id);
+                        $preview = $this->get('/api/v1/files/'.$received->id.'/preview')->assertOk();
+                        $this->assertSame('Testinhalt', $preview->streamedContent());
+                        $download = $this->get(route('auth.files.download', $received))->assertOk()->assertDownload($name);
+                        $this->assertSame('Testinhalt', $download->streamedContent());
+                        $newName = 'Meine-Kopie.pdf';
+                        $rename = ['display_name' => $newName];
+                        if ($api) {
+                            $this->patchJson("/api/v1/uploads/{$received->id}", $rename)->assertOk();
+                        } else {
+                            $this->put(route('auth.files.update', $received), $rename)->assertRedirect()->assertSessionHasNoErrors();
+                        }
+                        $this->assertSame($name, $file->fresh()->display_name);
+                        $this->assertSame($newName, $received->fresh()->display_name);
+                        $this->assertSame('Testinhalt', $this->get(route('auth.files.download', $received))
+                            ->assertOk()->assertDownload($newName)->streamedContent());
+                        if ($api) {
+                            $this->deleteJson("/api/v1/uploads/{$received->id}")->assertOk()->assertJsonPath('data.deleted', true);
+                        } else {
+                            $this->delete(route('auth.files.destroy', $received))->assertRedirect()->assertSessionHasNoErrors();
+                        }
+                        $this->assertNull($received->fresh());
+                        $this->actingAs($user->fresh());
+                        $this->assertSame('Testinhalt', $this->get("/api/v1/files/{$file->id}/preview")
+                            ->assertOk()->streamedContent());
                     } else {
                         $share->assertForbidden();
                         $this->assertDatabaseMissing('files', $copy);
@@ -308,6 +366,13 @@ class TariffAccountAccessTest extends TestCase
             $payload['title'] = 'Logo im Vereinsheft';
             $this->putJson($update, $payload)->assertOk();
             $this->assertDatabaseHas('sponsor_deliverables', ['id' => $id, 'title' => $payload['title'], 'club_id' => $club->id]);
+            $completed = array_merge($payload, ['status' => 'fulfilled', 'responsible_user_id' => $user->id]);
+            $this->putJson($update, $completed)->assertUnprocessable()->assertJsonValidationErrors('fulfillment_evidence');
+            $this->assertDatabaseHas('sponsor_deliverables', ['id' => $id, 'status' => 'planned', 'fulfilled_at' => null]);
+            $completed['fulfillment_evidence'] = 'Logo in der November-Ausgabe abgedruckt.';
+            $this->putJson($update, $completed)->assertOk()->assertJsonPath('data.fulfilled_by', $user->id);
+            $this->assertDatabaseHas('sponsor_deliverables', ['id' => $id, 'status' => 'fulfilled',
+                'fulfillment_evidence' => $completed['fulfillment_evidence'], 'responsible_user_id' => $user->id]);
             $this->deleteJson($delete)->assertForbidden();
             $setRights(false, true);
             $this->postJson($url, $payload)->assertForbidden();
@@ -375,13 +440,57 @@ class TariffAccountAccessTest extends TestCase
                 }
                 $item = $api ? $url.'/'.$sponsor->id : route('auth.clubs.sponsors.update', [$club, $sponsor]);
                 $payload['name'] .= ' aktualisiert';
+                $payload['contact_name'] = 'Mara Muster';
+                $payload['email'] = 'kontakt@example.test';
+                $payload['renewal_notice_days'] = 45;
                 $updated = $this->putJson($item, $payload);
                 if ($included) {
                     $api ? $updated->assertOk() : $updated->assertRedirect()->assertSessionHasNoErrors();
                     $this->assertSame($payload['name'], $sponsor->fresh()->name);
+                    $this->assertDatabaseHas('sponsors', ['id' => $sponsor->id,
+                        'contact_name' => 'Mara Muster', 'email' => 'kontakt@example.test',
+                        'renewal_notice_days' => $api ? 45 : $sponsor->renewal_notice_days]);
                 } else {
                     $updated->assertUnprocessable()->assertJsonValidationErrors('general');
                     $this->assertSame($sponsor->name, $sponsor->fresh()->name);
+                    $this->assertDatabaseMissing('sponsors', ['id' => $sponsor->id, 'email' => 'kontakt@example.test']);
+                }
+                $approval = $payload + ['contract_approval_status' => 'approved'];
+                if ($included && $api) {
+                    $this->putJson($item, $approval)->assertForbidden();
+                    $rights = ['sponsors.edit' => true, 'finance.approve' => true, 'sponsors.delete' => true];
+                    $membership = ['role' => 'member', 'membership_status' => 'active', 'permission_overrides' => $rights];
+                    $club->users()->syncWithoutDetaching([$user->id => $membership]);
+                    $this->actingAs($user->fresh())->putJson($item, $approval)->assertUnprocessable();
+                    $this->assertNull($sponsor->fresh()->contract_approved_by);
+                    $reviewer = User::factory()->create();
+                    $club->users()->attach($reviewer, $membership);
+                    $this->actingAs($reviewer)->putJson($item, $approval)->assertOk();
+                    $this->assertDatabaseHas('sponsors', ['id' => $sponsor->id, 'contract_approval_status' => 'approved',
+                        'contract_approved_by' => $reviewer->id, 'contract_submitted_by' => $user->id]);
+                    $this->actingAs($user->fresh());
+                } elseif ($included) {
+                    $this->putJson($item, $approval)->assertRedirect()->assertSessionHasNoErrors();
+                    $this->assertNotSame('approved', $sponsor->fresh()->contract_approval_status);
+                } else {
+                    $this->putJson($item, $approval)->assertUnprocessable()->assertJsonValidationErrors('general');
+                }
+                if (! $api) {
+                    $sponsor->update(['contract_approval_status' => 'pending_review', 'contract_submitted_by' => $user->id]);
+                    $reviewer = User::factory()->create();
+                    $club->users()->attach($reviewer, ['role' => 'member', 'membership_status' => 'active',
+                        'permission_overrides' => ['sponsors.edit' => true, 'finance.approve' => true]]);
+                    $approval['contact_name'] = 'Kontakt aus zweiter Prüfung';
+                    $result = $this->actingAs($reviewer)->putJson($item, $approval);
+                    if ($included) {
+                        $result->assertRedirect()->assertSessionHasNoErrors();
+                        $this->assertSame($approval['contact_name'], $sponsor->fresh()->contact_name);
+                    } else {
+                        $result->assertUnprocessable()->assertJsonValidationErrors('general');
+                    }
+                    $this->assertDatabaseHas('sponsors', ['id' => $sponsor->id, 'contract_approval_status' => 'pending_review',
+                        'contract_submitted_by' => $user->id, 'contract_approved_by' => null, 'contract_approved_at' => null]);
+                    $this->actingAs($user->fresh());
                 }
                 $deleted = $this->deleteJson($item);
                 if ($api || $included) {
@@ -620,6 +729,257 @@ class TariffAccountAccessTest extends TestCase
     }
 
     #[DataProvider('plans')]
+    public function test_club_policy_document_file_lifecycle(string $slug): void
+    {
+        // Storage::fake clears its directory. Separate simultaneous test runs.
+        config(['filesystems.uploads_disk' => 'policy-public-'.getmypid(),
+            'filesystems.private_uploads_disk' => 'policy-private-'.getmypid()]);
+        $user = $this->accountForPlan($slug);
+        $club = $user->clubs()->first() ?? Club::factory()->create();
+        $this->actingAs($user);
+        \Illuminate\Support\Facades\Storage::fake(\App\Support\UploadStorage::disk());
+        \Illuminate\Support\Facades\Storage::fake(\App\Support\UploadStorage::privateDisk());
+        $rights = ['files.edit' => true, 'files.view' => true, 'policy_documents.view' => true,
+            'policy_documents.edit' => true, 'policy_documents.download' => true, 'policy_documents.delete' => false];
+        $club->users()->syncWithoutDetaching([$user->id => ['role' => 'member', 'membership_status' => 'active',
+            'permission_overrides' => $rights]]);
+        $this->actingAs($user->fresh());
+        $contents = (new \App\Services\AirmiusPdfDocument())
+            ->text("Vereinsordnung - Tarif $slug", 48, 760, 18)->render();
+        $filename = "ordnung-$slug.pdf";
+        $this->postJson('/api/v1/uploads', ['scope' => 'club', 'club_id' => $club->id,
+            'file' => \Illuminate\Http\UploadedFile::fake()->createWithContent($filename, $contents)])->assertCreated();
+        $file = \App\Models\File::where('club_id', $club->id)->where('display_name', $filename)->sole();
+        $base = "/api/v1/clubs/{$club->id}/policy-documents";
+        $data = ['type' => 'regulation', 'title' => 'Vereinsordnung', 'version_label' => '1',
+            'valid_from' => today()->toDateString(), 'file_id' => $file->id, 'is_public' => false];
+        $id = $this->postJson($base, $data)->assertCreated()->json('data.id');
+        $data['title'] = 'Neue Vereinsordnung';
+        $this->putJson("$base/$id", $data)->assertOk()->assertJsonPath('data.title', $data['title']);
+        $download = $this->get("$base/$id/download")->assertOk()->assertDownload($filename);
+        $this->assertSame($contents, $download->streamedContent());
+        $this->deleteJson("$base/$id")->assertForbidden();
+        $club->update(['is_listed' => true]);
+        $outsider = $this->accountForPlan($slug);
+        $otherClub = $outsider->clubs()->first() ?? Club::factory()->create();
+        $otherClub->users()->syncWithoutDetaching([$outsider->id => ['role' => 'member', 'membership_status' => 'active']]);
+        $otherClub->users()->syncWithoutDetaching([$user->id => ['role' => 'member', 'membership_status' => 'active',
+            'permission_overrides' => $rights]]);
+        $this->actingAs($user->fresh())->postJson("/api/v1/clubs/{$otherClub->id}/policy-documents", $data)
+            ->assertUnprocessable()->assertJsonValidationErrors('file_id');
+        $this->assertDatabaseMissing('club_policy_documents', ['club_id' => $otherClub->id, 'file_id' => $file->id]);
+        foreach ([false, true, false] as $published) {
+            $data['is_public'] = $published;
+            $this->actingAs($user)->putJson("$base/$id", $data)->assertOk();
+            $list = $this->actingAs($outsider)->getJson($base)->assertOk();
+            $result = $this->get("$base/$id/download");
+            if ($published) {
+                $list->assertJsonCount(1, 'data.documents')->assertJsonPath('data.documents.0.id', $id);
+                $result->assertOk()->assertDownload($filename);
+                $this->assertSame($contents, $result->streamedContent());
+                $query = ['scope' => 'club', 'club_id' => $club->id, 'search' => $filename];
+                $this->getJson('/api/v1/files?'.http_build_query($query))->assertNotFound();
+                $this->get(route('auth.files.index', $query))->assertNotFound();
+            } else {
+                $list->assertJsonCount(0, 'data.documents');
+                $result->assertNotFound();
+            }
+        }
+        $rights['policy_documents.delete'] = true;
+        $club->users()->updateExistingPivot($user->id, ['permission_overrides' => $rights]);
+        $this->actingAs($user->fresh())->deleteJson("$base/$id")->assertOk()->assertJsonPath('data.deleted', true);
+        $this->assertDatabaseMissing('club_policy_documents', ['id' => $id]);
+    }
+
+    #[DataProvider('plans')]
+    public function test_membership_waitlist_requires_club_reviewer(string $slug): void
+    {
+        $reviewer = $this->accountForPlan($slug);
+        $club = $reviewer->clubs()->first() ?? Club::factory()->create();
+        foreach (['web', 'api'] as $surface) {
+            $applicant = User::factory()->create();
+            $application = \App\Models\ClubMembershipRequest::create(['club_id' => $club->id, 'user_id' => $applicant->id,
+                'type' => 'membership', 'status' => 'pending']);
+            $url = $surface === 'web' ? route('auth.club-membership-requests.waitlist', $application)
+                : "/api/v1/clubs/{$club->id}/membership-requests/{$application->id}/waitlist";
+            foreach ([false, true] as $allowed) {
+                $club->users()->syncWithoutDetaching([$reviewer->id => ['role' => 'member', 'membership_status' => 'active',
+                    'permission_overrides' => ['members.approve' => $allowed]]]);
+                $response = $this->actingAs($reviewer->fresh())->postJson($url, ['review_note' => 'Gruppe voll']);
+                if (! $allowed) {
+                    $response->assertForbidden();
+                    $this->assertSame('pending', $application->fresh()->status);
+                    continue;
+                }
+                $surface === 'web' ? $response->assertRedirect()->assertSessionHasNoErrors() : $response->assertOk();
+                $this->assertDatabaseHas('club_membership_requests', ['id' => $application->id, 'status' => 'waitlisted',
+                    'waitlisted_by' => $reviewer->id, 'review_note' => 'Gruppe voll']);
+                $this->assertFalse($club->users()->whereKey($applicant->id)->exists());
+            }
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_waitlisted_membership_decisions(string $slug): void
+    {
+        $reviewer = $this->accountForPlan($slug);
+        $club = $reviewer->clubs()->first() ?? Club::factory()->create();
+        foreach (['web', 'api'] as $surface) {
+            foreach (['approve' => 'approved', 'decline' => 'declined'] as $action => $status) {
+                $applicant = User::factory()->create();
+                $application = \App\Models\ClubMembershipRequest::create(['club_id' => $club->id, 'user_id' => $applicant->id,
+                    'type' => 'membership', 'status' => 'waitlisted']);
+                $url = $surface === 'web' ? route("auth.club-membership-requests.$action", $application)
+                    : "/api/v1/clubs/{$club->id}/membership-requests/{$application->id}/$action";
+                foreach ([false, true] as $allowed) {
+                    $club->users()->syncWithoutDetaching([$reviewer->id => ['role' => 'member', 'membership_status' => 'active',
+                        'permission_overrides' => ['members.approve' => $allowed]]]);
+                    $response = $this->actingAs($reviewer->fresh())->postJson($url, ['review_note' => 'Entscheidung geprüft']);
+                    if (! $allowed) {
+                        $response->assertForbidden();
+                        $this->assertSame('waitlisted', $application->fresh()->status);
+                        continue;
+                    }
+                    $surface === 'web' ? $response->assertRedirect()->assertSessionHasNoErrors() : $response->assertOk();
+                    $this->assertDatabaseHas('club_membership_requests', ['id' => $application->id, 'status' => $status,
+                        'reviewed_by' => $reviewer->id, 'review_note' => 'Entscheidung geprüft']);
+                    $membership = ['club_id' => $club->id, 'user_id' => $applicant->id];
+                    if ($action === 'approve') {
+                        $this->assertDatabaseHas('club_user', $membership + ['membership_status' => 'active']);
+                    } else {
+                        $this->assertDatabaseMissing('club_user', $membership);
+                    }
+                }
+            }
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_club_contribution_rule_creation_and_update(string $slug): void
+    {
+        $user = $this->accountForPlan($slug);
+        $club = $user->clubs()->first() ?? Club::factory()->create();
+        foreach (['web' => 'finance.edit', 'api' => 'members.manage'] as $surface => $needed) {
+            $url = $surface === 'web' ? route('auth.club-memberships.contribution-rules.store', $club)
+                : "/api/v1/clubs/{$club->id}/membership/contribution-rules";
+            $data = ['name' => "Jahresbeitrag $surface", 'valid_from' => today()->toDateString(),
+                'billing_interval' => 'yearly', 'amount' => 240, 'factor_key' => 'family'];
+            foreach ([false, true] as $allowed) {
+                $rights = ['finance.edit' => false, 'members.manage' => false];
+                $rights[$needed] = $allowed;
+                $club->users()->syncWithoutDetaching([$user->id => ['role' => 'member', 'membership_status' => 'active',
+                    'permission_overrides' => $rights]]);
+                $result = $this->actingAs($user->fresh())->postJson($url, $data);
+                if (! $allowed) {
+                    $result->assertForbidden();
+                    $this->assertFalse($club->contributionRules()->where('name', $data['name'])->exists());
+                    continue;
+                }
+                $surface === 'web' ? $result->assertRedirect()->assertSessionHasNoErrors() : $result->assertCreated();
+                $rule = $club->contributionRules()->where('name', $data['name'])->sole();
+                $data['name'] .= ' geändert';
+                $result = $this->putJson("$url/{$rule->id}", $data);
+                $surface === 'web' ? $result->assertRedirect()->assertSessionHasNoErrors() : $result->assertOk();
+                $this->assertSame($data['name'], $rule->fresh()->name);
+                $this->deleteJson("$url/{$rule->id}")->assertMethodNotAllowed();
+                $rights[$needed] = false;
+                $club->users()->updateExistingPivot($user->id, ['permission_overrides' => $rights]);
+                $this->actingAs($user->fresh())->putJson("$url/{$rule->id}", array_replace($data, [
+                    'name' => 'Änderung nach Rechteentzug',
+                ]))->assertForbidden();
+                $this->assertSame($data['name'], $rule->fresh()->name);
+            }
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_application_documents_preserve_optional_choice(string $slug): void
+    {
+        $applicant = $this->accountForPlan($slug);
+        $this->actingAs($applicant);
+        foreach (['web', 'api'] as $surface) {
+            foreach ([false, true] as $acceptPhoto) {
+                $document = ['type' => 'privacy', 'url' => 'https://example.test/datenschutz', 'is_visible' => true];
+                $club = Club::factory()->create(['membership_requests_enabled' => true, 'membership_application_fields' => ['gender' => 'required'], 'membership_application_documents' => [
+                    $document + ['id' => 'privacy', 'title' => 'Datenschutzhinweis', 'is_required' => true],
+                    $document + ['id' => 'photo', 'title' => 'Einwilligung Vereinsfotos', 'is_required' => false],
+                ]]);
+                $url = $surface === 'web' ? route('auth.club-membership-requests.store', $club)
+                    : "/api/v1/clubs/{$club->id}/membership-requests";
+                $data = ['type' => 'membership', 'application_data' => ['gender' => 'diverse'], 'accepted_documents' => ['photo' => $acceptPhoto]];
+                $this->postJson($url, $data)->assertUnprocessable()->assertJsonValidationErrors('accepted_documents.privacy');
+                $data['accepted_documents']['privacy'] = true;
+                $result = $this->postJson($url, $data);
+                $surface === 'web' ? $result->assertRedirect()->assertSessionHasNoErrors() : $result->assertCreated();
+                $application = \App\Models\ClubMembershipRequest::where('club_id', $club->id)->where('user_id', $applicant->id)->sole();
+                $ids = array_column($application->accepted_documents, 'id');
+                $this->assertContains('privacy', $ids);
+                $this->assertSame($acceptPhoto, in_array('photo', $ids, true));
+                $this->assertSame('pending', $application->status);
+                $action = fn ($name) => $surface === 'web' ? route("auth.club-membership-requests.$name", $application)
+                    : "$url/{$application->id}/$name";
+                $query = $this->actingAs($club->owner)->postJson($action('request-information'), ['message' => 'Bitte Auswahl prüfen']);
+                $surface === 'web' ? $query->assertRedirect()->assertSessionHasNoErrors() : $query->assertOk();
+                $reply = $this->actingAs($applicant)->postJson($action('respond'), ['accepted_documents' => ['photo' => ! $acceptPhoto]]);
+                $surface === 'web' ? $reply->assertRedirect()->assertSessionHasNoErrors() : $reply->assertOk();
+                $application->refresh();
+                $ids = array_column($application->accepted_documents, 'id');
+                $this->assertSame(! $acceptPhoto, in_array('photo', $ids, true));
+                $this->assertContains('privacy', $ids);
+                $this->assertSame('pending', $application->status);
+                $approved = $this->actingAs($club->owner)->postJson($action('approve'));
+                $surface === 'web' ? $approved->assertRedirect()->assertSessionHasNoErrors() : $approved->assertOk();
+                $this->assertDatabaseHas('club_user', ['club_id' => $club->id, 'user_id' => $applicant->id, 'membership_status' => 'active']);
+                $this->actingAs($applicant)->postJson($action('respond'), ['accepted_documents' => ['photo' => $acceptPhoto]])
+                    ->assertUnprocessable();
+                $application->refresh();
+                $this->assertSame('approved', $application->status);
+                $this->assertSame($ids, array_column($application->accepted_documents, 'id'));
+                $applicant->forceFill(['product_analytics_consent' => true])->save();
+                $withdraw = $surface === 'web' ? route('auth.settings.privacy.withdraw-consents') : '/api/v1/privacy/withdraw-consents';
+                $result = $this->postJson($withdraw, ['consents' => ['all']]);
+                $surface === 'web' ? $result->assertRedirect()->assertSessionHas('success') : $result->assertOk();
+                $this->assertFalse((bool) $applicant->fresh()->product_analytics_consent);
+                $this->assertSame($ids, array_column($application->fresh()->accepted_documents, 'id'));
+            }
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_membership_application_information_exchange(string $slug): void
+    {
+        $reviewer = $this->accountForPlan($slug);
+        $applicant = $this->accountForPlan($slug);
+        $club = $reviewer->clubs()->first() ?? Club::factory()->create();
+        foreach (['web', 'api'] as $surface) {
+            $application = \App\Models\ClubMembershipRequest::create(['club_id' => $club->id, 'user_id' => $applicant->id,
+                'type' => 'membership', 'status' => 'pending']);
+            $url = fn ($action) => $surface === 'web' ? route("auth.club-membership-requests.$action", $application)
+                : "/api/v1/clubs/{$club->id}/membership-requests/{$application->id}/$action";
+            foreach ([false, true] as $allowed) {
+                $club->users()->syncWithoutDetaching([$reviewer->id => ['role' => 'member', 'membership_status' => 'active',
+                    'permission_overrides' => ['members.approve' => $allowed]]]);
+                $request = $this->actingAs($reviewer->fresh())->postJson($url('request-information'), ['message' => 'Welche Gruppe?']);
+                if (! $allowed) {
+                    $request->assertForbidden();
+                    $this->assertSame('pending', $application->fresh()->status);
+                } else {
+                    $surface === 'web' ? $request->assertRedirect()->assertSessionHasNoErrors() : $request->assertOk();
+                    $this->assertSame('information_requested', $application->fresh()->status);
+                }
+            }
+            $this->postJson($url('respond'), ['message' => 'Fremde Antwort'])->assertForbidden();
+            $answer = $this->actingAs($applicant)->postJson($url('respond'), ['message' => 'Laufgruppe']);
+            $surface === 'web' ? $answer->assertRedirect()->assertSessionHasNoErrors() : $answer->assertOk();
+            $this->assertDatabaseHas('club_membership_requests', ['id' => $application->id, 'status' => 'pending',
+                'applicant_response_message' => 'Laufgruppe', 'information_requested_by' => $reviewer->id]);
+            if ($surface === 'web') {
+                $application->delete();
+            }
+        }
+    }
+
+    #[DataProvider('plans')]
     public function test_team_join_request_decisions(string $slug): void
     {
         $user = $this->accountForPlan($slug);
@@ -651,6 +1011,27 @@ class TariffAccountAccessTest extends TestCase
                 }
             }
         }
+    }
+
+    #[DataProvider('plans')]
+    public function test_public_club_sponsor_directory_by_tariff(string $slug): void
+    {
+        $viewer = $this->accountForPlan($slug);
+        $club = Club::factory()->create();
+        $partner = $club->sponsors()->create(['name' => 'Aktiver Partner', 'scope' => 'club',
+            'verification_status' => 'verified', 'starts_at' => today(), 'ends_at' => today()]);
+        foreach ([
+            ['verification_status' => 'pending'],
+            ['verification_status' => 'verified', 'starts_at' => today()->addDay()],
+            ['verification_status' => 'verified', 'ends_at' => today()->subDay()],
+        ] as $index => $attributes) {
+            $club->sponsors()->create($attributes + ['name' => "Inaktiver Partner $index", 'scope' => 'club']);
+        }
+        $this->actingAs($viewer);
+        $this->get(route('guest.sponsors'))->assertOk()->assertInertia(fn ($page) => $page
+            ->has('sponsors', 1)->where('sponsors.0.id', $partner->id)->where('sponsors.0.club.id', $club->id));
+        $this->getJson('/api/v1/public/sponsors')->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $partner->id)->assertJsonPath('data.0.club.id', $club->id);
     }
 
     #[DataProvider('plans')]
@@ -1139,7 +1520,9 @@ class TariffAccountAccessTest extends TestCase
         $club->users()->syncWithoutDetaching([$actor->id => ['role' => 'member', 'membership_status' => 'active',
             'permission_overrides' => ['organization.edit' => true, 'organization.delete' => false]]]);
         $this->actingAs($actor->fresh());
-        $id = $this->postJson($base, $data)->assertCreated()->json('data.id');
+        $id = $this->postJson($base, $data + ['club_id' => null])->assertCreated()->json('data.id');
+        $this->assertDatabaseHas('club_training_groups', ['id' => $id, 'club_id' => $club->id]);
+        $this->assertDatabaseMissing('club_training_groups', ['club_id' => null, 'name' => $data['name']]);
         $data['name'] = 'Jugendtraining Mittwoch';
         $this->putJson("$base/$id", $data)->assertOk();
         $this->assertDatabaseHas('club_training_groups', ['id' => $id, 'club_id' => $club->id, 'name' => $data['name'], 'club_location_id' => $location->id]);
@@ -1285,8 +1668,14 @@ class TariffAccountAccessTest extends TestCase
         $user = $this->accountForPlan($slug);
         $club = $user->clubs()->first() ?? Club::factory()->create();
         $clubPlans = in_array($slug, ['free', 'starter', 'club', 'pro', 'elite'], true)
-            ? [$slug] : ['free', 'club'];
+            ? [$slug] : ['free', 'starter', 'club', 'pro', 'elite'];
         foreach ($clubPlans as $clubPlan) {
+            $proFeatures = in_array($clubPlan, ['pro', 'elite'], true);
+            $expected = [
+                'media_rights' => $proFeatures, 'material_management' => $proFeatures,
+                'training_load_analysis' => $proFeatures, 'injury_risk_warnings' => $proFeatures,
+                'ai_rule_review' => $proFeatures, 'member_onboarding' => $clubPlan !== 'free',
+            ];
             $club->currentSubscription()->updateOrCreate([], [
                 'subscription_plan_id' => SubscriptionPlan::where('slug', $clubPlan)->sole()->id,
                 'status' => 'active', 'billing_interval' => 'monthly',
@@ -1302,12 +1691,21 @@ class TariffAccountAccessTest extends TestCase
                     $web->assertOk()->assertInertia(fn ($page) => $page
                         ->where('clubs.0.id', $club->id)
                         ->where('clubs.0.plan.slug', $clubPlan)
+                        ->where('clubs.0.capabilities.sponsor_crm', $clubPlan === 'elite')
+                        ->where('clubs.0.capabilities.custom_rules', $clubPlan === 'elite')
+                        ->where('clubs.0.capabilities', fn ($actual) => collect($actual)->only(array_keys($expected))->sortKeys()->all()
+                            === collect($expected)->sortKeys()->all())
                         ->where('clubs.0.locked', in_array($clubPlan, ['free', 'starter'], true)));
                 } else {
                     $web->assertForbidden();
                 }
-                $this->getJson("/api/v1/clubs/{$club->id}")->assertOk()
+                $detail = $this->getJson("/api/v1/clubs/{$club->id}")->assertOk()
+                    ->assertJsonPath('data.subscription_capabilities.sponsor_crm', $clubPlan === 'elite')
+                    ->assertJsonPath('data.subscription_capabilities.custom_rules', $clubPlan === 'elite')
                     ->assertJsonPath('data.can_view_cockpit', $allowed);
+                foreach ($expected as $feature => $enabled) {
+                    $detail->assertJsonPath("data.subscription_capabilities.$feature", $enabled);
+                }
             }
         }
     }
@@ -1436,6 +1834,8 @@ class TariffAccountAccessTest extends TestCase
     #[DataProvider('plans')]
     public function test_club_inventory_item_rights(string $slug): void
     {
+        config(['filesystems.uploads_disk' => 'public']);
+        $disk = \Illuminate\Support\Facades\Storage::fake('public');
         $member = $this->accountForPlan($slug);
         $club = $member->clubs()->first() ?? Club::factory()->create();
         $url = "/api/v1/clubs/{$club->id}/inventory";
@@ -1452,6 +1852,19 @@ class TariffAccountAccessTest extends TestCase
             $this->get(route('auth.club-inventory.index'))->assertOk()
                 ->assertInertia(fn ($page) => $page->where('clubs.0.id', $club->id));
             $this->getJson($url)->assertOk()->assertJsonFragment(['sku' => 'BALL-02']);
+            $imageUrl = "$url/{$existing->id}/image";
+            $upload = $this->postJson($imageUrl, ['image' => \Illuminate\Http\UploadedFile::fake()->image('ball.jpg')]);
+            if ($right === 'edit') {
+                $upload->assertOk();
+                $path = $existing->fresh()->image_path;
+                $disk->assertExists($path);
+                $this->deleteJson($imageUrl)->assertOk();
+                $this->assertNull($existing->fresh()->image_path);
+                $disk->assertMissing($path);
+            } else {
+                $upload->assertForbidden();
+                $this->deleteJson($imageUrl)->assertForbidden();
+            }
             if ($right === 'view') {
                 $this->postJson($url, $data)->assertForbidden();
                 $this->putJson("$url/{$existing->id}", array_merge($data, ['name' => 'Geändert']))->assertForbidden();
@@ -1627,6 +2040,90 @@ class TariffAccountAccessTest extends TestCase
         $this->getJson($api)->assertOk()->assertJsonCount(1, 'data.campaigns')
             ->assertJsonPath('data.campaigns.0.name', "Kampagne $user->id")->assertJsonPath('data.summary.impressions', 800)
             ->assertJsonPath('data.summary.clicks', 40)->assertJsonPath('data.summary.ctr', 5);
+        $brand = \App\Models\Sponsor::where('owner_user_id', $user->id)->sole();
+        foreach (['web', 'api'] as $surface) {
+            $apiSurface = $surface === 'api';
+            $base = $apiSurface ? '/api/v1/commerce/seller/campaigns' : route('auth.commerce.campaigns.store');
+            $data = ['sponsor_id' => $brand->id, 'name' => "Markenaktion $surface", 'objective' => 'traffic',
+                'placement' => 'sponsor_section', 'creative_format' => 'banner_wide', 'target_url' => 'https://example.test/sport',
+                'budget_cents' => 2500, 'start_payment' => false];
+            $result = $this->postJson($base, $data);
+            $apiSurface ? $result->assertCreated() : $result->assertRedirect()->assertSessionHasNoErrors();
+            $campaign = \App\Models\AdCampaign::where('name', $data['name'])->sole();
+            $this->assertSame($brand->id, $campaign->sponsor_id);
+            $this->assertNull($campaign->club_id);
+            $this->assertSame('draft', $campaign->status);
+            $data['name'] .= ' aktualisiert';
+            $url = "$base/{$campaign->id}";
+            ($apiSurface ? $this->putJson($url, $data) : $this->postJson($url, $data))->assertOk();
+            $this->assertSame($data['name'], $campaign->fresh()->name);
+            foreach (['viewer', 'finance', 'campaign_manager', 'administrator'] as $teamRole) {
+                $staff = $this->accountForPlan($slug);
+                $staff->assignRole('sponsor');
+                \App\Models\SponsorMembership::create(['sponsor_id' => $brand->id, 'user_id' => $staff->id,
+                    'email' => $staff->email, 'role' => $teamRole, 'status' => 'active']);
+                $data['name'] = "Sommer $surface $teamRole";
+                $this->actingAs($staff->fresh());
+                $edit = $apiSurface ? $this->putJson($url, $data) : $this->postJson($url, $data);
+                $draft = array_merge($data, ['name' => "Entwurf $surface $teamRole"]);
+                $create = $this->postJson($base, $draft);
+                if (in_array($teamRole, ['administrator', 'campaign_manager'], true)) {
+                    $edit->assertOk();
+                    $this->assertSame($data['name'], $campaign->fresh()->name);
+                    $apiSurface ? $create->assertCreated() : $create->assertRedirect()->assertSessionHasNoErrors();
+                    $ownDraft = \App\Models\AdCampaign::where('sponsor_id', $brand->id)->where('name', $draft['name'])->sole();
+                    $this->assertSame('draft', $ownDraft->status);
+                    $this->deleteJson("$base/{$ownDraft->id}", ['confirmation' => 'delete'])->assertOk();
+                    $this->assertDatabaseMissing('ad_campaigns', ['id' => $ownDraft->id]);
+                } else {
+                    $edit->assertForbidden();
+                    $create->assertForbidden();
+                    $this->assertDatabaseMissing('ad_campaigns', ['name' => $draft['name']]);
+                    $this->deleteJson($url, ['confirmation' => 'delete'])->assertForbidden();
+                    $this->assertNotSame($data['name'], $campaign->fresh()->name);
+                }
+            }
+            $this->actingAs($user);
+            $this->deleteJson($url, ['confirmation' => 'delete'])->assertOk();
+            $this->assertDatabaseMissing('ad_campaigns', ['id' => $campaign->id]);
+        }
+        foreach (['auth', 'api.v1'] as $prefix) {
+            $club = Club::factory()->create(['owner_id' => $user->id]);
+            $data = ['sponsor_id' => $brand->id, 'club_id' => $club->id, 'rights_package' => ['Banner']];
+            $request = $this->postJson(route("$prefix.sponsor-workspace.partnerships.store"), $data);
+            $prefix === 'auth' ? $request->assertRedirect()->assertSessionHasNoErrors() : $request->assertCreated();
+            $partnership = \App\Models\SponsorPartnership::where('sponsor_id', $brand->id)->where('club_id', $club->id)->sole();
+            $this->assertSame(\App\Models\SponsorPartnership::STATUS_PENDING, $partnership->status);
+            $this->assertSame(['Banner'], $partnership->rights_package);
+            $withdraw = $this->deleteJson(route("$prefix.sponsor-workspace.partnerships.withdraw", $partnership));
+            $prefix === 'auth' ? $withdraw->assertRedirect() : $withdraw->assertSuccessful();
+            $this->assertSame('withdrawn', $partnership->fresh()->status);
+        }
+        $reviewer = $this->accountForPlan($slug);
+        $club = Club::factory()->create();
+        $club->users()->attach($reviewer, ['role' => 'member', 'membership_status' => 'active',
+            'permission_overrides' => ['sponsors.edit' => true]]);
+        foreach (['approve' => 'active', 'reject' => 'rejected'] as $decision => $status) {
+            $record = \App\Models\SponsorPartnership::create(['sponsor_id' => $brand->id, 'club_id' => $club->id,
+                'created_by' => $user->id, 'status' => \App\Models\SponsorPartnership::STATUS_PENDING]);
+            $this->actingAs($reviewer);
+            $this->postJson("/admin/sponsor-partnerships/{$record->id}/decision", ['decision' => $decision])->assertForbidden();
+            $url = route('api.v1.sponsor-management.partnerships.decision', $record);
+            $this->postJson($url, ['decision' => $decision])->assertOk()->assertJsonPath('data.status', $status);
+            $this->assertSame($reviewer->id, (int) $record->fresh()->responded_by);
+            $this->postJson($url, ['decision' => $decision])->assertConflict();
+        }
+        $operator = $this->accountForPlan($slug);
+        $operator->givePermissionTo('system.manage');
+        $this->actingAs($operator->fresh());
+        foreach (['approve' => 'active', 'reject' => 'rejected'] as $decision => $status) {
+            $record = \App\Models\SponsorPartnership::create(['sponsor_id' => $brand->id, 'club_id' => $club->id,
+                'created_by' => $user->id, 'status' => \App\Models\SponsorPartnership::STATUS_PENDING]);
+            $this->post(route('sponsors.partnerships.decision', $record), ['decision' => $decision])
+                ->assertRedirect()->assertSessionHasNoErrors();
+            $this->assertDatabaseHas('sponsor_partnerships', ['id' => $record->id, 'status' => $status,
+                'responded_by' => $operator->id]);
+        }
     }
 
     #[DataProvider('plans')]
@@ -1694,13 +2191,31 @@ class TariffAccountAccessTest extends TestCase
             foreach (['physical_product' => 'equipment', 'online_course' => 'course'] as $type => $category) {
                 $data['offer_type'] = $type;
                 $data['category'] = $category;
+                if ($type === 'physical_product') {
+                    $data += ['catalog_group' => 'apparel', 'catalog_subcategory' => 'shorts', 'sports' => ['running', 'fitness']];
+                } else {
+                    unset($data['catalog_group'], $data['catalog_subcategory'], $data['sports']);
+                }
                 $this->postJson($base, $data)->assertSuccessful();
                 $product = \App\Models\MarketplaceProduct::where('user_id', $seller->id)->sole();
                 $this->assertSame($type, $product->offer_type);
                 $this->assertSame('review', $product->status);
                 $url = $api ? "$base/{$product->id}" : route('auth.commerce.my-products.update', $product);
+                if ($type === 'physical_product') {
+                    $this->assertSame('apparel', $product->catalog_group);
+                    $this->assertSame('shorts', $product->catalog_subcategory);
+                    $this->assertEqualsCanonicalizing(['running', 'fitness'], $product->sports);
+                    $data['catalog_group'] = 'shoes';
+                    $data['catalog_subcategory'] = 'running_shoes';
+                }
                 $this->json($api ? 'PUT' : 'POST', $url, array_merge($data, ['title' => 'Geändertes Angebot']))->assertSuccessful();
                 $this->assertSame('Geändertes Angebot', $product->fresh()->title);
+                if ($type === 'physical_product') {
+                    $product->refresh();
+                    $this->assertSame('shoes', $product->catalog_group);
+                    $this->assertSame('running_shoes', $product->catalog_subcategory);
+                    $this->assertEqualsCanonicalizing(['running', 'fitness'], $product->sports);
+                }
                 $this->deleteJson($url)->assertSuccessful();
                 $this->assertDatabaseMissing('marketplace_products', ['id' => $product->id]);
             }
@@ -1867,10 +2382,15 @@ class TariffAccountAccessTest extends TestCase
     public function test_invited_account_joins_correct_club_once(string $slug): void
     {
         $member = $this->accountForPlan($slug);
+        $member->forceFill(['birth_date' => now()->subYears(15), 'guardian_consent_at' => null])->save();
         foreach (['web', 'api'] as $surface) {
             $club = Club::factory()->create();
+            $team = \App\Models\Team::factory()->create(['club_id' => $club->id]);
+            $payerId = User::factory()->create()->id;
             $invite = \App\Models\ClubExternalMember::create(['club_id' => $club->id, 'name' => $member->name,
-                'email' => $member->email, 'role' => 'member', 'membership_status' => 'active', 'member_number' => 'T-17']);
+                'email' => $member->email, 'role' => 'member', 'membership_status' => 'active', 'member_number' => 'T-17',
+                'contribution_amount' => 27.50, 'family_group_key' => 'Familie-17',
+                'contribution_payer_user_id' => $payerId]);
             $invite->issueInvitation();
             $web = $surface === 'web';
             $url = $web ? route('auth.club-member-invitations.accept', $invite->invitation_token)
@@ -1879,7 +2399,12 @@ class TariffAccountAccessTest extends TestCase
             $response = $this->json($web ? 'GET' : 'POST', $url);
             $web ? $response->assertRedirect(route('auth.clubs.show', $club)) : $response->assertOk();
             $key = ['club_id' => $club->id, 'user_id' => $member->id];
-            $this->assertDatabaseHas('club_user', $key + ['membership_status' => 'active', 'member_number' => 'T-17']);
+            $this->assertDatabaseHas('club_user', $key + ['membership_status' => 'active', 'member_number' => 'T-17',
+                'contribution_amount' => 27.50, 'family_group_key' => 'Familie-17', 'contribution_payer_user_id' => $payerId]);
+            $this->assertDatabaseMissing('team_user', ['team_id' => $team->id, 'user_id' => $member->id]);
+            $this->assertNull($member->fresh()->guardian_consent_at);
+            $this->assertFalse(\App\Models\GuardianChildRelationship::where('child_user_id', $member->id)
+                ->where('guardian_user_id', $payerId)->exists());
             $this->json($web ? 'GET' : 'POST', $url)->assertNotFound();
             $this->assertSame(1, \Illuminate\Support\Facades\DB::table('club_user')->where($key)->count());
         }
@@ -2064,6 +2589,9 @@ class TariffAccountAccessTest extends TestCase
         $mobile = $this->getJson('/api/v1/subscription-plans')->assertOk()->json('data');
         foreach ([$web, $mobile] as $catalog) {
             $plan = collect($catalog)->sole('slug', $slug);
+            foreach (['Sportlerportfolio mit Medien (geplant)', 'Profilstatistiken (geplant)'] as $planned) {
+                $this->assertSame($slug === 'sportler-pro', in_array($planned, $plan['features'], true), $planned);
+            }
             foreach (['Datenmigration', 'Schnittstellen', 'Schulung', 'Mandantenfähigkeit vorbereitet', 'AVV und SLA Paket'] as $service) {
                 $this->assertSame($slug === 'enterprise-verband', in_array($service, $plan['features'], true), $service);
             }
@@ -2145,6 +2673,14 @@ class TariffAccountAccessTest extends TestCase
         $team->users()->attach($athlete, ['role' => \App\Support\TeamRoles::PLAYER]);
         $url = '/api/v1/training/overload-indicators?user_id='.$athlete->id;
         $this->actingAs($trainer)->getJson($url)->assertOk()->assertJsonPath('data.summary.level', 'insufficient_data');
+        \App\Models\TrainingLog::create([
+            'user_id' => $athlete->id, 'created_by' => $athlete->id,
+            'team_id' => $team->id, 'title' => 'Privates Einzeltraining',
+            'status' => 'completed', 'performed_at' => now(), 'duration_minutes' => 60,
+            'metrics' => ['privacy_scope' => 'private', 'wellness' => ['rpe' => 10]],
+        ]);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.summary.shared_logs', 0)
+            ->assertJsonPath('data.summary.level', 'insufficient_data')->assertDontSee('Privates Einzeltraining');
         foreach (range(1, 3) as $day) {
             \App\Models\TrainingLog::create(['user_id' => $athlete->id, 'created_by' => $athlete->id,
                 'team_id' => $team->id, 'trainer_id' => $trainer->id, 'title' => 'Intervalltraining',
@@ -2153,8 +2689,606 @@ class TariffAccountAccessTest extends TestCase
         }
         $this->getJson($url)->assertOk()->assertJsonPath('data.summary.shared_logs', 3)
             ->assertJsonPath('data.summary.level', 'high')->assertJsonPath('data.indicators.load_score', 810)
+            ->assertJsonPath('data.summary.signals', ['repeated_pain', 'repeated_high_rpe'])
+            ->assertJsonPath('data.indicators.pain_signal_count', 3)
+            ->assertJsonPath('data.indicators.high_rpe_signal_count', 3)
             ->assertJsonPath('data.privacy.content_included', false)->assertDontSee('Intervalltraining');
+        $trainer->assignRole(\Spatie\Permission\Models\Role::findOrCreate('coach', 'web'));
+        foreach ([6 => 12, 7 => 25, 13 => 35, 14 => 44] as $daysAgo => $minutes) {
+            \App\Models\TrainingLog::create(['user_id' => $athlete->id, 'created_by' => $athlete->id,
+                'team_id' => $team->id, 'trainer_id' => $trainer->id, 'title' => 'Lockerer Lauf',
+                'status' => 'completed', 'performed_at' => today()->subDays($daysAgo)->addHour(),
+                'duration_minutes' => $minutes, 'metrics' => ['privacy_scope' => 'trainer', 'wellness' => ['rpe' => 1]]]);
+        }
+        $this->actingAs($trainer->fresh())->get(route('auth.trainer-cockpit.index'))->assertOk()
+            ->assertInertia(fn ($page) => $page->where('coachWeekly.current_week.session_count', 4)
+                ->where('coachWeekly.current_week.duration_minutes', 102)
+                ->where('coachWeekly.previous_week.session_count', 2)
+                ->where('coachWeekly.previous_week.duration_minutes', 60)
+                ->where('coachWeekly.current_week.average_rpe', 7)
+                ->where('coachWeekly.risk_athletes.0.id', $athlete->id)
+                ->where('coachWeekly.risk_athletes.0.pain', 4)
+                ->where('coachWeekly.risk_athletes.0.rpe', 9)
+                ->where('coachWeekly.risk_athletes.0.high_load_sessions', 3));
+        $this->getJson('/api/v1/trainer-cockpit')->assertOk()
+            ->assertJsonPath('data.coachWeekly.current_week.session_count', 4)
+            ->assertJsonPath('data.coachWeekly.current_week.duration_minutes', 102)
+            ->assertJsonPath('data.coachWeekly.previous_week.session_count', 2)
+            ->assertJsonPath('data.coachWeekly.previous_week.duration_minutes', 60)
+            ->assertJsonPath('data.coachWeekly.risk_athletes.0.id', $athlete->id)
+            ->assertJsonPath('data.coachWeekly.risk_athletes.0.pain', 4)
+            ->assertJsonPath('data.coachWeekly.risk_athletes.0.high_load_sessions', 3);
         $this->actingAs(User::factory()->create())->getJson($url)->assertForbidden();
+    }
+
+    #[DataProvider('plans')]
+    public function test_seller_can_book_a_sponsor_section_draft_for_their_club_with_advertising_permission(string $slug): void
+    {
+        $seller = $this->accountForPlan($slug);
+        $club = Club::factory()->create();
+        foreach (['web', 'api'] as $surface) {
+            $url = $surface === 'web' ? route('auth.commerce.campaigns.store') : '/api/v1/commerce/seller/campaigns';
+            $data = ['name' => "Vereinswerbung $surface", 'club_id' => $club->id, 'placement' => 'sponsor_section',
+                'objective' => 'awareness', 'creative_format' => 'banner_wide', 'budget_cents' => 2500, 'start_payment' => false];
+            foreach ([false, true] as $allowed) {
+                $club->users()->syncWithoutDetaching([$seller->id => ['role' => 'member', 'membership_status' => 'active',
+                    'permission_overrides' => ['advertising.edit' => $allowed]]]);
+                $response = $this->actingAs($seller->fresh())->postJson($url, $data);
+                if ($allowed) {
+                    $surface === 'web' ? $response->assertRedirect()->assertSessionHasNoErrors() : $response->assertCreated();
+                    $this->assertDatabaseHas('ad_campaigns', ['club_id' => $club->id, 'user_id' => $seller->id,
+                        'name' => $data['name'], 'placement' => 'sponsor_section', 'status' => 'draft']);
+                } else {
+                    $response->assertUnprocessable()->assertJsonValidationErrors('club_id');
+                    $this->assertDatabaseMissing('ad_campaigns', ['name' => $data['name']]);
+                }
+            }
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_seller_campaign_placement_choices(string $slug): void
+    {
+        $user = $this->accountForPlan($slug);
+        $this->actingAs($user);
+        foreach (['web', 'api'] as $surface) {
+            $url = $surface === 'web' ? route('auth.commerce.campaigns.store') : '/api/v1/commerce/seller/campaigns';
+            foreach (['marketplace_card', 'feed', 'sidebar', 'sponsor_section', 'premium'] as $placement) {
+                $name = "Werbeplatz $surface $placement";
+                $result = $this->postJson($url, ['name' => $name, 'placement' => $placement, 'objective' => 'traffic',
+                    'creative_format' => 'banner_wide', 'budget_cents' => 2500, 'start_payment' => false,
+                    'target_url' => 'https://example.test/angebot']);
+                if ($placement === 'premium') {
+                    $result->assertUnprocessable()->assertJsonValidationErrors('placement');
+                    $this->assertDatabaseMissing('ad_campaigns', ['user_id' => $user->id, 'name' => $name]);
+                } else {
+                    $surface === 'web' ? $result->assertRedirect()->assertSessionHasNoErrors() : $result->assertCreated();
+                    $this->assertDatabaseHas('ad_campaigns', ['user_id' => $user->id, 'name' => $name,
+                        'placement' => $placement, 'status' => 'draft', 'force_priority' => false]);
+                }
+            }
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_club_advertising_drafts_by_role(string $slug): void
+    {
+        $member = $this->accountForPlan($slug);
+        $club = $member->clubs()->first() ?? Club::factory()->create();
+        foreach (['web', 'api'] as $surface) {
+            $api = $surface === 'api';
+            $base = $api ? '/api/v1/commerce/seller/campaigns' : route('auth.commerce.campaigns.store');
+            $data = ['club_id' => $club->id, 'name' => "Sommeraktion $surface", 'objective' => 'traffic',
+                'placement' => 'feed', 'creative_format' => 'feed_square', 'target_url' => 'https://example.test/sport',
+                'budget_cents' => 2500, 'start_payment' => false];
+            foreach ([false, true] as $allowed) {
+                $club->users()->syncWithoutDetaching([$member->id => ['role' => 'member', 'membership_status' => 'active',
+                    'permission_overrides' => ['advertising.edit' => $allowed]]]);
+                $response = $this->actingAs($member->fresh())->postJson($base, $data);
+                if (! $allowed) {
+                    $response->assertUnprocessable()->assertJsonValidationErrors('club_id');
+                    $this->assertDatabaseMissing('ad_campaigns', ['name' => $data['name']]);
+                } elseif ($api) {
+                    $response->assertCreated();
+                } else {
+                    $response->assertRedirect()->assertSessionHasNoErrors();
+                }
+            }
+            $campaign = \App\Models\AdCampaign::where('name', $data['name'])->where('club_id', $club->id)->sole();
+            $this->assertSame('draft', $campaign->status);
+            $url = "$base/{$campaign->id}";
+            $data['name'] .= ' bearbeitet';
+            $data['placement'] = 'sponsor_section';
+            $data['creative_format'] = 'banner_wide';
+            $response = $api ? $this->putJson($url, $data) : $this->postJson($url, $data);
+            $response->assertOk();
+            $this->assertSame($data['name'], $campaign->fresh()->name);
+            $this->assertDatabaseHas('ad_campaigns', ['id' => $campaign->id, 'placement' => 'sponsor_section',
+                'creative_format' => 'banner_wide', 'status' => 'draft']);
+            $response = $this->deleteJson($url, ['confirmation' => 'delete']);
+            $response->assertOk();
+            $this->assertDatabaseMissing('ad_campaigns', ['id' => $campaign->id]);
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_personal_onboarding_tracks_first_training(string $slug): void
+    {
+        $user = $this->accountForPlan($slug);
+        $this->actingAs($user)->get(route('auth.maturity.index'))->assertOk();
+        $url = route('api.v1.maturity.onboarding');
+        $before = $this->getJson($url)->assertOk()->json('data');
+        $this->assertContains('first_training_log', array_column($before['next_actions'], 'key'));
+        $this->postJson('/api/v1/training/logs', ['title' => 'Erstes Training', 'sport_type' => 'laufen',
+            'status' => 'completed', 'performed_at' => now()->toIso8601String(), 'privacy_scope' => 'private',
+            'notify_people' => false])->assertCreated();
+        $after = $this->getJson($url)->assertOk()->json('data');
+        $this->assertTrue(collect($after['items'])->sole('key', 'first_training_log')['done']);
+        $this->assertNotContains('first_training_log', array_column($after['next_actions'], 'key'));
+        $this->assertSame($before['completion_percent'] + 10, $after['completion_percent']);
+    }
+
+    #[DataProvider('plans')]
+    public function test_meal_photo_entitlement_and_consent(string $slug): void
+    {
+        $this->actingAs($this->accountForPlan($slug));
+        $locked = !in_array($slug, ['club', 'pro', 'elite', 'sportler-pro', 'trainer-pro'], true);
+        config(['airmius_ai.enabled' => true, 'airmius_ai.features.nutrition_image_analysis.enabled' => true,
+            'airmius_ai.features.nutrition_image_analysis.primary_provider' => 'openai',
+            'airmius_ai.features.nutrition_image_analysis.fallback_provider' => 'openai',
+            'airmius_ai.providers.openai' => ['enabled' => true, 'model' => 'test', 'api_key' => 'test',
+                'base_url' => 'https://tarif-test.invalid']]);
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        \Illuminate\Support\Facades\Http::fake(['https://tarif-test.invalid/responses' =>
+            \Illuminate\Support\Facades\Http::response(['output_text' => '{"title":"Testmahlzeit","calories":300}'])]);
+        $this->get(route('auth.nutrition.index'))->assertOk()->assertInertia(fn ($page) =>
+            $page->where('aiCapabilities.nutrition_image_analysis.requires_premium', $locked));
+        $this->getJson('/api/v1/nutrition')->assertOk()
+            ->assertJsonPath('data.ai_capabilities.nutrition_image_analysis.requires_premium', $locked);
+        foreach ([route('auth.nutrition.ai.meal-image'), '/api/v1/nutrition/ai/meal-image'] as $url) {
+            $this->postJson($url, ['image' => \Illuminate\Http\UploadedFile::fake()->image('essen.jpg'),
+                'ai_consent' => '0'])->assertUnprocessable()->assertJsonValidationErrors('ai_consent');
+            $response = $this->postJson($url, ['image' => \Illuminate\Http\UploadedFile::fake()->image('essen.jpg'),
+                'ai_consent' => '1']);
+            if ($locked) {
+                $response->assertUnprocessable();
+            } else {
+                $response->assertOk()->assertJsonPath('data.title', 'Testmahlzeit')->assertJsonPath('data.calories', 300);
+            }
+        }
+        \Illuminate\Support\Facades\Http::assertSentCount($locked ? 0 : 2);
+    }
+
+    #[DataProvider('plans')]
+    public function test_training_plan_quota_for_member_and_coach(string $slug): void
+    {
+        $user = $this->accountForPlan($slug);
+        $premium = in_array($slug, ['club', 'pro', 'elite', 'trainer-pro'], true);
+        $personal = $premium || $slug === 'sportler-pro';
+        foreach ([false, true] as $coach) {
+            if ($coach) {
+                $user->assignRole(\Spatie\Permission\Models\Role::findOrCreate('coach', 'web'));
+            }
+            [$limit, $weeks] = $coach ? ($premium ? [30, 26] : [0, 0]) : ($personal ? [10, 12] : [3, 4]);
+            $this->actingAs($user->fresh())->get(route('auth.nutrition.index'))->assertOk()
+                ->assertInertia(fn ($page) => $page->where('aiCapabilities.training_plan_generation.monthly_limit', $limit)
+                    ->where('aiCapabilities.training_plan_generation.max_weeks', $weeks));
+            $this->getJson('/api/v1/nutrition')->assertOk()
+                ->assertJsonPath('data.ai_capabilities.training_plan_generation.monthly_remaining', $limit)
+                ->assertJsonPath('data.ai_capabilities.training_plan_generation.max_weeks', $weeks);
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_short_plan_preview_with_provider_fixture(string $slug): void
+    {
+        $user = $this->accountForPlan($slug);
+        $club = $user->clubs()->first() ?? Club::factory()->create();
+        $club->users()->syncWithoutDetaching([$user->id => ['role' => 'member', 'membership_status' => 'active',
+            'permission_overrides' => ['training_plans.edit' => true]]]);
+        $this->actingAs($user->fresh());
+        config(['airmius_ai.enabled' => true, 'airmius_ai.features.training_plan_generation.enabled' => true,
+            'airmius_ai.features.training_plan_generation.primary_provider' => 'ionos',
+            'airmius_ai.features.training_plan_generation.fallback_provider' => 'ionos',
+            'airmius_ai.providers.ionos.enabled' => true, 'airmius_ai.providers.ionos.api_key' => 'test',
+            'airmius_ai.providers.ionos.base_url' => 'https://ionos.test/v1']);
+        $item = ['title' => 'Lockerer Lauf', 'duration_minutes' => 30, 'adaptation' => '5 Minuten kürzer laufen',
+            'steps' => array_map(fn ($phase) => ['phase' => $phase, 'exercise' => 'Lockeres Laufen',
+                'prescription' => '10 Minuten', 'minutes' => 10, 'instruction' => 'Entspannt laufen',
+                'rest' => 'Keine Pause', 'intensity' => 'Sprechtempo'], ['warmup', 'main', 'cooldown'])];
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        \Illuminate\Support\Facades\Http::fake(['ionos.test/*' => \Illuminate\Support\Facades\Http::response([
+            'choices' => [['message' => ['content' => json_encode(['title' => 'Wochenplan', 'items' => [$item]])]]],
+        ])]);
+        $urls = [route('auth.training.ai.plans.preview'), '/api/v1/training/ai/plans/preview'];
+        $request = ['goal' => 'Lauftraining planen', 'sport_type' => 'running', 'level' => 'beginner',
+            'phase' => 'base', 'weeks' => 1, 'sessions_per_week' => 1, 'allow_profile_estimate' => true];
+        foreach ($urls as $url) {
+            $callsBefore = \Illuminate\Support\Facades\Http::recorded()->count();
+            $incomplete = $this->postJson($url, array_replace($request, ['allow_profile_estimate' => false]))
+                ->assertUnprocessable()->assertJsonPath('profile_estimate_allowed', true);
+            $this->assertNotEmpty($incomplete->json('missing_profile_fields'));
+            \Illuminate\Support\Facades\Http::assertSentCount($callsBefore);
+            $plan = $this->postJson($url, $request)
+                ->assertOk()->assertJsonCount(1, 'plan.items')->assertJsonPath('plan.items.0.title', 'Lockerer Lauf')
+                ->assertJsonStructure(['plan' => ['safety_gate', 'safety_token', 'quality_check']])->json('plan');
+            $checks = collect($plan['quality_check']['checks'])->keyBy('key');
+            $this->assertSame('warning', $checks['profile']['status']);
+            $this->assertContains($checks['progression']['status'], ['ok', 'warning']);
+            $this->assertContains($checks['load_balance']['status'], ['ok', 'warning']);
+            $this->assertNotEmpty($plan['quality_check']['suggestions']);
+            $storeUrl = str_ends_with($url, '/api/v1/training/ai/plans/preview')
+                ? '/api/v1/training/ai/plans' : route('auth.training.ai.plans.store');
+            $this->postJson($storeUrl, ['plan' => $plan, 'accepted_ai_safety' => false])
+                ->assertUnprocessable()->assertJsonValidationErrors('accepted_ai_safety');
+            $id = $this->postJson($storeUrl, ['plan' => $plan, 'accepted_ai_safety' => true, 'status' => 'draft'])
+                ->assertCreated()->json('plan.id');
+            $this->assertDatabaseHas('training_plans', ['id' => $id, 'created_by' => $user->id, 'status' => 'draft']);
+            $this->assertDatabaseHas('training_plan_items', ['training_plan_id' => $id, 'title' => 'Lockerer Lauf']);
+        }
+        $user->assignRole(\Spatie\Permission\Models\Role::findOrCreate('coach', 'web'));
+        $this->actingAs($user->fresh());
+        foreach ($urls as $url) {
+            $before = \Illuminate\Support\Facades\Http::recorded()->count();
+            $response = $this->postJson($url, $request);
+            if (in_array($slug, ['club', 'pro', 'elite', 'trainer-pro'], true)) {
+                $response->assertOk()->assertJsonPath('plan.items.0.title', 'Lockerer Lauf');
+                $checks = collect($response->json('plan.quality_check.checks'))->keyBy('key');
+                $this->assertSame('warning', $checks['profile']['status']);
+            } else {
+                $response->assertUnprocessable()->assertJsonPath('code', 'training_ai_unavailable');
+                \Illuminate\Support\Facades\Http::assertSentCount($before);
+            }
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_personal_plan_monthly_usage_boundary(string $slug): void
+    {
+        $user = $this->accountForPlan($slug);
+        $this->actingAs($user);
+        $this->travelTo(now()->startOfMonth()->addDays(5));
+        $limit = in_array($slug, ['club', 'pro', 'elite', 'trainer-pro', 'sportler-pro'], true) ? 10 : 3;
+        $event = ['user_id' => $user->id, 'area' => 'ai', 'provider' => 'test', 'service' => 'text',
+            'operation' => 'training_plan_generation', 'occurred_at' => now()];
+        \App\Models\ExternalProviderUsageEvent::create($event + ['status' => 'error']);
+        for ($i = 1; $i < $limit; $i++) {
+            \App\Models\ExternalProviderUsageEvent::create($event + ['status' => 'ok']);
+        }
+        $remaining = function (int $expected) {
+            $this->get(route('auth.nutrition.index'))->assertOk()->assertInertia(fn ($page) =>
+                $page->where('aiCapabilities.training_plan_generation.monthly_remaining', $expected));
+            $this->getJson('/api/v1/nutrition')->assertOk()
+                ->assertJsonPath('data.ai_capabilities.training_plan_generation.monthly_remaining', $expected);
+        };
+        $remaining(1);
+        $request = ['goal' => 'Lauftraining planen', 'sport_type' => 'running', 'level' => 'beginner',
+            'phase' => 'base', 'weeks' => 1, 'sessions_per_week' => 2, 'allow_profile_estimate' => true];
+        foreach ([route('auth.training.ai.plans.preview'), '/api/v1/training/ai/plans/preview'] as $url) {
+            $this->postJson($url, $request)->assertForbidden();
+        }
+        \App\Models\ExternalProviderUsageEvent::create($event + ['status' => 'ok']);
+        $remaining(0);
+        $club = $user->clubs()->first() ?? Club::factory()->create();
+        $club->users()->syncWithoutDetaching([$user->id => ['role' => 'member', 'membership_status' => 'active',
+            'permission_overrides' => ['training_plans.edit' => true]]]);
+        $this->actingAs($user->fresh());
+        \Illuminate\Support\Facades\Http::fake();
+        \Illuminate\Support\Facades\Log::spy();
+        foreach ([route('auth.training.ai.plans.preview'), '/api/v1/training/ai/plans/preview'] as $url) {
+            // A new HTTP request resolves a fresh controller after the permission change.
+            app('router')->getRoutes()->match(\Illuminate\Http\Request::create($url, 'POST'))->flushController();
+            $this->postJson($url, array_replace($request, ['allow_profile_estimate' => false]))
+                ->assertUnprocessable()->assertJsonPath('profile_estimate_allowed', true)
+                ->assertJsonStructure(['missing_profile_fields' => [['label']], 'profile_completion_url']);
+            $this->postJson($url, $request)->assertUnprocessable()->assertJsonPath('code', 'training_ai_unavailable');
+        }
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')->twice()
+            ->withArgs(fn ($message, $context) => $message === 'AI training plan generation failed.'
+                && str_contains($context['message'], "KI-Trainingsplan-Limit ({$limit}x) ist erreicht"));
+        \Illuminate\Support\Facades\Http::assertNothingSent();
+        $this->travelTo(now()->addMonth()->startOfMonth());
+        $remaining($limit);
+    }
+
+    #[DataProvider('plans')]
+    public function test_member_can_report_image_rights_on_public_post(string $slug): void
+    {
+        $reporter = $this->accountForPlan($slug);
+        $author = User::factory()->create();
+        $this->actingAs($reporter);
+        foreach ([route('auth.reports.store'), '/api/v1/reports'] as $url) {
+            $post = \App\Models\Post::factory()->create(['user_id' => $author->id, 'visibility' => 'public',
+                'image' => 'https://example.test/vereinsfoto.jpg']);
+            $id = $this->postJson($url, ['type' => 'post', 'id' => $post->id, 'reason' => 'image_rights'])
+                ->assertCreated()->assertJsonPath('data.status', 'open')->json('data.id');
+            $this->assertDatabaseHas('content_reports', ['id' => $id, 'reportable_id' => $post->id,
+                'reporter_id' => $reporter->id, 'reason' => 'image_rights', 'status' => 'open']);
+            $appealUrl = "$url/$id/appeal";
+            $appeal = ['reason' => 'Bitte die Bildfreigabe erneut prüfen.'];
+            $this->postJson($appealUrl, $appeal)->assertUnprocessable();
+            \App\Models\ContentReport::findOrFail($id)->update(['status' => 'dismissed']);
+            $this->actingAs($author)->postJson($appealUrl, $appeal)->assertForbidden();
+            $this->actingAs($reporter)->postJson($appealUrl, $appeal)->assertCreated()
+                ->assertJsonPath('data.appeal_status', 'pending');
+            $this->postJson($appealUrl, $appeal)->assertUnprocessable();
+            $this->assertDatabaseHas('content_reports', ['id' => $id, 'appeal_status' => 'pending',
+                'appeal_reason' => $appeal['reason']]);
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_private_device_preview_link_requires_authentication(string $slug): void
+    {
+        $owner = $this->accountForPlan($slug);
+        $disk = \Illuminate\Support\Facades\Storage::fake(\App\Support\UploadStorage::privateDisk());
+        $path = 'private-files/test/greeting.txt';
+        $disk->put($path, 'Hallo Android');
+        $file = \App\Models\File::create(['user_id' => $owner->id, 'display_name' => 'Beispiel.txt',
+            'path' => $path, 'type' => 'text/plain', 'size' => 13]);
+        $this->actingAs($owner);
+        $url = $this->getJson('/api/v1/files?scope=user')->assertOk()->json('data.files.0.url');
+        $this->assertSame(route('api.v1.files.preview', $file), $url);
+        $response = $this->get($url)->assertOk();
+        $this->assertStringStartsWith('inline;', $response->headers->get('Content-Disposition'));
+        $this->assertSame('Hallo Android', $response->streamedContent());
+        $attachment = $this->get(route('auth.files.download', $file))->assertOk()->assertDownload('Beispiel.txt');
+        $this->assertSame('Hallo Android', $attachment->streamedContent());
+        auth()->forgetGuards();
+        auth()->shouldUse('web');
+        $this->assertGuest();
+        $guest = $this->get($url, ['Accept' => 'text/html'])->assertStatus(401);
+        $guest->assertDontSee('Hallo Android');
+    }
+
+    #[DataProvider('plans')]
+    public function test_cashbox_rule_lifecycle_by_permission(string $slug): void
+    {
+        $member = $this->accountForPlan($slug);
+        $club = $member->clubs()->first() ?? Club::factory()->create();
+        $team = \App\Models\Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->attach($member, ['role' => \App\Support\TeamRoles::PLAYER]);
+        $data = ['title' => 'Verspätung', 'trigger' => 'late', 'calculation_type' => 'fixed', 'amount' => 5,
+            'currency' => 'EUR', 'is_active' => true];
+        foreach ([route('auth.teams.penalty-rules.store', $team), "/api/v1/teams/{$team->id}/penalty-rules"] as $url) {
+            foreach ([false, true] as $allowed) {
+                $club->users()->syncWithoutDetaching([$member->id => ['role' => 'member', 'membership_status' => 'active',
+                    'permission_overrides' => [\App\Support\ClubPermissions::TEAM_CASHBOX_MANAGE => $allowed]]]);
+                $response = $this->actingAs($member->fresh())->postJson($url, $data);
+                $allowed ? $response->assertCreated() : $response->assertForbidden();
+            }
+            $id = $response->json('data.id');
+            $this->putJson("$url/$id", ['title' => 'Spät zum Training'])->assertOk();
+            $this->deleteJson("$url/$id")->assertOk()->assertJsonPath('data.is_active', false);
+            $this->assertDatabaseHas('team_penalty_rules', ['id' => $id, 'title' => 'Spät zum Training', 'is_active' => false]);
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_member_profile_photo_lifecycle(string $slug): void
+    {
+        config(['filesystems.uploads_disk' => 'public', 'jetstream.profile_photo_disk' => 'public']);
+        $disk = \Illuminate\Support\Facades\Storage::fake('public');
+        $user = $this->accountForPlan($slug);
+        $this->actingAs($user);
+        foreach (['web', 'api'] as $surface) {
+            $previous = null;
+            foreach (['erstes.jpg', 'zweites.jpg'] as $name) {
+                $photo = \Illuminate\Http\UploadedFile::fake()->image($name, 120, 120);
+                if ($surface === 'web') {
+                    $this->putJson(route('user-profile-information.update'), ['first_name' => $user->first_name,
+                        'last_name' => $user->last_name, 'email' => $user->email, 'profile_visibility' => 'private',
+                        'photo' => $photo])->assertSuccessful();
+                } else {
+                    $this->postJson('/api/v1/me/profile-photo', ['photo' => $photo])->assertOk();
+                }
+                $path = $user->refresh()->profile_photo_path;
+                $disk->assertExists($path);
+                if ($previous !== null) {
+                    $this->assertNotSame($previous, $path);
+                    $disk->assertMissing($previous);
+                }
+                $previous = $path;
+            }
+            $document = \Illuminate\Http\UploadedFile::fake()->createWithContent('Sportprofil.pdf', "%PDF-1.4\nSportprofil\n");
+            if ($surface === 'web') {
+                $invalid = $this->putJson(route('user-profile-information.update'), ['first_name' => $user->first_name,
+                    'last_name' => $user->last_name, 'email' => $user->email, 'profile_visibility' => 'private',
+                    'photo' => $document]);
+            } else {
+                $invalid = $this->postJson('/api/v1/me/profile-photo', ['photo' => $document]);
+            }
+            $invalid->assertUnprocessable()->assertJsonValidationErrors('photo');
+            $this->assertSame($previous, $user->refresh()->profile_photo_path);
+            $disk->assertExists($previous);
+            $url = $surface === 'web' ? route('current-user-photo.destroy') : '/api/v1/me/profile-photo';
+            $response = $this->deleteJson($url);
+            $surface === 'web' ? $response->assertRedirect()->assertSessionHasNoErrors() : $response->assertOk();
+            $this->assertNull($user->refresh()->profile_photo_path);
+            $disk->assertMissing($previous);
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_profile_sport_count_respects_private_entry(string $slug): void
+    {
+        $owner = $this->accountForPlan($slug);
+        $owner->forceFill(['profile_visibility' => 'public'])->save();
+        $other = User::factory()->create();
+        $this->actingAs($owner);
+        foreach (['public', 'private'] as $visibility) {
+            $sport = \App\Models\Sport::create(['name' => "Sport $visibility", 'slug' => "tarif-$visibility",
+                'category' => 'endurance', 'is_active' => true]);
+            $this->putJson("/api/v1/sport-profiles/{$sport->id}", ['status' => 'active',
+                'experience_level' => 'beginner', 'visibility' => $visibility])->assertOk();
+        }
+        foreach ([[$owner, 2], [$other, 1]] as [$viewer, $count]) {
+            $this->actingAs($viewer)->get(route('auth.users.show', $owner))->assertOk()
+                ->assertInertia(fn ($page) => $page->where('profileUser.sport_cv.summary.sports_count', $count));
+            $this->getJson("/api/v1/users/{$owner->id}/sport-cv")->assertOk()->assertJsonPath('data.summary.sports_count', $count);
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_direct_file_share_across_sender_and_recipient_plans(string $slug): void
+    {
+        $sender = $this->accountForPlan($slug);
+        $disk = \Illuminate\Support\Facades\Storage::fake(\App\Support\UploadStorage::privateDisk());
+        $path = 'private-files/tarife/uebergabe.txt';
+        $disk->put($path, 'Tarifprobe');
+        $source = \App\Models\File::create(['user_id' => $sender->id, 'path' => $path,
+            'display_name' => 'uebergabe.txt', 'type' => 'text/plain', 'size' => 10]);
+        $copies = [];
+        foreach (self::plans() as [$recipientPlan]) {
+            $recipient = $this->accountForPlan($recipientPlan);
+            $this->actingAs($sender)->postJson(route('auth.files.share', $source),
+                ['target_type' => 'user', 'target_id' => $recipient->id])->assertForbidden();
+            $this->postJson("/api/v1/uploads/{$source->id}/share", ['target_user_id' => $recipient->id])->assertForbidden();
+            $this->assertDatabaseMissing('files', ['user_id' => $recipient->id, 'path' => $path]);
+            \App\Models\Friendship::create(['user_id' => $sender->id, 'friend_id' => $recipient->id]);
+            $this->actingAs($sender)->postJson("/api/v1/uploads/{$source->id}/share",
+                ['target_user_id' => $recipient->id])->assertSuccessful();
+            $copy = \App\Models\File::where('user_id', $recipient->id)->where('path', $path)->sole();
+            $copies[] = [$recipient, $copy];
+            $this->actingAs($recipient);
+            $this->getJson('/api/v1/files?scope=user')->assertOk()->assertJsonPath('data.files.0.id', $copy->id);
+            $this->assertSame('Tarifprobe', $this->get("/api/v1/files/{$copy->id}/preview")->assertOk()->streamedContent());
+            $this->assertSame('Tarifprobe', $this->get(route('auth.files.download', $copy))
+                ->assertOk()->assertDownload('uebergabe.txt')->streamedContent());
+            $this->travel(2)->minutes();
+        }
+        $this->actingAs($sender)->deleteJson("/api/v1/uploads/{$source->id}")->assertOk();
+        $this->assertNull($source->fresh());
+        foreach ($copies as [$recipient, $copy]) {
+            $this->actingAs($recipient);
+            $this->assertSame('Tarifprobe', $this->get("/api/v1/files/{$copy->id}/preview")->assertOk()->streamedContent());
+            $this->assertSame('Tarifprobe', $this->get(route('auth.files.download', $copy))
+                ->assertOk()->assertDownload('uebergabe.txt')->streamedContent());
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_third_party_token_self_service_is_unavailable(string $slug): void
+    {
+        $member = $this->accountForPlan($slug);
+        $this->actingAs($member);
+        $this->assertFalse(\Illuminate\Support\Facades\Route::has('api-tokens.store'));
+        $this->get('/user/api-tokens')->assertNotFound();
+        $this->postJson('/user/api-tokens', ['name' => 'Berichtsexport', 'permissions' => ['read']])->assertNotFound();
+        $this->assertFalse($member->tokens()->where('name', 'Berichtsexport')->exists());
+    }
+
+    #[DataProvider('plans')]
+    public function test_marketplace_ad_delivery_by_campaign_status_and_budget(string $slug): void
+    {
+        $this->actingAs($this->accountForPlan($slug));
+        foreach (['marketplace_card' => 'feed_square', 'sponsor_section' => 'banner_wide'] as $placement => $format) {
+            $campaign = \App\Models\AdCampaign::create(['name' => 'Vereinsanzeige', 'objective' => 'traffic',
+                'club_id' => Club::factory()->create()->id, 'placement' => $placement, 'creative_format' => $format,
+                'budget_cents' => 10000, 'target_url' => 'https://example.test/sport', 'billing_event' => 'click',
+                'status' => 'draft']);
+            $url = route('ads.active', ['placement' => $placement]);
+            $this->getJson($url)->assertOk()->assertJsonMissingPath('id');
+            $campaign->update(['status' => 'active']);
+            $this->getJson($url)->assertOk()->assertJsonPath('id', $campaign->id);
+            // The mobile public ad screen requests the feed placement.
+            $this->getJson(route('ads.active', ['placement' => 'feed']))->assertOk()->assertJsonMissingPath('id');
+            $foreignClub = Club::factory()->create();
+            $foreignUrl = route('ads.active', ['placement' => $placement, 'club_id' => $foreignClub->id]);
+            $this->getJson($foreignUrl)->assertOk()->assertJsonPath('id', $campaign->id);
+            $priority = $campaign->replicate();
+            $priority->forceFill(['name' => 'Interne Anzeige', 'is_internal' => true, 'force_priority' => true])->save();
+            $this->getJson($url)->assertOk()->assertJsonPath('id', $priority->id);
+            $priority->update(['status' => 'paused']);
+            $campaign->update(['spent_cents' => 10000]);
+            $this->getJson($url)->assertOk()->assertJsonMissingPath('id');
+        }
+    }
+
+    #[DataProvider('plans')]
+    public function test_marketplace_campaign_bank_transfer_reserves_single_order(string $slug): void
+    {
+        $this->assertCampaignReservation($slug, 'marketplace_card', 'feed_square');
+    }
+
+    #[DataProvider('plans')]
+    public function test_sponsor_section_bank_transfer_reserves_single_order(string $slug): void
+    {
+        $this->assertCampaignReservation($slug, 'sponsor_section', 'banner_wide');
+    }
+
+    private function assertCampaignReservation(string $slug, string $placement, string $format): void
+    {
+        $admin = User::factory()->create(['two_factor_secret' => 'encrypted-test-secret', 'two_factor_confirmed_at' => now()]);
+        $admin->assignRole(\Spatie\Permission\Models\Role::findOrCreate('super_admin', 'web'));
+        $admin->givePermissionTo(\Spatie\Permission\Models\Permission::findOrCreate('subscriptions.manage', 'web'));
+        \App\Models\Setting::setValue('billing_iban', 'DE89370400440532013000');
+        \Illuminate\Support\Facades\Notification::fake();
+        $owner = $this->accountForPlan($slug);
+        $this->actingAs($owner);
+        foreach (['web', 'api'] as $surface) {
+            $name = "Testwerbung $surface";
+            $store = $surface === 'web' ? route('auth.commerce.campaigns.store') : '/api/v1/commerce/seller/campaigns';
+            $created = $this->postJson($store, ['name' => $name,
+                'objective' => 'traffic', 'placement' => $placement, 'creative_format' => $format,
+                'target_url' => 'https://example.test/sport', 'budget_cents' => 2500, 'start_payment' => false]);
+            $surface === 'web' ? $created->assertRedirect()->assertSessionHasNoErrors() : $created->assertCreated();
+            $campaign = \App\Models\AdCampaign::where('user_id', $owner->id)->where('name', $name)->sole();
+            $this->assertFalse($campaign->force_priority);
+            $url = $surface === 'web' ? route('auth.commerce.campaigns.payment', $campaign)
+                : "/api/v1/commerce/seller/campaigns/{$campaign->id}/payment";
+            $data = ['provider' => 'bank_transfer', 'accepted_terms' => true];
+            $this->postJson($url, $data)->assertSuccessful();
+            $this->postJson($url, $data)->assertSuccessful();
+            $order = \App\Models\CommerceOrder::where('orderable_id', $campaign->id)->where('type', 'ads_campaign')->sole();
+            $this->assertSame('awaiting_transfer', $order->status);
+            $this->assertSame(2500, (int) $order->amount_cents);
+            $this->assertSame('pending_payment', $campaign->fresh()->status);
+            $this->getJson(route('ads.active', ['placement' => $placement]))->assertOk()->assertJsonMissingPath('id');
+            $confirmation = $surface === 'web' ? route('admin.commerce.orders.mark-paid', $order)
+                : "/api/v1/admin/commerce/orders/{$order->id}/mark-paid";
+            $this->postJson($confirmation)->assertForbidden();
+            $this->assertSame('awaiting_transfer', $order->fresh()->status);
+            if ($surface === 'web') {
+                $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => now()->timestamp])
+                    ->postJson($confirmation)->assertRedirect()->assertSessionHasNoErrors();
+            } else {
+                \Laravel\Sanctum\Sanctum::actingAs($admin, [\App\Support\AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+                $this->postJson($confirmation)->assertOk();
+                auth()->forgetGuards();
+                auth()->shouldUse('web');
+            }
+            $this->assertSame('completed', $order->fresh()->status);
+            $this->assertSame('pending_review', $campaign->fresh()->status);
+            $this->actingAs($owner)->getJson(route('ads.active', ['placement' => $placement]))
+                ->assertOk()->assertJsonMissingPath('id');
+            $review = $surface === 'web' ? route('admin.commerce.campaigns.status.update', $campaign)
+                : "/api/v1/admin/commerce/campaigns/{$campaign->id}/status";
+            $method = $surface === 'web' ? 'PUT' : 'PATCH';
+            $this->json($method, $review, ['status' => 'active'])->assertForbidden();
+            if ($surface === 'web') {
+                $this->actingAs($admin)->withSession(['auth.password_confirmed_at' => now()->timestamp]);
+            } else {
+                \Laravel\Sanctum\Sanctum::actingAs($admin, [\App\Support\AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+            }
+            foreach (['active', 'paused'] as $status) {
+                $response = $this->json($method, $review, ['status' => $status]);
+                $response->assertStatus($surface === 'web' ? 302 : 200);
+                $this->assertSame($status, $campaign->fresh()->status);
+                $this->assertFalse($campaign->fresh()->force_priority);
+                $ad = $this->getJson(route('ads.active', ['placement' => $placement]))->assertOk();
+                if ($status === 'active') {
+                    $ad->assertJsonPath('id', $campaign->id);
+                    $this->getJson(route('ads.active', ['placement' => 'feed']))
+                        ->assertOk()->assertJsonMissingPath('id');
+                } else {
+                    $ad->assertJsonMissingPath('id');
+                }
+            }
+            auth()->forgetGuards();
+            auth()->shouldUse('web');
+            $this->actingAs($owner);
+        }
     }
 
     private function accountForPlan(string $slug): User

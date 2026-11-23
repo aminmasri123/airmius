@@ -144,11 +144,18 @@ class ClubGovernanceMeetingController extends Controller
     {
         $this->authorizeMeeting($request, $club, $meeting, ClubPermissions::GOVERNANCE_EDIT);
         $data = $request->validate([
-            'user_id' => ['nullable', 'required_without:club_external_member_id', 'integer', Rule::exists('users', 'id')],
-            'club_external_member_id' => ['nullable', 'required_without:user_id', 'integer', Rule::exists('club_external_members', 'id')->where('club_id', $club->id)],
+            'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
+            'club_external_member_id' => ['nullable', 'integer', Rule::exists('club_external_members', 'id')->where('club_id', $club->id)],
+            'guest_name' => ['nullable', 'string', 'max:160'],
+            'guest_role' => ['nullable', 'string', 'max:160'],
+            'guest_organization' => ['nullable', 'string', 'max:180'],
+            'guest_email' => ['nullable', 'email:rfc', 'max:254'],
         ]);
-        if (! empty($data['user_id']) && ! empty($data['club_external_member_id'])) {
-            throw ValidationException::withMessages(['user_id' => 'Bitte genau eine Person auswählen.']);
+        $data = collect($data)->map(fn ($value) => is_string($value) ? trim($value) : $value)->all();
+        $identityCount = collect(['user_id', 'club_external_member_id', 'guest_name'])
+            ->filter(fn (string $field) => filled($data[$field] ?? null))->count();
+        if ($identityCount !== 1) {
+            throw ValidationException::withMessages(['attendee' => 'Bitte genau eine Vereinsperson auswählen oder einen externen Gast angeben.']);
         }
         if (! empty($data['user_id']) && ! $club->users()->where('users.id', $data['user_id'])->wherePivot('membership_status', 'active')->exists()) {
             throw ValidationException::withMessages(['user_id' => 'Nur aktive Vereinsmitglieder können nachgetragen werden.']);
@@ -156,8 +163,17 @@ class ClubGovernanceMeetingController extends Controller
 
         $recipient = DB::transaction(function () use ($club, $meeting, $data) {
             ClubGovernanceMeeting::query()->whereKey($meeting->id)->lockForUpdate()->firstOrFail();
-            $identity = ! empty($data['user_id']) ? ['user_id' => $data['user_id']] : ['club_external_member_id' => $data['club_external_member_id']];
-            if ($meeting->recipients()->where($identity)->exists()) {
+            $identity = ! empty($data['user_id'])
+                ? ['user_id' => $data['user_id']]
+                : (! empty($data['club_external_member_id'])
+                    ? ['club_external_member_id' => $data['club_external_member_id']]
+                    : [
+                        'guest_name' => $data['guest_name'],
+                        'guest_role' => $data['guest_role'] ?? null,
+                        'guest_organization' => $data['guest_organization'] ?? null,
+                        'guest_email' => $data['guest_email'] ?? null,
+                    ]);
+            if (empty($data['guest_name']) && $meeting->recipients()->where($identity)->exists()) {
                 throw ValidationException::withMessages(['user_id' => 'Diese Person steht bereits in der Teilnehmerliste. Bitte dort die Anwesenheit setzen.']);
             }
             return $meeting->recipients()->create([
@@ -785,7 +801,12 @@ class ClubGovernanceMeetingController extends Controller
             'delivered_at' => $recipient->delivered_at?->toISOString(),
             'responded_at' => $recipient->responded_at?->toISOString(),
             'response_status' => $recipient->response_status,
-            'person' => ['name' => $recipient->user?->name ?? $recipient->externalMember?->name],
+            'person' => [
+                'name' => $recipient->user?->name ?? $recipient->externalMember?->name ?? $recipient->guest_name,
+                'kind' => $recipient->guest_name ? 'guest' : ($recipient->externalMember ? 'external_member' : 'member'),
+                'role' => $recipient->guest_role,
+                'organization' => $recipient->guest_organization,
+            ],
             'user_id' => $recipient->user_id,
             'club_external_member_id' => $recipient->club_external_member_id,
         ];

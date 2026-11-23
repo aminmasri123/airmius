@@ -544,7 +544,11 @@ class _MembershipApplicationFormScreenState
                         const SizedBox(height: 14),
                         ..._applicationTab(t),
                         const SizedBox(height: 8),
-                        Row(
+                          Wrap(
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
                           children: [
                             if (_activeTab > 0)
                               AirmiusButton(
@@ -555,7 +559,6 @@ class _MembershipApplicationFormScreenState
                               )
                             else
                               const SizedBox.shrink(),
-                            const Spacer(),
                             Text(
                               '${_activeTab + 1} / 7',
                               style: TextStyle(
@@ -563,7 +566,6 @@ class _MembershipApplicationFormScreenState
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
-                            const Spacer(),
                             if (_activeTab < 6)
                               AirmiusButton(
                                 label: t('membership.next'),

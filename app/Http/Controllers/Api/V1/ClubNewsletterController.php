@@ -36,13 +36,8 @@ class ClubNewsletterController extends Controller
         return response()->json([
             'message' => $message,
             'data' => [
-                'status' => $subscription->status,
+                ...$this->newsletters->confirmationStatus($subscription),
                 'confirmation_sent' => $token !== null,
-                'can_resend_at' => $subscription->status === 'pending' && $subscription->confirmation_sent_at
-                    ? $subscription->confirmation_sent_at->copy()
-                        ->addMinutes(ClubNewsletterService::CONFIRMATION_RESEND_MINUTES)
-                        ->toJSON()
-                    : null,
             ],
         ], 202);
     }

@@ -15,5 +15,5 @@ String sidebarGroupLabel(String group, String language) {
     'fr': ['Mon sport', 'Communauté', 'Club et équipe', 'Administration', 'Découvrir', 'Compte et aide'],
     'ar': ['رياضتي', 'المجتمع', 'النادي والفريق', 'الإدارة', 'استكشاف', 'الحساب والمساعدة'],
   };
-  return (labels[language] ?? labels['en']!)[sidebarGroups.keys.toList().indexOf(group)];
+  return (labels[language.toLowerCase()] ?? labels['en']!)[sidebarGroups.keys.toList().indexOf(group)];
 }

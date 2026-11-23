@@ -19,6 +19,8 @@ const status = ref('')
 const form = ref(null)
 const decisionForm = ref(null)
 const attendeeKey = ref('')
+const guestFormOpen = ref(false)
+const guestForm = ref({ name: '', role: '', organization: '', email: '' })
 const missingAttendees = computed(() => (governance.value.member_options || []).filter((person) =>
     !(meeting.value?.recipients || []).some((recipient) => recipient[person.kind === 'external' ? 'club_external_member_id' : 'user_id'] === person.id)))
 const labels = {
@@ -239,6 +241,22 @@ async function addAttendee() {
         notice.value = 'Anwesenheit nachgetragen.'
     }
 }
+async function addGuest() {
+    if (!canManage.value || busy.value || !guestForm.value.name.trim()) return
+    const id = meeting.value.id
+    const payload = {
+        guest_name: guestForm.value.name.trim(),
+        guest_role: guestForm.value.role.trim() || null,
+        guest_organization: guestForm.value.organization.trim() || null,
+        guest_email: guestForm.value.email.trim() || null,
+    }
+    if (await mutate(() => request('post', `${baseUrl.value}/${id}/attendees`, payload), 'Externer Gast wurde als anwesend erfasst.')) {
+        guestForm.value = { name: '', role: '', organization: '', email: '' }
+        guestFormOpen.value = false
+        await openMeeting(id)
+        notice.value = 'Externer Gast wurde als anwesend erfasst.'
+    }
+}
 async function presence(recipient, value) {
     if (!canManage.value) return
     const id = meeting.value.id
@@ -346,7 +364,24 @@ onMounted(loadList)
                 </article>
                 <p v-if="!meeting.decisions?.length" class="mt-2 text-sm text-secondary">Noch keine Beschlüsse.</p>
             </div>
-            <div><h4 class="font-semibold text-primary">Anwesenheit &amp; Einladungen</h4><p class="mt-1 text-sm text-secondary">Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen erhalten kein Stimmrecht in bestehenden Abstimmungen.</p><div v-if="canManage && missingAttendees.length" class="mt-3 flex flex-wrap gap-2"><select v-model="attendeeKey" aria-label="Anwesende Person auswählen"><option value="">Person auswählen</option><option v-for="person in missingAttendees" :key="personKey(person)" :value="personKey(person)">{{ person.name }}</option></select><button type="button" class="meeting-button" :disabled="busy || !attendeeKey" @click="addAttendee">Anwesende Person nachtragen</button></div><ul class="mt-2 divide-y divide-border"><li v-for="recipient in meeting.recipients" :key="recipient.id" class="flex flex-wrap items-center justify-between gap-2 py-2"><div class="min-w-0 text-sm text-primary"><p class="break-words">{{ recipient.person?.name || 'Mitglied' }}</p><p class="text-xs text-secondary">{{ recipient.voting_eligible ? 'Stimmberechtigt' : 'Nicht stimmberechtigt' }} · {{ recipient.was_present === true ? 'Anwesend' : recipient.was_present === false ? 'Abwesend' : 'Anwesenheit noch nicht erfasst' }}</p></div><div class="flex flex-wrap gap-2"><select v-if="canManage" :value="recipient.was_present === null ? '' : String(recipient.was_present)" :aria-label="`Anwesenheit: ${recipient.person?.name || 'Mitglied'}`" :disabled="busy" @change="presence(recipient, $event.target.value === 'true')"><option value="" disabled>Anwesenheit erfassen</option><option value="true">Anwesend</option><option value="false">Abwesend</option></select><select v-if="canManage" :value="recipient.delivery_status" :aria-label="`Zustellstatus: ${recipient.person?.name || 'Mitglied'}`" :disabled="busy" @change="delivery(recipient, $event.target.value)"><option v-for="value in ['pending', 'sent', 'delivered', 'failed', 'bounced']" :key="value" :value="value">{{ label(value) }}</option></select><span v-else class="text-sm text-secondary">{{ label(recipient.delivery_status) }}</span></div></li></ul></div>
+            <div>
+                <h4 class="font-semibold text-primary">Anwesenheit &amp; Einladungen</h4>
+                <p class="mt-1 text-sm text-secondary">Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen und externe Gäste erhalten kein Stimmrecht in bestehenden Abstimmungen.</p>
+                <div v-if="canManage" class="mt-3 flex flex-wrap gap-2">
+                    <select v-if="missingAttendees.length" v-model="attendeeKey" aria-label="Vereinsperson auswählen"><option value="">Vereinsperson auswählen</option><option v-for="person in missingAttendees" :key="personKey(person)" :value="personKey(person)">{{ person.name }}</option></select>
+                    <button v-if="missingAttendees.length" type="button" class="meeting-button" :disabled="busy || !attendeeKey" @click="addAttendee">Vereinsperson nachtragen</button>
+                    <button type="button" class="meeting-button" :disabled="busy" @click="guestFormOpen = !guestFormOpen"><i class="las la-user-plus" aria-hidden="true"></i> Externen Gast hinzufügen</button>
+                </div>
+                <form v-if="canManage && guestFormOpen" class="mt-3 grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-2" @submit.prevent="addGuest">
+                    <label class="text-sm text-primary">Name *<input v-model="guestForm.name" required maxlength="160" class="mt-1 w-full" autocomplete="off"></label>
+                    <label class="text-sm text-primary">Funktion<input v-model="guestForm.role" maxlength="160" class="mt-1 w-full" placeholder="z. B. Rechtsanwalt"></label>
+                    <label class="text-sm text-primary">Organisation<input v-model="guestForm.organization" maxlength="180" class="mt-1 w-full" placeholder="z. B. Kanzlei Müller"></label>
+                    <label class="text-sm text-primary">E-Mail (optional)<input v-model="guestForm.email" type="email" maxlength="254" class="mt-1 w-full" autocomplete="off"></label>
+                    <p class="text-xs text-secondary sm:col-span-2">Der Gast wird nur für diese Sitzung dokumentiert, erhält keinen Vereinszugriff und standardmäßig kein Stimmrecht.</p>
+                    <div class="flex gap-2 sm:col-span-2"><button type="button" class="meeting-button" :disabled="busy" @click="guestFormOpen = false">Abbrechen</button><button type="submit" class="meeting-button" :disabled="busy || !guestForm.name.trim()">Als anwesend hinzufügen</button></div>
+                </form>
+                <ul class="mt-2 divide-y divide-border"><li v-for="recipient in meeting.recipients" :key="recipient.id" class="flex flex-wrap items-center justify-between gap-2 py-2"><div class="min-w-0 text-sm text-primary"><p class="break-words">{{ recipient.person?.name || 'Mitglied' }}</p><p v-if="recipient.person?.kind === 'guest'" class="text-xs text-secondary">Externer Gast{{ recipient.person?.role ? ` · ${recipient.person.role}` : '' }}{{ recipient.person?.organization ? ` · ${recipient.person.organization}` : '' }}</p><p class="text-xs text-secondary">{{ recipient.voting_eligible ? 'Stimmberechtigt' : 'Nicht stimmberechtigt' }} · {{ recipient.was_present === true ? 'Anwesend' : recipient.was_present === false ? 'Abwesend' : 'Anwesenheit noch nicht erfasst' }}</p></div><div class="flex flex-wrap gap-2"><select v-if="canManage" :value="recipient.was_present === null ? '' : String(recipient.was_present)" :aria-label="`Anwesenheit: ${recipient.person?.name || 'Mitglied'}`" :disabled="busy" @change="presence(recipient, $event.target.value === 'true')"><option value="" disabled>Anwesenheit erfassen</option><option value="true">Anwesend</option><option value="false">Abwesend</option></select><select v-if="canManage" :value="recipient.delivery_status" :aria-label="`Zustellstatus: ${recipient.person?.name || 'Mitglied'}`" :disabled="busy" @change="delivery(recipient, $event.target.value)"><option v-for="value in ['pending', 'sent', 'delivered', 'failed', 'bounced']" :key="value" :value="value">{{ label(value) }}</option></select><span v-else class="text-sm text-secondary">{{ label(recipient.delivery_status) }}</span></div></li></ul>
+            </div>
             <div><h4 class="font-semibold text-primary">Protokollversionen</h4><details v-for="version in meeting.versions" :key="version.id" class="mt-2 border-t border-border py-2"><summary class="cursor-pointer text-sm text-primary">Version {{ version.version }} · {{ label(version.status) }} · {{ date(version.created_at) }}{{ creator(version) ? ` · ${creator(version)}` : '' }}</summary><ol class="mt-2 text-sm text-secondary"><li v-for="(item, index) in version.agenda_items" :key="index">{{ index + 1 }}. {{ item.title }}{{ item.description ? `: ${item.description}` : '' }}</li></ol><p class="mt-2 whitespace-pre-wrap break-words text-sm text-primary">{{ version.notes || 'Keine Notizen.' }}</p></details><p v-if="!meeting.versions?.length" class="text-sm text-secondary">Keine Versionen verfügbar.</p></div>
         </div>
 

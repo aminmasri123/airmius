@@ -119,6 +119,27 @@ test('body creation selects current assignments and persists explicit recipient 
     stop()
 })
 
+test('manager can add a meeting-only external guest without voting rights', async () => {
+    const { state, requests, stop } = mount({ manager: true })
+    await state.openMeeting(4)
+    state.guestForm.value = {
+        name: 'Dr. Lea Beispiel',
+        role: 'Rechtsanwältin',
+        organization: 'Kanzlei Beispiel',
+        email: 'lea@example.test',
+    }
+    await state.addGuest()
+    const request = requests.find((entry) => entry.method === 'post' && entry.url.endsWith('/attendees'))
+    assert.deepEqual(request.data, {
+        guest_name: 'Dr. Lea Beispiel',
+        guest_role: 'Rechtsanwältin',
+        guest_organization: 'Kanzlei Beispiel',
+        guest_email: 'lea@example.test',
+    })
+    assert.equal(state.guestFormOpen.value, false)
+    stop()
+})
+
 test('failed edit retains protocol input and does not perform a misleading reload', async () => {
     const { state, requests, stop } = mount({ manager: true, saveError: true })
     await state.openMeeting(4)
@@ -138,6 +159,7 @@ test('cancelled meetings and viewer eligibility forbid voting and decision creat
     const { state, requests, stop } = mount({ manager: true })
     await state.openMeeting(4)
     const decision = state.meeting.value.decisions[0]
+    const requestsAfterOpen = requests.length
     decision.viewer_can_vote = false
     assert.equal(state.canVote(decision), false)
     decision.viewer_can_vote = true
@@ -146,7 +168,7 @@ test('cancelled meetings and viewer eligibility forbid voting and decision creat
     state.newDecision()
     assert.equal(state.decisionForm.value, null)
     await state.vote(decision, 'yes')
-    assert.equal(requests.length, 1)
+    assert.equal(requests.length, requestsAfterOpen)
     assert.equal(state.creator({ created_by: 'Alex' }), 'Alex')
     stop()
 })

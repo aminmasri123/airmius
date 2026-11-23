@@ -14,6 +14,7 @@ class ClubStaffAssignment extends Model
     protected $fillable = [
         'club_id',
         'shift_key',
+        'slot_type',
         'event_id',
         'team_id',
         'user_id',

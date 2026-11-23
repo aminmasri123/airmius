@@ -180,16 +180,22 @@ class ClubStaffSchedulingController extends Controller
         }
 
         $capacity = max(1, (int) ($data['capacity'] ?? 1));
-        abort_if($capacity > 1 && ! empty($data['user_id']), 422, 'A member can only be assigned to one capacity slot.');
-        unset($data['capacity']);
+        $reserveCapacity = max(0, (int) ($data['reserve_capacity'] ?? 0));
+        abort_if($capacity + $reserveCapacity > 100, 422, 'Insgesamt sind höchstens 100 Plätze erlaubt.');
+        abort_if(($capacity > 1 || $reserveCapacity > 0) && ! empty($data['user_id']), 422, 'A member can only be assigned to one capacity slot.');
+        unset($data['capacity'], $data['reserve_capacity']);
         $shiftKey = (string) Str::uuid();
-        $assignments = DB::transaction(function () use ($data, $capacity, $club, $request, $shiftKey) {
-            return collect(range(1, $capacity))->map(fn () => ClubStaffAssignment::query()->create([
-                ...$data,
-                'club_id' => $club->id,
-                'shift_key' => $shiftKey,
-                'assigned_by' => $request->user()->id,
-            ]));
+        $assignments = DB::transaction(function () use ($data, $capacity, $reserveCapacity, $club, $request, $shiftKey) {
+            return collect([
+                ...array_fill(0, $capacity, 'primary'),
+                ...array_fill(0, $reserveCapacity, 'reserve'),
+            ])->map(fn (string $slotType) => ClubStaffAssignment::query()->create([
+                    ...$data,
+                    'club_id' => $club->id,
+                    'shift_key' => $shiftKey,
+                    'slot_type' => $slotType,
+                    'assigned_by' => $request->user()->id,
+                ]));
         });
         $assignment = $assignments->first();
         $this->notifyShiftAudience($club, $assignment, $request->user()->id);
@@ -199,6 +205,8 @@ class ClubStaffSchedulingController extends Controller
                 ...$this->scheduling->assignmentPayload($assignment->load(['event:id,title', 'team:id,name', 'user:id,name', 'substitute:id,name'])),
                 'conflicts' => $conflicts,
                 'capacity' => $capacity,
+                'primary_capacity' => $capacity,
+                'reserve_capacity' => $reserveCapacity,
                 'slot_ids' => $assignments->pluck('id')->values(),
             ],
         ], 201);
@@ -209,31 +217,37 @@ class ClubStaffSchedulingController extends Controller
         $this->authorizeShiftEditor($request, $club, $assignment);
         $data = $this->assignmentData($request, $club);
         $capacity = max(1, (int) ($data['capacity'] ?? 1));
-        unset($data['capacity'], $data['user_id'], $data['substitute_user_id'], $data['status']);
+        $reserveCapacity = max(0, (int) ($data['reserve_capacity'] ?? 0));
+        abort_if($capacity + $reserveCapacity > 100, 422, 'Insgesamt sind höchstens 100 Plätze erlaubt.');
+        unset($data['capacity'], $data['reserve_capacity'], $data['user_id'], $data['substitute_user_id'], $data['status']);
         $shiftKey = $assignment->shift_key ?: (string) Str::uuid();
 
-        $updated = DB::transaction(function () use ($club, $assignment, $data, $capacity, $shiftKey, $request) {
+        $updated = DB::transaction(function () use ($club, $assignment, $data, $capacity, $reserveCapacity, $shiftKey, $request) {
             $slots = $this->shiftSlots($club, $assignment)->lockForUpdate()->get();
-            $occupied = $slots->filter(fn (ClubStaffAssignment $slot) => $slot->status !== 'waitlisted' && $this->slotOccupied($slot));
-            abort_if($capacity < $occupied->count(), 422, 'Die Kapazität darf nicht kleiner als die aktuelle Belegung sein.');
-
             $slots->each->update([...$data, 'shift_key' => $shiftKey]);
-            $currentCapacity = $slots->where('status', '!=', 'waitlisted')->count();
-            if ($capacity > $currentCapacity) {
-                collect(range(1, $capacity - $currentCapacity))->each(fn () => ClubStaffAssignment::query()->create([
-                    ...$data,
-                    'club_id' => $club->id,
-                    'shift_key' => $shiftKey,
-                    'assigned_by' => $assignment->assigned_by ?: $request->user()->id,
-                    'user_id' => null,
-                    'external_member_id' => null,
-                    'substitute_user_id' => null,
-                    'status' => 'open',
-                ]));
-            } elseif ($capacity < $currentCapacity) {
-                $slots->filter(fn (ClubStaffAssignment $slot) => ! $this->slotOccupied($slot) && $slot->status !== 'waitlisted')
-                    ->take($currentCapacity - $capacity)
-                    ->each->delete();
+            foreach (['primary' => $capacity, 'reserve' => $reserveCapacity] as $slotType => $wanted) {
+                $typed = $slots->filter(fn (ClubStaffAssignment $slot) => $slot->status !== 'waitlisted' && ($slot->slot_type ?: 'primary') === $slotType);
+                $occupied = $typed->filter(fn (ClubStaffAssignment $slot) => $this->slotOccupied($slot));
+                abort_if($wanted < $occupied->count(), 422, $slotType === 'primary'
+                    ? 'Die Anzahl benötigter Helfer darf nicht kleiner als die aktuelle Belegung sein.'
+                    : 'Die Anzahl der Ersatzplätze darf nicht kleiner als die aktuelle Belegung sein.');
+                if ($wanted > $typed->count()) {
+                    collect(range(1, $wanted - $typed->count()))->each(fn () => ClubStaffAssignment::query()->create([
+                        ...$data,
+                        'club_id' => $club->id,
+                        'shift_key' => $shiftKey,
+                        'slot_type' => $slotType,
+                        'assigned_by' => $assignment->assigned_by ?: $request->user()->id,
+                        'user_id' => null,
+                        'external_member_id' => null,
+                        'substitute_user_id' => null,
+                        'status' => 'open',
+                    ]));
+                } elseif ($wanted < $typed->count()) {
+                    $typed->filter(fn (ClubStaffAssignment $slot) => ! $this->slotOccupied($slot))
+                        ->take($typed->count() - $wanted)
+                        ->each->delete();
+                }
             }
 
             return ClubStaffAssignment::query()->where('club_id', $club->id)->where('shift_key', $shiftKey)->oldest('id')->firstOrFail();
@@ -385,26 +399,40 @@ class ClubStaffSchedulingController extends Controller
             $assignment = ClubStaffAssignment::query()->whereKey($assignment->id)->lockForUpdate()->firstOrFail();
             $this->assertAssignmentBelongsToClub($assignment, $club);
 
-            if ((int) $assignment->user_id === $userId && in_array($assignment->status, ['planned', 'confirmed'], true)) {
-                return response()->json(['data' => $this->scheduling->assignmentPayload($assignment->load(['event:id,title', 'team:id,name']))]);
+            $existing = $this->shiftSlots($club, $assignment)
+                ->where('user_id', $userId)
+                ->whereIn('status', ['planned', 'confirmed'])
+                ->lockForUpdate()
+                ->first();
+            if ($existing) {
+                return response()->json(['data' => $this->scheduling->assignmentPayload($existing->load(['event:id,title', 'team:id,name']))]);
             }
 
-            if ($this->slotOccupied($assignment) || ! in_array($assignment->status, ['open', 'planned'], true)) {
+            $openSlot = $this->shiftSlots($club, $assignment)
+                ->whereNull('user_id')
+                ->whereNull('external_member_id')
+                ->whereIn('status', ['open', 'planned'])
+                ->orderByRaw("case when slot_type = 'reserve' then 1 else 0 end")
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $openSlot) {
                 return $this->createWaitlistEntry($request, $club, $assignment, $userId);
             }
 
-            $conflicts = $this->scheduling->conflictsFor($club, $userId, $assignment->starts_at, $assignment->ends_at, $assignment->id, $assignment->required_qualifications ?? []);
+            $conflicts = $this->scheduling->conflictsFor($club, $userId, $openSlot->starts_at, $openSlot->ends_at, $openSlot->id, $openSlot->required_qualifications ?? []);
             if ($this->hasBlockingConflicts($conflicts) && ! $request->boolean('force')) {
                 return $this->conflictResponse($conflicts);
             }
 
-            $assignment->update([
+            $openSlot->update([
                 'user_id' => $userId,
                 'status' => 'confirmed',
             ]);
 
             return response()->json(['data' => [
-                ...$this->scheduling->assignmentPayload($assignment->refresh()->load(['event:id,title', 'team:id,name'])),
+                ...$this->scheduling->assignmentPayload($openSlot->refresh()->load(['event:id,title', 'team:id,name'])),
                 'conflicts' => $conflicts,
             ]]);
         });
@@ -443,13 +471,34 @@ class ClubStaffSchedulingController extends Controller
                 ]]);
             }
 
+            $releasedType = $assignment->slot_type ?: 'primary';
             $assignment->update([
                 'user_id' => null,
                 'substitute_user_id' => null,
                 'status' => 'open',
             ]);
-
-            $promoted = $this->promoteNextWaitlisted($club, $assignment);
+            $promoted = null;
+            if ($releasedType === 'primary') {
+                $reserve = $this->shiftSlots($club, $assignment)
+                    ->where('slot_type', 'reserve')
+                    ->whereNotNull('user_id')
+                    ->whereIn('status', ['planned', 'confirmed', 'swap_requested'])
+                    ->oldest('id')
+                    ->lockForUpdate()
+                    ->first();
+                if ($reserve) {
+                    $assignment->update([
+                        'user_id' => $reserve->user_id,
+                        'substitute_user_id' => $reserve->substitute_user_id,
+                        'status' => 'confirmed',
+                    ]);
+                    $reserve->update(['user_id' => null, 'substitute_user_id' => null, 'status' => 'open']);
+                    $promoted = $assignment->refresh();
+                    $this->notifySlotPromotion($club, $promoted, 'Du bist vom Ersatzplatz auf einen regulären Helferplatz nachgerückt.');
+                    $this->promoteNextWaitlisted($club, $reserve);
+                }
+            }
+            $promoted ??= $this->promoteNextWaitlisted($club, $assignment);
 
             return response()->json(['data' => [
                 'released_user_id' => $previousUserId,
@@ -694,6 +743,7 @@ class ClubStaffSchedulingController extends Controller
             'status' => ['required', Rule::in(ClubStaffAssignment::STATUSES)],
             'note' => ['nullable', 'string', 'max:2000'],
             'capacity' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'reserve_capacity' => ['nullable', 'integer', 'min:0', 'max:100'],
             'force' => ['nullable', 'boolean'],
         ]);
         if (! empty($data['user_id'])) {
@@ -965,6 +1015,7 @@ class ClubStaffSchedulingController extends Controller
             'role' => $assignment->role,
             'required_qualifications' => $assignment->required_qualifications ?? [],
             'shift_key' => $assignment->shift_key,
+            'slot_type' => 'waitlist',
             'visibility_scope' => $assignment->visibility_scope,
             'audience_team_ids' => $assignment->audience_team_ids ?? [],
             'audience_user_ids' => $assignment->audience_user_ids ?? [],
@@ -1012,10 +1063,29 @@ class ClubStaffSchedulingController extends Controller
             ]);
             $next->update(['status' => 'cancelled']);
 
+            $this->notifySlotPromotion($club, $assignment->refresh(), ($assignment->slot_type ?: 'primary') === 'reserve'
+                ? 'Du bist auf einen Ersatzplatz nachgerückt.'
+                : 'Du bist auf einen freien Helferplatz nachgerückt.');
+
             return $assignment->refresh();
         }
 
         return null;
+    }
+
+    private function notifySlotPromotion(Club $club, ClubStaffAssignment $assignment, string $body): void
+    {
+        if (! $assignment->user_id) {
+            return;
+        }
+        AppNotification::send($assignment->user_id, 'club.staff.slot_promoted', [
+            'title' => $assignment->role,
+            'body' => $body,
+            'club_id' => $club->id,
+            'assignment_id' => $assignment->id,
+            'mobile_url' => "airmius://clubs/{$club->id}/staff-scheduling",
+            'deep_link' => "airmius://clubs/{$club->id}/staff-scheduling",
+        ]);
     }
 
     private function clubHasActiveUser(Club $club, int $userId): bool

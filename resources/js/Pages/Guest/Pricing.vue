@@ -199,7 +199,7 @@ const accessRules = {
     sportler: [
         { feature: 'Persönliches Dashboard, Feed, Chat, Dateien 1 GB', plan: 'Free', reason: 'Soll Einstieg und tägliche Nutzung nicht blockieren.' },
         { feature: 'Sportkarte, Tracking, Sportplätze, 10 automatische Routenvorschläge/Monat', plan: 'Free', reason: 'Basis-Bewegung und Orte sollen kostenlos bleiben; externe Routingkosten bleiben begrenzt.' },
-        { feature: 'KI-Ernährungsbild, Trainings-KI kurz, Profilportfolio', plan: 'Sportler Pro', reason: 'Hat externe Kosten und persönlichen Premium-Nutzen.' },
+        { feature: 'KI-Ernährungsbild, Trainings-KI kurz, Profilportfolio (geplant)', plan: 'Sportler Pro', reason: 'Hat externe Kosten und persönlichen Premium-Nutzen.' },
         { feature: 'Erweiterte Analyse, Sichtbarkeit, Bewerbungsmappe, bis 150 Routenvorschläge/Monat', plan: 'Sportler Pro', reason: 'Mehrwert für ambitionierte Sportler und kontrollierte Providerkosten.' },
     ],
     trainer: [

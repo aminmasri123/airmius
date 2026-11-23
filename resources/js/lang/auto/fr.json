@@ -3815,7 +3815,18 @@
     "Anwesenheit erfassen": "Enregistrer la présence",
     "Anwesend": "Présent",
     "Abwesend": "Absent",
-    "Anwesende Person auswählen": "Sélectionner une personne présente"
+    "Anwesende Person auswählen": "Sélectionner une personne présente",
+    "Anwesenheit und Stimmrecht sind getrennt. Nachgetragene Personen und externe Gäste erhalten kein Stimmrecht in bestehenden Abstimmungen.": "La présence et le droit de vote sont distincts. Les personnes ajoutées et les invités externes n'obtiennent aucun droit de vote dans les scrutins existants.",
+    "Vereinsperson auswählen": "Sélectionner un membre du club",
+    "Vereinsperson nachtragen": "Ajouter un membre du club",
+    "Externen Gast hinzufügen": "Ajouter un invité externe",
+    "Name *": "Nom *",
+    "Organisation": "Organisation",
+    "E-Mail (optional)": "E-mail (facultatif)",
+    "Der Gast wird nur für diese Sitzung dokumentiert, erhält keinen Vereinszugriff und standardmäßig kein Stimmrecht.": "L'invité est enregistré uniquement pour cette réunion, ne reçoit aucun accès au club et n'a aucun droit de vote par défaut.",
+    "Als anwesend hinzufügen": "Ajouter comme présent",
+    "z. B. Rechtsanwalt": "p. ex. avocat",
+    "z. B. Kanzlei Müller": "p. ex. cabinet Müller"
   },
   "auto_patterns": [
     {

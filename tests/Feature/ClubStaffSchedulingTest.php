@@ -264,6 +264,70 @@ class ClubStaffSchedulingTest extends TestCase
         $this->assertDatabaseCount('club_staff_assignments', 3);
     }
 
+    public function test_primary_and_reserve_places_fill_in_order_promote_and_appear_in_personal_calendar(): void
+    {
+        [$manager, $club, $primary, $team] = $this->clubWithCoach();
+        $reserve = User::factory()->create();
+        $waiting = User::factory()->create();
+        $club->users()->syncWithoutDetaching([
+            $reserve->id => ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active'],
+            $waiting->id => ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active'],
+        ]);
+
+        Sanctum::actingAs($manager);
+        $created = $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments", [
+            'team_id' => $team->id,
+            'starts_at' => '2026-10-26T08:00:00Z',
+            'ends_at' => '2026-10-26T10:30:00Z',
+            'role' => 'Bierstand',
+            'location' => 'Vereinsheim',
+            'capacity' => 1,
+            'reserve_capacity' => 1,
+            'status' => 'open',
+        ])->assertCreated()
+            ->assertJsonPath('data.primary_capacity', 1)
+            ->assertJsonPath('data.reserve_capacity', 1)
+            ->assertJsonCount(2, 'data.slot_ids');
+        [$primarySlot, $reserveSlot] = $created->json('data.slot_ids');
+
+        Sanctum::actingAs($primary);
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$reserveSlot}/signup")
+            ->assertOk()
+            ->assertJsonPath('data.id', $primarySlot)
+            ->assertJsonPath('data.slot_type', 'primary');
+
+        Sanctum::actingAs($reserve);
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$primarySlot}/signup")
+            ->assertOk()
+            ->assertJsonPath('data.id', $reserveSlot)
+            ->assertJsonPath('data.slot_type', 'reserve');
+        $this->getJson('/api/v1/family-calendar?month=2026-10')
+            ->assertOk()
+            ->assertJsonPath('data.services.0.title', 'Bierstand')
+            ->assertJsonPath('data.services.0.slot_type', 'reserve')
+            ->assertJsonPath('data.services.0.starts_at', '2026-10-26T08:00:00.000000Z');
+
+        Sanctum::actingAs($waiting);
+        $waitlist = $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$primarySlot}/signup")
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'waitlisted')
+            ->json('data.id');
+
+        Sanctum::actingAs($primary);
+        $this->postJson("/api/v1/clubs/{$club->id}/staff-scheduling/assignments/{$primarySlot}/release")
+            ->assertOk()
+            ->assertJsonPath('data.promoted_assignment.user_id', $reserve->id)
+            ->assertJsonPath('data.promoted_assignment.slot_type', 'primary');
+
+        $this->assertDatabaseHas('club_staff_assignments', [
+            'id' => $reserveSlot,
+            'slot_type' => 'reserve',
+            'user_id' => $waiting->id,
+            'status' => 'confirmed',
+        ]);
+        $this->assertDatabaseHas('club_staff_assignments', ['id' => $waitlist, 'status' => 'cancelled']);
+    }
+
     public function test_inactive_member_cannot_view_or_join_staff_shifts(): void
     {
         [$manager, $club, $member, $team] = $this->clubWithCoach();
