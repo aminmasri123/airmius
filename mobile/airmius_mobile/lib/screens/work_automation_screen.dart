@@ -246,13 +246,20 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
 
   Future<void> _edit(AirmiusJson job) async {
     final clubId = _clubId!;
-    final details = (await _client.workAutomationJob(clubId, job['id'] as int))['data'] as AirmiusJson;
+    final details =
+        (await _client.workAutomationJob(clubId, job['id'] as int))['data']
+            as AirmiusJson;
     if (!mounted || _clubId != clubId) return;
     final payload = await showDialog<AirmiusJson>(
       context: context,
       builder: (_) => WorkAutomationCreateDialog(
         permissions: _permissions,
-        preview: (roles) async => (await _client.workAutomationRecipients(clubId, roles))['data']['count'] as int,
+        preview: (roles) async =>
+            (await _client.workAutomationRecipients(
+                  clubId,
+                  roles,
+                ))['data']['count']
+                as int,
         initial: details,
       ),
     );
@@ -275,8 +282,14 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
         title: Text(_t('confirmDelete')),
         content: Text('${job['title'] ?? _t(job['kind'])} #${job['id']}'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(_t('cancel'))),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(_t('delete'))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(_t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(_t('delete')),
+          ),
         ],
       ),
     );
@@ -299,6 +312,8 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
           (await _client.workAutomationJob(_clubId!, job['id'] as int))['data']
               as AirmiusJson,
       retry: _retry,
+      edit: _edit,
+      delete: _delete,
     ),
   );
 
@@ -455,9 +470,17 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
                 child: Wrap(
                   children: [
                     if (job['can_edit'] == true)
-                      TextButton.icon(onPressed: _busy ? null : () => _edit(job), icon: const Icon(Icons.edit_outlined), label: Text(_t('edit'))),
+                      TextButton.icon(
+                        onPressed: _busy ? null : () => _edit(job),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: Text(_t('edit')),
+                      ),
                     if (job['can_delete'] == true)
-                      TextButton.icon(onPressed: _busy ? null : () => _delete(job), icon: const Icon(Icons.delete_outline), label: Text(_t('delete'))),
+                      TextButton.icon(
+                        onPressed: _busy ? null : () => _delete(job),
+                        icon: const Icon(Icons.delete_outline),
+                        label: Text(_t('delete')),
+                      ),
                   ],
                 ),
               ),
@@ -535,8 +558,11 @@ class _WorkAutomationCreateDialogState
       _kind = initial['kind'] as String;
       _title.text = '${initial['title'] ?? ''}';
       _body.text = '${initial['body'] ?? ''}';
-      _roles.addAll(((initial['recipient_roles'] as List?) ?? []).cast<String>());
-      if (initial['scheduled_at'] != null) _scheduled = DateTime.parse('${initial['scheduled_at']}').toLocal();
+      _roles.addAll(
+        ((initial['recipient_roles'] as List?) ?? []).cast<String>(),
+      );
+      if (initial['scheduled_at'] != null)
+        _scheduled = DateTime.parse('${initial['scheduled_at']}').toLocal();
     }
     _preview();
   }
@@ -743,9 +769,13 @@ class WorkAutomationDetailsDialog extends StatefulWidget {
     super.key,
     required this.load,
     required this.retry,
+    required this.edit,
+    required this.delete,
   });
   final Future<AirmiusJson> Function() load;
   final Future<void> Function(AirmiusJson) retry;
+  final Future<void> Function(AirmiusJson) edit;
+  final Future<void> Function(AirmiusJson) delete;
   @override
   State<WorkAutomationDetailsDialog> createState() =>
       _WorkAutomationDetailsDialogState();
@@ -864,6 +894,28 @@ class _WorkAutomationDetailsDialogState
                           },
                     icon: const Icon(Icons.replay),
                     label: Text(_t('retry')),
+                  ),
+                if (job['can_edit'] == true)
+                  TextButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () async {
+                            Navigator.pop(context);
+                            await widget.edit(job);
+                          },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: Text(_t('edit')),
+                  ),
+                if (job['can_delete'] == true)
+                  TextButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () async {
+                            Navigator.pop(context);
+                            await widget.delete(job);
+                          },
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(_t('delete')),
                   ),
               ],
             ),
