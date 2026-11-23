@@ -14,6 +14,7 @@ import '../screens/clubs_screen.dart';
 import '../screens/support_helpdesk_screen.dart';
 import '../screens/sport_matching_screen.dart';
 import '../screens/admin_platform_settings_screen.dart';
+import '../screens/admin_commerce_operations_screen.dart';
 import '../screens/billing_detail_screen.dart';
 import '../screens/chat_detail_screen.dart';
 import '../screens/challenges_screen.dart';
@@ -209,6 +210,8 @@ class AirmiusDeepLinkNavigator {
         ),
       AirmiusDeepLinkTargetType.adminSettings =>
         const AdminPlatformSettingsScreen(),
+      AirmiusDeepLinkTargetType.adminCommerce =>
+        const AdminCommerceOperationsScreen(initialSection: 'fulfillment'),
       AirmiusDeepLinkTargetType.marketplaceOrder => const MarketplaceScreen(
         initialSection: 'orders',
       ),
@@ -267,6 +270,7 @@ class AirmiusDeepLinkNavigator {
         'Mitgliedschaftsrechnungen',
       AirmiusDeepLinkTargetType.billingInvoice => 'Meine Rechnung',
       AirmiusDeepLinkTargetType.adminSettings => 'Admin-Einstellungen',
+      AirmiusDeepLinkTargetType.adminCommerce => 'Admin-Commerce',
       AirmiusDeepLinkTargetType.marketplaceOrder => 'Marketplace-Bestellung',
       AirmiusDeepLinkTargetType.profile => 'Profil',
       AirmiusDeepLinkTargetType.memberCard => 'Mitgliedskarte',

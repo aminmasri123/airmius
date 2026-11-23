@@ -16,6 +16,7 @@ enum AirmiusDeepLinkTargetType {
   clubMembershipInvoice,
   billingInvoice,
   adminSettings,
+  adminCommerce,
   marketplaceOrder,
   profile,
   memberCard,
@@ -90,6 +91,7 @@ class AirmiusDeepLinkTarget {
       'club_membership_invoice',
     AirmiusDeepLinkTargetType.billingInvoice => 'billing_invoice',
     AirmiusDeepLinkTargetType.adminSettings => 'admin_settings',
+    AirmiusDeepLinkTargetType.adminCommerce => 'admin_commerce',
     AirmiusDeepLinkTargetType.marketplaceOrder => 'marketplace_order',
     AirmiusDeepLinkTargetType.profile => 'profile',
     AirmiusDeepLinkTargetType.memberCard => 'member_card',
@@ -414,6 +416,14 @@ class AirmiusDeepLinkResolver {
         pathSegments[1].toLowerCase() == 'settings') {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.adminSettings,
+        path: path,
+        query: query,
+      );
+    }
+    if (root == 'admin' && pathSegments.length > 1 &&
+        pathSegments[1].toLowerCase() == 'commerce') {
+      return AirmiusDeepLinkTarget(
+        type: AirmiusDeepLinkTargetType.adminCommerce,
         path: path,
         query: query,
       );
