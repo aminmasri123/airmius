@@ -32,6 +32,7 @@ class WorkAutomationJobController extends Controller
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
         $status = $data['status'] ?? null;
+        $canCreate = WorkAutomationAccess::canCreate($club, $request->user());
         $jobs = WorkAutomationAccess::visibleJobs(WorkAutomationJob::query(), $club, $request->user())
             ->when($status, fn ($query) => $query->where('status', $status))
             ->latest('id')->paginate(25);
@@ -40,10 +41,11 @@ class WorkAutomationJobController extends Controller
             'data' => $jobs->getCollection()->map(fn (WorkAutomationJob $job) => $this->payload($job, $request->user())),
             'meta' => [
                 'current_page' => $jobs->currentPage(), 'last_page' => $jobs->lastPage(), 'total' => $jobs->total(),
-                'can_create' => WorkAutomationAccess::canCreate($club, $request->user()),
+                'can_create' => $canCreate,
                 'recipient_permissions' => collect(ClubPermissions::ALL)->map(fn ($key) => [
                     'key' => $key, 'label' => ClubPermissions::LABELS[$key] ?? $key,
                 ]),
+                'recipient_users' => $canCreate ? $this->recipientUsers($club) : [],
             ],
         ])->header('Cache-Control', 'private, no-store');
     }
@@ -54,9 +56,18 @@ class WorkAutomationJobController extends Controller
         $data = $request->validate([
             'recipient_roles' => ['nullable', 'array', 'max:8'],
             'recipient_roles.*' => ['string', Rule::in(ClubPermissions::ALL), 'distinct'],
+            'recipient_user_ids' => ['nullable', 'array', 'max:500'],
+            'recipient_user_ids.*' => ['integer', 'distinct', Rule::exists('club_user', 'user_id')->where('club_id', $club->id)
+                ->where(fn ($query) => $query->whereNull('membership_status')->orWhereIn('membership_status', ['active', 'non_member']))],
+            'include_creator' => ['nullable', 'boolean'],
         ]);
 
-        return response()->json(['data' => ['count' => $service->recipients($club, $data['recipient_roles'] ?? [])->count()]])
+        return response()->json(['data' => ['count' => $service->recipients(
+            $club,
+            $data['recipient_roles'] ?? [],
+            $data['recipient_user_ids'] ?? [],
+            $request->boolean('include_creator') ? $request->user()->id : null,
+        )->count()]])
             ->header('Cache-Control', 'private, no-store');
     }
 
@@ -69,6 +80,10 @@ class WorkAutomationJobController extends Controller
             'idempotency_key' => ['required', 'string', 'max:160'],
             'recipient_roles' => ['nullable', 'array', 'max:8'],
             'recipient_roles.*' => ['string', Rule::in(ClubPermissions::ALL), 'distinct'],
+            'recipient_user_ids' => ['nullable', 'array', 'max:500'],
+            'recipient_user_ids.*' => ['integer', 'distinct', Rule::exists('club_user', 'user_id')->where('club_id', $club->id)
+                ->where(fn ($query) => $query->whereNull('membership_status')->orWhereIn('membership_status', ['active', 'non_member']))],
+            'include_creator' => ['nullable', 'boolean'],
             'scheduled_at' => ['nullable', 'date'],
             'payload' => ['nullable', 'array:template,title,body'],
             'payload.template' => ['sometimes', Rule::in(['due_task', 'reminder', 'escalation'])],
@@ -81,6 +96,9 @@ class WorkAutomationJobController extends Controller
             throw ValidationException::withMessages(['scheduled_at' => 'Choose a future execution time.']);
         }
 
+        $payload = $data['payload'] ?? [];
+        $payload['_recipient_user_ids'] = array_values(array_unique($data['recipient_user_ids'] ?? []));
+        $payload['_include_creator'] = (bool) ($data['include_creator'] ?? false);
         $job = $service->enqueue(
             $club,
             $data['kind'],
@@ -88,7 +106,7 @@ class WorkAutomationJobController extends Controller
             $request->user(),
             null,
             $data['recipient_roles'] ?? [],
-            $data['payload'] ?? [],
+            $payload,
             isset($data['scheduled_at']) ? Carbon::parse($data['scheduled_at'])->utc() : null
         );
 
@@ -115,11 +133,18 @@ class WorkAutomationJobController extends Controller
             'kind' => ['required', Rule::in([WorkAutomationJob::KIND_REMINDER, WorkAutomationJob::KIND_ESCALATION])],
             'recipient_roles' => ['nullable', 'array', 'max:8'],
             'recipient_roles.*' => ['string', Rule::in(ClubPermissions::ALL), 'distinct'],
+            'recipient_user_ids' => ['nullable', 'array', 'max:500'],
+            'recipient_user_ids.*' => ['integer', 'distinct', Rule::exists('club_user', 'user_id')->where('club_id', $club->id)
+                ->where(fn ($query) => $query->whereNull('membership_status')->orWhereIn('membership_status', ['active', 'non_member']))],
+            'include_creator' => ['nullable', 'boolean'],
             'scheduled_at' => ['required', 'date', 'after:now'],
             'payload' => ['required', 'array:title,body'],
             'payload.title' => ['required', 'string', 'max:160'],
             'payload.body' => ['required', 'string', 'max:2000'],
         ]);
+
+        $data['payload']['_recipient_user_ids'] = array_values(array_unique($data['recipient_user_ids'] ?? []));
+        $data['payload']['_include_creator'] = (bool) ($data['include_creator'] ?? false);
 
         return response()->json(['data' => $this->payload($service->updateScheduled($workAutomationJob, $request->user(), $data), $request->user())])
             ->header('Cache-Control', 'private, no-store');
@@ -164,6 +189,8 @@ class WorkAutomationJobController extends Controller
             'status' => $job->status,
             'idempotency_key' => $job->idempotency_key,
             'recipient_roles' => $job->recipient_roles ?? [],
+            'recipient_user_ids' => $job->payload['_recipient_user_ids'] ?? [],
+            'include_creator' => (bool) ($job->payload['_include_creator'] ?? false),
             'attempts' => $job->attempts,
             'queued_at' => $job->queued_at?->toIso8601String(),
             'started_at' => $job->started_at?->toIso8601String(),
@@ -180,5 +207,19 @@ class WorkAutomationJobController extends Controller
             'can_edit' => WorkAutomationAccess::canManageScheduled($job, $user),
             'can_delete' => WorkAutomationAccess::canDelete($job, $user),
         ];
+    }
+
+    private function recipientUsers(Club $club): array
+    {
+        $users = $club->users()
+            ->where(fn ($query) => $query->whereNull('club_user.membership_status')
+                ->orWhereIn('club_user.membership_status', ['active', 'non_member']))
+            ->get(['users.id', 'users.name']);
+        if ($club->owner && ! $users->contains('id', $club->owner_id)) {
+            $users->push($club->owner);
+        }
+
+        return $users->map(fn ($user) => ['id' => (int) data_get($user, 'id'), 'name' => (string) data_get($user, 'name')])
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values()->all();
     }
 }

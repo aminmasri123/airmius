@@ -24,7 +24,7 @@ class WorkAutomationScreen extends StatefulWidget {
 
 class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
   late final _store = widget.requestStore ?? WorkAutomationRequestStore();
-  List<AirmiusJson> _clubs = [], _jobs = [], _permissions = [];
+  List<AirmiusJson> _clubs = [], _jobs = [], _permissions = [], _users = [];
   AirmiusJson? _pending;
   int? _clubId;
   int _page = 1, _lastPage = 1, _revision = 0;
@@ -53,7 +53,18 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
 
   String _recipientSummary(AirmiusJson job) {
     final roles = ((job['recipient_roles'] as List?) ?? []).cast<String>();
-    return roles.isEmpty ? _t('defaultRecipients') : roles.join(', ');
+    final userIds = ((job['recipient_user_ids'] as List?) ?? [])
+        .map((id) => int.tryParse('$id'))
+        .whereType<int>()
+        .toSet();
+    final parts = <String>[
+      if (job['include_creator'] == true) _t('creator'),
+      ..._users
+          .where((user) => userIds.contains(user['id']))
+          .map((user) => '${user['name']}'),
+      ...roles,
+    ];
+    return parts.isEmpty ? _t('defaultRecipients') : parts.join(', ');
   }
 
   String _timeLabel(AirmiusJson job) {
@@ -148,6 +159,7 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
         _canCreate = meta['can_create'] == true;
         _permissions = (meta['recipient_permissions'] as List)
             .cast<AirmiusJson>();
+        _users = (meta['recipient_users'] as List).cast<AirmiusJson>();
         _lastPage = meta['last_page'] as int;
         _error = null;
       });
@@ -192,10 +204,13 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
       context: context,
       builder: (_) => WorkAutomationCreateDialog(
         permissions: _permissions,
-        preview: (roles) async =>
+        users: _users,
+        preview: (roles, userIds, includeCreator) async =>
             (await _client.workAutomationRecipients(
                   clubId,
                   roles,
+                  userIds,
+                  includeCreator,
                 ))['data']['count']
                 as int,
       ),
@@ -287,10 +302,13 @@ class _WorkAutomationScreenState extends State<WorkAutomationScreen> {
       context: context,
       builder: (_) => WorkAutomationCreateDialog(
         permissions: _permissions,
-        preview: (roles) async =>
+        users: _users,
+        preview: (roles, userIds, includeCreator) async =>
             (await _client.workAutomationRecipients(
                   clubId,
                   roles,
+                  userIds,
+                  includeCreator,
                 ))['data']['count']
                 as int,
         initial: details,
@@ -590,11 +608,13 @@ class WorkAutomationCreateDialog extends StatefulWidget {
   const WorkAutomationCreateDialog({
     super.key,
     required this.permissions,
+    required this.users,
     required this.preview,
     this.initial,
   });
   final List<AirmiusJson> permissions;
-  final Future<int> Function(List<String>) preview;
+  final List<AirmiusJson> users;
+  final Future<int> Function(List<String>, List<int>, bool) preview;
   final AirmiusJson? initial;
   @override
   State<WorkAutomationCreateDialog> createState() =>
@@ -605,6 +625,8 @@ class _WorkAutomationCreateDialogState
     extends State<WorkAutomationCreateDialog> {
   final _title = TextEditingController(), _body = TextEditingController();
   final _roles = <String>[];
+  final _userIds = <int>[];
+  bool _includeCreator = true;
   String _kind = 'reminder';
   DateTime? _scheduled;
   int? _count;
@@ -623,8 +645,15 @@ class _WorkAutomationCreateDialogState
       _roles.addAll(
         ((initial['recipient_roles'] as List?) ?? []).cast<String>(),
       );
-      if (initial['scheduled_at'] != null)
+      _userIds.addAll(
+        ((initial['recipient_user_ids'] as List?) ?? [])
+            .map((id) => int.tryParse('$id'))
+            .whereType<int>(),
+      );
+      _includeCreator = initial['include_creator'] == true;
+      if (initial['scheduled_at'] != null) {
         _scheduled = DateTime.parse('${initial['scheduled_at']}').toLocal();
+      }
     }
     _preview();
   }
@@ -646,7 +675,11 @@ class _WorkAutomationCreateDialogState
       });
     }
     try {
-      final count = await widget.preview(List.of(_roles));
+      final count = await widget.preview(
+        List.of(_roles),
+        List.of(_userIds),
+        _includeCreator,
+      );
       if (mounted && revision == _revision) setState(() => _count = count);
     } catch (_) {
       if (mounted && revision == _revision) {
@@ -702,6 +735,46 @@ class _WorkAutomationCreateDialogState
                         } else if (value == false) {
                           _roles.remove(permission['key']);
                         }
+                      });
+                    },
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(_t('close')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (mounted) {
+      setState(() {});
+      _preview();
+    }
+  }
+
+  Future<void> _pickPeople() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
+          title: Text(_t('specificPeople')),
+          content: SizedBox(
+            width: 440,
+            height: 360,
+            child: ListView(
+              children: [
+                for (final user in widget.users)
+                  CheckboxListTile(
+                    title: Text('${user['name']}'),
+                    value: _userIds.contains(user['id']),
+                    onChanged: (value) {
+                      update(() {
+                        final id = user['id'] as int;
+                        value == true ? _userIds.add(id) : _userIds.remove(id);
                       });
                     },
                   ),
@@ -784,6 +857,26 @@ class _WorkAutomationCreateDialogState
               trailing: const Icon(Icons.people_outline),
               onTap: _pickRoles,
             ),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(_t('includeCreator')),
+              value: _includeCreator,
+              onChanged: (value) {
+                setState(() => _includeCreator = value == true);
+                _preview();
+              },
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(_t('specificPeople')),
+              subtitle: Text(
+                _userIds.isEmpty
+                    ? _t('noSpecificPeople')
+                    : '${_userIds.length} ${_t('people')}',
+              ),
+              trailing: const Icon(Icons.person_add_alt_1_outlined),
+              onTap: _pickPeople,
+            ),
             if (_count == null)
               const LinearProgressIndicator()
             else ...[
@@ -824,6 +917,8 @@ class _WorkAutomationCreateDialogState
                 Navigator.pop(context, <String, dynamic>{
                   'kind': _kind,
                   'recipient_roles': List.of(_roles),
+                  'recipient_user_ids': List.of(_userIds),
+                  'include_creator': _includeCreator,
                   'payload': {
                     'title': _title.text.trim(),
                     'body': _body.text.trim(),

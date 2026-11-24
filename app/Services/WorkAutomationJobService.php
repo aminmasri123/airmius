@@ -143,7 +143,12 @@ class WorkAutomationJobService
             throw new \RuntimeException('Club no longer exists.');
         }
 
-        $recipients = $this->recipients($club, $job->recipient_roles ?: []);
+        $recipients = $this->recipients(
+            $club,
+            $job->recipient_roles ?: [],
+            $payload['_recipient_user_ids'] ?? [],
+            ($payload['_include_creator'] ?? false) ? $job->created_by : null,
+        );
         if ($recipients->isEmpty()) {
             throw new NoWorkAutomationRecipients('No authorized recipients.');
         }
@@ -168,7 +173,7 @@ class WorkAutomationJobService
         return ['stored_notifications' => $delivered, 'skipped_notifications' => $skipped];
     }
 
-    public function recipients(Club $club, array $roles = []): Collection
+    public function recipients(Club $club, array $roles = [], array $userIds = [], ?int $creatorId = null): Collection
     {
         $members = $club->users()
             ->where(fn ($query) => $query->whereNull('club_user.membership_status')
@@ -178,11 +183,14 @@ class WorkAutomationJobService
             $members->push($club->owner);
         }
 
-        return $members
-            ->filter(function (User $user) use ($club, $roles): bool {
+        $useDefaultRecipients = $roles === [] && $userIds === [] && $creatorId === null;
+        $roleRecipients = $members
+            ->filter(function (User $user) use ($club, $roles, $useDefaultRecipients): bool {
                 if ($roles === []) {
-                    return ClubPermissions::allows($club, $user, ClubPermissions::GOVERNANCE_EDIT)
-                        || ClubPermissions::allows($club, $user, ClubPermissions::FINANCE_MANAGE);
+                    return $useDefaultRecipients && (
+                        ClubPermissions::allows($club, $user, ClubPermissions::GOVERNANCE_EDIT)
+                        || ClubPermissions::allows($club, $user, ClubPermissions::FINANCE_MANAGE)
+                    );
                 }
 
                 foreach ($roles as $permission) {
@@ -192,7 +200,17 @@ class WorkAutomationJobService
                 }
 
                 return false;
-            })->unique('id')->values();
+            });
+
+        $selectedIds = collect($userIds)->map(fn ($id) => (int) $id)->filter()->unique();
+        $explicitRecipients = $members->filter(fn (User $user) => $selectedIds->contains((int) $user->id));
+        $creator = $creatorId ? $members->firstWhere('id', $creatorId) : null;
+
+        return $roleRecipients
+            ->merge($explicitRecipients)
+            ->when($creator, fn (Collection $recipients) => $recipients->push($creator))
+            ->unique('id')
+            ->values();
     }
 
     private function notificationBody(array $payload): string

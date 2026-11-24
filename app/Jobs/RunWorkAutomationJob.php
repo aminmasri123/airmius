@@ -18,7 +18,10 @@ class RunWorkAutomationJob implements ShouldQueue
 
     public bool $failOnTimeout = true;
 
-    public function __construct(public int $jobId, public ?string $executionToken = null) {}
+    public function __construct(public int $jobId, public ?string $executionToken = null)
+    {
+        $this->onQueue('work-automation');
+    }
 
     public function handle(WorkAutomationJobService $service): void
     {

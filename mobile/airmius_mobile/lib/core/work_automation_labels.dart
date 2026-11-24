@@ -73,6 +73,10 @@ const _labels = <AirmiusLanguage, Map<String, String>>{
     'failedHelp': 'Der Versand ist fehlgeschlagen und benötigt Aufmerksamkeit.',
     'preview': 'Zusammenfassung',
     'people': 'Personen',
+    'creator': 'Ersteller',
+    'includeCreator': 'Ersteller ebenfalls benachrichtigen',
+    'specificPeople': 'Bestimmte Personen auswählen',
+    'noSpecificPeople': 'Keine bestimmten Personen ausgewählt',
     'processingLocked':
         'Während der Verarbeitung kann dieser Auftrag nicht bearbeitet oder gelöscht werden.',
   },
@@ -145,6 +149,10 @@ const _labels = <AirmiusLanguage, Map<String, String>>{
     'failedHelp': 'Delivery failed and needs attention.',
     'preview': 'Summary',
     'people': 'people',
+    'creator': 'Creator',
+    'includeCreator': 'Notify the creator as well',
+    'specificPeople': 'Select specific people',
+    'noSpecificPeople': 'No specific people selected',
     'processingLocked':
         'This job cannot be edited or deleted while it is being processed.',
   },
@@ -217,6 +225,10 @@ const _labels = <AirmiusLanguage, Map<String, String>>{
     'failedHelp': "L'envoi a échoué et nécessite une intervention.",
     'preview': 'Résumé',
     'people': 'personnes',
+    'creator': 'Créateur',
+    'includeCreator': 'Notifier également le créateur',
+    'specificPeople': 'Sélectionner des personnes',
+    'noSpecificPeople': 'Aucune personne sélectionnée',
     'processingLocked':
         'Cette tâche ne peut pas être modifiée ou supprimée pendant son traitement.',
   },
@@ -288,6 +300,10 @@ const _labels = <AirmiusLanguage, Map<String, String>>{
     'failedHelp': 'فشل الإرسال ويتطلب الانتباه.',
     'preview': 'الملخص',
     'people': 'أشخاص',
+    'creator': 'المنشئ',
+    'includeCreator': 'إشعار المنشئ أيضًا',
+    'specificPeople': 'اختيار أشخاص محددين',
+    'noSpecificPeople': 'لم يتم اختيار أشخاص محددين',
     'processingLocked': 'لا يمكن تعديل هذه المهمة أو حذفها أثناء معالجتها.',
   },
 };

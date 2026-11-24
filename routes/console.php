@@ -26,6 +26,9 @@ Artisan::command('airmius:process-member-removals', function (\App\Services\Club
 Schedule::command('airmius:process-member-removals')->everyMinute()->withoutOverlapping();
 
 Schedule::command('airmius:dispatch-work-automation-jobs')->everyMinute()->withoutOverlapping();
+Schedule::command('queue:work database --queue=work-automation --once --sleep=0 --tries=1 --timeout=60')
+    ->everyMinute()
+    ->withoutOverlapping();
 
 Schedule::command('airmius:process-club-deletions')->hourly()->withoutOverlapping();
 

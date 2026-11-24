@@ -54,6 +54,44 @@ class WorkAutomationJobTest extends TestCase
         ]);
     }
 
+    public function test_creator_and_specific_people_can_be_selected_as_notification_recipients(): void
+    {
+        Queue::fake();
+        [$club, $owner, $member] = $this->clubWithOwner();
+        $foreign = User::factory()->create();
+        Sanctum::actingAs($owner);
+
+        $this->getJson($this->path($club))
+            ->assertOk()
+            ->assertJsonFragment(['id' => $owner->id, 'name' => $owner->name]);
+        $this->getJson("/api/v1/clubs/{$club->id}/work-automation-recipients?include_creator=1&recipient_user_ids[0]={$member->id}")
+            ->assertOk()
+            ->assertJsonPath('data.count', 2);
+
+        $jobId = $this->postJson($this->path($club), [
+            'kind' => 'reminder',
+            'idempotency_key' => 'creator-and-person',
+            'include_creator' => true,
+            'recipient_user_ids' => [$member->id],
+            'payload' => ['title' => 'Training', 'body' => 'Bitte bestätigen.'],
+        ])->assertAccepted()
+            ->assertJsonPath('data.include_creator', true)
+            ->assertJsonPath('data.recipient_user_ids.0', $member->id)
+            ->json('data.id');
+
+        app(WorkAutomationJobService::class)->run($jobId);
+        $this->assertDatabaseHas('notifications', ['user_id' => $owner->id, 'type' => 'club.work_automation.reminder']);
+        $this->assertDatabaseHas('notifications', ['user_id' => $member->id, 'type' => 'club.work_automation.reminder']);
+        $this->assertSame(2, WorkAutomationJob::findOrFail($jobId)->result['stored_notifications']);
+
+        $this->postJson($this->path($club), [
+            'kind' => 'reminder',
+            'idempotency_key' => 'foreign-person',
+            'recipient_user_ids' => [$foreign->id],
+            'payload' => ['title' => 'Ungültig', 'body' => 'Nicht zustellen.'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('recipient_user_ids.0');
+    }
+
     public function test_failed_escalation_is_visible_and_manual_retry_is_permission_checked(): void
     {
         Queue::fake();
@@ -71,7 +109,7 @@ class WorkAutomationJobTest extends TestCase
 
         $failingService = new class extends WorkAutomationJobService
         {
-            public function recipients(Club $club, array $roles = []): Collection
+            public function recipients(Club $club, array $roles = [], array $userIds = [], ?int $creatorId = null): Collection
             {
                 throw new \RuntimeException('Injected delivery failure');
             }
@@ -250,7 +288,7 @@ class WorkAutomationJobTest extends TestCase
         $empty = $service->enqueue($club, 'reminder', 'empty');
         $emptyService = new class extends WorkAutomationJobService
         {
-            public function recipients(Club $club, array $roles = []): Collection
+            public function recipients(Club $club, array $roles = [], array $userIds = [], ?int $creatorId = null): Collection
             {
                 return collect();
             }
@@ -380,7 +418,11 @@ class WorkAutomationJobTest extends TestCase
         $document = $service->enqueue($club, 'reminder', 'document', $owner, null, [ClubPermissions::POLICY_DOCUMENTS_EDIT], ['template' => 'policy_document_contract_review']);
         $service->markFailed($document->id, $document->execution_token, 'queue_worker_failed', null);
         Sanctum::actingAs($editor);
-        $this->getJson($this->path($club))->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('meta.can_create', false);
+        $this->getJson($this->path($club))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('meta.can_create', false)
+            ->assertJsonCount(0, 'meta.recipient_users');
         $this->getJson($this->path($club)."/{$generic->id}")->assertNotFound();
         $this->postJson($this->path($club)."/{$generic->id}/retry")->assertForbidden();
         $this->postJson($this->path($club)."/{$document->id}/retry")->assertOk()->assertJsonPath('data.status', 'queued');
@@ -419,7 +461,12 @@ class WorkAutomationJobTest extends TestCase
         $this->artisan('airmius:dispatch-work-automation-jobs')->assertExitCode(0);
         $this->assertDatabaseCount('jobs', 1);
         $this->assertSame('queued', $job->fresh()->status);
-        $this->artisan('queue:work', ['connection' => 'database', '--once' => true, '--sleep' => 0])->assertExitCode(0);
+        $this->artisan('queue:work', [
+            'connection' => 'database',
+            '--queue' => 'work-automation',
+            '--once' => true,
+            '--sleep' => 0,
+        ])->assertExitCode(0);
         $this->assertSame('completed', $job->fresh()->status);
         $this->assertSame(1, $job->fresh()->result['stored_notifications']);
         $this->assertDatabaseHas('notifications', ['user_id' => $owner->id, 'type' => 'club.work_automation.reminder']);

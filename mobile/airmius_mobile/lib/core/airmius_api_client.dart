@@ -1255,11 +1255,16 @@ class AirmiusApiClient {
   Future<AirmiusJson> workAutomationRecipients(
     int clubId,
     List<String> roles,
+    List<int> userIds,
+    bool includeCreator,
   ) => _json(
     'GET',
     '/api/v1/clubs/$clubId/work-automation-recipients',
     query: {
       for (var i = 0; i < roles.length; i++) 'recipient_roles[$i]': roles[i],
+      for (var i = 0; i < userIds.length; i++)
+        'recipient_user_ids[$i]': '${userIds[i]}',
+      'include_creator': includeCreator ? '1' : '0',
     },
   );
 
