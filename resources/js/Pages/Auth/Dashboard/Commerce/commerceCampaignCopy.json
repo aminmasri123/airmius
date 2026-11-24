@@ -1,0 +1,18 @@
+{
+  "de": {
+    "format_help": "Empfohlene Bildformate",
+    "format_upload_hint": "JPG, PNG oder WebP bis 8 MB."
+  },
+  "en": {
+    "format_help": "Recommended image formats",
+    "format_upload_hint": "JPG, PNG or WebP, up to 8 MB."
+  },
+  "fr": {
+    "format_help": "Formats d’image recommandés",
+    "format_upload_hint": "JPG, PNG ou WebP, 8 Mo maximum."
+  },
+  "ar": {
+    "format_help": "مقاسات الصور الموصى بها",
+    "format_upload_hint": "JPG أو PNG أو WebP، حتى 8 ميغابايت."
+  }
+}

@@ -2161,8 +2161,8 @@ class _CampaignDateField extends StatelessWidget {
                       child: Text(
                         value == null
                             ? '–'
-                            : DateFormat('dd.MM.yyyy').format(value!),
-                        overflow: TextOverflow.ellipsis,
+                            : DateFormat('dd.MM.yyyy HH:mm').format(value!),
+                        softWrap: true,
                         style: TextStyle(
                           color: value == null
                               ? airmiusMutedColor(context)
@@ -2267,7 +2267,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
   Future<void> _pickDate({required bool start}) async {
     final now = DateUtils.dateOnly(DateTime.now());
     final current = start ? _startsAt : _endsAt;
-    final minimum = start ? now : (_startsAt ?? now);
+    final minimum = start ? now : DateUtils.dateOnly(_startsAt ?? now);
     final picked = await showDatePicker(
       context: context,
       initialDate: current != null && !current.isBefore(minimum)
@@ -2277,16 +2277,62 @@ class _CampaignSheetState extends State<_CampaignSheet> {
       lastDate: DateTime(now.year + 10, 12, 31),
     );
     if (picked == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: current != null
+          ? TimeOfDay.fromDateTime(current)
+          : start
+          ? TimeOfDay.now()
+          : const TimeOfDay(hour: 23, minute: 59),
+    );
+    if (time == null || !mounted) return;
+    final selected = DateTime(
+      picked.year, picked.month, picked.day, time.hour, time.minute,
+    );
     setState(() {
       if (start) {
-        _startsAt = picked;
-        if (_endsAt != null && _endsAt!.isBefore(picked)) {
-          _endsAt = picked;
+        _startsAt = selected;
+        if (_endsAt != null && _endsAt!.isBefore(selected)) {
+          _endsAt = selected;
         }
       } else {
-        _endsAt = picked;
+        _endsAt = selected;
       }
     });
+  }
+
+  void _showFormatHelp() {
+    final t = AirmiusScope.of(context).t;
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('commerceAdv.formatHelp')),
+        scrollable: true,
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final format in const [
+              ('feed_square', '1080 × 1080 px · 1:1'),
+              ('feed_portrait', '1080 × 1350 px · 4:5'),
+              ('story_vertical', '1080 × 1920 px · 9:16'),
+              ('banner_wide', '1200 × 628 px · 1.91:1'),
+            ])
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text('${t('commerceAdv.format.${format.$1}')}\n${format.$2}'),
+              ),
+            Text(t('commerceAdv.imageUploadHint')),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(t('common.close')),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -2508,7 +2554,14 @@ class _CampaignSheetState extends State<_CampaignSheet> {
             DropdownButtonFormField<String>(
               initialValue: _format,
               isExpanded: true,
-              decoration: InputDecoration(labelText: t('commerceAdv.format')),
+              decoration: InputDecoration(
+                labelText: t('commerceAdv.format'),
+                suffixIcon: IconButton(
+                  tooltip: t('commerceAdv.formatHelp'),
+                  onPressed: _showFormatHelp,
+                  icon: const Icon(Icons.info_outline),
+                ),
+              ),
               items:
                   const [
                         'feed_square',
@@ -4208,14 +4261,12 @@ DateTime? _campaignDate(Object? value) {
   return DateTime.tryParse(text)?.toLocal();
 }
 
-String? _campaignApiDate(DateTime? value) => value == null
-    ? null
-    : DateFormat('yyyy-MM-dd').format(DateUtils.dateOnly(value));
+String? _campaignApiDate(DateTime? value) => value?.toUtc().toIso8601String();
 
 String _campaignPeriod(BuildContext context, Map<String, dynamic> campaign) {
   final start = _campaignDate(campaign['starts_at']);
   final end = _campaignDate(campaign['ends_at']);
-  final formatter = DateFormat('dd.MM.yyyy');
+  final formatter = DateFormat('dd.MM.yyyy HH:mm');
   final language = Localizations.localeOf(context).languageCode;
   final startLabel = switch (language) {
     'en' => 'Start',

@@ -6997,6 +6997,16 @@ void main() {
 
     expect(find.text('Kampagne bearbeiten'), findsOneWidget);
     expect(find.text('Bild auswählen'), findsOneWidget);
+    final formatInfo = find.byTooltip('Empfohlene Bildformate');
+    await tester.ensureVisible(formatInfo);
+    await tester.pumpAndSettle();
+    await tester.tap(formatInfo);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('1080 × 1350 px'), findsOneWidget);
+    expect(find.textContaining('1200 × 628 px'), findsOneWidget);
+    expect(find.text('JPG, PNG oder WebP, maximal 8 MB.'), findsWidgets);
+    Navigator.of(tester.element(find.byType(AlertDialog))).pop();
+    await tester.pumpAndSettle();
     expect(
       find.byWidgetPredicate((widget) {
         return widget is Image &&
@@ -7005,6 +7015,38 @@ void main() {
       }),
       findsOneWidget,
     );
+  });
+
+  testWidgets('campaign editor preserves start and end times when saving', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1200));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body: '{"data":{"ads_can_manage":true,"campaigns":[{"id":12,"name":"Zeitentest","status":"draft","budget_cents":5000,"starts_at":"2030-06-01T08:15:00Z","ends_at":"2030-06-02T20:45:00Z"}]}}',
+      ),
+    );
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const CommerceCenterScreen(initialSection: 'ads'),
+    );
+    await tester.pumpAndSettle();
+    final edit = find.text('Bearbeiten');
+    await tester.ensureVisible(edit);
+    await tester.tap(edit);
+    await tester.pumpAndSettle();
+    final save = find.widgetWithText(FilledButton, 'Speichern');
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    final request = transport.requests.singleWhere((request) => request.method == 'PUT');
+    expect(DateTime.parse(request.body!['starts_at'] as String),
+        DateTime.utc(2030, 6, 1, 8, 15));
+    expect(DateTime.parse(request.body!['ends_at'] as String),
+        DateTime.utc(2030, 6, 2, 20, 45));
   });
 
   testWidgets('commerce localizes a mobile connection failure', (

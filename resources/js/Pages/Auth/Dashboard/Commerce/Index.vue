@@ -6,6 +6,7 @@ import AppLoadingState from "@/Components/UI/AppLoadingState.vue"
 import Modal from "@/Components/Modal.vue"
 import TeamBulkOrders from "@/Components/Commerce/TeamBulkOrders.vue"
 import { useCommerceWorkspace } from "@/composables/useCommerceWorkspace"
+import commerceCampaignCopy from "./commerceCampaignCopy.json"
 import commerceCriticalCheckoutCopy from "./commerceCriticalCheckoutCopy.json"
 import { Head, Link } from "@inertiajs/vue3"
 import { useI18n } from "vue-i18n"
@@ -44,6 +45,7 @@ const props = defineProps({
 
 const { t, locale } = useI18n()
 const campaignImageSource = ref('link')
+const campaignFormatHelpOpen = ref(false)
 const editCampaignImageSource = ref('link')
 const tx = (key, fallback, values = {}) => {
     const translated = t(key, values)
@@ -53,6 +55,11 @@ const ct = (key) => {
     const language = String(locale.value || 'de').split('-')[0]
 
     return commerceCriticalCheckoutCopy[language]?.[key] || commerceCriticalCheckoutCopy.de[key] || key
+}
+const campaignCt = (key) => {
+    const language = String(locale.value || 'de').split('-')[0]
+
+    return commerceCampaignCopy[language]?.[key] || commerceCampaignCopy.de[key] || key
 }
 const campaignStatusLabel = (status) => ({
     draft: 'Entwurf',
@@ -1346,7 +1353,10 @@ const {
                         </div>
                     </div>
                     <div class="rounded-lg border border-border bg-bg p-3">
-                        <label class="text-xs font-semibold uppercase text-secondary">Creative Format und Bildmaße</label>
+                        <div class="flex items-center justify-between gap-2">
+                            <label class="text-xs font-semibold uppercase text-secondary">Creative Format und Bildmaße</label>
+                            <button type="button" class="inline-flex h-10 w-10 items-center justify-center rounded-md text-buttonPrimary" :aria-label="campaignCt('format_help')" @click="campaignFormatHelpOpen = true"><i class="las la-info-circle text-xl" aria-hidden="true"></i></button>
+                        </div>
                         <select v-model="campaignForm.creative_format" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option v-for="format in campaignAdFormats" :key="format.key" :value="format.key">
                                 {{ format.label }} - {{ format.size }}
@@ -2142,7 +2152,10 @@ const {
                         </div>
                     </div>
                     <div class="rounded-lg border border-border bg-bg p-3">
-                        <label for="edit-campaign-creative-format" class="text-xs font-semibold uppercase text-secondary">Creative Format - welches Bildmass?</label>
+                        <div class="flex items-center justify-between gap-2">
+                            <label for="edit-campaign-creative-format" class="text-xs font-semibold uppercase text-secondary">Creative Format - welches Bildmass?</label>
+                            <button type="button" class="inline-flex h-10 w-10 items-center justify-center rounded-md text-buttonPrimary" :aria-label="campaignCt('format_help')" @click="campaignFormatHelpOpen = true"><i class="las la-info-circle text-xl" aria-hidden="true"></i></button>
+                        </div>
                         <select id="edit-campaign-creative-format" v-model="editCampaignForm.creative_format" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option v-for="format in editCampaignAdFormats" :key="format.key" :value="format.key">
                                 {{ format.label }} - {{ format.size }}
@@ -2419,6 +2432,18 @@ const {
                     </button>
                 </div>
             </form>
+        </Modal>
+        <Modal :show="campaignFormatHelpOpen" max-width="lg" :aria-label="campaignCt('format_help')" @close="campaignFormatHelpOpen = false">
+            <section class="p-5">
+                <h2 class="text-lg font-bold text-primary">{{ campaignCt('format_help') }}</h2>
+                <ul class="mt-4 space-y-3">
+                    <li v-for="format in adFormats" :key="format.key" class="text-sm text-primary">
+                        <p class="font-semibold">{{ format.label }}</p>
+                        <p>{{ format.size }} · {{ format.ratio }}</p>
+                    </li>
+                </ul>
+                <p class="mt-4 text-sm text-secondary">{{ campaignCt('format_upload_hint') }}</p>
+            </section>
         </Modal>
         <Modal :show="Boolean(adPaymentCampaign)" max-width="lg" @close="adPaymentCampaign = null">
             <section v-if="adPaymentCampaign" :aria-label="t('Kampagne bezahlen')" class="p-5">
