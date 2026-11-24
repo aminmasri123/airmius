@@ -55,6 +55,12 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
             true;
   }
 
+  bool get _isSponsorAccount =>
+      AirmiusServicesScope.of(
+        context,
+      ).authState.user?.hasAnyRole(const ['sponsor', 'sponsor_manager']) ==
+      true;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -181,7 +187,9 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
                             _sponsorText(nearClub['city']).toLowerCase())) &&
                 haystack.contains(_query.trim().toLowerCase());
           }).toList();
-          if (!_openedInitialSponsor && widget.initialSponsorId != null) {
+          if (!_isSponsorAccount &&
+              !_openedInitialSponsor &&
+              widget.initialSponsorId != null) {
             _openedInitialSponsor = true;
             final target = sponsors
                 .where((s) => _sponsorInt(s['id']) == widget.initialSponsorId)
@@ -368,7 +376,12 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _SponsorCard(
                         sponsor: sponsor,
-                        onOpen: () => _openSponsor(sponsor, clubs, outgoing),
+                        onOpen: _isSponsorAccount
+                            ? null
+                            : () => _openSponsor(sponsor, clubs, outgoing),
+                        disabledLabel: _isSponsorAccount
+                            ? _tx('Nur für Vereine', 'For clubs only')
+                            : null,
                       ),
                     ),
                   ),
@@ -589,10 +602,15 @@ class _SponsorBenefits extends StatelessWidget {
 }
 
 class _SponsorCard extends StatelessWidget {
-  const _SponsorCard({required this.sponsor, required this.onOpen});
+  const _SponsorCard({
+    required this.sponsor,
+    required this.onOpen,
+    this.disabledLabel,
+  });
 
   final JsonMap sponsor;
-  final VoidCallback onOpen;
+  final VoidCallback? onOpen;
+  final String? disabledLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -670,7 +688,16 @@ class _SponsorCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          const Icon(Icons.chevron_right),
+          if (onOpen != null)
+            const Icon(Icons.chevron_right)
+          else
+            Tooltip(
+              message: disabledLabel ?? '',
+              child: Icon(
+                Icons.lock_outline,
+                color: airmiusMutedColor(context),
+              ),
+            ),
         ],
       ),
     );

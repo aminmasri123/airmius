@@ -580,6 +580,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/sponsor-inquiries', [SponsorInquiryController::class, 'index'])->name('sponsor-inquiries.index');
         Route::post('/sponsor-inquiries', [SponsorInquiryController::class, 'store'])->middleware('throttle:10,1')->name('sponsor-inquiries.store');
         Route::post('/sponsor-inquiries/{inquiry}/respond', [SponsorInquiryController::class, 'respond'])->name('sponsor-inquiries.respond');
+        Route::delete('/sponsor-inquiries/{inquiry}/recipient', [SponsorInquiryController::class, 'destroyForSponsor'])->name('sponsor-inquiries.recipient.destroy');
         Route::delete('/sponsor-inquiries/{inquiry}', [SponsorInquiryController::class, 'withdraw'])->name('sponsor-inquiries.withdraw');
         Route::post('/sponsor-management', [SponsorManagementController::class, 'store'])->name('sponsor-management.store');
         Route::put('/sponsor-management/{sponsor}', [SponsorManagementController::class, 'update'])->name('sponsor-management.update');

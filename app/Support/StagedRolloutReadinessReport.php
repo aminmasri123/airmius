@@ -208,12 +208,17 @@ final class StagedRolloutReadinessReport
     /** @return array{data:array<string,mixed>,errors:array<int,string>} */
     private function json(string $path): array
     {
-        if (! is_file($path) || ! is_readable($path)) {
+        if (! is_file($path)) {
             return ['data' => [], 'errors' => ['file_missing']];
         }
 
         try {
-            $data = json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+            $contents = @file_get_contents($path);
+            if ($contents === false) {
+                return ['data' => [], 'errors' => ['file_missing']];
+            }
+
+            $data = json_decode($contents, true, flags: JSON_THROW_ON_ERROR);
 
             return is_array($data) ? ['data' => $data, 'errors' => []] : ['data' => [], 'errors' => ['root_not_object']];
         } catch (JsonException) {

@@ -1,5 +1,6 @@
 {
   "auto": {
+    "Ignorieren": "Ignore",
     "Vereinsauszahlungen": "Club payouts",
     "Prüfe anhand des Banknachweises, dass der Verein Inhaber dieser IBAN ist.": "Use the bank statement to verify that the club owns this IBAN.",
     "Kontoinhaberschaft bestätigen": "Confirm account ownership",

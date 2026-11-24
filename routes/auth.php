@@ -128,6 +128,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         Route::post('/sponsor-cockpit/profile/logo', [SponsorWorkspaceController::class, 'uploadLogo'])->name('auth.sponsor-workspace.profile.logo');
         Route::post('/sponsor-cockpit/partnerships', [SponsorWorkspaceController::class, 'storePartnership'])->name('auth.sponsor-workspace.partnerships.store');
         Route::post('/sponsor-cockpit/inquiries/{inquiry}/respond', [SponsorInquiryController::class, 'respond'])->name('auth.sponsor-workspace.inquiries.respond');
+        Route::delete('/sponsor-cockpit/inquiries/{inquiry}', [SponsorInquiryController::class, 'destroyForSponsor'])->name('auth.sponsor-workspace.inquiries.destroy');
         Route::delete('/sponsor-cockpit/partnerships/{partnership}', [SponsorWorkspaceController::class, 'withdrawPartnership'])->name('auth.sponsor-workspace.partnerships.withdraw');
         Route::post('/sponsor-cockpit/sponsors/{sponsor}/deliverables', [SponsorDeliverableManagementController::class, 'store'])->name('auth.sponsor-workspace.deliverables.store');
         Route::put('/sponsor-cockpit/sponsors/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'update'])->name('auth.sponsor-workspace.deliverables.update');

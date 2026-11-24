@@ -6297,6 +6297,45 @@ void main() {
     expect(find.text('Website öffnen'), findsOneWidget);
   });
 
+  testWidgets('sponsor accounts cannot open sponsor contact cards', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(900, 1400));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":3,"name":"Sport Partner","website":"https://partner.example.test","logo_url":null,"scope":"platform","club":null}],"stats":{"total":1,"platform":1,"outfit_subscription":0,"club":0}}',
+      ),
+    );
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 12,
+        name: 'Sponsor Test',
+        email: 'sponsor@example.test',
+        role: 'sponsor',
+        roles: ['sponsor'],
+      ),
+      transport: transport,
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      container,
+      const SponsorsCenterScreen(initialSponsorId: 3),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sport Partner'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_outline), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
+    expect(find.text('Sponsor kontaktieren'), findsNothing);
+
+    await tester.tap(find.text('Sport Partner'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sponsor kontaktieren'), findsNothing);
+  });
+
   testWidgets('editorial management renders permissions and quality status', (
     WidgetTester tester,
   ) async {

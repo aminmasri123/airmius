@@ -45,6 +45,17 @@ const replyInquiry = () => {
         note: inquiryReply.value.note,
     }, { preserveScroll: true, onSuccess: () => { inquiryReply.value = { id: null, decision: 'interested', note: '' } } })
 }
+const ignoreInquiry = (inquiry) => {
+    if (!window.confirm('Diese Anfrage wirklich ignorieren? Der Verein erhält keine Benachrichtigung.')) return
+    router.post(route('auth.sponsor-workspace.inquiries.respond', inquiry.id), {
+        decision: 'ignored',
+        note: '',
+    }, { preserveScroll: true })
+}
+const deleteInquiry = (inquiry) => {
+    if (!window.confirm('Diese Anfrage aus dem Sponsor-Cockpit löschen?')) return
+    router.delete(route('auth.sponsor-workspace.inquiries.destroy', inquiry.id), { preserveScroll: true })
+}
 const campaigns = computed(() => props.workspace.campaigns || [])
 const growth = computed(() => props.workspace.growth || { stages: [], attention: {} })
 const growthStages = computed(() => growth.value.stages || [])
@@ -656,8 +667,10 @@ const roleLabel = (role) => ({
                                 <div v-else class="flex flex-wrap gap-2">
                                     <button type="button" class="min-h-10 rounded-lg bg-buttonPrimary px-3 text-sm font-bold text-buttonTextPrimary" @click="inquiryReply = { id: inquiry.id, decision: 'interested', note: '' }">Interesse bestätigen</button>
                                     <button type="button" class="min-h-10 rounded-lg border border-border px-3 text-sm font-bold text-primary" @click="inquiryReply = { id: inquiry.id, decision: 'declined', note: '' }">Absagen</button>
+                                    <button type="button" class="min-h-10 rounded-lg border border-border px-3 text-sm font-bold text-primary" @click="ignoreInquiry(inquiry)">Ignorieren</button>
                                 </div>
                             </div>
+                            <button v-if="capabilities.manage_partnerships" type="button" class="mt-3 min-h-10 rounded-lg border border-red-500/50 px-3 text-sm font-bold text-red-300" @click="deleteInquiry(inquiry)">Löschen</button>
                         </article>
                     </div>
 

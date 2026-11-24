@@ -42,7 +42,7 @@ class SponsorInquiryController extends Controller
     public function respond(Request $request, SponsorInquiry $inquiry)
     {
         $data = $request->validate([
-            'decision' => ['required', Rule::in(['interested', 'declined'])],
+            'decision' => ['required', Rule::in(['interested', 'declined', 'ignored'])],
             'note' => ['nullable', 'string', 'max:2000'],
         ]);
         $record = $this->inquiries->respond($request->user(), $inquiry, $data['decision'], $data['note'] ?? null);
@@ -59,5 +59,14 @@ class SponsorInquiryController extends Controller
         return $request->expectsJson()
             ? response()->json(['data' => $record])
             : back()->with('success', 'Anfrage zurückgezogen.');
+    }
+
+    public function destroyForSponsor(Request $request, SponsorInquiry $inquiry)
+    {
+        $record = $this->inquiries->deleteForSponsor($request->user(), $inquiry);
+
+        return $request->expectsJson()
+            ? response()->json(['data' => $record])
+            : back()->with('success', 'Anfrage wurde gelöscht.');
     }
 }

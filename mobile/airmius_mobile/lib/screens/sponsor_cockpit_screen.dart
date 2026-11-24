@@ -1080,6 +1080,50 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     }
   }
 
+  Future<void> _ignoreInquiry(Map<String, dynamic> inquiry) async {
+    final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('Anfrage ignorieren?'),
+      content: const Text('Die Anfrage wird als ignoriert markiert. Der Verein erhält keine Benachrichtigung.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Abbrechen')),
+        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Ignorieren')),
+      ],
+    ));
+    if (confirmed != true || !mounted) return;
+    try {
+      await _client.respondSponsorInquiry(_int(inquiry['id']), 'ignored', '');
+      if (mounted) _reload();
+    } on AirmiusApiException catch (error) {
+      if (mounted) _toast(error.userMessage);
+    }
+  }
+
+  Future<void> _deleteInquiry(Map<String, dynamic> inquiry) async {
+    final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('Anfrage löschen?'),
+      content: const Text('Die Anfrage wird aus deinem Sponsor-Cockpit entfernt. Dieser Vorgang kann nicht rückgängig gemacht werden.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Abbrechen')),
+        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Löschen')),
+      ],
+    ));
+    if (confirmed != true || !mounted) return;
+    try {
+      await _client.deleteSponsorInquiryForRecipient(_int(inquiry['id']));
+      if (mounted) _reload();
+    } on AirmiusApiException catch (error) {
+      if (mounted) _toast(error.userMessage);
+    }
+  }
+
+  String _inquiryStatusLabel(String status) => switch (status) {
+    'pending' => 'Offen',
+    'interested' => 'Interesse bestätigt',
+    'declined' => 'Abgelehnt',
+    'ignored' => 'Ignoriert',
+    _ => status,
+  };
+
   Widget _incomingInquiries(List<Map<String, dynamic>> inquiries, bool canManage) {
     return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text('Anfragen von Vereinen', style: Theme.of(context).textTheme.titleMedium),
@@ -1088,12 +1132,18 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           Text('${_text(_map(inquiry['club'])['name'])} · ${_text(inquiry['subject'])}',
             style: const TextStyle(fontWeight: FontWeight.bold)),
           Text(_text(inquiry['message'])),
-          Text(_text(inquiry['status']), style: TextStyle(color: airmiusMutedColor(context))),
+          Text(_inquiryStatusLabel(_text(inquiry['status'])), style: TextStyle(color: airmiusMutedColor(context))),
           if (_text(inquiry['response_note']).isNotEmpty) Text(_text(inquiry['response_note'])),
           if (canManage && inquiry['status'] == 'pending') Wrap(spacing: 8, children: [
             TextButton(onPressed: () => _respondInquiry(inquiry, 'interested'), child: const Text('Interesse bestätigen')),
             TextButton(onPressed: () => _respondInquiry(inquiry, 'declined'), child: const Text('Absagen')),
+            TextButton(onPressed: () => _ignoreInquiry(inquiry), child: const Text('Ignorieren')),
           ]),
+          if (canManage) Align(alignment: Alignment.centerLeft, child: TextButton.icon(
+            onPressed: () => _deleteInquiry(inquiry),
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Löschen'),
+          )),
           const Divider(),
         ],
       ))),

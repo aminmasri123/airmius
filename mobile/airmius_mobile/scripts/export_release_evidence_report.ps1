@@ -58,21 +58,21 @@ $lines.Add("")
 foreach ($gate in $manifest.gates) {
     $lines.Add("### $($gate.title)")
     $lines.Add("")
-    $lines.Add("- ID: `$($gate.id)`")
+    $lines.Add("- ID: ``$($gate.id)``")
     $lines.Add("- Owner: $($gate.owner)")
     $lines.Add("- Status: $($gate.status)")
     $lines.Add("- Required evidence: $($gate.required_evidence)")
     if ($gate.local_command) {
-        $lines.Add("- Local command: `$($gate.local_command)`")
+        $lines.Add("- Local command: ``$($gate.local_command)``")
     }
     if ($gate.linux_local_command) {
-        $lines.Add("- Linux local command: `$($gate.linux_local_command)`")
+        $lines.Add("- Linux local command: ``$($gate.linux_local_command)``")
     }
     if ($gate.macos_local_command) {
-        $lines.Add("- macOS local command: `$($gate.macos_local_command)`")
+        $lines.Add("- macOS local command: ``$($gate.macos_local_command)``")
     }
     if ($gate.runbook) {
-        $lines.Add("- Runbook: `$($gate.runbook)`")
+        $lines.Add("- Runbook: ``$($gate.runbook)``")
     }
     if ($gate.urls) {
         $lines.Add("- URLs:")
@@ -83,7 +83,7 @@ foreach ($gate in $manifest.gates) {
     if ($gate.ci_artifacts) {
         $lines.Add("- CI artifacts:")
         foreach ($artifact in $gate.ci_artifacts) {
-            $lines.Add("  - `$artifact`")
+            $lines.Add("  - ``$artifact``")
         }
     }
     if ($gate.last_updated_at) {

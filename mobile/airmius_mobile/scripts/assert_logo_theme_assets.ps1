@@ -6,11 +6,11 @@ $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $Failures = New-Object System.Collections.Generic.List[string]
 
 $RequiredAssets = @(
-    "assets\images\airmius-mark.png",
-    "assets\images\airmius-wordmark-dark.png",
-    "assets\images\airmius-wordmark-light.png",
-    "assets\images\airmius-full-dark.png",
-    "assets\images\airmius-full-light.png"
+    "assets/images/airmius-mark.png",
+    "assets/images/airmius-logo-dark.png",
+    "assets/images/airmius-logo-light.png",
+    "assets/images/airmius-logo-vertical-dark.png",
+    "assets/images/airmius-logo-vertical-light.png"
 )
 
 foreach ($Asset in $RequiredAssets) {
@@ -19,9 +19,9 @@ foreach ($Asset in $RequiredAssets) {
     }
 }
 
-$WidgetPath = Join-Path $Root "lib\widgets\airmius_widgets.dart"
+$WidgetPath = Join-Path $Root "lib/widgets/airmius_widgets.dart"
 if (-not (Test-Path $WidgetPath)) {
-    $Failures.Add("Airmius logo widget missing: lib\widgets\airmius_widgets.dart")
+    $Failures.Add("Airmius logo widget missing: lib/widgets/airmius_widgets.dart")
 } else {
     $WidgetSource = Get-Content -Raw -Path $WidgetPath
 
@@ -29,8 +29,10 @@ if (-not (Test-Path $WidgetPath)) {
         "ThemeMode.dark => true",
         "ThemeMode.light => false",
         "ThemeMode.system => Theme.of(context).brightness == Brightness.dark",
-        "useDarkUiLogo ? 'assets/images/airmius-wordmark-dark.png' : 'assets/images/airmius-wordmark-light.png'",
-        "useDarkUiLogo ? 'assets/images/airmius-full-dark.png' : 'assets/images/airmius-full-light.png'"
+        "'assets/images/airmius-logo-dark.png'",
+        "'assets/images/airmius-logo-light.png'",
+        "'assets/images/airmius-logo-vertical-dark.png'",
+        "'assets/images/airmius-logo-vertical-light.png'"
     )
 
     foreach ($Mapping in $RequiredMappings) {

@@ -75,7 +75,7 @@ function Set-GateStatus {
         if ($Gate.id -eq $GateId) {
             $Gate.status = $Status
             $Gate | Add-Member -NotePropertyName "evidence_note" -NotePropertyValue $Note -Force
-            $Updates.Add("$GateId -> $Status: $Note")
+            $Updates.Add("$GateId -> ${Status}: $Note")
             return
         }
     }

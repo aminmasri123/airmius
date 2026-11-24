@@ -86,22 +86,24 @@ class SponsorInquiryService
         ]);
         abort_unless($updated === 1, 409, 'Diese Anfrage wurde bereits bearbeitet.');
 
-        $club = $inquiry->club;
-        $recipients = collect([$club->owner])->merge($club->users()->get())
-            ->filter(fn (?User $candidate) => $candidate && ClubPermissions::allows($club, $candidate, ClubPermissions::SPONSORS_EDIT))
-            ->unique('id');
-        $recipients->each(fn (User $recipient) => AppNotification::sendLocalized(
-            $recipient, 'sponsor.inquiry_decided',
-            'sponsor.notifications.inquiry_decided_title', 'sponsor.notifications.inquiry_decided_body',
-            ['sponsor' => $inquiry->sponsor->name],
-            [
-                'url' => route('guest.sponsors', ['sponsor_id' => $inquiry->sponsor_id]),
-                'mobile_url' => 'airmius://sponsor-directory?sponsor_id='.$inquiry->sponsor_id,
-                'inquiry_id' => $inquiry->id,
-                'status' => $decision,
-            ],
-            ['category' => 'system'],
-        ));
+        if ($decision !== 'ignored') {
+            $club = $inquiry->club;
+            $recipients = collect([$club->owner])->merge($club->users()->get())
+                ->filter(fn (?User $candidate) => $candidate && ClubPermissions::allows($club, $candidate, ClubPermissions::SPONSORS_EDIT))
+                ->unique('id');
+            $recipients->each(fn (User $recipient) => AppNotification::sendLocalized(
+                $recipient, 'sponsor.inquiry_decided',
+                'sponsor.notifications.inquiry_decided_title', 'sponsor.notifications.inquiry_decided_body',
+                ['sponsor' => $inquiry->sponsor->name],
+                [
+                    'url' => route('guest.sponsors', ['sponsor_id' => $inquiry->sponsor_id]),
+                    'mobile_url' => 'airmius://sponsor-directory?sponsor_id='.$inquiry->sponsor_id,
+                    'inquiry_id' => $inquiry->id,
+                    'status' => $decision,
+                ],
+                ['category' => 'system'],
+            ));
+        }
 
         return $inquiry->fresh();
     }
@@ -112,6 +114,23 @@ class SponsorInquiryService
         $updated = SponsorInquiry::query()->whereKey($inquiry->id)->where('status', 'pending')
             ->update(['status' => 'withdrawn']);
         abort_unless($updated === 1, 409, 'Nur offene Anfragen können zurückgezogen werden.');
+
+        return $inquiry->fresh();
+    }
+
+    public function deleteForSponsor(User $user, SponsorInquiry $inquiry): SponsorInquiry
+    {
+        abort_unless($this->organizations->can($user, $inquiry->sponsor, 'partnerships'), 403);
+        abort_if($inquiry->status === 'deleted', 409, 'Diese Anfrage wurde bereits gelöscht.');
+
+        $inquiry->update([
+            'status' => 'deleted',
+            'subject' => 'Gelöschte Anfrage',
+            'message' => '',
+            'response_note' => null,
+            'responded_by' => $user->id,
+            'responded_at' => now(),
+        ]);
 
         return $inquiry->fresh();
     }
@@ -133,6 +152,7 @@ class SponsorInquiryService
         abort_unless($this->organizations->can($user, $sponsor, 'view'), 403);
 
         return SponsorInquiry::query()->with('club:id,name,city')
-            ->where('sponsor_id', $sponsorId)->latest('id')->limit(100)->get();
+            ->where('sponsor_id', $sponsorId)->where('status', '!=', 'deleted')
+            ->latest('id')->limit(100)->get();
     }
 }

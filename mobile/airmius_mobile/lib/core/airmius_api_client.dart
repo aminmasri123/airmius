@@ -4131,6 +4131,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> withdrawSponsorInquiry(int id) =>
       _json('DELETE', '/api/v1/sponsor-inquiries/$id');
 
+  Future<AirmiusJson> deleteSponsorInquiryForRecipient(int id) =>
+      _json('DELETE', '/api/v1/sponsor-inquiries/$id/recipient');
+
   Future<AirmiusJson> createManagedSponsor(AirmiusJson body) =>
       _json('POST', '/api/v1/sponsor-management', body: body);
 

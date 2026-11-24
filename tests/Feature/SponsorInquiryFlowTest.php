@@ -96,4 +96,63 @@ class SponsorInquiryFlowTest extends TestCase
         ])->assertUnprocessable();
         $this->assertDatabaseCount('sponsor_inquiries', 0);
     }
+
+    public function test_sponsor_can_ignore_and_delete_club_inquiries_without_exposing_them_to_other_sponsors(): void
+    {
+        $clubOwner = User::factory()->create();
+        $sponsorOwner = User::factory()->create();
+        $foreignSponsorOwner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $clubOwner->id]);
+        $sponsor = Sponsor::query()->create([
+            'name' => 'Empfänger', 'scope' => 'platform', 'owner_user_id' => $sponsorOwner->id,
+            'verification_status' => 'verified',
+        ]);
+        Sponsor::query()->create([
+            'name' => 'Fremder Sponsor', 'scope' => 'platform', 'owner_user_id' => $foreignSponsorOwner->id,
+            'verification_status' => 'verified',
+        ]);
+        $inquiry = SponsorInquiry::query()->create([
+            'sponsor_id' => $sponsor->id,
+            'club_id' => $club->id,
+            'created_by' => $clubOwner->id,
+            'status' => 'pending',
+            'subject' => 'Jugendturnier',
+            'message' => 'Wir suchen Unterstützung für unser Jugendturnier.',
+        ]);
+
+        Sanctum::actingAs($foreignSponsorOwner);
+        $this->postJson("/api/v1/sponsor-inquiries/{$inquiry->id}/respond", [
+            'decision' => 'ignored',
+        ])->assertForbidden();
+        $this->deleteJson("/api/v1/sponsor-inquiries/{$inquiry->id}/recipient")
+            ->assertForbidden();
+
+        Sanctum::actingAs($sponsorOwner);
+        $this->postJson("/api/v1/sponsor-inquiries/{$inquiry->id}/respond", [
+            'decision' => 'ignored',
+        ])->assertOk()->assertJsonPath('data.status', 'ignored');
+        $this->deleteJson("/api/v1/sponsor-inquiries/{$inquiry->id}/recipient")
+            ->assertOk()->assertJsonPath('data.status', 'deleted');
+        $this->getJson('/api/v1/sponsor-inquiries?sponsor_id='.$sponsor->id)
+            ->assertOk()->assertJsonCount(0, 'incoming');
+
+        Sanctum::actingAs($clubOwner);
+        $this->getJson('/api/v1/sponsor-inquiries')
+            ->assertOk()->assertJsonPath('outgoing.0.status', 'deleted');
+        $this->postJson('/api/v1/sponsor-inquiries', [
+            'club_id' => $club->id,
+            'sponsor_id' => $sponsor->id,
+            'subject' => 'Neue Anfrage',
+            'message' => 'Wir möchten eine neue Sponsoring-Anfrage senden.',
+        ])->assertCreated();
+
+        $this->assertDatabaseCount('sponsor_inquiries', 2);
+        $this->assertDatabaseHas('sponsor_inquiries', [
+            'id' => $inquiry->id,
+            'status' => 'deleted',
+            'subject' => 'Gelöschte Anfrage',
+            'message' => '',
+            'responded_by' => $sponsorOwner->id,
+        ]);
+    }
 }
