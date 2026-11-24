@@ -6,9 +6,15 @@ return [
         'created' => 'Sponsor erstellt.',
         'updated' => 'Sponsor aktualisiert.',
         'deleted' => 'Sponsor gelöscht.',
+        'deliverable_created' => 'Vereinbarte Leistung angelegt.',
+        'deliverable_updated' => 'Vereinbarte Leistung aktualisiert.',
+        'deliverable_deleted' => 'Vereinbarte Leistung gelöscht.',
+        'sponsor_notified' => 'Sponsor benachrichtigt.',
+        'notification_failed' => 'Die Benachrichtigung konnte nicht erstellt werden.',
     ],
     'validation' => [
         'verification_incomplete' => 'Das Sponsorprofil ist noch nicht verifizierbar (:count Pflichtangaben offen).',
+        'notification_recipient_missing' => 'Für diesen Sponsor ist kein Empfängerkonto hinterlegt.',
     ],
     'notifications' => [
         'inquiry_title' => 'Neue Sponsoring-Anfrage',
@@ -21,6 +27,8 @@ return [
         'review_approved_body' => 'Das öffentliche Profil von :sponsor wurde freigegeben.',
         'review_rejected_title' => 'Sponsorprofil nicht freigegeben',
         'review_rejected_body' => 'Das Profil von :sponsor benötigt Änderungen. Öffne das Cockpit für den Prüfhinweis.',
+        'deliverable_update_title' => 'Mitteilung zur Sponsoring-Leistung',
+        'deliverable_update_body' => 'Bitte prüfe die Leistung „:title“ im Sponsoren-Cockpit.',
     ],
     'partnership' => [
         'requested' => 'Partnerschaftsanfrage gesendet.',

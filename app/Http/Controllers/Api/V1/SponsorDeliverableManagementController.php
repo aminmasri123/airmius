@@ -55,6 +55,33 @@ class SponsorDeliverableManagementController extends Controller
         ]);
     }
 
+    public function notifySponsor(Request $request, Sponsor $sponsor, SponsorDeliverable $deliverable): JsonResponse
+    {
+        abort_unless((int) $deliverable->sponsor_id === (int) $sponsor->id, 404);
+        $clubId = $this->clubId($request, $sponsor, $deliverable);
+        abort_unless($this->canEditSponsor($request, $sponsor, $clubId), 403);
+        abort_unless($sponsor->owner_user_id, 422, __('sponsor.validation.notification_recipient_missing'));
+
+        $notification = \App\Support\AppNotification::sendLocalized(
+            $sponsor->owner_user_id,
+            'sponsor.deliverable_update',
+            'sponsor.notifications.deliverable_update_title',
+            'sponsor.notifications.deliverable_update_body',
+            ['title' => $deliverable->title],
+            [
+                'url' => route('auth.sponsor-workspace.index'),
+                'mobile_url' => 'airmius://sponsors',
+                'deliverable_id' => $deliverable->id,
+                'sponsor_id' => $sponsor->id,
+                'club_id' => $clubId,
+            ],
+        );
+        abort_unless($notification, 422, __('sponsor.flash.notification_failed'));
+        $this->audit($request, $deliverable, 'notified', ['notification_id' => $notification->id]);
+
+        return response()->json(['message' => __('sponsor.flash.sponsor_notified')]);
+    }
+
     public function destroy(Request $request, Sponsor $sponsor, SponsorDeliverable $deliverable): JsonResponse
     {
         abort_unless((int) $deliverable->sponsor_id === (int) $sponsor->id, 404);

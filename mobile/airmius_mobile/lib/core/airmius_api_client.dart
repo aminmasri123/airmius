@@ -3904,6 +3904,9 @@ class AirmiusApiClient {
     body: body,
   );
 
+  Future<AirmiusJson> notifySponsorDeliverable(int sponsorId, int id, int clubId) =>
+      _json('POST', '/api/v1/sponsor-management/$sponsorId/deliverables/$id/notify', body: {'club_id': clubId});
+
   Future<AirmiusJson> updateSponsorDeliverable(
     int sponsorId,
     int deliverableId,

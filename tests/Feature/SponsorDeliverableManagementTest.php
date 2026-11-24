@@ -39,10 +39,20 @@ class SponsorDeliverableManagementTest extends TestCase
         $imageFile = \Illuminate\Http\UploadedFile::fake()->image('proof.jpg', 20, 20);
         $image = 'data:image/jpeg;base64,'.base64_encode(file_get_contents($imageFile->getRealPath()));
         $deliverable = $sponsor->deliverables()->where('club_id', $club->id)->firstOrFail();
+        $recipient = User::factory()->create();
+        $sponsor->update(['owner_user_id' => $recipient->id]);
         $this->putJson('/api/v1/sponsor-management/'.$sponsor->id.'/deliverables/'.$deliverable->id, [
             'club_id' => $club->id, 'title' => 'Logo on club website',
             'status' => 'fulfilled', 'evidence_images' => [$image],
         ])->assertOk()->assertJsonPath('data.evidence_images.0', $image);
+        $messages = $recipient->appNotifications()->where('type', 'sponsor.deliverable_update');
+        $this->assertSame(0, $messages->count());
+        $notify = route('auth.sponsor-workspace.deliverables.notify', [$sponsor, $deliverable]);
+        $this->actingAs($owner)->postJson($notify, ['club_id' => $club->id])->assertOk();
+        $this->assertSame($deliverable->id, $messages->sole()->data['deliverable_id']);
+        $this->actingAs(User::factory()->create(), 'sanctum')
+            ->postJson("/api/v1/sponsor-management/{$sponsor->id}/deliverables/{$deliverable->id}/notify", ['club_id' => $club->id])->assertForbidden();
+        $this->actingAs($owner, 'sanctum');
         $this->getJson('/api/v1/sponsor-workspace')
             ->assertOk()->assertJsonPath('data.partners.0.deliverables.0.evidence_images.0', $image);
         $this->postJson('/api/v1/sponsor-management/'.$sponsor->id.'/deliverables', [

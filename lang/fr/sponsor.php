@@ -6,9 +6,15 @@ return [
         'created' => 'Sponsor créé.',
         'updated' => 'Sponsor mis à jour.',
         'deleted' => 'Sponsor supprimé.',
+        'deliverable_created' => 'Prestation convenue créée.',
+        'deliverable_updated' => 'Prestation convenue mise à jour.',
+        'deliverable_deleted' => 'Prestation convenue supprimée.',
+        'sponsor_notified' => 'Sponsor informé.',
+        'notification_failed' => 'La notification n’a pas pu être créée.',
     ],
     'validation' => [
         'verification_incomplete' => 'Le profil sponsor ne peut pas encore être vérifié (:count éléments obligatoires manquants).',
+        'notification_recipient_missing' => 'Aucun compte destinataire n’est associé à ce sponsor.',
     ],
     'notifications' => [
         'review_requested_title' => 'Profil sponsor à vérifier',
@@ -17,6 +23,8 @@ return [
         'review_approved_body' => 'Le profil public de :sponsor a été approuvé.',
         'review_rejected_title' => 'Profil sponsor non approuvé',
         'review_rejected_body' => 'Le profil de :sponsor doit être corrigé. Ouvrez le cockpit pour lire la note.',
+        'deliverable_update_title' => 'Mise à jour d’une prestation de sponsoring',
+        'deliverable_update_body' => 'Veuillez vérifier la prestation « :title » dans le cockpit sponsor.',
     ],
     'partnership' => [
         'requested' => 'Demande de partenariat envoyée.',

@@ -1,5 +1,11 @@
 {
   "auto": {
+    "Die Benachrichtigung konnte nicht erstellt werden.": "La notification n’a pas pu être créée.",
+    "Sponsor benachrichtigt.": "Sponsor informé.",
+    "Sponsor benachrichtigt": "Sponsor informé",
+    "Sponsor benachrichtigen": "Informer le sponsor",
+    "Die Nachricht bezieht sich auf den zuletzt gespeicherten Stand.": "Le message se rapporte à la dernière version enregistrée.",
+    "Benachrichtigung fehlgeschlagen": "Échec de la notification",
     "Ignorieren": "Ignorer",
     "Vereinsauszahlungen": "Versements aux clubs",
     "Prüfe anhand des Banknachweises, dass der Verein Inhaber dieser IBAN ist.": "Vérifiez à l’aide du justificatif bancaire que le club est titulaire de cet IBAN.",

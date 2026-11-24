@@ -73,20 +73,20 @@ if ($OpenGates.Count -eq 0) {
     $Lines += ""
     $Lines += "Run final Go/No-Go:"
     $Lines += ""
-    $Lines += "```powershell"
+    $Lines += '```powershell'
     $Lines += 'scripts/run_full_release_evidence_pipeline.ps1 -ApiBaseUrl "https://airmius.com" -RunGoNoGo'
-    $Lines += "```"
+    $Lines += '```'
 } else {
     $Index = 1
     foreach ($Gate in ($OpenGates | Select-Object -First $Limit)) {
         $Lines += ""
         $Lines += "### $Index. $($Gate.title)"
         $Lines += ""
-        $Lines += "- Gate ID: `$($Gate.id)`"
+        $Lines += "- Gate ID: ``$($Gate.id)``"
         $Lines += "- Owner: $($Gate.owner)"
-        $Lines += "- Status: `$($Gate.status)`"
+        $Lines += "- Status: ``$($Gate.status)``"
         $Lines += "- Required evidence: $($Gate.required_evidence)"
-        $Lines += "- Next action: `$(Get-GateAction -Gate $Gate)`"
+        $Lines += "- Next action: ``$(Get-GateAction -Gate $Gate)``"
         $Index++
     }
 

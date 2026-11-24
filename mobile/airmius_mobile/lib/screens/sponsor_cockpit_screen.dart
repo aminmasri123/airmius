@@ -1922,6 +1922,23 @@ class _SponsorDeliverableEditor extends StatefulWidget {
 }
 
 class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
+  bool _notified = false;
+
+  Future<void> _notifySponsor() async {
+    if (_busy || _notified) return;
+    setState(() { _busy = true; _error = null; });
+    try {
+      await widget.client.notifySponsorDeliverable(widget.sponsorId, _int(widget.deliverable?['id']), widget.clubId);
+      if (mounted) setState(() => _notified = true);
+    } on AirmiusApiException catch (e) {
+      if (mounted) setState(() => _error = e.userMessage);
+    } catch (_) {
+      if (mounted) setState(() => _error = t('common.errorDetails'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   final List<String> _images = [];
 
   Future<void> _pickEvidenceImages() async {
@@ -2196,6 +2213,15 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
                     : const Icon(Icons.save_outlined),
                 label: Text(t('common.save')),
               ),
+              if (widget.deliverable != null) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _busy || _notified ? null : _notifySponsor,
+                  icon: Icon(_notified ? Icons.check : Icons.notifications_outlined),
+                  label: Text(t(_notified ? 'sponsorCockpit.notified' : 'sponsorCockpit.notifySponsor')),
+                ),
+                Text(t('sponsorCockpit.notifySavedHint'), textAlign: TextAlign.center),
+              ],
             ],
           ),
         ),

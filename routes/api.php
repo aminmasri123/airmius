@@ -591,6 +591,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->name('sponsor-management.partnerships.decision');
         Route::post('/sponsor-management/{sponsor}/deliverables', [SponsorDeliverableManagementController::class, 'store'])->name('sponsor-management.deliverables.store');
         Route::put('/sponsor-management/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'update'])->name('sponsor-management.deliverables.update');
+        Route::post('/sponsor-management/{sponsor}/deliverables/{deliverable}/notify', [SponsorDeliverableManagementController::class, 'notifySponsor'])->middleware('throttle:10,1')->name('sponsor-management.deliverables.notify');
         Route::delete('/sponsor-management/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'destroy'])->name('sponsor-management.deliverables.destroy');
         Route::get('/rides/locations', RideLocationController::class)->middleware('throttle:ride-geocoding')->name('rides.locations');
         Route::get('/rides', [MobileRideController::class, 'index'])->name('rides.index');

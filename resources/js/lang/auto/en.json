@@ -1,5 +1,11 @@
 {
   "auto": {
+    "Die Benachrichtigung konnte nicht erstellt werden.": "The notification could not be created.",
+    "Sponsor benachrichtigt.": "Sponsor notified.",
+    "Sponsor benachrichtigt": "Sponsor notified",
+    "Sponsor benachrichtigen": "Notify sponsor",
+    "Die Nachricht bezieht sich auf den zuletzt gespeicherten Stand.": "The message refers to the most recently saved version.",
+    "Benachrichtigung fehlgeschlagen": "Notification failed",
     "Ignorieren": "Ignore",
     "Vereinsauszahlungen": "Club payouts",
     "Prüfe anhand des Banknachweises, dass der Verein Inhaber dieser IBAN ist.": "Use the bank statement to verify that the club owns this IBAN.",

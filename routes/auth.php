@@ -132,6 +132,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         Route::delete('/sponsor-cockpit/partnerships/{partnership}', [SponsorWorkspaceController::class, 'withdrawPartnership'])->name('auth.sponsor-workspace.partnerships.withdraw');
         Route::post('/sponsor-cockpit/sponsors/{sponsor}/deliverables', [SponsorDeliverableManagementController::class, 'store'])->name('auth.sponsor-workspace.deliverables.store');
         Route::put('/sponsor-cockpit/sponsors/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'update'])->name('auth.sponsor-workspace.deliverables.update');
+        Route::post('/sponsor-cockpit/sponsors/{sponsor}/deliverables/{deliverable}/notify', [SponsorDeliverableManagementController::class, 'notifySponsor'])->middleware('throttle:10,1')->name('auth.sponsor-workspace.deliverables.notify');
         Route::delete('/sponsor-cockpit/sponsors/{sponsor}/deliverables/{deliverable}', [SponsorDeliverableManagementController::class, 'destroy'])->name('auth.sponsor-workspace.deliverables.destroy');
         Route::post('/sponsor-cockpit/team', [SponsorTeamController::class, 'invite'])->name('auth.sponsor-workspace.team.invite');
         Route::post('/sponsor-cockpit/team/{membership}/accept', [SponsorTeamController::class, 'accept'])->name('auth.sponsor-workspace.team.accept');

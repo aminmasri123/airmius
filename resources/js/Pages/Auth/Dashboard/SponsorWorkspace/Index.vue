@@ -25,6 +25,7 @@ const deliverableOpen = ref(false)
 const deliverablePartner = ref(null)
 const deliverableId = ref(null)
 const deliverableSaving = ref(false)
+const sponsorNotified = ref(false)
 const deliverableError = ref('')
 const deliverableForm = ref({ title: '', location: '', due_at: '', status: 'planned', fulfillment_evidence: '' })
 const activeSection = ref(typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('section') === 'partnerships' ? 'partnerships' : 'overview')
@@ -268,6 +269,7 @@ const withdrawPartnership = (partner) => {
 }
 
 const openDeliverable = (partner, deliverable = null) => {
+    sponsorNotified.value = false
     deliverablePartner.value = partner
     deliverableId.value = deliverable?.id || null
     deliverableForm.value = {
@@ -281,6 +283,20 @@ const openDeliverable = (partner, deliverable = null) => {
     deliverableOpen.value = true
 }
 
+const notifySponsor = async () => {
+    const partner = deliverablePartner.value
+    if (!partner || !deliverableId.value || deliverableSaving.value || sponsorNotified.value) return
+    deliverableSaving.value = true
+    deliverableError.value = ''
+    try {
+        await window.axios.post(route('auth.sponsor-workspace.deliverables.notify', [partner.sponsor.id, deliverableId.value]), { club_id: partner.club.id })
+        sponsorNotified.value = true
+    } catch (error) {
+        deliverableError.value = error.response?.data?.message || t('Benachrichtigung fehlgeschlagen')
+    } finally {
+        deliverableSaving.value = false
+    }
+}
 const saveDeliverable = async () => {
     const partner = deliverablePartner.value
     if (!partner || deliverableSaving.value) return
@@ -805,6 +821,10 @@ const roleLabel = (role) => ({
                 <label><span class="mb-1 block text-sm font-bold text-primary">{{ t('Status') }}</span><select v-model="deliverableForm.status" class="w-full rounded-md border-border bg-inputBg text-primary"><option value="planned">{{ deliverableStatusLabel('planned') }}</option><option value="in_progress">{{ deliverableStatusLabel('in_progress') }}</option><option value="fulfilled">{{ deliverableStatusLabel('fulfilled') }}</option><option value="waived">{{ deliverableStatusLabel('waived') }}</option><option value="cancelled">{{ deliverableStatusLabel('cancelled') }}</option></select></label>
                 <label><span class="mb-1 block text-sm font-bold text-primary">{{ t('Nachweis') }} {{ deliverableForm.status === 'fulfilled' ? '*' : '' }}</span><textarea v-model.trim="deliverableForm.fulfillment_evidence" :required="deliverableForm.status === 'fulfilled'" maxlength="5000" rows="3" class="w-full rounded-md border-border bg-inputBg text-primary" /></label>
                 <p v-if="deliverableError" role="alert" class="text-sm text-danger">{{ deliverableError }}</p>
+                <div v-if="deliverableId">
+                    <button type="button" :disabled="deliverableSaving || sponsorNotified" class="min-h-10 rounded-md border border-border px-4 font-bold disabled:opacity-60" @click="notifySponsor">{{ t(sponsorNotified ? 'Sponsor benachrichtigt' : 'Sponsor benachrichtigen') }}</button>
+                    <p class="text-sm text-secondary">{{ t('Die Nachricht bezieht sich auf den zuletzt gespeicherten Stand.') }}</p>
+                </div>
                 <div class="flex justify-end gap-2"><button type="button" class="min-h-10 rounded-md border border-border px-4 text-sm font-bold text-primary" @click="deliverableOpen = false">{{ t('Abbrechen') }}</button><button type="submit" :disabled="deliverableSaving" class="min-h-10 rounded-md bg-buttonPrimary px-4 text-sm font-bold text-buttonTextPrimary disabled:opacity-60">{{ t('Speichern') }}</button></div>
             </form>
         </section>

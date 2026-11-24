@@ -6,9 +6,15 @@ return [
         'created' => 'تم إنشاء الراعي.',
         'updated' => 'تم تحديث الراعي.',
         'deleted' => 'تم حذف الراعي.',
+        'deliverable_created' => 'تم إنشاء الالتزام المتفق عليه.',
+        'deliverable_updated' => 'تم تحديث الالتزام المتفق عليه.',
+        'deliverable_deleted' => 'تم حذف الالتزام المتفق عليه.',
+        'sponsor_notified' => 'تم إشعار الراعي.',
+        'notification_failed' => 'تعذر إنشاء الإشعار.',
     ],
     'validation' => [
         'verification_incomplete' => 'ملف الراعي غير جاهز للتحقق بعد (:count متطلبات إلزامية متبقية).',
+        'notification_recipient_missing' => 'لا يوجد حساب مستلم مرتبط بهذا الراعي.',
     ],
     'notifications' => [
         'review_requested_title' => 'ملف الراعي بانتظار المراجعة',
@@ -17,6 +23,8 @@ return [
         'review_approved_body' => 'تمت الموافقة على الملف العام لـ :sponsor.',
         'review_rejected_title' => 'لم تتم الموافقة على ملف الراعي',
         'review_rejected_body' => 'يحتاج ملف :sponsor إلى تعديلات. افتح لوحة التحكم لقراءة ملاحظة المراجعة.',
+        'deliverable_update_title' => 'تحديث التزام الرعاية',
+        'deliverable_update_body' => 'يرجى مراجعة الالتزام «:title» في لوحة تحكم الراعي.',
     ],
     'partnership' => [
         'requested' => 'تم إرسال طلب الشراكة.',

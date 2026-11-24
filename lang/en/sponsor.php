@@ -6,9 +6,15 @@ return [
         'created' => 'Sponsor created.',
         'updated' => 'Sponsor updated.',
         'deleted' => 'Sponsor deleted.',
+        'deliverable_created' => 'Agreed deliverable created.',
+        'deliverable_updated' => 'Agreed deliverable updated.',
+        'deliverable_deleted' => 'Agreed deliverable deleted.',
+        'sponsor_notified' => 'Sponsor notified.',
+        'notification_failed' => 'The notification could not be created.',
     ],
     'validation' => [
         'verification_incomplete' => 'The sponsor profile is not ready for verification (:count required items remain).',
+        'notification_recipient_missing' => 'No recipient account is linked to this sponsor.',
     ],
     'notifications' => [
         'inquiry_title' => 'New sponsorship inquiry',
@@ -21,6 +27,8 @@ return [
         'review_approved_body' => 'The public profile for :sponsor has been approved.',
         'review_rejected_title' => 'Sponsor profile not approved',
         'review_rejected_body' => 'The profile for :sponsor needs changes. Open the cockpit to read the review note.',
+        'deliverable_update_title' => 'Sponsorship deliverable update',
+        'deliverable_update_body' => 'Please review the deliverable “:title” in the sponsor cockpit.',
     ],
     'partnership' => [
         'requested' => 'Partnership request sent.',

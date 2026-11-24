@@ -79,6 +79,7 @@ final class RolloutAcceptanceRegistry
                         'auth.sponsor-workspace.partnerships.withdraw',
                         'auth.sponsor-workspace.deliverables.store',
                         'auth.sponsor-workspace.deliverables.update',
+                        'auth.sponsor-workspace.deliverables.notify',
                         'auth.sponsor-workspace.deliverables.destroy',
                         'auth.sponsor-workspace.team.invite',
                         'auth.sponsor-workspace.team.accept',
