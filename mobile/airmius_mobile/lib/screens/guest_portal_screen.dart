@@ -8,7 +8,7 @@ import 'guest_ad_agency_screen.dart';
 import 'guest_club_directory_screen.dart';
 import 'guest_jobs_careers_screen.dart';
 import 'guest_learning_certificate_screen.dart';
-import 'guest_marketplace_parity_screen.dart';
+import 'marketplace_screen.dart';
 import 'legal_status_center_screen.dart';
 import 'public_detail_screen.dart';
 import 'public_interest_screen.dart';
@@ -134,7 +134,7 @@ class GuestPortalScreen extends StatelessWidget {
         _open(context, const BlogMediaCenterScreen());
         return;
       case _GuestAction.marketplace:
-        _open(context, const GuestMarketplaceParityScreen());
+        _open(context, const MarketplaceScreen(guest: true));
         return;
       case _GuestAction.learning:
         _open(context, const GuestLearningCertificateScreen());

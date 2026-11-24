@@ -25,6 +25,11 @@ class CommerceCartService
     public function resourceFor(User $user, array $shippingAddress, array $customer = [], ?string $couponCode = null): array
     {
         $cart = $this->cartFor($user)->load('items.product');
+        return $this->resourceForCart($cart, $shippingAddress, $customer, $couponCode);
+    }
+
+    public function resourceForCart(CommerceCart $cart, array $shippingAddress, array $customer = [], ?string $couponCode = null): array
+    {
         $summary = $cart->items->isNotEmpty()
             ? $this->quote($cart, $shippingAddress, $customer)
             : [

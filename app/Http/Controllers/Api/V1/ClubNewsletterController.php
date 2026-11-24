@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\ClubNewsletterDelivery;
+use App\Models\ClubNewsletterSuppression;
 use App\Services\ClubNewsletterService;
 use App\Support\ClubPermissions;
 use Illuminate\Http\Request;
@@ -57,7 +58,20 @@ class ClubNewsletterController extends Controller
         $this->authorizeManage($request, $club);
         $request->validate(['subscribers_page' => ['nullable', 'integer', 'min:1']]);
 
-        return response()->json($this->newsletters->subscribers($club));
+        $payload = $this->newsletters->subscribers($club)->toArray();
+        $payload['failures'] = ClubNewsletterDelivery::query()
+            ->where('club_id', $club->id)
+            ->where('status', 'bounced')
+            ->latest('bounced_at')
+            ->limit(30)
+            ->get(['id', 'email', 'bounce_type', 'failure_reason', 'bounced_at']);
+        $payload['suppressions'] = ClubNewsletterSuppression::query()
+            ->where('club_id', $club->id)
+            ->latest('suppressed_at')
+            ->limit(30)
+            ->get(['email', 'reason', 'suppressed_at']);
+
+        return response()->json($payload);
     }
 
     public function confirm(string $token)

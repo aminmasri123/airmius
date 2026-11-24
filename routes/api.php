@@ -206,6 +206,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/public/marketplace', [PublicMarketplaceController::class, 'indexJson'])
             ->middleware('throttle:public-content')
             ->name('public.marketplace.index');
+        Route::get('/public/commerce/products', [CommerceController::class, 'products'])->middleware('throttle:public-content')->name('public.commerce.products');
+        Route::get('/public/commerce/products/{product}', [CommerceController::class, 'showProduct'])->middleware('throttle:public-content')->name('public.commerce.products.show');
+        Route::get('/public/commerce/products/{product}/reviews', [CommerceController::class, 'reviews'])->middleware('throttle:public-content')->name('public.commerce.products.reviews');
+        Route::post('/public/commerce/cart', [MobileCommerceCheckoutController::class, 'guestCart'])->middleware('throttle:public-content')->name('public.commerce.cart');
+        Route::post('/public/commerce/cart/checkout', [MobileCommerceCheckoutController::class, 'checkoutCart'])->middleware(['throttle:payment-actions', EnsureIdempotentApiRequest::class])->name('public.commerce.cart.checkout');
+        Route::get('/public/commerce/orders/{order}/{token}', [MobileCommerceCheckoutController::class, 'guestOrder'])->middleware('throttle:public-status')->name('public.commerce.orders.show');
         Route::get('/public/commerce/catalog', PublicCommerceCatalogController::class)
             ->middleware('throttle:public-content')
             ->name('public.commerce.catalog');

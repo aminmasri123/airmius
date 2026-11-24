@@ -18,7 +18,7 @@ class MarketplaceProductReviewResource extends JsonResource
             'body' => $this->body,
             'status' => $this->status,
             'verified_purchase' => (bool) $this->verified_purchase,
-            'author' => new UserResource($this->whenLoaded('user')),
+            'author' => $request->user() ? new UserResource($this->whenLoaded('user')) : $this->user?->only(['id', 'name']),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

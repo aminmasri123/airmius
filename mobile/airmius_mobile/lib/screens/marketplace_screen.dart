@@ -24,12 +24,14 @@ class MarketplaceScreen extends StatefulWidget {
     this.initialSection = 'products',
     this.initialProductId,
     this.initialProductTitle = '',
+    this.guest = false,
   });
 
   final String initialQuery;
   final String initialSection;
   final int? initialProductId;
   final String initialProductTitle;
+  final bool guest;
 
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -53,6 +55,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   bool _busy = false;
   bool _initialProductScheduled = false;
   late final TextEditingController _searchController;
+  AirmiusApiClient? _guestClient;
 
   @override
   void initState() {
@@ -80,6 +83,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
+    if (widget.guest) {
+      return _guestClient ??= AirmiusApiClient(
+        transport: services.guestMarketplaceTransport,
+        baseUrl: services.environment.apiBaseUrl,
+        locale: services.environment.locale,
+      );
+    }
     return services.clientForSession(services.authState.session);
   }
 
@@ -679,6 +689,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
               const SizedBox(height: 10),
               _MarketSectionPicker(
                 value: _section,
+                allowBulkOrders: !widget.guest,
                 cartCount: cartCount,
                 onChanged: (value) => Navigator.pop(context, value),
               ),
@@ -810,6 +821,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         client: _client,
         cart: bundle.cart,
         checkout: bundle.checkout,
+        guest: widget.guest,
       ),
     );
     if (order == null || !mounted) return;
@@ -1468,11 +1480,13 @@ class _MarketSectionPicker extends StatelessWidget {
     required this.value,
     required this.cartCount,
     required this.onChanged,
+    this.allowBulkOrders = true,
   });
 
   final String value;
   final int cartCount;
   final ValueChanged<String> onChanged;
+  final bool allowBulkOrders;
 
   @override
   Widget build(BuildContext context) {
@@ -1482,7 +1496,7 @@ class _MarketSectionPicker extends StatelessWidget {
       ('cart', Icons.shopping_cart_outlined, t('market.cart'), cartCount),
       ('wishlist', Icons.favorite_outline, t('market.wishlist'), null),
       ('orders', Icons.receipt_long_outlined, t('market.orders'), null),
-      (
+      if (allowBulkOrders) (
         'bulk_orders',
         Icons.groups_2_outlined,
         Localizations.localeOf(context).languageCode == 'de'
@@ -2753,11 +2767,13 @@ class _CheckoutSheet extends StatefulWidget {
     required this.client,
     required this.cart,
     required this.checkout,
+    this.guest = false,
   });
 
   final AirmiusApiClient client;
   final JsonMap cart;
   final JsonMap checkout;
+  final bool guest;
 
   @override
   State<_CheckoutSheet> createState() => _CheckoutSheetState();
@@ -2773,6 +2789,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   final _company = TextEditingController();
   final _vatId = TextEditingController();
   final _coupon = TextEditingController();
+  final _guestName = TextEditingController();
+  final _guestEmail = TextEditingController();
+  bool get _guest => widget.guest;
   String? _appliedCoupon;
   String? _couponError;
   String _provider = 'bank_transfer';
@@ -2790,6 +2809,10 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   void initState() {
     super.initState();
     _previewCart = widget.cart;
+    final providers = widget.checkout['payment_providers'];
+    if (providers is List && providers.isNotEmpty) {
+      _provider = providers.first.toString();
+    }
     final address = _marketMap(widget.checkout['checkout_address']);
     _country = TextEditingController(
       text: _marketText(address['country'], fallback: 'DE'),
@@ -2814,6 +2837,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     _company.dispose();
     _vatId.dispose();
     _coupon.dispose();
+    _guestName.dispose();
+    _guestEmail.dispose();
     super.dispose();
   }
 
@@ -2967,7 +2992,23 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                 ),
               ],
             ),
-            CheckboxListTile(
+            if (_guest) ...[
+              TextFormField(
+                controller: _guestName,
+                autofillHints: const [AutofillHints.name],
+                decoration: InputDecoration(labelText: t('application.name')),
+                validator: (value) => value == null || value.trim().isEmpty ? t('market.required') : null,
+              ),
+              TextFormField(
+                controller: _guestEmail,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                decoration: InputDecoration(labelText: t('application.email')),
+                validator: (value) => value != null && RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim()) ? null : t('market.required'),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (!_guest) CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               value: _saveAddress,
               onChanged: (value) =>
@@ -3054,7 +3095,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                     ('bank_transfer', Icons.account_balance_outlined),
                     ('stripe', Icons.credit_card_outlined),
                     ('paypal', Icons.account_balance_wallet_outlined),
-                  ])
+                  ].where((option) => !_guest ||
+                      (widget.checkout['payment_providers'] as List? ?? []).contains(option.$1)))
                     RadioListTile<String>(
                       contentPadding: EdgeInsets.zero,
                       value: option.$1,
@@ -3314,6 +3356,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     });
     try {
       final response = await widget.client.checkoutCommerceCart({
+        if (_guest) 'guest_name': _guestName.text.trim(),
+        if (_guest) 'guest_email': _guestEmail.text.trim(),
         if (_appliedCoupon != null) 'coupon_code': _appliedCoupon,
         'provider': _provider,
         'accepted_terms': true,
@@ -3653,6 +3697,12 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
           spacing: 10,
           runSpacing: 10,
           children: [
+            if (_marketNullableText(order['guest_status_url']) case final String guestStatusUrl)
+              AirmiusButton(
+                label: t('market.orderDetails'),
+                icon: Icons.open_in_new,
+                onPressed: () => _openUrl(guestStatusUrl),
+              ),
             if (checkoutUrl != null)
               AirmiusButton(
                 label: t('market.continuePayment'),

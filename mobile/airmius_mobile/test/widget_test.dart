@@ -105,6 +105,7 @@ import 'package:airmius/screens/club_tasks_screen.dart';
 import 'package:airmius/screens/club_membership_admin_screen.dart';
 import 'package:airmius/screens/clubs_screen.dart';
 import 'package:airmius/screens/club_newsletter_screen.dart';
+import 'package:airmius/screens/club_newsletter_subscribers_screen.dart';
 import 'package:airmius/screens/commerce_center_screen.dart';
 import 'package:airmius/screens/conversations_center_screen.dart';
 import 'package:airmius/screens/dashboard_screen.dart';
@@ -6262,6 +6263,33 @@ void main() {
     expect(find.textContaining('4 Min.'), findsOneWidget);
   });
 
+  testWidgets('newsletter management shows failures and blocked addresses', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(900, 1600));
+    final transport = _RecordingTransport(
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":1,"name":"Leser","email":"leser@example.org","status":"confirmed","created_at":"2026-11-24T10:00:00Z"}],"total":1,"last_page":1,"failures":[{"id":9,"email":"fehler@example.org","bounce_type":"hard","failure_reason":"Mailbox unavailable","bounced_at":"2026-11-24T10:30:00Z"}],"suppressions":[{"email":"fehler@example.org","reason":"hard_bounce","suppressed_at":"2026-11-24T10:30:00Z"}]}',
+      ),
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubNewsletterSubscribersScreen(clubId: 4),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Zustellfehler'), findsOneWidget);
+    expect(find.text('Gesperrte Adressen'), findsOneWidget);
+    expect(find.text('fehler@example.org'), findsNWidgets(2));
+    expect(find.textContaining('Mailbox unavailable'), findsOneWidget);
+    expect(find.byTooltip('Adresse sperren'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('sponsor screen renders active public partner data', (
     WidgetTester tester,
   ) async {
@@ -7024,7 +7052,8 @@ void main() {
     final transport = _RecordingTransport(
       const AirmiusApiResponse(
         statusCode: 200,
-        body: '{"data":{"ads_can_manage":true,"campaigns":[{"id":12,"name":"Zeitentest","status":"draft","budget_cents":5000,"starts_at":"2030-06-01T08:15:00Z","ends_at":"2030-06-02T20:45:00Z"}]}}',
+        body:
+            '{"data":{"ads_can_manage":true,"campaigns":[{"id":12,"name":"Zeitentest","status":"draft","budget_cents":5000,"starts_at":"2030-06-01T08:15:00Z","ends_at":"2030-06-02T20:45:00Z"}]}}',
       ),
     );
     await _pumpAirmiusWidget(
@@ -7042,11 +7071,17 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(save);
     await tester.pumpAndSettle();
-    final request = transport.requests.singleWhere((request) => request.method == 'PUT');
-    expect(DateTime.parse(request.body!['starts_at'] as String),
-        DateTime.utc(2030, 6, 1, 8, 15));
-    expect(DateTime.parse(request.body!['ends_at'] as String),
-        DateTime.utc(2030, 6, 2, 20, 45));
+    final request = transport.requests.singleWhere(
+      (request) => request.method == 'PUT',
+    );
+    expect(
+      DateTime.parse(request.body!['starts_at'] as String),
+      DateTime.utc(2030, 6, 1, 8, 15),
+    );
+    expect(
+      DateTime.parse(request.body!['ends_at'] as String),
+      DateTime.utc(2030, 6, 2, 20, 45),
+    );
   });
 
   testWidgets('commerce localizes a mobile connection failure', (

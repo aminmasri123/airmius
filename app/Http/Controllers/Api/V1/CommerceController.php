@@ -230,7 +230,7 @@ class CommerceController extends Controller
     private function abortUnlessVisible(MarketplaceProduct $product, Request $request): void
     {
         abort_unless(
-            $this->isPublished($product) || $product->user_id === $request->user()->id,
+            $this->isPublished($product) || ($request->user() && $product->user_id === $request->user()->id),
             404
         );
     }

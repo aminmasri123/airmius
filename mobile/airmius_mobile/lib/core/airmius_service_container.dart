@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'airmius_api_client.dart';
+import 'guest_marketplace_transport.dart';
 import 'airmius_firebase_push_token_provider.dart';
 import 'airmius_api_repositories.dart';
 import 'airmius_auth_state.dart';
@@ -66,6 +67,7 @@ class AirmiusServiceContainer {
     onUnauthorized: authState.expireSession,
   );
   final AirmiusTokenStore tokenStore;
+  late final GuestMarketplaceTransport guestMarketplaceTransport = GuestMarketplaceTransport(transport);
   final AirmiusPushDeviceRegistry pushDevices;
   late final AirmiusAuthState authState;
 

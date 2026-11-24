@@ -996,9 +996,76 @@ class CommerceCheckoutController extends Controller
         return back()->with('success', __('commerce.flash.cart_removed'));
     }
 
-    public function checkoutCart(Request $request)
+    private function guestCartModel(Request $request): \App\Models\CommerceCart
     {
         $data = $request->validate([
+            'items' => ['present', 'array', 'max:50'],
+            'items.*.product_id' => ['required', 'integer', 'distinct'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:999'],
+        ]);
+        $products = MarketplaceProduct::query()->whereKey(collect($data['items'])->pluck('product_id'))
+            ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+        if ($request->routeIs('api.v1.public.commerce.cart.checkout') && $products->contains('is_shippable', true)) {
+            $request->validate([
+                'shipping_country' => ['required', 'string', 'size:2'],
+                'shipping_postal_code' => ['required', 'string', 'max:30'],
+                'shipping_city' => ['required', 'string', 'max:120'],
+                'shipping_street' => ['required', 'string', 'max:180'],
+                'shipping_house_number' => ['required', 'string', 'max:40'],
+            ]);
+        }
+        $country = strtoupper($request->input('shipping_country', 'DE'));
+        $items = collect($data['items'])->map(function ($entry) use ($products, $country) {
+            $product = $products->get($entry['product_id']);
+            abort_unless($product && $product->status === 'published' && $product->moderation_status === 'approved'
+                && $this->cartService->hasSellableStock($product, $country, $entry['quantity']), 422, __('commerce.validation.product_unavailable', ['product' => $product?->title ?? '']));
+            if ($product->learning_course_id) {
+                throw ValidationException::withMessages(['items' => 'Bitte melde dich für den Kauf eines Kurses an, damit er deinem Konto zugeordnet werden kann.']);
+            }
+            $item = new CommerceCartItem(['marketplace_product_id' => $product->id, 'quantity' => $entry['quantity']]);
+            $item->id = $product->id;
+            return $item->setRelation('product', $product);
+        });
+        return (new \App\Models\CommerceCart())->setRelation('items', $items);
+    }
+
+    public function guestCart(Request $request)
+    {
+        $data = $request->validate([
+            'shipping_country' => ['nullable', 'string', 'size:2'],
+            'shipping_state' => ['nullable', 'string', 'max:80'],
+            'shipping_postal_code' => ['nullable', 'string', 'max:30'],
+            'shipping_city' => ['nullable', 'string', 'max:120'],
+            'customer_type' => ['nullable', Rule::in(['consumer', 'business'])],
+            'customer_company' => ['nullable', 'string', 'max:255'],
+            'customer_vat_id' => ['nullable', 'string', 'max:40'],
+            'coupon_code' => ['nullable', 'string', 'max:80'],
+        ]);
+        $address = $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, $data);
+        return response()->json(['data' => [
+            'cart' => $this->cartService->resourceForCart($this->guestCartModel($request), $address, $this->checkoutPayload->customerFromData($data), $data['coupon_code'] ?? null),
+            'pricing_countries' => $this->checkoutPayload->pricingCountries(),
+            'checkout_address' => $address,
+            'shipping_addresses' => [],
+            'payment_providers' => array_column(app(PublicMarketplaceController::class)->paymentProviders(), 'value'),
+        ]]);
+    }
+
+    public function guestOrder(Request $request, CommerceOrder $order, string $token)
+    {
+        abort_unless($order->user_id === null && filled($order->access_token) && hash_equals($order->access_token, $token), 404);
+        $response = $this->orderJsonResponse($order->load(['club', 'items.orderable', 'returnRequests']));
+        $payload = $response->getData(true);
+        $payload['data']['guest_status_url'] = $this->payments->orderRoute($order, 'success');
+        return $response->setData($payload);
+    }
+
+    public function checkoutCart(Request $request)
+    {
+        $guest = $request->routeIs('api.v1.public.commerce.cart.checkout');
+        $data = $request->validate([
+            'guest_name' => [$guest ? 'required' : 'nullable', 'string', 'max:255'],
+            'guest_email' => [$guest ? 'required' : 'nullable', 'email', 'max:255'],
             'coupon_code' => ['nullable', 'string', 'max:80'],
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
             'accepted_terms' => ['accepted'],
@@ -1015,14 +1082,19 @@ class CommerceCheckoutController extends Controller
             'shipping_address_label' => ['nullable', 'string', 'max:120'],
         ]);
 
-        $cart = $this->cartService->cartFor($request->user());
+        if ($guest) {
+            abort_unless(in_array($data['provider'], array_column(app(PublicMarketplaceController::class)->paymentProviders(), 'value'), true), 422);
+        }
+        $cart = $guest ? null : $this->cartService->cartFor($request->user());
         $shippingAddress = $this->checkoutPayload->shippingAddressForAuthenticatedUser($request, $data);
-        $this->saveShippingAddressIfRequested($request, $data, $shippingAddress);
+        if (! $guest) {
+            $this->saveShippingAddressIfRequested($request, $data, $shippingAddress);
+        }
         $customer = $this->checkoutPayload->customerFromData($data);
 
-        [$order, $summary] = DB::transaction(function () use ($request, $cart, $data, $shippingAddress, $customer) {
-            $lockedCart = CommerceCart::query()->lockForUpdate()->findOrFail($cart->id);
-            $items = $lockedCart->items()->lockForUpdate()->get();
+        [$order, $summary] = DB::transaction(function () use ($request, $cart, $data, $shippingAddress, $customer, $guest) {
+            $lockedCart = $guest ? $this->guestCartModel($request) : CommerceCart::query()->lockForUpdate()->findOrFail($cart->id);
+            $items = $guest ? $lockedCart->items : $lockedCart->items()->lockForUpdate()->get();
             abort_if($items->isEmpty(), 422, __('commerce.validation.cart_empty'));
 
             $products = MarketplaceProduct::query()
@@ -1050,7 +1122,11 @@ class CommerceCheckoutController extends Controller
             $summary = $this->cartService->applyCoupon($summary, $data['coupon_code'] ?? null, reserve: true);
 
             $order = CommerceOrder::create([
-                'user_id' => $request->user()->id,
+                ...($guest ? [
+                    'guest_name' => $data['guest_name'],
+                    'guest_email' => strtolower($data['guest_email']),
+                    'access_token' => Str::random(64),
+                ] : ['user_id' => $request->user()->id]),
                 'type' => 'marketplace_cart',
                 'provider' => $data['provider'],
                 'item_gross_cents' => $summary['item_gross_cents'],
@@ -1075,7 +1151,9 @@ class CommerceCheckoutController extends Controller
                 $this->createOrderItem($order, $item['product'], $item['quote'], $item['quantity']);
             }
 
-            $lockedCart->items()->delete();
+            if (! $guest) {
+                $lockedCart->items()->delete();
+            }
 
             return [$order, $summary];
         });
@@ -1086,7 +1164,7 @@ class CommerceCheckoutController extends Controller
         app(CommerceOrderNotifier::class)->notifySalesRecipients($order);
         $this->trackAttributedAdConversion($request, 'checkout_started', (int) $summary['amount_cents'], [
             'order_id' => $order->id,
-            'cart_id' => $cart->id,
+            'cart_id' => $cart?->id,
             'items' => collect($summary['items'])->map(fn ($item) => [
                 'product_id' => $item['product']->id,
                 'category' => $item['product']->category,
@@ -1094,7 +1172,14 @@ class CommerceCheckoutController extends Controller
             ])->values()->all(),
         ]);
 
-        return $this->startCheckout($order);
+        $response = $this->startCheckout($order);
+        if ($guest && $response instanceof \Illuminate\Http\JsonResponse) {
+            $payload = $response->getData(true);
+            $payload['data']['guest_access_token'] = $order->access_token;
+            $payload['data']['guest_status_url'] = $this->payments->orderRoute($order, 'success');
+            $response->setData($payload);
+        }
+        return $response;
     }
 
     public function storeOwnProduct(Request $request)

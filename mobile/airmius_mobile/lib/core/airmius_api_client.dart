@@ -3904,8 +3904,15 @@ class AirmiusApiClient {
     body: body,
   );
 
-  Future<AirmiusJson> notifySponsorDeliverable(int sponsorId, int id, int clubId) =>
-      _json('POST', '/api/v1/sponsor-management/$sponsorId/deliverables/$id/notify', body: {'club_id': clubId});
+  Future<AirmiusJson> notifySponsorDeliverable(
+    int sponsorId,
+    int id,
+    int clubId,
+  ) => _json(
+    'POST',
+    '/api/v1/sponsor-management/$sponsorId/deliverables/$id/notify',
+    body: {'club_id': clubId},
+  );
 
   Future<AirmiusJson> updateSponsorDeliverable(
     int sponsorId,
@@ -3993,6 +4000,16 @@ class AirmiusApiClient {
         '/api/v1/clubs/$clubId/newsletter/subscribers',
         query: {'subscribers_page': '$page'},
       );
+
+  Future<AirmiusJson> suppressClubNewsletterAddress(
+    int clubId, {
+    required String email,
+    String reason = 'manual',
+  }) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/newsletter/suppressions',
+    body: {'email': email.trim(), 'reason': reason},
+  );
 
   Future<AirmiusJson> clubNewsletterStatus(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/newsletter/status');

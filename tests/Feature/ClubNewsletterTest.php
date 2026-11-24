@@ -305,6 +305,13 @@ class ClubNewsletterTest extends TestCase
             'email' => 'hard@example.org',
             'reason' => 'hard_bounce',
         ]);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/newsletter/subscribers")
+            ->assertOk()
+            ->assertJsonPath('failures.0.email', 'hard@example.org')
+            ->assertJsonPath('failures.0.bounce_type', 'hard')
+            ->assertJsonPath('suppressions.0.email', 'hard@example.org')
+            ->assertJsonPath('suppressions.0.reason', 'hard_bounce');
     }
 
     public function test_authenticated_postmark_bounce_suppresses_matching_newsletter_only(): void

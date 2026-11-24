@@ -861,7 +861,7 @@ class PublicMarketplaceController extends Controller
         ];
     }
 
-    private function paymentProviders(): array
+    public function paymentProviders(): array
     {
         return array_values(array_filter([
             filled(Setting::valueFor('billing_iban')) ? [
