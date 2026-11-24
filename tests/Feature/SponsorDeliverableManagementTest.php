@@ -50,6 +50,14 @@ class SponsorDeliverableManagementTest extends TestCase
         $notify = route('auth.sponsor-workspace.deliverables.notify', [$sponsor, $deliverable]);
         $this->actingAs($owner)->postJson($notify, ['club_id' => $club->id])->assertOk();
         $this->assertSame($deliverable->id, $messages->sole()->data['deliverable_id']);
+        $target = [
+            'sponsor_id' => $sponsor->id,
+            'section' => 'partnerships',
+            'club_id' => $club->id,
+            'deliverable_id' => $deliverable->id,
+        ];
+        $this->assertSame('airmius://sponsors?'.http_build_query($target), $messages->sole()->data['mobile_url']);
+        $this->assertSame(route('auth.sponsor-workspace.index', $target), $messages->sole()->data['url']);
         $this->actingAs(User::factory()->create(), 'sanctum')
             ->postJson("/api/v1/sponsor-management/{$sponsor->id}/deliverables/{$deliverable->id}/notify", ['club_id' => $club->id])->assertForbidden();
         $this->actingAs($owner, 'sanctum');

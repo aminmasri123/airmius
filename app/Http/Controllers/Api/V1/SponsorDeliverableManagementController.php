@@ -69,8 +69,18 @@ class SponsorDeliverableManagementController extends Controller
             'sponsor.notifications.deliverable_update_body',
             ['title' => $deliverable->title],
             [
-                'url' => route('auth.sponsor-workspace.index'),
-                'mobile_url' => 'airmius://sponsors',
+                'url' => route('auth.sponsor-workspace.index', [
+                    'sponsor_id' => $sponsor->id,
+                    'section' => 'partnerships',
+                    'club_id' => $clubId,
+                    'deliverable_id' => $deliverable->id,
+                ]),
+                'mobile_url' => 'airmius://sponsors?'.http_build_query([
+                    'sponsor_id' => $sponsor->id,
+                    'section' => 'partnerships',
+                    'club_id' => $clubId,
+                    'deliverable_id' => $deliverable->id,
+                ]),
                 'deliverable_id' => $deliverable->id,
                 'sponsor_id' => $sponsor->id,
                 'club_id' => $clubId,

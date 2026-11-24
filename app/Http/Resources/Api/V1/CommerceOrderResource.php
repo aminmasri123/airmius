@@ -108,6 +108,9 @@ class CommerceOrderResource extends JsonResource
                 'orderable_type' => $item->orderable_type,
                 'orderable_id' => $item->orderable_id,
                 'title' => $item->title,
+                'image_url' => $item->relationLoaded('orderable') && $item->orderable instanceof \App\Models\MarketplaceProduct
+                    ? ($item->orderable->image_url ?: data_get($item->orderable->gallery_images, '0'))
+                    : null,
                 'sku' => $item->sku,
                 'quantity' => $item->quantity,
                 'unit_gross_cents' => $item->unit_gross_cents,

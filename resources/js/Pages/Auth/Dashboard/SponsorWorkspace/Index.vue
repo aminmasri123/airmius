@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick, onMounted } from 'vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
@@ -36,7 +36,20 @@ const pendingInvitations = computed(() => props.workspace.pending_invitations ||
 const team = computed(() => props.workspace.team || [])
 const activities = computed(() => props.workspace.activities || [])
 const summary = computed(() => props.workspace.summary || {})
-const partners = computed(() => props.workspace.partners || [])
+const targetParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+const targetDeliverableId = Number(targetParams.get('deliverable_id')) || null
+const targetClubId = Number(targetParams.get('club_id')) || null
+const isTargetPartner = (partner) => targetDeliverableId &&
+    (!targetClubId || Number(partner.club?.id) === targetClubId) &&
+    partner.deliverables?.some((item) => Number(item.id) === targetDeliverableId)
+const partners = computed(() => [...(props.workspace.partners || [])]
+    .sort((a, b) => Number(Boolean(isTargetPartner(b))) - Number(Boolean(isTargetPartner(a)))))
+onMounted(async () => {
+    if (!targetDeliverableId) return
+    activeSection.value = 'partnerships'
+    await nextTick()
+    document.getElementById('deliverable-' + targetDeliverableId)?.scrollIntoView({ block: 'center' })
+})
 const incomingInquiries = computed(() => props.workspace.incoming_inquiries || [])
 const inquiryReply = ref({ id: null, decision: 'interested', note: '' })
 const replyInquiry = () => {
@@ -691,7 +704,7 @@ const roleLabel = (role) => ({
                     </div>
 
                     <div v-if="partners.length" class="mt-4 space-y-3">
-                        <details v-for="partner in partners.slice(0, 5)" :key="partner.id" class="group rounded-lg border border-border bg-inputBg/50 p-3">
+                        <details v-for="partner in partners.slice(0, 5)" :key="partner.id" :open="Boolean(isTargetPartner(partner))" class="group rounded-lg border border-border bg-inputBg/50 p-3">
                             <summary class="flex cursor-pointer list-none items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-buttonPrimary">
                                 <img v-if="partner.logo_url" :src="partner.logo_url" :alt="partner.name" class="h-11 w-11 rounded-lg bg-white object-contain p-1.5" />
                                 <span v-else class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-card text-violet-300"><i class="las la-handshake text-xl"></i></span>
@@ -720,7 +733,7 @@ const roleLabel = (role) => ({
                                 </div>
                                 <p v-if="!partner.deliverables?.length" class="mt-2 text-xs text-secondary">{{ t('Noch keine Leistung erfasst.') }}</p>
                                 <div class="mt-3 space-y-2">
-                                    <article v-for="deliverable in partner.deliverables" :key="deliverable.id" class="rounded-lg border border-border bg-card p-3">
+                                    <article v-for="deliverable in partner.deliverables" :key="deliverable.id" :id="'deliverable-' + deliverable.id" class="rounded-lg border border-border bg-card p-3" :class="{ 'ring-2 ring-buttonPrimary': Number(deliverable.id) === targetDeliverableId }">
                                         <div class="flex items-start justify-between gap-3">
                                             <div>
                                                 <p class="text-sm font-bold text-primary">{{ deliverable.title }}</p>

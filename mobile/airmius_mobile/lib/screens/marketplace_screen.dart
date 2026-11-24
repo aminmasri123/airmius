@@ -3492,6 +3492,7 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
 
   Widget _content(ScrollController controller, JsonMap order) {
     final t = AirmiusScope.of(context).t;
+    final currency = _marketText(order['currency'], fallback: 'EUR');
     final items = _marketMaps(order['items']);
     final support = _marketMap(order['support']);
     final documents = _marketMap(order['documents']);
@@ -3554,6 +3555,7 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
               for (final item in items)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
+                  leading: _ProductImage(url: _marketNullableText(item['image_url']), size: 50),
                   title: Text(
                     _marketText(item['title']),
                     style: TextStyle(
@@ -3562,23 +3564,20 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
                     ),
                   ),
                   subtitle: Text(
-                    '${t('market.quantity')}: ${_marketInt(item['quantity'])}',
-                  ),
-                  trailing: Text(
-                    _price(
-                      context,
-                      _marketInt(item['total_cents']),
-                      _marketText(item['currency'], fallback: 'EUR'),
-                    ),
+                    "${t('market.quantity')}: ${_marketInt(item['quantity'])}\n"
+                    "${t('market.unitPrice')}: ${_price(context, _marketInt(item['unit_gross_cents']), _marketText(item['currency'], fallback: currency))}",
                   ),
                 ),
-              Divider(),
+              const Divider(),
+              _AmountRow(label: t('market.itemsSubtotal'), cents: _marketInt(order['item_gross_cents']), currency: currency),
+              _AmountRow(label: t('market.shipping'), cents: _marketInt(order['shipping_cents']), currency: currency),
               _AmountRow(
                 label: t('market.total'),
                 cents: _marketInt(order['amount_cents']),
-                currency: _marketText(order['currency'], fallback: 'EUR'),
+                currency: currency,
                 strong: true,
               ),
+              _AmountRow(label: t('market.includingTax'), cents: _marketInt(order['tax_cents']), currency: currency, muted: true),
             ],
           ),
         ),

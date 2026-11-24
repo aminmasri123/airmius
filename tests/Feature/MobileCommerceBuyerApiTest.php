@@ -174,6 +174,26 @@ class MobileCommerceBuyerApiTest extends TestCase
             ->assertJsonPath('data.cart.items_count', 0);
     }
 
+    public function test_order_detail_returns_product_image_and_saved_prices_after_catalog_price_changes(): void
+    {
+        $buyer = User::factory()->create();
+        $product = $this->publishedProduct(User::factory()->create(), ['image_url' => '/images/shirt.jpg']);
+        $order = $this->orderFor($buyer, $product, [
+            'item_gross_cents' => 7800, 'shipping_cents' => 490, 'amount_cents' => 8290, 'tax_cents' => 1324,
+        ]);
+        $order->items()->update(['quantity' => 2, 'shipping_cents' => 490, 'total_cents' => 8290, 'tax_cents' => 1324, 'net_cents' => 6966]);
+        $product->update(['price_cents' => 4500]);
+        Sanctum::actingAs($buyer);
+        $this->getJson("/api/v1/commerce/orders/{$order->id}")->assertOk()
+            ->assertJsonPath('data.items.0.image_url', '/images/shirt.jpg')
+            ->assertJsonPath('data.items.0.quantity', 2)
+            ->assertJsonPath('data.items.0.unit_gross_cents', 3900)
+            ->assertJsonPath('data.item_gross_cents', 7800)
+            ->assertJsonPath('data.shipping_cents', 490)
+            ->assertJsonPath('data.amount_cents', 8290)
+            ->assertJsonPath('data.tax_cents', 1324);
+    }
+
     public function test_buyer_can_report_issue_request_return_and_cancel_eligible_orders(): void
     {
         $buyer = User::factory()->create();

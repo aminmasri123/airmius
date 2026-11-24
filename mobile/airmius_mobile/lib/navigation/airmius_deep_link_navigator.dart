@@ -105,6 +105,8 @@ class AirmiusDeepLinkNavigator {
             ? SponsorCockpitScreen(
                 initialSponsorId:
                     target.id ?? int.tryParse(target.query['sponsor_id'] ?? ''),
+                initialClubId: int.tryParse(target.query['club_id'] ?? ''),
+                initialDeliverableId: int.tryParse(target.query['deliverable_id'] ?? ''),
                 initialSection: target.query['section'] == 'partnerships'
                     ? 2
                     : 0,

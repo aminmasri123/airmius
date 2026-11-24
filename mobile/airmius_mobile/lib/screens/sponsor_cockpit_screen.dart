@@ -18,9 +18,11 @@ import 'sponsor_application_screen.dart';
 import 'sponsors_center_screen.dart';
 
 class SponsorCockpitScreen extends StatefulWidget {
-  const SponsorCockpitScreen({super.key, this.initialSponsorId, this.initialSection = 0, this.clubPartnerships = false});
+  const SponsorCockpitScreen({super.key, this.initialSponsorId, this.initialSection = 0, this.clubPartnerships = false, this.initialClubId, this.initialDeliverableId});
 
   final int? initialSponsorId;
+  final int? initialClubId;
+  final int? initialDeliverableId;
   final int initialSection;
   final bool clubPartnerships;
 
@@ -32,6 +34,13 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   Future<Map<String, dynamic>>? _future;
   int? _selectedSponsorId;
   int _selectedSection = 0;
+  final _targetDeliverableKey = GlobalKey();
+  bool _scrolledToDeliverable = false;
+
+  bool _isTargetPartner(Map<String, dynamic> partner) =>
+      widget.initialDeliverableId != null &&
+      (widget.initialClubId == null || _int(_map(partner['club'])['id']) == widget.initialClubId) &&
+      _list(partner['deliverables']).any((item) => _int(item['id']) == widget.initialDeliverableId);
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -44,7 +53,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   void initState() {
     super.initState();
     _selectedSponsorId = widget.initialSponsorId;
-    _selectedSection = widget.clubPartnerships ? 2 : widget.initialSection;
+    _selectedSection = widget.clubPartnerships || widget.initialDeliverableId != null ? 2 : widget.initialSection;
   }
 
   @override
@@ -414,6 +423,15 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
               : null;
           final campaigns = _list(data['campaigns']);
           final partners = _list(data['partners']);
+          if (widget.initialDeliverableId != null) {
+            partners.sort((a, b) => (_isTargetPartner(a) ? 0 : 1).compareTo(_isTargetPartner(b) ? 0 : 1));
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final targetContext = _targetDeliverableKey.currentContext;
+              if (!mounted || _scrolledToDeliverable || targetContext == null) return;
+              _scrolledToDeliverable = true;
+              Scrollable.ensureVisible(targetContext, alignment: 0.15);
+            });
+          }
           final incomingInquiries = _list(data['incoming_inquiries']);
           final partnershipClubs = _list(data['partnership_clubs']);
           final assets = _list(data['assets']);
@@ -1203,6 +1221,7 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
         border: Border.all(color: airmiusBorderColor(context)),
       ),
       child: ExpansionTile(
+        initiallyExpanded: _isTargetPartner(partner),
         shape: const Border(),
         collapsedShape: const Border(),
         leading: const Icon(Icons.handshake_outlined),
@@ -1344,6 +1363,8 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     final evidence = _text(deliverable['fulfillment_evidence']);
     final status = _text(deliverable['status'], fallback: 'open');
     return Container(
+      key: _isTargetPartner(partner) && _int(deliverable['id']) == widget.initialDeliverableId
+          ? _targetDeliverableKey : null,
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(

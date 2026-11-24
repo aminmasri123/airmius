@@ -27641,6 +27641,7 @@ final _strings = {
     'market.checkoutSafety':
         'Bestand, Versand, Steuer und Rückgaberegeln werden vor der Bestellung erneut sicher geprüft.',
     'market.quantity': 'Menge',
+    'market.unitPrice': 'Einzelpreis',
     'market.total': 'Gesamt',
     'market.loadError': 'Die Marketplace-Daten konnten nicht geladen werden.',
     'market.cart': 'Warenkorb',
@@ -30327,6 +30328,7 @@ final _strings = {
     'market.checkoutSafety':
         'Stock, shipping, tax and return rules are securely checked again before the order is placed.',
     'market.quantity': 'Quantity',
+    'market.unitPrice': 'Unit price',
     'market.total': 'Total',
     'market.loadError': 'Marketplace data could not be loaded.',
     'market.cart': 'Cart',
@@ -32983,6 +32985,7 @@ final _strings = {
     'market.checkoutSafety':
         'Le stock, la livraison, les taxes et les règles de retour sont vérifiés à nouveau avant la commande.',
     'market.quantity': 'Quantité',
+    'market.unitPrice': 'Prix unitaire',
     'market.total': 'Total',
     'market.loadError': 'Impossible de charger les données du marketplace.',
     'market.cart': 'Panier',
@@ -35511,6 +35514,7 @@ final _strings = {
     'market.checkoutSafety':
         'يُعاد التحقق بأمان من المخزون والشحن والضرائب وسياسة الإرجاع قبل تأكيد الطلب.',
     'market.quantity': 'الكمية',
+    'market.unitPrice': 'سعر الوحدة',
     'market.total': 'الإجمالي',
     'market.loadError': 'تعذر تحميل بيانات السوق.',
     'market.cart': 'سلة التسوق',

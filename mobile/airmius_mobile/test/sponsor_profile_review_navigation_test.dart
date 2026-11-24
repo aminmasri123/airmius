@@ -5,6 +5,17 @@ import 'package:airmius/screens/sponsor_management_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('deliverable notification opens the correct sponsor club and performance', () {
+    const resolver = AirmiusDeepLinkResolver();
+    final target = resolver.resolve(
+      'airmius://sponsors?sponsor_id=17&section=partnerships&club_id=26&deliverable_id=89',
+    );
+    final screen = AirmiusDeepLinkNavigator.screenFor(target) as SponsorCockpitScreen;
+    expect(screen.initialSponsorId, 17);
+    expect(screen.initialSection, 2);
+    expect(screen.initialClubId, 26);
+    expect(screen.initialDeliverableId, 89);
+  });
   test('partnership notification opens the targeted request', () {
     const resolver = AirmiusDeepLinkResolver();
     final target = resolver.resolve('airmius://admin/sponsors?partnership_id=42');
