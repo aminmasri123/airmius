@@ -66,6 +66,8 @@ final class AirmiusPersonaResolver {
           'minor_player',
           'guest_player',
           'captain',
+          // Sponsor accounts retain the complete personal athlete experience.
+          'sponsor',
         });
 
     // Platform admins are also regular app users. Keep the personal sports
@@ -121,7 +123,17 @@ final class AirmiusPersonaResolver {
       });
     }
     if (sponsor) {
-      modules.addAll(const {'Sponsoren', 'Commerce', 'Marketplace', 'Dateien'});
+      // Sponsors need the public club/team discovery journey for partnership
+      // research. Operational club tools remain protected by their own role
+      // and permission checks, so this never grants club administration.
+      modules.addAll(const {
+        'Sponsoren',
+        'Vereine & Teams',
+        'Teams',
+        'Commerce',
+        'Marketplace',
+        'Dateien',
+      });
     }
     if (AirmiusModuleAccess.canOpenGuardianCenter(user)) {
       modules.add('Eltern & Jugendschutz');
@@ -150,8 +162,5 @@ final class AirmiusPersonaResolver {
 
   static bool canManageClubSponsorships(AirmiusUser user) =>
       AirmiusModuleAccess.canOpenClubCockpit(user) ||
-      user.permissions.any(const {
-        'sponsors.edit',
-        'sponsors.delete',
-      }.contains);
+      user.permissions.any(const {'sponsors.edit', 'sponsors.delete'}.contains);
 }

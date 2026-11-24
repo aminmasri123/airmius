@@ -53,6 +53,24 @@ class RoleExperienceTest extends TestCase
         $sponsorUser = User::factory()->create();
         $foreignUser = User::factory()->create();
         $sponsorUser->assignRole('sponsor');
+        foreach ([
+            'event.join',
+            'post.create', 'post.update', 'post.delete',
+            'file.view',
+            'follow.user',
+            'clubs.view', 'teams.view',
+            'training.view',
+            'matches.view',
+            'players.stats.view',
+            'sponsor.workspace.view',
+            'sponsor.profile.edit',
+        ] as $permission) {
+            $this->assertTrue(
+                $sponsorUser->can($permission),
+                "Sponsor is missing the expected permission [{$permission}]."
+            );
+        }
+        $this->assertTrue($sponsorUser->can('viewAny', \App\Models\File::class));
 
         $ownSponsor = Sponsor::query()->create([
             'owner_user_id' => $sponsorUser->id,

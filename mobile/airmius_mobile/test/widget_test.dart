@@ -6786,27 +6786,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('club shop opens selected club products without personal payout tools', (tester) async {
-    _setTestViewport(tester, const Size(390, 1200));
-    final transport = _RecordingTransport(const AirmiusApiResponse(statusCode: 200,
-      body: '{"data":{"club":{"id":9,"name":"Verein Neun"},"active":true,"can_manage_bank":true,"bank_account":{"holder":"Verein Neun","last_four":"3000","status":"verified"},"seller_can_sell":true,"products":[{"id":4,"title":"Vereinsschal","price_cents":1200}]}}'));
-    await _pumpAirmiusWidget(tester, _widgetTestContainer(transport: transport),
-        const CommerceCenterScreen(clubId: 9, initialSection: 'products'));
-    await tester.pumpAndSettle();
-    expect(transport.paths, contains('/api/v1/clubs/9/shop'));
-    expect(find.text('Verein Neun'), findsOneWidget);
-    expect(find.text('Vereinsschal'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'Auszahlungen'), findsNothing);
-    final bankButton = find.text('Auszahlungskonto des Vereins');
-    await tester.ensureVisible(bankButton);
-    await tester.tap(bankButton);
-    await tester.pumpAndSettle();
-    expect(find.text('IBAN endet auf 3000 · Verifiziert'), findsOneWidget);
-    await tester.enterText(find.byType(TextField).last, 'DE89370400440532013000');
-    await tester.tap(find.text('Zur Prüfung einreichen'));
-    await tester.pumpAndSettle();
-    expect(transport.paths, contains('/api/v1/clubs/9/shop/payout-account'));
-  });
+  testWidgets(
+    'club shop opens selected club products without personal payout tools',
+    (tester) async {
+      _setTestViewport(tester, const Size(390, 1200));
+      final transport = _RecordingTransport(
+        const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"club":{"id":9,"name":"Verein Neun"},"active":true,"can_manage_bank":true,"bank_account":{"holder":"Verein Neun","last_four":"3000","status":"verified"},"seller_can_sell":true,"products":[{"id":4,"title":"Vereinsschal","price_cents":1200}]}}',
+        ),
+      );
+      await _pumpAirmiusWidget(
+        tester,
+        _widgetTestContainer(transport: transport),
+        const CommerceCenterScreen(clubId: 9, initialSection: 'products'),
+      );
+      await tester.pumpAndSettle();
+      expect(transport.paths, contains('/api/v1/clubs/9/shop'));
+      expect(find.text('Verein Neun'), findsOneWidget);
+      expect(find.text('Vereinsschal'), findsOneWidget);
+      expect(find.widgetWithText(ChoiceChip, 'Auszahlungen'), findsNothing);
+      final bankButton = find.text('Auszahlungskonto des Vereins');
+      await tester.ensureVisible(bankButton);
+      await tester.tap(bankButton);
+      await tester.pumpAndSettle();
+      expect(find.text('IBAN endet auf 3000 · Verifiziert'), findsOneWidget);
+      await tester.enterText(
+        find.byType(TextField).last,
+        'DE89370400440532013000',
+      );
+      await tester.tap(find.text('Zur Prüfung einreichen'));
+      await tester.pumpAndSettle();
+      expect(transport.paths, contains('/api/v1/clubs/9/shop/payout-account'));
+    },
+  );
 
   testWidgets('seller commerce screen renders real shop data', (
     WidgetTester tester,
@@ -9177,6 +9191,65 @@ void main() {
     expect(
       FooterNavigationDestination.defaultsFor(user),
       isNot(contains(FooterNavigationDestination.sponsors)),
+    );
+  });
+
+  test('sponsor navigation keeps club and team discovery visible', () {
+    const sponsor = AirmiusUser(
+      id: 33,
+      name: 'Sponsor Account',
+      email: 'sponsor@example.test',
+      role: 'sponsor',
+      roles: ['sponsor'],
+      permissions: [
+        'sponsor.workspace.view',
+        'event.join',
+        'training.view',
+        'file.view',
+      ],
+    );
+
+    final modules = AirmiusPersonaResolver.navigationModules(sponsor);
+    expect(modules, contains('Sponsoren'));
+    expect(modules, contains('Vereine & Teams'));
+    expect(modules, contains('Teams'));
+    expect(modules, contains('Events & Training'));
+    expect(modules, contains('Sportkarte'));
+    expect(modules, contains('Sport-Matching'));
+    expect(modules, contains('Dateien'));
+    expect(AirmiusModuleAccess.canOpen(sponsor, 'Events & Training'), isTrue);
+    expect(AirmiusModuleAccess.canOpen(sponsor, 'Dateien'), isTrue);
+    expect(AirmiusModuleAccess.canOpen(sponsor, 'Vereins-Cockpit'), isFalse);
+  });
+
+  test('sponsor role does not hide simultaneous coach and club workspaces', () {
+    const multiRole = AirmiusUser(
+      id: 34,
+      name: 'Multi Role Account',
+      email: 'multi@example.test',
+      role: 'sponsor',
+      roles: ['sponsor', 'coach', 'club_admin'],
+      permissions: [
+        'sponsor.workspace.view',
+        'trainer-cockpit.view',
+        'club-cockpit.view',
+      ],
+    );
+
+    final modules = AirmiusPersonaResolver.navigationModules(multiRole);
+    expect(
+      AirmiusPersonaResolver.primary(multiRole),
+      AirmiusPersona.multiWorkspace,
+    );
+    expect(
+      modules,
+      containsAll(<String>{
+        'Sponsoren',
+        'Trainer-Cockpit',
+        'Vereins-Cockpit',
+        'Vereine & Teams',
+        'Teams',
+      }),
     );
   });
 

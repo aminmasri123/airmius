@@ -24,7 +24,7 @@ void main() {
       );
       await client.workAutomationClubs();
       await client.workAutomationJobs(7, status: 'failed', page: 2);
-      await client.workAutomationRecipients(7, ['members.manage']);
+      await client.workAutomationRecipients(7, ['members.manage'], [], true);
       await client.createWorkAutomationJob(7, {
         'kind': 'reminder',
         'idempotency_key': 'stable-key',
@@ -43,6 +43,7 @@ void main() {
       expect(transport.requests[1].query, {'page': '2', 'status': 'failed'});
       expect(transport.requests[2].query, {
         'recipient_roles[0]': 'members.manage',
+        'include_creator': '1',
       });
       expect(transport.requests.last.body, {'expected_attempts': 2});
     },
@@ -108,7 +109,8 @@ void main() {
                       context: context,
                       builder: (_) => WorkAutomationCreateDialog(
                         permissions: const [],
-                        preview: (_) async => 1,
+                        users: const [],
+                        preview: (_, _, _) async => 1,
                       ),
                     );
                   },
@@ -135,6 +137,8 @@ void main() {
       expect(result, {
         'kind': 'reminder',
         'recipient_roles': [],
+        'recipient_user_ids': [],
+        'include_creator': true,
         'payload': {'title': 'Reminder', 'body': 'Exact message'},
         'scheduled_at': null,
       });
@@ -144,7 +148,8 @@ void main() {
           MaterialApp(
             home: WorkAutomationCreateDialog(
               permissions: const [],
-              preview: (_) async => 0,
+              users: const [],
+              preview: (_, _, _) async => 0,
             ),
           ),
         ),
@@ -197,6 +202,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(transport.createdPayload?['idempotency_key'], isNotEmpty);
       expect(find.textContaining('Queued'), findsWidgets);
+      final dialog = find.byType(AlertDialog);
+      final edit = tester.getCenter(find.descendant(of: dialog, matching: find.byIcon(Icons.edit_outlined)));
+      final delete = tester.getCenter(find.descendant(of: dialog, matching: find.byIcon(Icons.delete_outline)));
+      expect(edit.dy, closeTo(delete.dy, 1));
+      expect(edit.dx, lessThan(delete.dx));
       await tester.tap(find.text('Close'));
       await tester.pumpAndSettle();
       await tester.pumpWidget(const SizedBox());
@@ -341,6 +351,8 @@ class _AutomationTransport implements AirmiusApiTransport {
         'idempotency_key': request.body!['idempotency_key'],
         'recipient_roles': [],
         'can_retry': false,
+        'can_edit': true,
+        'can_delete': true,
         'queued_at': '2026-10-13T11:00:00Z',
         'history': [],
       };

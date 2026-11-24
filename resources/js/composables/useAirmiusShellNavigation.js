@@ -166,6 +166,7 @@ export const useAirmiusShellNavigation = () => {
                 label: 'shell.spaces.discover',
                 icon: 'las la-compass',
                 items: [
+                    isSponsor.value ? item('club-discovery', 'Vereine & Teams', 'las la-building', route('guest.vereine'), ['/vereine']) : null,
                     item('marketplace', 'shell.items.marketplace', 'las la-shopping-bag', route('guest.marketplace'), ['/marketplace']),
                     item('courses', 'shell.items.courses', 'las la-graduation-cap', route('auth.learning.my-courses.index'), ['/learning']),
                     item('blog', 'shell.items.blog', 'las la-pen-nib', route('guest.blog.index'), ['/blog']),

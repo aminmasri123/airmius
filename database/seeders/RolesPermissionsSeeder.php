@@ -387,7 +387,7 @@ class RolesPermissionsSeeder extends Seeder
             'clubs.view', 'teams.view',
         ]);
 
-        Role::findByName('player')->givePermissionTo([
+        $playerPermissions = [
             'event.join',
             'post.create', 'post.update', 'post.delete',
             'file.view',
@@ -396,7 +396,9 @@ class RolesPermissionsSeeder extends Seeder
             'training.view',
             'matches.view',
             'players.stats.view',
-        ]);
+        ];
+
+        Role::findByName('player')->givePermissionTo($playerPermissions);
 
         Role::findByName('minor_pending_consent')->givePermissionTo([
             'clubs.view', 'teams.view',
@@ -496,10 +498,12 @@ class RolesPermissionsSeeder extends Seeder
             'outfit-subscriptions.manage',
         ]);
 
-        Role::findByName('sponsor')->givePermissionTo([
+        // A sponsor is a regular athlete with additional sponsor capabilities.
+        // Keep the base permissions shared so the two roles cannot drift apart.
+        Role::findByName('sponsor')->givePermissionTo(array_merge($playerPermissions, [
             'sponsor.workspace.view',
             'sponsor.profile.edit',
-        ]);
+        ]));
 
         Role::findByName('media_manager')->givePermissionTo([
             'post.create', 'post.update', 'post.delete',

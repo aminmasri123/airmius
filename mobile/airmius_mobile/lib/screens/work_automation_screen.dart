@@ -1063,27 +1063,37 @@ class _WorkAutomationDetailsDialogState
                     icon: const Icon(Icons.replay),
                     label: Text(_t('retry')),
                   ),
-                if (job['can_edit'] == true)
-                  TextButton.icon(
-                    onPressed: _busy
-                        ? null
-                        : () async {
-                            Navigator.pop(context);
-                            await widget.edit(job);
-                          },
-                    icon: const Icon(Icons.edit_outlined),
-                    label: Text(_t('edit')),
-                  ),
-                if (job['can_delete'] == true)
-                  TextButton.icon(
-                    onPressed: _busy
-                        ? null
-                        : () async {
-                            Navigator.pop(context);
-                            await widget.delete(job);
-                          },
-                    icon: const Icon(Icons.delete_outline),
-                    label: Text(_t('delete')),
+                if (job['can_edit'] == true || job['can_delete'] == true)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (job['can_edit'] == true)
+                        Flexible(
+                          child: TextButton.icon(
+                            onPressed: _busy
+                                ? null
+                                : () async {
+                                    Navigator.pop(context);
+                                    await widget.edit(job);
+                                  },
+                            icon: const Icon(Icons.edit_outlined),
+                            label: Text(_t('edit')),
+                          ),
+                        ),
+                      if (job['can_delete'] == true)
+                        Flexible(
+                          child: TextButton.icon(
+                            onPressed: _busy
+                                ? null
+                                : () async {
+                                    Navigator.pop(context);
+                                    await widget.delete(job);
+                                  },
+                            icon: const Icon(Icons.delete_outline),
+                            label: Text(_t('delete')),
+                          ),
+                        ),
+                    ],
                   ),
               ],
             ),
