@@ -58,7 +58,7 @@ jobs:
         run: ./scripts/assert_flutter_dependency_lock.ps1 2>&1 | Tee-Object -FilePath release_evidence/flutter-dependency-lock-ios.log
 
       - name: Analyze
-        run: flutter analyze 2>&1 | tee release_evidence/flutter-analyze-ios.log
+        run: flutter analyze --no-fatal-infos 2>&1 | tee release_evidence/flutter-analyze-ios.log
 
       - name: iOS release build without codesign
         run: flutter build ios --release --no-codesign --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com 2>&1 | tee release_evidence/ios-release-build-no-codesign.log

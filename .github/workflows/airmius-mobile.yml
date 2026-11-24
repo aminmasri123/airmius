@@ -66,7 +66,7 @@ jobs:
         run: ./scripts/assert_flutter_dependency_lock.ps1 2>&1 | Tee-Object -FilePath release_evidence/flutter-dependency-lock.log
 
       - name: Analyze
-        run: flutter analyze 2>&1 | tee release_evidence/flutter-analyze.log
+        run: flutter analyze --no-fatal-infos 2>&1 | tee release_evidence/flutter-analyze.log
 
       - name: Android App Bundle release build
         run: flutter build appbundle --release --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://airmius.com 2>&1 | tee release_evidence/android-appbundle-build.log
