@@ -85,8 +85,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
           _workspace?.availableTeams.isNotEmpty == true ||
           user?.teams.isNotEmpty == true)
         'team',
-      if (_fixedClubId != null || user?.clubs.isNotEmpty == true)
-        'club',
+      if (_fixedClubId != null || user?.clubs.isNotEmpty == true) 'club',
     ];
   }
 
@@ -171,22 +170,21 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     );
     if (name == null || name.trim().isEmpty || !mounted) return;
     try {
-      final view = await AirmiusServicesScope.of(
-        context,
-      ).repositories.search.createSavedView(
-        workspace: 'files',
-        name: name.trim(),
-        configuration: {
-          'query': _search.trim(),
-          'filters': {
-            'scope': _scope,
-            'club_id': _selectedClubId,
-            'team_id': _selectedTeamId,
-            'event_id': _selectedEventId,
-            'folder_id': _folderId,
-          },
-        },
-      );
+      final view = await AirmiusServicesScope.of(context).repositories.search
+          .createSavedView(
+            workspace: 'files',
+            name: name.trim(),
+            configuration: {
+              'query': _search.trim(),
+              'filters': {
+                'scope': _scope,
+                'club_id': _selectedClubId,
+                'team_id': _selectedTeamId,
+                'event_id': _selectedEventId,
+                'folder_id': _folderId,
+              },
+            },
+          );
       if (mounted) setState(() => _savedViews = [view, ..._savedViews]);
     } on AirmiusApiException catch (error) {
       if (mounted) setState(() => _error = error.userMessage);
@@ -585,6 +583,9 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
           ? destination.eventId
           : _selectedEventId;
       request.fields['scope'] = targetScope;
+      if (targetScope == 'club') {
+        request.fields['audience'] = destination?.audience ?? 'club_members';
+      }
       if (targetClubId != null) {
         request.fields['club_id'] = '$targetClubId';
       }
@@ -2273,12 +2274,14 @@ class _UploadDestination {
     this.clubId,
     this.teamId,
     this.eventId,
+    this.audience = 'club_members',
   });
 
   final String scope;
   final int? clubId;
   final int? teamId;
   final int? eventId;
+  final String audience;
 
   String get apiScope => switch (scope) {
     'club' => 'club',
@@ -2303,6 +2306,7 @@ class _UploadDestinationSheetState extends State<_UploadDestinationSheet> {
   String _scope = 'mine';
   int? _clubId;
   int? _teamId;
+  String _audience = 'club_members';
 
   @override
   Widget build(BuildContext context) {
@@ -2452,6 +2456,26 @@ class _UploadDestinationSheetState extends State<_UploadDestinationSheet> {
                 items: widget.clubs,
                 onChanged: (value) => setState(() => _clubId = value),
               ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _audience,
+                decoration: InputDecoration(
+                  labelText: t('files.audienceLabel'),
+                  helperText: t('files.audienceHelp'),
+                ),
+                items: [
+                  DropdownMenuItem(
+                    value: 'club_members',
+                    child: Text(t('files.audienceMembers')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'board',
+                    child: Text(t('files.audienceBoard')),
+                  ),
+                ],
+                onChanged: (value) =>
+                    setState(() => _audience = value ?? 'club_members'),
+              ),
             ],
             if (_scope == 'team') ...[
               const SizedBox(height: 2),
@@ -2473,6 +2497,7 @@ class _UploadDestinationSheetState extends State<_UploadDestinationSheet> {
                           scope: _scope,
                           clubId: _clubId,
                           teamId: _teamId,
+                          audience: _audience,
                         ),
                       )
                     : null,

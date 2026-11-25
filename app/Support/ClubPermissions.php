@@ -531,7 +531,12 @@ class ClubPermissions
             $roles = ClubRoles::normalize($role, [$role]);
             $overrides = [];
         } else {
-            $membershipEligible = in_array($member->pivot?->membership_status, [null, 'active', 'non_member'], true);
+            $membershipStatus = strtolower(trim((string) ($member->pivot?->membership_status ?? '')));
+            $isTeamMember = $club->teams()
+                ->whereHas('users', fn ($query) => $query->where('users.id', $user->id))
+                ->exists();
+            $membershipEligible = ClubActiveMembership::directMemberIsActive($club, $member)
+                || ($membershipStatus === 'non_member' && $isTeamMember);
             if (! $membershipEligible) {
                 return array_fill_keys(self::ALL, false);
             }

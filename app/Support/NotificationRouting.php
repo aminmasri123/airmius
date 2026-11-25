@@ -133,8 +133,14 @@ final class NotificationRouting
         }
 
         if (Str::startsWith($type, 'support.') && ($ticketId = self::positiveIdentifier($data['support_ticket_id'] ?? null)) !== null) {
-            return self::withAction($data, self::existingWebAction($data) ?? '/support?ticket='.$ticketId,
-                'airmius://support?ticket='.$ticketId, false);
+            $web = self::existingWebAction($data) ?? '/support?ticket='.$ticketId;
+            parse_str((string) parse_url($web, PHP_URL_QUERY), $query);
+            $mobile = 'airmius://support?ticket='.$ticketId;
+            if (($query['tab'] ?? null) === 'operations') {
+                $mobile .= '&tab=operations&inbox='.(($query['inbox'] ?? null) === 'safety' ? 'safety' : 'general');
+            }
+
+            return self::withAction($data, $web, $mobile, false);
         }
 
         if ($type === 'role.application_review_requested' && ($data['application_type'] ?? 'trainer') === 'trainer' && ! empty($data['application_id'])) {

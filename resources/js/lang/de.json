@@ -4200,6 +4200,10 @@
   },
   "files": {
     "page_title": "Dateien",
+    "audience_label": "Sichtbar für",
+    "audience_members": "Alle aktiven Mitglieder",
+    "audience_board": "Nur Vorstand",
+    "audience_help": "Personen mit dem Status „Kein Mitglied“ erhalten keinen Zugriff.",
     "scope_label": "Bereich",
     "select": "Auswählen",
     "manager": "Dateimanager",

@@ -18,6 +18,7 @@ class FileResource extends JsonResource
             'team_id' => $this->team_id,
             'event_id' => $this->event_id,
             'folder_id' => $this->folder_id,
+            'audience' => $this->audience ?: 'club_members',
             'display_name' => $this->display_name,
             'path' => $this->path,
             'thumbnail_path' => $this->thumbnail_path,

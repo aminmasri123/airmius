@@ -29,6 +29,7 @@ class FileService
             'team_id' => $data['team_id'] ?? null,
             'event_id' => $data['event_id'] ?? null,
             'folder_id' => $data['folder_id'] ?? null,
+            'audience' => $data['audience'] ?? 'club_members',
             'display_name' => $this->displayNameForUpload($file),
             ...$optimized,
         ]);

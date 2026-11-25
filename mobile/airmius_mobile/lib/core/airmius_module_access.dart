@@ -123,7 +123,7 @@ final class AirmiusModuleAccess {
         user.clubs.any(
           (club) =>
               _trainerRoles.contains(club.membershipRole?.trim().toLowerCase()) &&
-              const <String?>{null, 'active', 'non_member'}.contains(
+              const <String?>{null, 'active'}.contains(
                 club.membershipStatus?.trim().toLowerCase(),
               ),
         ) ||

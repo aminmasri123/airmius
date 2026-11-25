@@ -5000,6 +5000,76 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('club website request is reachable without Commerce access', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1200));
+    final transport = _SequencedTransport(
+      [],
+      responsesByPath: {
+        '/api/v1/work-automation-clubs': const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":[]}',
+        ),
+        '/api/v1/clubs': const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":[{"id":4,"owner_id":1,"name":"Testverein","can_manage":true}]}',
+        ),
+        '/api/v1/clubs/4': const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"id":4,"owner_id":1,"name":"Testverein","can_manage":true,"management":{"can_manage":true,"permissions":{"effective":{"website_request.create":true}}}}}',
+        ),
+        '/api/v1/commerce/seller': const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"website_requests":[],"clubs":[{"id":4,"name":"Testverein","can_request_website":true}]}}',
+        ),
+        '/api/v1/commerce/seller/website-requests': const AirmiusApiResponse(
+          statusCode: 201,
+          body: '{"data":{"id":12,"club_id":4,"status":"new"}}',
+        ),
+      },
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubCockpitScreen(initialClubId: 4),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Website anfragen'));
+    await tester.pumpAndSettle();
+    expect(
+      transport.requests.map((request) => request.path),
+      contains('/api/v1/commerce/seller'),
+    );
+    expect(find.text('Eine professionelle Website anfragen'), findsOneWidget);
+    await tester.tap(find.widgetWithText(AirmiusButton, 'Website anfragen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ziele und gewünschte Inhalte'), findsOneWidget);
+    expect(
+      tester.widget<DropdownButtonFormField<int?>>(
+        find.byType(DropdownButtonFormField<int?>),
+      ).initialValue,
+      4,
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Ziele und gewünschte Inhalte'),
+      'Vereinswebsite mit Kontaktseite',
+    );
+    await tester.tap(find.byType(CheckboxListTile));
+    await tester.tap(find.text('Anfrage senden'));
+    await tester.pumpAndSettle();
+
+    final request = transport.requests.firstWhere(
+      (item) => item.path == '/api/v1/commerce/seller/website-requests',
+    );
+    expect(request.body, containsPair('club_id', 4));
+    expect(request.body, containsPair('accepted_privacy', true));
+  });
+
   testWidgets('new club starts with status and focused first actions', (
     WidgetTester tester,
   ) async {

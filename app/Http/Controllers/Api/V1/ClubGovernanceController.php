@@ -501,6 +501,7 @@ class ClubGovernanceController extends Controller
     private function memberOptions(Club $club): array
     {
         $users = $club->users()
+            ->where('users.id', '!=', $club->owner_id)
             ->wherePivot('membership_status', 'active')
             ->select(['users.id', 'users.name'])
             ->distinct()

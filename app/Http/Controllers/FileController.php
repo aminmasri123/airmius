@@ -12,6 +12,8 @@ use App\Models\User;
 use App\Services\FileService;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
+use App\Support\ClubActiveMembership;
+use App\Support\ClubFileAudience;
 use App\Support\ClubPermissions;
 use App\Support\FileAccessSummary;
 use App\Support\UploadStorage;
@@ -153,6 +155,15 @@ class FileController extends Controller
             ->where('folder_id', $currentFolder?->id)
             ->whereDoesntHave('messages');
 
+        if (! empty($scope['club_id'])) {
+            $club = Club::find($scope['club_id']);
+            if ($club && ! ClubFileAudience::isBoardMember($club, $request->user())) {
+                $fileQuery->where(fn (Builder $query) => $query
+                    ->whereNull('audience')
+                    ->orWhere('audience', ClubFileAudience::MEMBERS));
+            }
+        }
+
         if ($search !== '') {
             $this->applyDisplayNameSearch($fileQuery, $search);
         }
@@ -244,6 +255,7 @@ class FileController extends Controller
             'team_id' => ['nullable', 'required_if:scope,team', 'exists:teams,id'],
             'event_id' => ['nullable', 'required_if:scope,event', 'exists:events,id'],
             'folder_id' => ['nullable', 'exists:folders,id'],
+            'audience' => ['nullable', Rule::in(ClubFileAudience::ALL)],
             'file' => ['required', 'file', 'max:'.self::MAX_FILE_SIZE_KB],
         ]);
 
@@ -284,6 +296,9 @@ class FileController extends Controller
 
         $this->service->upload(auth()->user(), $uploadFile, array_merge($scope, [
             'folder_id' => $data['folder_id'] ?? null,
+            'audience' => ! empty($scope['club_id'])
+                ? ($data['audience'] ?? ClubFileAudience::MEMBERS)
+                : ClubFileAudience::MEMBERS,
         ]));
 
         return back();
@@ -336,12 +351,16 @@ class FileController extends Controller
 
         $data = $request->validate([
             'display_name' => ['required', 'string', 'max:'.self::FILE_NAME_MAX_LENGTH],
+            'audience' => ['nullable', Rule::in(ClubFileAudience::ALL)],
         ]);
 
         $safeName = $this->normalizeSafeDisplayName((string) $data['display_name']);
 
         $file->update([
             'display_name' => $safeName,
+            'audience' => $file->club_id
+                ? ($data['audience'] ?? $file->audience ?? ClubFileAudience::MEMBERS)
+                : ClubFileAudience::MEMBERS,
         ]);
 
         return back()->with('success', 'Datei umbenannt.');
@@ -441,9 +460,10 @@ class FileController extends Controller
 
     private function clubScope($clubId = null): array
     {
-        $query = Club::query()
-            ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()));
-        $club = $clubId ? $query->findOrFail($clubId) : $query->orderBy('name')->firstOrFail();
+        $club = $clubId
+            ? Club::findOrFail($clubId)
+            : Club::query()->linkedToUser(auth()->user())->orderBy('name')->firstOrFail();
+        abort_unless(ClubActiveMembership::allows($club, auth()->user()), 404);
         abort_if(ClubPermissions::explicitlyDeniesForFileScope(
             auth()->user(), ClubPermissions::FILES_VIEW, (int) $club->id,
         ), 404);
@@ -469,9 +489,10 @@ class FileController extends Controller
             return false;
         }
 
-        return $team->users()->where('users.id', $user->id)->exists()
-            || Gate::forUser($user)->allows('update', $team)
-            || $this->canAccessFileScope($user, $team->club_id, $team->id);
+        return ClubActiveMembership::allows($team->club, $user)
+            && ($team->users()->where('users.id', $user->id)->exists()
+                || Gate::forUser($user)->allows('update', $team)
+                || $this->canAccessFileScope($user, $team->club_id, $team->id));
     }
 
     private function availableFileTeams(User $user)

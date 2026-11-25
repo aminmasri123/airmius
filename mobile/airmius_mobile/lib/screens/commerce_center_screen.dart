@@ -19,12 +19,14 @@ class CommerceCenterScreen extends StatefulWidget {
     this.openCampaignComposer = false,
     this.sponsorId,
     this.clubId,
+    this.preferredWebsiteClubId,
   });
 
   final String initialSection;
   final bool openCampaignComposer;
   final int? sponsorId;
   final int? clubId;
+  final int? preferredWebsiteClubId;
 
   @override
   State<CommerceCenterScreen> createState() => _CommerceCenterScreenState();
@@ -35,6 +37,8 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
   Future<Map<String, dynamic>>? _future;
   bool _busy = false;
   bool _campaignComposerScheduled = false;
+
+  bool get _clubWebsiteOnly => widget.preferredWebsiteClubId != null;
 
   bool get _sponsorTools =>
       widget.sponsorId != null ||
@@ -169,7 +173,13 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
             Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         title: Text(
-          t(_sponsorTools ? 'sponsorCockpit.toolsTitle' : 'seller.title'),
+          t(
+            _clubWebsiteOnly
+                ? 'commerceAdv.requestWebsite'
+                : _sponsorTools
+                ? 'sponsorCockpit.toolsTitle'
+                : 'seller.title',
+          ),
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
@@ -205,24 +215,26 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 36),
               children: [
-                if (widget.clubId != null)
-                  Text(
-                    '${_map(data['club'])['name']}',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  )
-                else if (_sponsorTools)
-                  const _SponsorToolsHeader()
-                else
-                  _Header(data: data),
-                const SizedBox(height: 14),
-                if (widget.clubId == null || data['active'] == true)
-                  _SectionPicker(
-                    selected: _section,
-                    sponsorTools: _sponsorTools,
-                    clubShop: widget.clubId != null,
-                    onSelected: (value) => setState(() => _section = value),
-                  ),
-                const SizedBox(height: 14),
+                if (!_clubWebsiteOnly) ...[
+                  if (widget.clubId != null)
+                    Text(
+                      '${_map(data['club'])['name']}',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    )
+                  else if (_sponsorTools)
+                    const _SponsorToolsHeader()
+                  else
+                    _Header(data: data),
+                  const SizedBox(height: 14),
+                  if (widget.clubId == null || data['active'] == true)
+                    _SectionPicker(
+                      selected: _section,
+                      sponsorTools: _sponsorTools,
+                      clubShop: widget.clubId != null,
+                      onSelected: (value) => setState(() => _section = value),
+                    ),
+                  const SizedBox(height: 14),
+                ],
                 if (_busy) const LinearProgressIndicator(minHeight: 3),
                 if (_busy) const SizedBox(height: 10),
                 if (widget.clubId != null && data['active'] != true)
@@ -995,6 +1007,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
         clubs: _maps(
           data['clubs'],
         ).where((club) => club['can_request_website'] == true).toList(),
+        preferredClubId: widget.preferredWebsiteClubId,
       ),
     );
     if (payload == null || !mounted) return;
@@ -2742,9 +2755,10 @@ class _CampaignSheetState extends State<_CampaignSheet> {
 }
 
 class _WebsiteRequestSheet extends StatefulWidget {
-  const _WebsiteRequestSheet({required this.clubs});
+  const _WebsiteRequestSheet({required this.clubs, this.preferredClubId});
 
   final List<Map<String, dynamic>> clubs;
+  final int? preferredClubId;
 
   @override
   State<_WebsiteRequestSheet> createState() => _WebsiteRequestSheetState();
@@ -2758,6 +2772,16 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
   int? _clubId;
   bool _acceptedPrivacy = false;
   bool _submitted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.clubs.any(
+      (club) => _int(club['id']) == widget.preferredClubId,
+    )) {
+      _clubId = widget.preferredClubId;
+    }
+  }
 
   @override
   void dispose() {

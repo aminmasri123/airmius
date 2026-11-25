@@ -287,7 +287,7 @@ class ClubInventoryController extends Controller
     public function checkout(Request $request, Club $club, ClubInventoryItem $item)
     {
         $this->ensureItemClub($club, $item);
-        $this->authorizeItem($request, $item, ClubPermissions::INVENTORY_VIEW);
+        abort_unless($this->canViewItem($item, $request->user()), 403);
         $canApprove = ClubPermissions::allowsForInventoryItem($item, $request->user(), ClubPermissions::INVENTORY_APPROVE);
         $data = $request->validate([
             'borrower_id' => ['nullable', 'integer', 'exists:users,id'],
@@ -1280,12 +1280,14 @@ class ClubInventoryController extends Controller
 
     private function authorizeAccess(Request $request, Club $club): void
     {
-        abort_unless(collect([
+        $hasScopedPermission = collect([
             ClubPermissions::INVENTORY_VIEW,
             ClubPermissions::INVENTORY_EDIT,
             ClubPermissions::INVENTORY_APPROVE,
             ClubPermissions::INVENTORY_DELETE,
-        ])->contains(fn (string $permission) => ClubPermissions::allowsAnyInventoryScope($club, $request->user(), $permission)), 403);
+        ])->contains(fn (string $permission) => ClubPermissions::allowsAnyInventoryScope($club, $request->user(), $permission));
+
+        abort_unless($hasScopedPermission || $this->isLegacyInactiveMember($club, $request->user()), 403);
     }
 
     private function authorizeItem(Request $request, ClubInventoryItem $item, string $permission): void
@@ -1319,12 +1321,31 @@ class ClubInventoryController extends Controller
 
     private function canAccessItem(ClubInventoryItem $item, User $user): bool
     {
-        return collect([
+        $hasScopedPermission = collect([
             ClubPermissions::INVENTORY_VIEW,
             ClubPermissions::INVENTORY_EDIT,
             ClubPermissions::INVENTORY_APPROVE,
             ClubPermissions::INVENTORY_DELETE,
         ])->contains(fn (string $permission) => ClubPermissions::allowsForInventoryItem($item, $user, $permission));
+
+        return $hasScopedPermission
+            || $this->canViewItem($item, $user);
+    }
+
+    private function canViewItem(ClubInventoryItem $item, User $user): bool
+    {
+        return ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_VIEW)
+            || ($item->team_id === null
+                && $item->club_department_id === null
+                && $this->isLegacyInactiveMember($item->club, $user));
+    }
+
+    private function isLegacyInactiveMember(Club $club, User $user): bool
+    {
+        return $club->users()
+            ->where('users.id', $user->id)
+            ->whereRaw("LOWER(TRIM(club_user.membership_status)) = 'non_member'")
+            ->exists();
     }
 
     private function ensureActiveMember(Club $club, int $userId): void
@@ -1950,7 +1971,7 @@ class ClubInventoryController extends Controller
         if ($item->status !== 'active') {
             return 'item_inactive';
         }
-        if (! ClubPermissions::allowsForInventoryItem($item, $user, ClubPermissions::INVENTORY_VIEW)) {
+        if (! $this->canViewItem($item, $user)) {
             return 'permission_denied';
         }
         if (! $this->isActiveBorrower($item->club, (int) $user->id)) {

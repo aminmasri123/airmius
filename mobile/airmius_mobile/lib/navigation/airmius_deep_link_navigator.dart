@@ -11,7 +11,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../screens/clubs_screen.dart';
-import '../screens/support_helpdesk_screen.dart';
+import '../screens/support_ticket_service_center_suite_screen.dart';
 import '../screens/sport_matching_screen.dart';
 import '../screens/admin_platform_settings_screen.dart';
 import '../screens/admin_commerce_operations_screen.dart';
@@ -97,8 +97,10 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.sportMatching => SportMatchingScreen(
         initialMatchingId: target.id,
       ),
-      AirmiusDeepLinkTargetType.support => SupportHelpdeskScreen(
-        initialTicketId: target.id,
+      AirmiusDeepLinkTargetType.support => SupportTicketServiceCenterSuiteScreen(
+        ticketId: target.id,
+        operations: target.query['tab'] == 'operations',
+        inbox: target.query['inbox'] == 'safety' ? 'safety' : 'general',
       ),
       AirmiusDeepLinkTargetType.sponsorApplication =>
         target.section == 'overview'

@@ -3261,9 +3261,7 @@ String? _mobileNotificationActionUrl(String type, JsonMap data) {
     final clubId = int.tryParse('${data['club_id'] ?? ''}');
     if (clubId != null && clubId > 0) {
       final periodId = int.tryParse('${data['period_id'] ?? ''}');
-      final recordId = int.tryParse(
-        '${data['service_hour_record_id'] ?? ''}',
-      );
+      final recordId = int.tryParse('${data['service_hour_record_id'] ?? ''}');
       final query = <String, String>{
         if (periodId != null) 'period': '$periodId',
         if (recordId != null) 'record': '$recordId',
@@ -4635,6 +4633,7 @@ class AirmiusManagedFile {
     this.previewUrl,
     this.createdAt,
     this.folderId,
+    this.audience = 'club_members',
     this.hasPublicShares = false,
     this.accessRights,
   });
@@ -4648,6 +4647,7 @@ class AirmiusManagedFile {
   final String? previewUrl;
   final DateTime? createdAt;
   final int? folderId;
+  final String audience;
   final bool hasPublicShares;
   final AirmiusFileAccessRights? accessRights;
 
@@ -4661,6 +4661,7 @@ class AirmiusManagedFile {
     previewUrl: _nullableString(json['preview_url']),
     createdAt: _optionalDate(json['created_at']),
     folderId: _nullableInt(json['folder_id']),
+    audience: _string(json['audience'], fallback: 'club_members'),
     hasPublicShares: json['has_public_shares'] == true,
     accessRights: json['access_rights'] is JsonMap
         ? AirmiusFileAccessRights.fromJson(json['access_rights'] as JsonMap)

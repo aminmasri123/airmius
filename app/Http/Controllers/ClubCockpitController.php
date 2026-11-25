@@ -233,7 +233,7 @@ class ClubCockpitController extends Controller
     {
         $members = DB::table('club_user')
             ->where('club_id', $club->id)
-            ->get(['role', 'roles', 'membership_status']);
+            ->get(['user_id', 'role', 'roles', 'membership_status']);
 
         $elevatedMembers = $members->filter(function ($member) {
             $roles = ClubRoles::normalize($member->role, $this->decodePivotRoles($member->roles));
@@ -243,7 +243,10 @@ class ClubCockpitController extends Controller
 
         return [
             'members_count' => $members->count(),
-            'active_members_count' => $members->where('membership_status', 'active')->count(),
+            'active_members_count' => $members
+                ->where('membership_status', 'active')
+                ->where('user_id', '!=', $club->owner_id)
+                ->count(),
             'elevated_count' => $elevatedMembers->count(),
             'has_owner' => $elevatedMembers->contains(fn ($member) => in_array('owner', ClubRoles::normalize($member->role, $this->decodePivotRoles($member->roles)), true)),
             'has_admin' => $elevatedMembers->contains(fn ($member) => in_array('admin', ClubRoles::normalize($member->role, $this->decodePivotRoles($member->roles)), true)),

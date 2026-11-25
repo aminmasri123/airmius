@@ -96,6 +96,7 @@ const uploadForm = useForm({
     team_id: scopeForm.team_id,
     event_id: scopeForm.event_id,
     folder_id: props.currentFolder?.id || null,
+    audience: 'club_members',
     file: null,
 })
 
@@ -116,6 +117,7 @@ const shareForm = useForm({
 const renameForm = useForm({
     name: '',
     display_name: '',
+    audience: 'club_members',
 })
 const deleteConfirmationInputRef = ref(null)
 const renameFolderInputRef = ref(null)
@@ -478,6 +480,7 @@ const openRename = (item, type = 'file') => {
     renameType.value = type
     renameForm.name = type === 'folder' ? item.name : ''
     renameForm.display_name = type === 'file' ? fileName(item) : ''
+    renameForm.audience = type === 'file' ? (item.audience || 'club_members') : 'club_members'
     showRenameModal.value = true
 }
 
@@ -1245,6 +1248,15 @@ watch(showShareModal, async (show) => {
                 </select>
             </label>
 
+            <label v-if="uploadTarget === 'club'" class="block text-sm">
+                <span class="mb-1 block text-secondary">{{ tx('files.audience_label') }}</span>
+                <select v-model="uploadForm.audience" class="h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-primary">
+                    <option value="club_members">{{ tx('files.audience_members') }}</option>
+                    <option value="board">{{ tx('files.audience_board') }}</option>
+                </select>
+                <span class="mt-1 block text-xs text-secondary">{{ tx('files.audience_help') }}</span>
+            </label>
+
             <label v-if="uploadTarget === 'team'" class="block text-sm">
                 <span class="mb-1 block text-secondary">{{ tx('files.scope.team') }}</span>
                 <select v-model="uploadTeamId" class="h-11 w-full rounded-xl border border-border bg-inputBg px-3 text-primary">
@@ -1348,6 +1360,13 @@ watch(showShareModal, async (show) => {
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
                 :placeholder="tx('files.file_name')"
             >
+            <label v-if="renameType === 'file' && renameTarget?.club_id" class="block text-sm">
+                <span class="mb-1 block text-secondary">{{ tx('files.audience_label') }}</span>
+                <select v-model="renameForm.audience" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary">
+                    <option value="club_members">{{ tx('files.audience_members') }}</option>
+                    <option value="board">{{ tx('files.audience_board') }}</option>
+                </select>
+            </label>
             <div class="flex gap-3">
                 <button type="button" class="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600" @click="showRenameModal = false">{{ tx('files.cancel') }}</button>
                 <button
@@ -1466,6 +1485,10 @@ watch(showShareModal, async (show) => {
                 <div class="flex items-start justify-between gap-4 py-3">
                     <dt class="text-sm text-secondary">{{ tx('files.location') }}</dt>
                     <dd class="text-right text-sm font-semibold text-primary">{{ contextLabel(selectedFile) }}</dd>
+                </div>
+                <div v-if="selectedFile.club_id" class="flex items-start justify-between gap-4 py-3">
+                    <dt class="text-sm text-secondary">{{ tx('files.audience_label') }}</dt>
+                    <dd class="text-right text-sm font-semibold text-primary">{{ tx(selectedFile.audience === 'board' ? 'files.audience_board' : 'files.audience_members') }}</dd>
                 </div>
             </dl>
 

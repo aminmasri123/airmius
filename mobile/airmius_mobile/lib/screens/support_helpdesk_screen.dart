@@ -13,15 +13,14 @@ import 'legal_status_center_screen.dart';
 import 'privacy_consent_center_screen.dart';
 
 class SupportHelpdeskScreen extends StatefulWidget {
-  const SupportHelpdeskScreen({super.key, this.initialTicketId});
-
-  final int? initialTicketId;
+  const SupportHelpdeskScreen({super.key});
 
   @override
   State<SupportHelpdeskScreen> createState() => _SupportHelpdeskScreenState();
 }
 
-class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
+class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen>
+    with _TicketActions {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _email = TextEditingController();
@@ -36,12 +35,11 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
   bool _ticketsLoading = false;
   bool _ticketsLoaded = false;
   bool _showHidden = false;
-  bool _lifecycleBusy = false;
+
   String? _ticketsError;
   List<AirmiusSupportTicket> _tickets = const [];
   List<ClubSummary> _clubs = const [];
   int? _selectedClubId;
-  bool _initialTicketOpened = false;
 
   @override
   void dispose() {
@@ -56,36 +54,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final user = AirmiusServicesScope.of(context).authState.user;
-    if (user != null &&
-        widget.initialTicketId != null &&
-        !_initialTicketOpened) {
-      _initialTicketOpened = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _openInitialTicket());
-    }
     if (user != null && !_ticketsLoaded && !_ticketsLoading) _loadTickets();
-  }
-
-  Future<void> _openInitialTicket() async {
-    if (!mounted) return;
-    final services = AirmiusServicesScope.of(context);
-    try {
-      final result = await services
-          .clientForSession(services.authState.session)
-          .supportTicket(widget.initialTicketId!);
-      if (mounted) {
-        await _openTicket(
-          AirmiusSupportTicket.fromJson(
-            Map<String, dynamic>.from(result['data'] as Map),
-          ),
-        );
-      }
-    } on AirmiusApiException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
-      }
-    }
   }
 
   Future<void> _loadTickets() async {
@@ -188,239 +157,13 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
     }
   }
 
-  Future<bool> _ticketLifecycle(
-    AirmiusSupportTicket ticket,
-    String action,
-  ) async {
-    if (_lifecycleBusy) return false;
-    final t = AirmiusScope.of(context).t;
-    if (action != 'restore') {
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(t('support.lifecycle.$action')),
-          content: Text(t('support.lifecycle.${action}_confirm')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(t('common.close')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(t('support.lifecycle.$action')),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true || !mounted) return false;
-    }
-    setState(() => _lifecycleBusy = true);
-    try {
-      final services = AirmiusServicesScope.of(context);
-      final client = services.clientForSession(services.authState.session);
-      final result = action == 'withdraw'
-          ? await client.withdrawSupportTicket(ticket.id)
-          : await client.setSupportTicketVisibility(
-              ticket.id,
-              hidden: action == 'hide',
-            );
-      if (!mounted) return false;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result['message']?.toString() ??
-                t(
-                  'support.lifecycle.${action == 'withdraw'
-                      ? 'withdrawn_notice'
-                      : action == 'hide'
-                      ? 'hidden_notice'
-                      : 'restored_notice'}',
-                ),
-          ),
-        ),
-      );
-      return true;
-    } on AirmiusApiException catch (error) {
-      if (mounted) _showError(error.userMessage);
-      return false;
-    } finally {
-      if (mounted) setState(() => _lifecycleBusy = false);
-    }
-  }
-
   Future<void> _openTicket(AirmiusSupportTicket ticket) async {
-    final services = AirmiusServicesScope.of(context);
-    final client = services.clientForSession(services.authState.session);
-    final reply = TextEditingController();
-    JsonMap? detail;
-    String? loadError;
-    var loading = false;
-    var sending = false;
-
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          Future<void> load() async {
-            try {
-              final response = await client.supportTicket(ticket.id);
-              if (!dialogContext.mounted) return;
-              setDialogState(() {
-                detail = response['data'] is JsonMap
-                    ? response['data'] as JsonMap
-                    : <String, dynamic>{};
-                loadError = null;
-              });
-            } on AirmiusApiException catch (error) {
-              if (dialogContext.mounted) {
-                setDialogState(() => loadError = error.userMessage);
-              }
-            } finally {
-              loading = false;
-            }
-          }
-
-          if (detail == null && loadError == null && !loading) {
-            loading = true;
-            Future<void>.microtask(load);
-          }
-          final t = AirmiusScope.of(context).t;
-          final messages = detail?['messages'] is List
-              ? (detail!['messages'] as List).whereType<JsonMap>().toList()
-              : const <JsonMap>[];
-          return AlertDialog(
-            title: Text(ticket.subject),
-            content: SizedBox(
-              width: 560,
-              child: detail == null
-                  ? loadError != null
-                        ? Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(loadError!),
-                              TextButton.icon(
-                                onPressed: () {
-                                  setDialogState(() => loadError = null);
-                                },
-                                icon: const Icon(Icons.refresh_outlined),
-                                label: Text(t('support.ticketsRetry')),
-                              ),
-                            ],
-                          )
-                        : const Center(child: CircularProgressIndicator())
-                  : SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            t('support.initialMessage'),
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 4),
-                          Text('${detail!['message'] ?? ''}'),
-                          if (detail!['withdrawn_at'] != null)
-                            Text(t('support.lifecycle.withdrawn_notice')),
-                          const Divider(height: 28),
-                          for (final message in messages) ...[
-                            Text(
-                              message['is_staff'] == true
-                                  ? t('support.supportAuthor')
-                                  : t('support.youAuthor'),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text('${message['body'] ?? ''}'),
-                            const Divider(height: 22),
-                          ],
-                          if (detail!['can_reply'] == true) ...[
-                            TextField(
-                              controller: reply,
-                              minLines: 2,
-                              maxLines: 5,
-                              maxLength: 10000,
-                              decoration: InputDecoration(
-                                labelText: t('support.reply'),
-                              ),
-                            ),
-                            Text(
-                              t('support.attachmentsUnavailable'),
-                              style: TextStyle(
-                                color: airmiusMutedColor(context),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-            ),
-            actions: [
-              for (final action in [
-                if (detail?['can_withdraw'] == true) 'withdraw',
-                if (detail?['can_hide'] == true)
-                  detail?['requester_hidden_at'] != null ? 'restore' : 'hide',
-              ])
-                TextButton(
-                  onPressed: sending
-                      ? null
-                      : () async {
-                          setDialogState(() => sending = true);
-                          final changed = await _ticketLifecycle(
-                            ticket,
-                            action,
-                          );
-                          if (dialogContext.mounted) {
-                            if (changed) {
-                              Navigator.pop(dialogContext);
-                            } else {
-                              setDialogState(() => sending = false);
-                            }
-                          }
-                          if (changed && mounted) await _loadTickets();
-                        },
-                  child: Text(t('support.lifecycle.$action')),
-                ),
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: Text(t('common.close')),
-              ),
-              if (detail?['can_reply'] == true)
-                FilledButton.icon(
-                  onPressed: sending
-                      ? null
-                      : () async {
-                          final body = reply.text.trim();
-                          if (body.length < 2) return;
-                          setDialogState(() => sending = true);
-                          try {
-                            await client.replySupportTicket(ticket.id, body);
-                            reply.clear();
-                            await load();
-                            if (mounted) await _loadTickets();
-                          } on AirmiusApiException catch (error) {
-                            if (dialogContext.mounted) {
-                              setDialogState(
-                                () => loadError = error.userMessage,
-                              );
-                            }
-                          } finally {
-                            if (dialogContext.mounted) {
-                              setDialogState(() => sending = false);
-                            }
-                          }
-                        },
-                  icon: const Icon(Icons.send_outlined),
-                  label: Text(t('support.sendReply')),
-                ),
-            ],
-          );
-        },
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SupportTicketDetailScreen(ticketId: ticket.id),
       ),
     );
-    reply.dispose();
+    if (mounted) await _loadTickets();
   }
 
   void _showError(String message) {
@@ -518,7 +261,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                   _loadTickets();
                 },
                 onAction: (ticket, action) async {
-                  if (await _ticketLifecycle(ticket, action) && mounted) {
+                  if (await _ticketLifecycle(ticket.id, action) && mounted) {
                     await _loadTickets();
                   }
                 },
@@ -887,3 +630,230 @@ String _platformName() => switch (defaultTargetPlatform) {
   TargetPlatform.linux => 'linux',
   TargetPlatform.fuchsia => 'fuchsia',
 };
+
+mixin _TicketActions<T extends StatefulWidget> on State<T> {
+  bool _lifecycleBusy = false;
+  Future<bool> _ticketLifecycle(int ticketId, String action) async {
+    if (_lifecycleBusy) return false;
+    final t = AirmiusScope.of(context).t;
+    if (action != 'restore') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(t('support.lifecycle.$action')),
+          content: Text(t('support.lifecycle.${action}_confirm')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(t('common.close')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(t('support.lifecycle.$action')),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return false;
+    }
+    setState(() => _lifecycleBusy = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final client = services.clientForSession(services.authState.session);
+      final result = action == 'withdraw'
+          ? await client.withdrawSupportTicket(ticketId)
+          : await client.setSupportTicketVisibility(
+              ticketId,
+              hidden: action == 'hide',
+            );
+      if (!mounted) return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result['message']?.toString() ??
+                t(
+                  'support.lifecycle.${action == 'withdraw'
+                      ? 'withdrawn_notice'
+                      : action == 'hide'
+                      ? 'hidden_notice'
+                      : 'restored_notice'}',
+                ),
+          ),
+        ),
+      );
+      return true;
+    } on AirmiusApiException catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+      return false;
+    } finally {
+      if (mounted) setState(() => _lifecycleBusy = false);
+    }
+  }
+}
+
+class SupportTicketDetailScreen extends StatefulWidget {
+  const SupportTicketDetailScreen({super.key, required this.ticketId});
+  final int ticketId;
+  @override
+  State<SupportTicketDetailScreen> createState() => _SupportTicketDetailState();
+}
+
+class _SupportTicketDetailState extends State<SupportTicketDetailScreen>
+    with _TicketActions {
+  final reply = TextEditingController();
+  Future<JsonMap>? _detail;
+  bool _sending = false;
+
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _detail ??= _client.supportTicket(widget.ticketId);
+  }
+
+  @override
+  void dispose() {
+    reply.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final body = reply.text.trim();
+    if (_sending || body.length < 2) return;
+    setState(() => _sending = true);
+    try {
+      await _client.replySupportTicket(widget.ticketId, body);
+      if (!mounted) return;
+      reply.clear();
+      setState(() => _detail = _client.supportTicket(widget.ticketId));
+    } on AirmiusApiException catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.userMessage)));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return FutureBuilder<JsonMap>(
+      future: _detail,
+      builder: (context, snapshot) {
+        final data = snapshot.data?['data'] as JsonMap?;
+        final messages = (data?['messages'] as List? ?? [])
+            .whereType<JsonMap>();
+        final error = snapshot.error;
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(data?['subject']?.toString() ?? t('support.title')),
+          ),
+          body: SafeArea(
+            child: error != null
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          error is AirmiusApiException
+                              ? error.userMessage
+                              : t('support.ticketsLoadError'),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(
+                            () => _detail = _client.supportTicket(
+                              widget.ticketId,
+                            ),
+                          ),
+                          child: Text(t('support.ticketsRetry')),
+                        ),
+                      ],
+                    ),
+                  )
+                : data == null
+                ? const Center(child: CircularProgressIndicator())
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      Text(
+                        t('support.initialMessage'),
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('${data['message'] ?? ''}'),
+                      if (data['withdrawn_at'] != null)
+                        Text(t('support.lifecycle.withdrawn_notice')),
+                      const Divider(height: 28),
+                      for (final message in messages) ...[
+                        Text(
+                          message['is_staff'] == true
+                              ? t('support.supportAuthor')
+                              : t('support.youAuthor'),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 3),
+                        Text('${message['body'] ?? ''}'),
+                        const Divider(height: 22),
+                      ],
+                      if (data['can_reply'] == true) ...[
+                        TextField(
+                          controller: reply,
+                          minLines: 2,
+                          maxLines: 5,
+                          maxLength: 10000,
+                          decoration: InputDecoration(
+                            labelText: t('support.reply'),
+                          ),
+                        ),
+                        Text(
+                          t('support.attachmentsUnavailable'),
+                          style: TextStyle(
+                            color: airmiusMutedColor(context),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+
+                      if (data['can_reply'] == true)
+                        FilledButton.icon(
+                          onPressed: _sending || _lifecycleBusy ? null : _send,
+                          icon: const Icon(Icons.send_outlined),
+                          label: Text(t('support.sendReply')),
+                        ),
+                      for (final action in [
+                        if (data['can_withdraw'] == true) 'withdraw',
+                        if (data['can_hide'] == true)
+                          data['requester_hidden_at'] != null
+                              ? 'restore'
+                              : 'hide',
+                      ])
+                        TextButton(
+                          onPressed: _sending || _lifecycleBusy
+                              ? null
+                              : () async {
+                                  if (await _ticketLifecycle(
+                                        widget.ticketId,
+                                        action,
+                                      ) &&
+                                      context.mounted)
+                                    Navigator.pop(context);
+                                },
+                          child: Text(t('support.lifecycle.$action')),
+                        ),
+                    ],
+                  ),
+          ),
+        );
+      },
+    );
+  }
+}

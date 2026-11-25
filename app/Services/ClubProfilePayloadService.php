@@ -10,6 +10,7 @@ use App\Models\ClubVolunteerProfile;
 use App\Models\OrganizationJob;
 use App\Models\Post;
 use App\Models\User;
+use App\Support\ClubActiveMembership;
 use App\Models\UserBadge;
 use App\Support\ClubMembershipApplication;
 use App\Support\ClubPermissions;
@@ -25,7 +26,7 @@ class ClubProfilePayloadService
 
     public function forViewer(Club $club, User $viewer): array
     {
-        $isMember = $club->users()->where('users.id', $viewer->id)->exists();
+        $isMember = ClubActiveMembership::allows($club, $viewer);
         $canManage = $viewer->can('update', $club);
         $profileCapabilities = ClubProfilePermissions::capabilities($club, $viewer);
         $canViewMetadata = ClubPermissions::allows($club, $viewer, ClubPermissions::METADATA_VIEW);

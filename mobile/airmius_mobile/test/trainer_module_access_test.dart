@@ -30,7 +30,14 @@ void main() {
 
   test('ordinary members and suspended trainers do not gain trainer navigation', () {
     expect(AirmiusModuleAccess.canOpenTrainerCockpit(member('member', 'active')), isFalse);
-    for (final status in ['paused', 'former', 'pending', 'removal_pending', 'removal_objected']) {
+    for (final status in [
+      'non_member',
+      'paused',
+      'former',
+      'pending',
+      'removal_pending',
+      'removal_objected',
+    ]) {
       expect(AirmiusModuleAccess.canOpenTrainerCockpit(member('trainer', status)), isFalse);
     }
   });

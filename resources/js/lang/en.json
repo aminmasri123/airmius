@@ -4219,6 +4219,10 @@
   },
   "files": {
     "page_title": "Files",
+    "audience_label": "Visible to",
+    "audience_members": "All active members",
+    "audience_board": "Board only",
+    "audience_help": "People marked as non-members do not have access.",
     "scope_label": "Scope",
     "select": "Select",
     "manager": "File manager",

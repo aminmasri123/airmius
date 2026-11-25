@@ -236,6 +236,22 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                   const SizedBox(height: 12),
                 ],
                 _clubPicker(data),
+                if (club.management?.permissions['effective'] is JsonMap &&
+                    (club.management!.permissions['effective']
+                            as JsonMap)['website_request.create'] ==
+                        true) ...[
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.language_outlined),
+                    label: Text(t('commerceAdv.requestWebsite')),
+                    onPressed: () => _open(
+                      CommerceCenterScreen(
+                        initialSection: 'websites',
+                        preferredWebsiteClubId: club.id,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 if (club.deletionScheduledAt != null) ...[
                   const SizedBox(height: 12),
                   Text(

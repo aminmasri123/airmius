@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Story;
 use App\Models\User;
 use App\Support\ClubPermissions;
+use App\Support\ClubActiveMembership;
 
 class StoryPolicy extends BasePolicy
 {
@@ -32,7 +33,8 @@ class StoryPolicy extends BasePolicy
         }
 
         if ($story->visibility === 'team' && $story->team_id) {
-            return $story->team->users()->where('users.id', $user->id)->exists();
+            return ClubActiveMembership::allows($story->team->club, $user)
+                && $story->team->users()->where('users.id', $user->id)->exists();
         }
 
         return $story->club && $this->inClub($user, $story->club);

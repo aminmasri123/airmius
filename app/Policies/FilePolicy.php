@@ -7,6 +7,8 @@ use App\Models\File;
 use App\Models\Message;
 use App\Models\User;
 use App\Support\ClubPermissions;
+use App\Support\ClubFileAudience;
+use App\Support\ClubActiveMembership;
 use Illuminate\Support\Facades\DB;
 
 class FilePolicy extends BasePolicy
@@ -25,6 +27,9 @@ class FilePolicy extends BasePolicy
 
     public function view(User $user, File $file)
     {
+        if (! $this->allowsClubAudience($user, $file)) {
+            return false;
+        }
         if ($file->posts()->where('visibility', 'friends')->get()->contains(fn ($post) => $user->can('view', $post))) {
             return true;
         }
@@ -57,6 +62,10 @@ class FilePolicy extends BasePolicy
 
     public function delete(User $user, File $file)
     {
+        if (! $this->allowsClubAudience($user, $file)) {
+            return false;
+        }
+
         if ($file->policyDocuments()->exists()) {
             return false;
         }
@@ -75,6 +84,10 @@ class FilePolicy extends BasePolicy
 
     public function update(User $user, File $file)
     {
+        if (! $this->allowsClubAudience($user, $file)) {
+            return false;
+        }
+
         if ($this->ownsPersonalFile($user, $file)) {
             return true;
         }
@@ -89,6 +102,9 @@ class FilePolicy extends BasePolicy
 
     public function download(User $user, File $file): bool
     {
+        if (! $this->allowsClubAudience($user, $file)) {
+            return false;
+        }
         if ($this->ownsPersonalFile($user, $file)
             || $this->canViewViaVisibleChatMessage($user, $file)
             || $this->isVisibleMembershipApplicationDocument($file)) {
@@ -105,6 +121,9 @@ class FilePolicy extends BasePolicy
 
     public function share(User $user, File $file): bool
     {
+        if (! $this->allowsClubAudience($user, $file)) {
+            return false;
+        }
         if ($this->ownsPersonalFile($user, $file)
             || $this->canViewViaVisibleChatMessage($user, $file)
             || $this->isVisibleMembershipApplicationDocument($file)) {
@@ -125,6 +144,15 @@ class FilePolicy extends BasePolicy
             && ! $file->club_id
             && ! $file->team_id
             && ! $file->event_id;
+    }
+
+    private function allowsClubAudience(User $user, File $file): bool
+    {
+        if (! $file->club_id || $file->team_id || $file->event_id) {
+            return true;
+        }
+
+        return ClubFileAudience::allows($file, $user);
     }
 
     private function isVisibleMembershipApplicationDocument(File $file): bool
@@ -148,8 +176,9 @@ class FilePolicy extends BasePolicy
         }
 
         if ($file->team) {
-            return $file->team->users()->where('users.id', $user->id)->exists()
-                || $this->managesTeam($user, $file->team);
+            return ClubActiveMembership::allows($file->team->club, $user)
+                && ($file->team->users()->where('users.id', $user->id)->exists()
+                    || $this->managesTeam($user, $file->team));
         }
 
         if ($file->club) {

@@ -2317,7 +2317,8 @@ const _sponsorCockpitDe = {
   'sponsorCockpit.editDeliverable': 'Leistung bearbeiten',
   'sponsorCockpit.notifySponsor': 'Sponsor benachrichtigen',
   'sponsorCockpit.notified': 'Sponsor benachrichtigt',
-  'sponsorCockpit.notifySavedHint': 'Die Nachricht bezieht sich auf den zuletzt gespeicherten Stand.',
+  'sponsorCockpit.notifySavedHint':
+      'Die Nachricht bezieht sich auf den zuletzt gespeicherten Stand.',
   'sponsorCockpit.deliverableTitle': 'Bezeichnung',
   'sponsorCockpit.deliverableLocation': 'Ort (optional)',
   'sponsorCockpit.deliverableDue': 'Fälligkeit (optional)',
@@ -2510,7 +2511,8 @@ const _sponsorCockpitEn = {
   'sponsorCockpit.editDeliverable': 'Edit deliverable',
   'sponsorCockpit.notifySponsor': 'Notify sponsor',
   'sponsorCockpit.notified': 'Sponsor notified',
-  'sponsorCockpit.notifySavedHint': 'The notification refers to the last saved version.',
+  'sponsorCockpit.notifySavedHint':
+      'The notification refers to the last saved version.',
   'sponsorCockpit.deliverableTitle': 'Title',
   'sponsorCockpit.deliverableLocation': 'Location (optional)',
   'sponsorCockpit.deliverableDue': 'Due date (optional)',
@@ -3481,7 +3483,8 @@ const _platformAdminDe = {
   'adminNative.subscription_trialing': 'Testphase',
   'adminNative.subscription_active': 'Aktiv',
   'adminNative.subscription_past_due': 'Zahlung überfällig',
-  'adminNative.subscription_cancels_at_period_end': 'Kündigung zum Laufzeitende',
+  'adminNative.subscription_cancels_at_period_end':
+      'Kündigung zum Laufzeitende',
   'adminNative.subscription_cancelled': 'Gekündigt',
   'adminNative.createUser': 'Nutzer anlegen',
   'adminNative.editUser': 'Nutzer bearbeiten',
@@ -3686,10 +3689,14 @@ const _platformAdminDe = {
   'platformAdmin.appeal.rejected': 'Beschwerde ablehnen',
   'platformAdmin.appealReasonHint': 'Mindestens 10 Zeichen',
   'platformAdmin.templates': 'Textbaustein auswählen',
-  'platformAdmin.template.context': 'Wir haben den gemeldeten Inhalt im Zusammenhang geprüft.',
-  'platformAdmin.template.rules': 'Wir haben den Inhalt anhand der Community-Regeln bewertet.',
-  'platformAdmin.template.review': 'Wir haben die ursprüngliche Entscheidung erneut geprüft.',
-  'platformAdmin.template.newInfo': 'Wir haben die zusätzlichen Angaben aus dem Einspruch berücksichtigt.',
+  'platformAdmin.template.context':
+      'Wir haben den gemeldeten Inhalt im Zusammenhang geprüft.',
+  'platformAdmin.template.rules':
+      'Wir haben den Inhalt anhand der Community-Regeln bewertet.',
+  'platformAdmin.template.review':
+      'Wir haben die ursprüngliche Entscheidung erneut geprüft.',
+  'platformAdmin.template.newInfo':
+      'Wir haben die zusätzlichen Angaben aus dem Einspruch berücksichtigt.',
   'platformAdmin.appealSaved': 'Die Beschwerde wurde entschieden.',
   'platformAdmin.noGamificationRules': 'Keine Gamification-Regeln vorhanden.',
   'platformAdmin.xp': 'XP',
@@ -3936,10 +3943,13 @@ final _platformAdminEn = {
   'platformAdmin.appeal.rejected': 'Reject appeal',
   'platformAdmin.appealReasonHint': 'At least 10 characters',
   'platformAdmin.templates': 'Select a response template',
-  'platformAdmin.template.context': 'We reviewed the reported content in context.',
-  'platformAdmin.template.rules': 'We assessed the content against the community rules.',
+  'platformAdmin.template.context':
+      'We reviewed the reported content in context.',
+  'platformAdmin.template.rules':
+      'We assessed the content against the community rules.',
   'platformAdmin.template.review': 'We reviewed the original decision again.',
-  'platformAdmin.template.newInfo': 'We considered the additional information in the appeal.',
+  'platformAdmin.template.newInfo':
+      'We considered the additional information in the appeal.',
   'platformAdmin.appealSaved': 'The appeal was decided.',
   'platformAdmin.noGamificationRules': 'No gamification rules available.',
   'platformAdmin.xp': 'XP',
@@ -4087,10 +4097,13 @@ final _platformAdminFr = {
   'platformAdmin.appeal.rejected': 'Rejeter le recours',
   'platformAdmin.appealReasonHint': 'Au moins 10 caractères',
   'platformAdmin.templates': 'Choisir une réponse type',
-  'platformAdmin.template.context': 'Nous avons examiné le contenu signalé dans son contexte.',
-  'platformAdmin.template.rules': 'Nous avons évalué le contenu au regard des règles de la communauté.',
+  'platformAdmin.template.context':
+      'Nous avons examiné le contenu signalé dans son contexte.',
+  'platformAdmin.template.rules':
+      'Nous avons évalué le contenu au regard des règles de la communauté.',
   'platformAdmin.template.review': 'Nous avons réexaminé la décision initiale.',
-  'platformAdmin.template.newInfo': 'Nous avons pris en compte les précisions du recours.',
+  'platformAdmin.template.newInfo':
+      'Nous avons pris en compte les précisions du recours.',
   'platformAdmin.appealSaved': 'Le recours a été décidé.',
   'platformAdmin.noGamificationRules': 'Aucune règle de gamification.',
   'platformAdmin.xp': 'XP',
@@ -4235,7 +4248,8 @@ final _platformAdminAr = {
   'platformAdmin.template.context': 'راجعنا المحتوى المبلغ عنه في سياقه.',
   'platformAdmin.template.rules': 'قيّمنا المحتوى وفق قواعد المجتمع.',
   'platformAdmin.template.review': 'أعدنا النظر في القرار الأصلي.',
-  'platformAdmin.template.newInfo': 'أخذنا المعلومات الإضافية الواردة في الاعتراض بعين الاعتبار.',
+  'platformAdmin.template.newInfo':
+      'أخذنا المعلومات الإضافية الواردة في الاعتراض بعين الاعتبار.',
   'platformAdmin.appealSaved': 'تم اتخاذ قرار بشأن الاعتراض.',
   'platformAdmin.noGamificationRules': 'لا توجد قواعد تحفيز.',
   'platformAdmin.xp': 'نقاط الخبرة',
@@ -4954,7 +4968,8 @@ const _commerceOpsDe = {
   'commerceOps.couponScope': 'Gutscheinbereich',
   'commerceOps.couponSubscription': 'Abo',
   'commerceOps.deleteCoupon': 'Rabattcode löschen',
-  'commerceOps.deleteCouponBody': 'Soll dieser Rabattcode endgültig gelöscht werden?',
+  'commerceOps.deleteCouponBody':
+      'Soll dieser Rabattcode endgültig gelöscht werden?',
   'commerceOps.couponDeleted': 'Rabattcode gelöscht.',
   'commerceOps.code': 'Code',
   'commerceOps.type': 'Typ',
@@ -5349,7 +5364,8 @@ final _commerceOpsFr = {
   'commerceOps.couponScope': 'Type de coupon',
   'commerceOps.couponSubscription': 'Abonnement',
   'commerceOps.deleteCoupon': 'Supprimer le code de réduction',
-  'commerceOps.deleteCouponBody': 'Supprimer définitivement ce code de réduction ?',
+  'commerceOps.deleteCouponBody':
+      'Supprimer définitivement ce code de réduction ?',
   'commerceOps.couponDeleted': 'Code de réduction supprimé.',
   'commerceOps.cta': 'Libellé du bouton',
   'commerceOps.defaultCommission': 'Pourcentage de commission par défaut',
@@ -18511,6 +18527,10 @@ const _filesLabelsDe = {
   'files.fileRange': 'Dateien 1 – {count} von {count}',
   'files.folderRange': 'Ordner 1 – {count} von {count}',
   'files.uploadTitle': 'Datei hochladen',
+  'files.audienceLabel': 'Sichtbar für',
+  'files.audienceMembers': 'Alle aktiven Mitglieder',
+  'files.audienceBoard': 'Nur Vorstand',
+  'files.audienceHelp': '„Kein Mitglied“ erhält keinen Zugriff.',
   'files.createFolder': 'Ordner erstellen',
   'files.create': 'Erstellen',
   'files.searchHint': 'Suchen …',
@@ -18622,6 +18642,10 @@ final _filesLabelsEn = {
   'files.fileRange': 'Files 1 – {count} of {count}',
   'files.folderRange': 'Folders 1 – {count} of {count}',
   'files.uploadTitle': 'Upload file',
+  'files.audienceLabel': 'Visible to',
+  'files.audienceMembers': 'All active members',
+  'files.audienceBoard': 'Board only',
+  'files.audienceHelp': 'Non-members do not have access.',
   'files.createFolder': 'Create folder',
   'files.create': 'Create',
   'files.searchHint': 'Search …',
@@ -18731,6 +18755,10 @@ final _filesLabelsFr = {
   'files.fileRange': 'Fichiers 1 – {count} sur {count}',
   'files.folderRange': 'Dossiers 1 – {count} sur {count}',
   'files.uploadTitle': 'Importer un fichier',
+  'files.audienceLabel': 'Visible pour',
+  'files.audienceMembers': 'Tous les membres actifs',
+  'files.audienceBoard': 'Comité directeur uniquement',
+  'files.audienceHelp': 'Les non-membres n’ont pas accès.',
   'files.createFolder': 'Créer un dossier',
   'files.create': 'Créer',
   'files.searchHint': 'Rechercher …',
@@ -18806,6 +18834,10 @@ final _filesLabelsAr = {
   'files.fileRange': 'الملفات 1 – {count} من {count}',
   'files.folderRange': 'المجلدات 1 – {count} من {count}',
   'files.uploadTitle': 'رفع ملف',
+  'files.audienceLabel': 'مرئي لـ',
+  'files.audienceMembers': 'جميع الأعضاء النشطين',
+  'files.audienceBoard': 'مجلس الإدارة فقط',
+  'files.audienceHelp': 'غير الأعضاء لا يمكنهم الوصول.',
   'files.createFolder': 'إنشاء مجلد',
   'files.create': 'إنشاء',
   'files.searchHint': 'بحث …',
@@ -22995,12 +23027,15 @@ final _guestClubLabelsEn = {
   'guestClubs.newsletterSent':
       'Request processed. If confirmation is required, you will receive an email. Please also check your spam folder.',
   'guestClubs.newsletterPendingTitle': 'Confirmation pending',
-  'guestClubs.newsletterCheckInbox': 'Open the confirmation link in your inbox or spam folder.',
-  'guestClubs.newsletterDeliveryFailed': 'The confirmation email could not be sent. You can try again after five minutes.',
+  'guestClubs.newsletterCheckInbox':
+      'Open the confirmation link in your inbox or spam folder.',
+  'guestClubs.newsletterDeliveryFailed':
+      'The confirmation email could not be sent. You can try again after five minutes.',
   'guestClubs.newsletterResend': 'Resend confirmation email',
   'guestClubs.newsletterResendWait': 'Resend available after five minutes',
   'guestClubs.newsletterContactSupport': 'Contact support',
-  'guestClubs.newsletterResendUnavailable': 'If the email is missing, contact support.',
+  'guestClubs.newsletterResendUnavailable':
+      'If the email is missing, contact support.',
   'guestClubs.newsletterPendingBody':
       'A confirmation email has already been requested. Open the link in your inbox. Another tap will not immediately send another email.',
   'guestClubs.newsletterConfirmedTitle': 'Newsletter subscribed ✓',
@@ -23052,12 +23087,15 @@ final _guestClubLabelsDe = {
   'guestClubs.newsletterSent':
       'Anfrage verarbeitet. Falls eine Bestätigung nötig ist, erhältst du eine E-Mail. Bitte prüfe auch den Spam-Ordner.',
   'guestClubs.newsletterPendingTitle': 'Bestätigung ausstehend',
-  'guestClubs.newsletterCheckInbox': 'Öffne den Bestätigungslink im Posteingang oder Spamordner.',
-  'guestClubs.newsletterDeliveryFailed': 'Die Bestätigungsmail konnte nicht gesendet werden. Du kannst es nach fünf Minuten erneut versuchen.',
+  'guestClubs.newsletterCheckInbox':
+      'Öffne den Bestätigungslink im Posteingang oder Spamordner.',
+  'guestClubs.newsletterDeliveryFailed':
+      'Die Bestätigungsmail konnte nicht gesendet werden. Du kannst es nach fünf Minuten erneut versuchen.',
   'guestClubs.newsletterResend': 'Bestätigungsmail erneut senden',
   'guestClubs.newsletterResendWait': 'Erneut senden nach fünf Minuten',
   'guestClubs.newsletterContactSupport': 'Support kontaktieren',
-  'guestClubs.newsletterResendUnavailable': 'Falls die E-Mail fehlt, wende dich an den Support.',
+  'guestClubs.newsletterResendUnavailable':
+      'Falls die E-Mail fehlt, wende dich an den Support.',
   'guestClubs.newsletterPendingBody':
       'Die Bestätigungsmail wurde bereits angefordert. Öffne den Link in deinem E-Mail-Postfach. Ein weiterer Klick versendet nicht sofort eine neue E-Mail.',
   'guestClubs.newsletterConfirmedTitle': 'Newsletter abonniert ✓',
@@ -23108,12 +23146,15 @@ final _guestClubLabelsFr = {
   'guestClubs.newsletterSent':
       'Demande traitée. Si une confirmation est nécessaire, vous recevrez un e-mail. Vérifiez aussi les courriers indésirables.',
   'guestClubs.newsletterPendingTitle': 'Confirmation en attente',
-  'guestClubs.newsletterCheckInbox': 'Ouvre le lien de confirmation dans ta boîte de réception ou dans les courriers indésirables.',
-  'guestClubs.newsletterDeliveryFailed': 'Le courriel de confirmation n’a pas pu être envoyé. Réessaie après cinq minutes.',
+  'guestClubs.newsletterCheckInbox':
+      'Ouvre le lien de confirmation dans ta boîte de réception ou dans les courriers indésirables.',
+  'guestClubs.newsletterDeliveryFailed':
+      'Le courriel de confirmation n’a pas pu être envoyé. Réessaie après cinq minutes.',
   'guestClubs.newsletterResend': 'Renvoyer le courriel de confirmation',
   'guestClubs.newsletterResendWait': 'Renvoi possible après cinq minutes',
   'guestClubs.newsletterContactSupport': 'Contacter le support',
-  'guestClubs.newsletterResendUnavailable': 'Si tu n’as pas reçu le courriel, contacte le support.',
+  'guestClubs.newsletterResendUnavailable':
+      'Si tu n’as pas reçu le courriel, contacte le support.',
   'guestClubs.newsletterPendingBody':
       'Un e-mail de confirmation a déjà été demandé. Ouvrez le lien reçu. Un nouveau clic n’envoie pas immédiatement un autre e-mail.',
   'guestClubs.newsletterConfirmedTitle': 'Newsletter confirmée ✓',
@@ -23164,12 +23205,15 @@ final _guestClubLabelsAr = {
   'guestClubs.newsletterSent':
       'تمت معالجة الطلب. إذا كان التأكيد مطلوباً فستصلك رسالة. تحقق أيضاً من مجلد الرسائل غير المرغوب فيها.',
   'guestClubs.newsletterPendingTitle': 'التأكيد قيد الانتظار',
-  'guestClubs.newsletterCheckInbox': 'افتح رابط التأكيد في صندوق الوارد أو مجلد البريد غير المرغوب فيه.',
-  'guestClubs.newsletterDeliveryFailed': 'تعذّر إرسال رسالة التأكيد. يمكنك المحاولة مجددًا بعد خمس دقائق.',
+  'guestClubs.newsletterCheckInbox':
+      'افتح رابط التأكيد في صندوق الوارد أو مجلد البريد غير المرغوب فيه.',
+  'guestClubs.newsletterDeliveryFailed':
+      'تعذّر إرسال رسالة التأكيد. يمكنك المحاولة مجددًا بعد خمس دقائق.',
   'guestClubs.newsletterResend': 'إعادة إرسال رسالة التأكيد',
   'guestClubs.newsletterResendWait': 'إعادة الإرسال متاحة بعد خمس دقائق',
   'guestClubs.newsletterContactSupport': 'التواصل مع الدعم',
-  'guestClubs.newsletterResendUnavailable': 'إذا لم تصلك الرسالة، فتواصل مع الدعم.',
+  'guestClubs.newsletterResendUnavailable':
+      'إذا لم تصلك الرسالة، فتواصل مع الدعم.',
   'guestClubs.newsletterPendingBody':
       'تم طلب رسالة تأكيد بالفعل. افتح الرابط في بريدك الإلكتروني. لن يؤدي النقر مرة أخرى إلى إرسال رسالة جديدة فورًا.',
   'guestClubs.newsletterConfirmedTitle': 'تم الاشتراك في النشرة ✓',
@@ -24946,7 +24990,8 @@ const _clubInventoryDe = {
   'inventory.guestPhone': 'Telefon (optional)',
   'inventory.loanDetailsSection': 'Ausleihe',
   'inventory.collateralSection': 'Pfand oder Sicherheit hinterlegt',
-  'inventory.collateralOptionalHint': 'Optional, zum Beispiel Autoschlüssel oder Geldbetrag',
+  'inventory.collateralOptionalHint':
+      'Optional, zum Beispiel Autoschlüssel oder Geldbetrag',
   'inventory.collateralType': 'Art des Pfands',
   'inventory.collateralItem': 'Gegenstand',
   'inventory.collateralCash': 'Geldbetrag',
@@ -24954,16 +24999,19 @@ const _clubInventoryDe = {
   'inventory.collateralOther': 'Sonstiges',
   'inventory.collateralAmount': 'Betrag in Euro *',
   'inventory.collateralDescription': 'Kurze Beschreibung *',
-  'inventory.collateralPrivacyHint': 'Keine Ausweis- oder Dokumentnummer speichern.',
+  'inventory.collateralPrivacyHint':
+      'Keine Ausweis- oder Dokumentnummer speichern.',
   'inventory.collateralHeld': 'Pfand hinterlegt',
   'inventory.collateralPlanned': 'Pfand bei Ausgabe vorgesehen',
   'inventory.collateralReturned': 'Pfand zurückgegeben',
   'inventory.collateralReceivedBy': 'Angenommen von',
   'inventory.collateralReturnedBy': 'Zurückgegeben von',
   'inventory.confirmCollateralReturn': 'Pfandrückgabe bestätigen',
-  'inventory.confirmCollateralReturnQuestion': 'Wurde das hinterlegte Pfand tatsächlich an die ausleihende Person zurückgegeben?',
+  'inventory.confirmCollateralReturnQuestion':
+      'Wurde das hinterlegte Pfand tatsächlich an die ausleihende Person zurückgegeben?',
   'inventory.returnWithCollateralTitle': 'Rückgabe mit Pfand',
-  'inventory.returnWithCollateralQuestion': 'Wurde neben dem Inventar auch das hinterlegte Pfand zurückgegeben?',
+  'inventory.returnWithCollateralQuestion':
+      'Wurde neben dem Inventar auch das hinterlegte Pfand zurückgegeben?',
   'inventory.returnItemOnly': 'Nur Inventar zurück',
   'inventory.returnItemAndCollateral': 'Inventar und Pfand zurück',
   'inventory.loan.collateral_pending': 'Inventar zurück · Pfand noch offen',
@@ -25211,12 +25259,15 @@ const _clubInventoryEn = {
   'inventory.collateralReceivedBy': 'Received by',
   'inventory.collateralReturnedBy': 'Returned by',
   'inventory.confirmCollateralReturn': 'Confirm collateral return',
-  'inventory.confirmCollateralReturnQuestion': 'Was the collateral actually returned to the borrower?',
+  'inventory.confirmCollateralReturnQuestion':
+      'Was the collateral actually returned to the borrower?',
   'inventory.returnWithCollateralTitle': 'Return with collateral',
-  'inventory.returnWithCollateralQuestion': 'Was the collateral returned together with the inventory item?',
+  'inventory.returnWithCollateralQuestion':
+      'Was the collateral returned together with the inventory item?',
   'inventory.returnItemOnly': 'Inventory only',
   'inventory.returnItemAndCollateral': 'Inventory and collateral',
-  'inventory.loan.collateral_pending': 'Inventory returned · collateral still open',
+  'inventory.loan.collateral_pending':
+      'Inventory returned · collateral still open',
   'inventory.createItem': 'Create item',
   'inventory.createResource': 'Create resource',
   'inventory.editResource': 'Edit resource',
@@ -25445,7 +25496,8 @@ const _clubInventoryFr = {
   'inventory.guestPhone': 'Téléphone (facultatif)',
   'inventory.loanDetailsSection': 'Emprunt',
   'inventory.collateralSection': 'Caution ou garantie déposée',
-  'inventory.collateralOptionalHint': 'Facultatif, par exemple des clés de voiture ou de l’argent',
+  'inventory.collateralOptionalHint':
+      'Facultatif, par exemple des clés de voiture ou de l’argent',
   'inventory.collateralType': 'Type de garantie',
   'inventory.collateralItem': 'Objet',
   'inventory.collateralCash': 'Espèces',
@@ -25453,19 +25505,24 @@ const _clubInventoryFr = {
   'inventory.collateralOther': 'Autre',
   'inventory.collateralAmount': 'Montant en euros *',
   'inventory.collateralDescription': 'Description courte *',
-  'inventory.collateralPrivacyHint': 'Ne pas enregistrer de numéro de pièce d’identité.',
+  'inventory.collateralPrivacyHint':
+      'Ne pas enregistrer de numéro de pièce d’identité.',
   'inventory.collateralHeld': 'Garantie déposée',
   'inventory.collateralPlanned': 'Garantie prévue lors de la remise',
   'inventory.collateralReturned': 'Garantie restituée',
   'inventory.collateralReceivedBy': 'Reçue par',
   'inventory.collateralReturnedBy': 'Restituée par',
-  'inventory.confirmCollateralReturn': 'Confirmer la restitution de la garantie',
-  'inventory.confirmCollateralReturnQuestion': 'La garantie a-t-elle bien été restituée à la personne emprunteuse ?',
+  'inventory.confirmCollateralReturn':
+      'Confirmer la restitution de la garantie',
+  'inventory.confirmCollateralReturnQuestion':
+      'La garantie a-t-elle bien été restituée à la personne emprunteuse ?',
   'inventory.returnWithCollateralTitle': 'Retour avec garantie',
-  'inventory.returnWithCollateralQuestion': 'La garantie a-t-elle également été restituée ?',
+  'inventory.returnWithCollateralQuestion':
+      'La garantie a-t-elle également été restituée ?',
   'inventory.returnItemOnly': 'Inventaire uniquement',
   'inventory.returnItemAndCollateral': 'Inventaire et garantie',
-  'inventory.loan.collateral_pending': 'Inventaire rendu · garantie encore ouverte',
+  'inventory.loan.collateral_pending':
+      'Inventaire rendu · garantie encore ouverte',
   'inventory.createItem': 'Créer un article',
   'inventory.createResource': 'Créer une ressource',
   'inventory.editResource': 'Modifier la ressource',
@@ -25662,7 +25719,8 @@ const _clubInventoryAr = {
   'inventory.guestPhone': 'الهاتف (اختياري)',
   'inventory.loanDetailsSection': 'الإعارة',
   'inventory.collateralSection': 'تم إيداع ضمان',
-  'inventory.collateralOptionalHint': 'اختياري، مثل مفاتيح السيارة أو مبلغ نقدي',
+  'inventory.collateralOptionalHint':
+      'اختياري، مثل مفاتيح السيارة أو مبلغ نقدي',
   'inventory.collateralType': 'نوع الضمان',
   'inventory.collateralItem': 'غرض',
   'inventory.collateralCash': 'نقد',
@@ -25677,12 +25735,15 @@ const _clubInventoryAr = {
   'inventory.collateralReceivedBy': 'استلمه',
   'inventory.collateralReturnedBy': 'أعاده',
   'inventory.confirmCollateralReturn': 'تأكيد إعادة الضمان',
-  'inventory.confirmCollateralReturnQuestion': 'هل تمت إعادة الضمان فعلاً إلى الشخص المستعير؟',
+  'inventory.confirmCollateralReturnQuestion':
+      'هل تمت إعادة الضمان فعلاً إلى الشخص المستعير؟',
   'inventory.returnWithCollateralTitle': 'الإرجاع مع الضمان',
-  'inventory.returnWithCollateralQuestion': 'هل تمت إعادة الضمان مع عنصر المخزون؟',
+  'inventory.returnWithCollateralQuestion':
+      'هل تمت إعادة الضمان مع عنصر المخزون؟',
   'inventory.returnItemOnly': 'المخزون فقط',
   'inventory.returnItemAndCollateral': 'المخزون والضمان',
-  'inventory.loan.collateral_pending': 'تمت إعادة المخزون · الضمان ما زال مفتوحًا',
+  'inventory.loan.collateral_pending':
+      'تمت إعادة المخزون · الضمان ما زال مفتوحًا',
   'inventory.createItem': 'إنشاء عنصر',
   'inventory.createResource': 'إنشاء مورد',
   'inventory.editResource': 'تعديل المورد',
@@ -27676,12 +27737,14 @@ final _strings = {
     'market.summary': 'Zusammenfassung',
     'market.itemsSubtotal': 'Artikel',
     'market.couponCode': 'Gutscheincode',
-    'market.applyCouponFirst': 'Wende den eingegebenen Gutscheincode zuerst an.',
+    'market.applyCouponFirst':
+        'Wende den eingegebenen Gutscheincode zuerst an.',
     'market.applyCoupon': 'Anwenden',
     'market.removeCoupon': 'Gutschein entfernen',
     'market.couponApplied': 'Gutschein angewendet',
     'market.couponDiscount': 'Gutscheinrabatt',
-    'market.couponUnavailable': 'Der Gutscheincode konnte nicht angewendet werden.',
+    'market.couponUnavailable':
+        'Der Gutscheincode konnte nicht angewendet werden.',
     'market.shipping': 'Versand',
     'market.includingTax': 'Enthaltene Steuer',
     'market.secureCheckout': 'Sicher zur Kasse',
@@ -28102,7 +28165,8 @@ final _strings = {
     'subscriptions.planFilterHint':
         'Wir zeigen zuerst passende Angebote. Andere Zielgruppen bleiben jederzeit erreichbar.',
     'subscriptions.recommendedForYou': 'Passend zu deiner Rolle vorausgewählt',
-    'subscriptions.emptyFilteredPlans': 'Für diese Zielgruppe gibt es derzeit keinen Plan.',
+    'subscriptions.emptyFilteredPlans':
+        'Für diese Zielgruppe gibt es derzeit keinen Plan.',
     'subscriptions.audience.all': 'Alle',
     'subscriptions.audience.sportler': 'Sportler',
     'subscriptions.audience.trainer': 'Trainer',
@@ -30777,7 +30841,8 @@ final _strings = {
     'subscriptions.planFilterHint':
         'We show relevant offers first. Other audiences remain available.',
     'subscriptions.recommendedForYou': 'Preselected to match your role',
-    'subscriptions.emptyFilteredPlans': 'There is currently no plan for this audience.',
+    'subscriptions.emptyFilteredPlans':
+        'There is currently no plan for this audience.',
     'subscriptions.audience.all': 'All',
     'subscriptions.audience.sportler': 'Athletes',
     'subscriptions.audience.trainer': 'Coaches',
@@ -33401,7 +33466,8 @@ final _strings = {
     'subscriptions.planFilterHint':
         'Nous affichons d’abord les offres adaptées. Les autres publics restent accessibles.',
     'subscriptions.recommendedForYou': 'Présélectionné selon votre rôle',
-    'subscriptions.emptyFilteredPlans': 'Aucun forfait n’est disponible pour ce public.',
+    'subscriptions.emptyFilteredPlans':
+        'Aucun forfait n’est disponible pour ce public.',
     'subscriptions.audience.all': 'Tous',
     'subscriptions.audience.sportler': 'Sportifs',
     'subscriptions.audience.trainer': 'Entraîneurs',

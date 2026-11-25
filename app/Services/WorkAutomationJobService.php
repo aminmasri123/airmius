@@ -177,7 +177,7 @@ class WorkAutomationJobService
     {
         $members = $club->users()
             ->where(fn ($query) => $query->whereNull('club_user.membership_status')
-                ->orWhereIn('club_user.membership_status', ['active', 'non_member']))
+                ->orWhere('club_user.membership_status', 'active'))
             ->get();
         if ($club->owner && ! $members->contains('id', $club->owner_id)) {
             $members->push($club->owner);

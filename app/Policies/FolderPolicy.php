@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\Folder;
 use App\Models\User;
 use App\Support\ClubPermissions;
+use App\Support\ClubActiveMembership;
 
 class FolderPolicy extends BasePolicy
 {
@@ -103,7 +104,8 @@ class FolderPolicy extends BasePolicy
         }
 
         if ($folder->team) {
-            return $folder->team->users()->where('users.id', $user->id)->exists();
+            return ClubActiveMembership::allows($folder->team->club, $user)
+                && $folder->team->users()->where('users.id', $user->id)->exists();
         }
 
         if ($folder->club) {

@@ -5,6 +5,7 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Support\ClubRoles;
+use App\Support\ClubActiveMembership;
 use App\Support\Roles;
 
 class BasePolicy
@@ -66,7 +67,7 @@ class BasePolicy
             return false;
         }
 
-        return $club->users()->where('user_id', $user->id)->exists();
+        return ClubActiveMembership::allows($club, $user);
     }
 
     protected function managesClub(User $user, $club): bool
@@ -83,6 +84,10 @@ class BasePolicy
     protected function hasElevatedClubRole(User $user, $club): bool
     {
         if (! $club) {
+            return false;
+        }
+
+        if (! ClubActiveMembership::allows($club, $user)) {
             return false;
         }
 

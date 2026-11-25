@@ -4215,6 +4215,10 @@
   },
   "files": {
     "page_title": "Fichiers",
+    "audience_label": "Visible pour",
+    "audience_members": "Tous les membres actifs",
+    "audience_board": "Comité directeur uniquement",
+    "audience_help": "Les personnes sans statut de membre n’ont pas accès.",
     "scope_label": "Espace",
     "select": "Sélectionner",
     "manager": "Gestionnaire de fichiers",

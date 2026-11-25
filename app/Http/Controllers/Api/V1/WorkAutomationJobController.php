@@ -58,7 +58,7 @@ class WorkAutomationJobController extends Controller
             'recipient_roles.*' => ['string', Rule::in(ClubPermissions::ALL), 'distinct'],
             'recipient_user_ids' => ['nullable', 'array', 'max:500'],
             'recipient_user_ids.*' => ['integer', 'distinct', Rule::exists('club_user', 'user_id')->where('club_id', $club->id)
-                ->where(fn ($query) => $query->whereNull('membership_status')->orWhereIn('membership_status', ['active', 'non_member']))],
+                ->where(fn ($query) => $query->whereNull('membership_status')->orWhere('membership_status', 'active'))],
             'include_creator' => ['nullable', 'boolean'],
         ]);
 
@@ -82,7 +82,7 @@ class WorkAutomationJobController extends Controller
             'recipient_roles.*' => ['string', Rule::in(ClubPermissions::ALL), 'distinct'],
             'recipient_user_ids' => ['nullable', 'array', 'max:500'],
             'recipient_user_ids.*' => ['integer', 'distinct', Rule::exists('club_user', 'user_id')->where('club_id', $club->id)
-                ->where(fn ($query) => $query->whereNull('membership_status')->orWhereIn('membership_status', ['active', 'non_member']))],
+                ->where(fn ($query) => $query->whereNull('membership_status')->orWhere('membership_status', 'active'))],
             'include_creator' => ['nullable', 'boolean'],
             'scheduled_at' => ['nullable', 'date'],
             'payload' => ['nullable', 'array:template,title,body'],
@@ -135,7 +135,7 @@ class WorkAutomationJobController extends Controller
             'recipient_roles.*' => ['string', Rule::in(ClubPermissions::ALL), 'distinct'],
             'recipient_user_ids' => ['nullable', 'array', 'max:500'],
             'recipient_user_ids.*' => ['integer', 'distinct', Rule::exists('club_user', 'user_id')->where('club_id', $club->id)
-                ->where(fn ($query) => $query->whereNull('membership_status')->orWhereIn('membership_status', ['active', 'non_member']))],
+                ->where(fn ($query) => $query->whereNull('membership_status')->orWhere('membership_status', 'active'))],
             'include_creator' => ['nullable', 'boolean'],
             'scheduled_at' => ['required', 'date', 'after:now'],
             'payload' => ['required', 'array:title,body'],
@@ -213,7 +213,7 @@ class WorkAutomationJobController extends Controller
     {
         $users = $club->users()
             ->where(fn ($query) => $query->whereNull('club_user.membership_status')
-                ->orWhereIn('club_user.membership_status', ['active', 'non_member']))
+                ->orWhere('club_user.membership_status', 'active'))
             ->get(['users.id', 'users.name']);
         if ($club->owner && ! $users->contains('id', $club->owner_id)) {
             $users->push($club->owner);

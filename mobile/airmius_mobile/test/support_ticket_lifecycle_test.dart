@@ -8,8 +8,28 @@ import 'package:airmius/core/airmius_l10n.dart';
 import 'package:airmius/core/airmius_service_container.dart';
 import 'package:airmius/core/airmius_services_scope.dart';
 import 'package:airmius/screens/support_helpdesk_screen.dart';
+import 'package:airmius/screens/admin_support_ticket_screen.dart';
+import 'package:airmius/screens/support_ticket_service_center_suite_screen.dart';
 
 void main() {
+  for (final role in ['member', 'admin', 'support']) {
+    testWidgets('ticket notification opens the correct page for $role', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _Transport(role: role),
+        home: const SupportTicketServiceCenterSuiteScreen(ticketId: 42),
+      );
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(SupportHelpdeskScreen), findsNothing);
+      if (role == 'member') {
+        expect(find.widgetWithText(AppBar, 'Ticket 42'), findsOneWidget);
+      } else {
+        expect(find.byType(AdminSupportTicketScreen), findsOneWidget);
+      }
+    });
+  }
   testWidgets(
     'withdraw requires confirmation; hide and restore preserve withdrawn ticket',
     (tester) async {
@@ -105,20 +125,25 @@ void main() {
   });
 }
 
-Future<void> _pump(WidgetTester tester, _Transport transport) async {
+Future<void> _pump(
+  WidgetTester tester,
+  _Transport transport, {
+  Widget home = const SupportHelpdeskScreen(),
+}) async {
   tester.view.physicalSize = const Size(600, 1400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   final tokens = AirmiusMemoryTokenStore();
   await tokens.write(
-    const AirmiusSession(
+    AirmiusSession(
       token: 'test',
       locale: 'de',
       user: AirmiusUser(
         id: 1,
         name: 'Owner',
-        role: 'member',
+        role: transport.role,
+        permissions: transport.permissions,
         email: 'test@example.test',
       ),
     ),
@@ -138,7 +163,7 @@ Future<void> _pump(WidgetTester tester, _Transport transport) async {
       setLanguage: (_) {},
       child: AirmiusServicesScope(
         container: container,
-        child: const MaterialApp(home: SupportHelpdeskScreen()),
+        child: MaterialApp(home: home),
       ),
     ),
   );
@@ -146,6 +171,9 @@ Future<void> _pump(WidgetTester tester, _Transport transport) async {
 }
 
 class _Transport implements AirmiusApiTransport {
+  _Transport({this.role = 'member'});
+  final String role;
+  List<String> get permissions => role == 'support' ? ['support.tickets'] : [];
   bool hidden = false;
   bool withdrawn = false;
   bool fail = false;
@@ -155,7 +183,21 @@ class _Transport implements AirmiusApiTransport {
     Object body = {'data': []};
     if (request.path == '/api/v1/me') {
       body = {
-        'data': {'id': 1, 'name': 'Owner', 'email': 'test@example.test'},
+        'data': {
+          'id': 1,
+          'name': 'Owner',
+          'email': 'test@example.test',
+          'role': role,
+          'permissions': permissions,
+        },
+      };
+    } else if (request.path == '/api/v1/admin/support/tickets') {
+      body = {
+        'data': {'tickets': []},
+      };
+    } else if (request.path == '/api/v1/support/tickets/42') {
+      body = {
+        'data': {'id': 42, 'subject': 'Ticket 42', 'message': 'Test'},
       };
     } else if (request.path.endsWith('/withdraw') ||
         request.path.endsWith('/visibility')) {

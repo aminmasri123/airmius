@@ -4116,6 +4116,10 @@
     }
   },
   "files": {
+    "audience_label": "مرئي لـ",
+    "audience_members": "جميع الأعضاء النشطين",
+    "audience_board": "مجلس الإدارة فقط",
+    "audience_help": "الأشخاص المصنفون كغير أعضاء لا يمكنهم الوصول.",
     "page_title": "الملفات",
     "scope_label": "النطاق",
     "select": "اختيار",

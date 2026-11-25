@@ -1496,14 +1496,15 @@ class _MarketSectionPicker extends StatelessWidget {
       ('cart', Icons.shopping_cart_outlined, t('market.cart'), cartCount),
       ('wishlist', Icons.favorite_outline, t('market.wishlist'), null),
       ('orders', Icons.receipt_long_outlined, t('market.orders'), null),
-      if (allowBulkOrders) (
-        'bulk_orders',
-        Icons.groups_2_outlined,
-        Localizations.localeOf(context).languageCode == 'de'
-            ? 'Sammelbestellungen'
-            : 'Bulk orders',
-        null,
-      ),
+      if (allowBulkOrders)
+        (
+          'bulk_orders',
+          Icons.groups_2_outlined,
+          Localizations.localeOf(context).languageCode == 'de'
+              ? 'Sammelbestellungen'
+              : 'Bulk orders',
+          null,
+        ),
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -2957,13 +2958,17 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                 ),
                 const SizedBox(width: 10),
                 SizedBox(
-                  width: 92,
+                  width: 116,
                   child: countryCodes.contains(_country.text.toUpperCase())
                       ? DropdownButtonFormField<String>(
                           initialValue: _country.text.toUpperCase(),
                           isExpanded: true,
                           decoration: InputDecoration(
-                            labelText: t('market.country'),
+                            hintText: t('market.country'),
+                            prefixIcon: const Icon(Icons.public, size: 20),
+                            prefixIconConstraints: const BoxConstraints(
+                              minWidth: 38,
+                            ),
                           ),
                           items: [
                             for (final code in countryCodes)
@@ -2982,7 +2987,11 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                           textCapitalization: TextCapitalization.characters,
                           maxLength: 2,
                           decoration: InputDecoration(
-                            labelText: t('market.country'),
+                            hintText: t('market.country'),
+                            prefixIcon: const Icon(Icons.public, size: 20),
+                            prefixIconConstraints: const BoxConstraints(
+                              minWidth: 38,
+                            ),
                             counterText: '',
                           ),
                           validator: (value) => value?.trim().length == 2
@@ -2993,29 +3002,40 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
               ],
             ),
             if (_guest) ...[
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _guestName,
                 autofillHints: const [AutofillHints.name],
                 decoration: InputDecoration(labelText: t('application.name')),
-                validator: (value) => value == null || value.trim().isEmpty ? t('market.required') : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? t('market.required')
+                    : null,
               ),
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _guestEmail,
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.email],
                 decoration: InputDecoration(labelText: t('application.email')),
-                validator: (value) => value != null && RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value.trim()) ? null : t('market.required'),
+                validator: (value) =>
+                    value != null &&
+                        RegExp(
+                          r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
+                        ).hasMatch(value.trim())
+                    ? null
+                    : t('market.required'),
               ),
               const SizedBox(height: 12),
             ],
-            if (!_guest) CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _saveAddress,
-              onChanged: (value) =>
-                  setState(() => _saveAddress = value ?? false),
-              title: Text(t('market.saveAddress')),
-              controlAffinity: ListTileControlAffinity.leading,
-            ),
+            if (!_guest)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _saveAddress,
+                onChanged: (value) =>
+                    setState(() => _saveAddress = value ?? false),
+                title: Text(t('market.saveAddress')),
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
             const SizedBox(height: 12),
             Text(
               t('market.customerType'),
@@ -3091,12 +3111,18 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
               },
               child: Column(
                 children: [
-                  for (final option in const [
-                    ('bank_transfer', Icons.account_balance_outlined),
-                    ('stripe', Icons.credit_card_outlined),
-                    ('paypal', Icons.account_balance_wallet_outlined),
-                  ].where((option) => !_guest ||
-                      (widget.checkout['payment_providers'] as List? ?? []).contains(option.$1)))
+                  for (final option
+                      in const [
+                        ('bank_transfer', Icons.account_balance_outlined),
+                        ('stripe', Icons.credit_card_outlined),
+                        ('paypal', Icons.account_balance_wallet_outlined),
+                      ].where(
+                        (option) =>
+                            !_guest ||
+                            (widget.checkout['payment_providers'] as List? ??
+                                    [])
+                                .contains(option.$1),
+                      ))
                     RadioListTile<String>(
                       contentPadding: EdgeInsets.zero,
                       value: option.$1,
@@ -3150,7 +3176,8 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                 children: [
                   _AmountRow(
                     label: t('market.itemsSubtotal'),
-                    cents: _marketInt(summary['item_gross_cents']) +
+                    cents:
+                        _marketInt(summary['item_gross_cents']) +
                         _marketInt(summary['discount_cents']),
                     currency: _marketText(summary['currency'], fallback: 'EUR'),
                   ),
@@ -3158,7 +3185,10 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                     _AmountRow(
                       label: t('market.couponDiscount'),
                       cents: -_marketInt(summary['discount_cents']),
-                      currency: _marketText(summary['currency'], fallback: 'EUR'),
+                      currency: _marketText(
+                        summary['currency'],
+                        fallback: 'EUR',
+                      ),
                     ),
                   _AmountRow(
                     label: t('market.shipping'),
@@ -3260,7 +3290,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   void _applyCoupon() {
     final code = _coupon.text.trim();
     if (code.isEmpty) {
-      setState(() => _couponError = AirmiusScope.of(context).t('market.required'));
+      setState(
+        () => _couponError = AirmiusScope.of(context).t('market.required'),
+      );
       return;
     }
     _refreshQuote(couponChange: code);
@@ -3599,7 +3631,10 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
               for (final item in items)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: _ProductImage(url: _marketNullableText(item['image_url']), size: 50),
+                  leading: _ProductImage(
+                    url: _marketNullableText(item['image_url']),
+                    size: 50,
+                  ),
                   title: Text(
                     _marketText(item['title']),
                     style: TextStyle(
@@ -3613,15 +3648,28 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
                   ),
                 ),
               const Divider(),
-              _AmountRow(label: t('market.itemsSubtotal'), cents: _marketInt(order['item_gross_cents']), currency: currency),
-              _AmountRow(label: t('market.shipping'), cents: _marketInt(order['shipping_cents']), currency: currency),
+              _AmountRow(
+                label: t('market.itemsSubtotal'),
+                cents: _marketInt(order['item_gross_cents']),
+                currency: currency,
+              ),
+              _AmountRow(
+                label: t('market.shipping'),
+                cents: _marketInt(order['shipping_cents']),
+                currency: currency,
+              ),
               _AmountRow(
                 label: t('market.total'),
                 cents: _marketInt(order['amount_cents']),
                 currency: currency,
                 strong: true,
               ),
-              _AmountRow(label: t('market.includingTax'), cents: _marketInt(order['tax_cents']), currency: currency, muted: true),
+              _AmountRow(
+                label: t('market.includingTax'),
+                cents: _marketInt(order['tax_cents']),
+                currency: currency,
+                muted: true,
+              ),
             ],
           ),
         ),
@@ -3697,7 +3745,8 @@ class _OrderDetailSheetState extends State<_OrderDetailSheet> {
           spacing: 10,
           runSpacing: 10,
           children: [
-            if (_marketNullableText(order['guest_status_url']) case final String guestStatusUrl)
+            if (_marketNullableText(order['guest_status_url'])
+                case final String guestStatusUrl)
               AirmiusButton(
                 label: t('market.orderDetails'),
                 icon: Icons.open_in_new,

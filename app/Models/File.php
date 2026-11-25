@@ -11,7 +11,7 @@ class File extends Model
     use HasFactory;
 
     protected $fillable = [
-        'club_id', 'team_id', 'event_id', 'user_id', 'folder_id',
+        'club_id', 'team_id', 'event_id', 'user_id', 'folder_id', 'audience',
         'display_name', 'path', 'thumbnail_path', 'type', 'size',
     ];
 

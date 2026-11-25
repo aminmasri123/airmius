@@ -117,7 +117,7 @@ class ClubPermissionsTest extends TestCase
         $this->assertFalse($effective[ClubPermissions::MEMBERS_DELETE]);
     }
 
-    public function test_inactive_members_lose_all_permissions_while_non_member_staff_remain_compatible(): void
+    public function test_inactive_and_non_member_people_lose_all_club_permissions(): void
     {
         $owner = User::factory()->create();
         $member = User::factory()->create();
@@ -173,14 +173,8 @@ class ClubPermissionsTest extends TestCase
         }
 
         $club->users()->updateExistingPivot($member->id, ['membership_status' => 'non_member']);
-        foreach ([
-            ClubPermissions::MEMBERS_EDIT,
-            ClubPermissions::FINANCE_APPROVE,
-            ClubPermissions::FINANCE_EXPORT,
-            ClubPermissions::YEAR_PERIODS_VIEW,
-            ClubPermissions::YEAR_PERIODS_EDIT,
-        ] as $permission) {
-            $this->assertTrue(ClubPermissions::allows($club, $member, $permission), $permission);
+        foreach (ClubPermissions::ALL as $permission) {
+            $this->assertFalse(ClubPermissions::allows($club, $member, $permission), 'non_member:'.$permission);
         }
     }
 

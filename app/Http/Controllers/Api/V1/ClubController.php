@@ -2114,6 +2114,7 @@ class ClubController extends Controller
 
         if (! $canAccessManagement) {
             $activeLinkedMembers = $club->users()
+                ->where('users.id', '!=', $club->owner_id)
                 ->where(fn ($query) => $query
                     ->where('club_user.membership_status', 'active')
                     ->orWhereNull('club_user.membership_status'))
@@ -2434,7 +2435,8 @@ class ClubController extends Controller
                 'updated_at' => $transaction->updated_at?->toJSON(),
             ])->values(),
             'summary' => [
-                'active_members_count' => $club->users->filter(fn (User $member) => ($member->pivot?->membership_status ?? 'active') === 'active')->count()
+                'active_members_count' => $club->users->filter(fn (User $member) => (int) $member->id !== (int) $club->owner_id
+                    && ($member->pivot?->membership_status ?? 'active') === 'active')->count()
                     + $club->externalMembers->where('membership_status', 'active')->count(),
                 'member_open_balances' => (bool) ($effectivePermissions[ClubPermissions::FINANCE_VIEW] ?? false)
                     ? Invoice::memberOpenBalances((int) $club->id) : [],

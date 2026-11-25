@@ -23,7 +23,11 @@ class Club extends Model
             }
 
             $club->users()->syncWithoutDetaching([
-                $club->owner_id => ['role' => 'owner', 'roles' => ['owner']],
+                $club->owner_id => [
+                    'role' => 'owner',
+                    'roles' => ['owner'],
+                    'membership_status' => 'active',
+                ],
             ]);
 
             if (! $club->currentSubscription && ($freePlan = SubscriptionPlan::free())) {

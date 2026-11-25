@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Post;
 use App\Models\User;
+use App\Support\ClubActiveMembership;
 use Illuminate\Auth\Access\Response;
 
 class PostPolicy extends BasePolicy
@@ -50,7 +51,8 @@ class PostPolicy extends BasePolicy
         }
 
         if ($post->visibility === 'team' && $post->team_id) {
-            return $post->team->users()->where('users.id', $user->id)->exists();
+            return ClubActiveMembership::allows($post->team->club, $user)
+                && $post->team->users()->where('users.id', $user->id)->exists();
         }
 
         return $post->club && $this->inClub($user, $post->club);

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:airmius/core/airmius_api_models.dart';
 import 'package:airmius/core/airmius_deep_links.dart';
 import 'package:airmius/navigation/airmius_deep_link_navigator.dart';
-import 'package:airmius/screens/support_helpdesk_screen.dart';
+import 'package:airmius/screens/support_ticket_service_center_suite_screen.dart';
 
 void main() {
   test('support inbox notifications open the exact authenticated ticket', () {
@@ -21,8 +21,11 @@ void main() {
       expect(target.type, AirmiusDeepLinkTargetType.support);
       expect(target.requiresAuth, isTrue);
       final screen =
-          AirmiusDeepLinkNavigator.screenFor(target) as SupportHelpdeskScreen;
-      expect(screen.initialTicketId, 42);
+          AirmiusDeepLinkNavigator.screenFor(target)
+              as SupportTicketServiceCenterSuiteScreen;
+      expect(screen.ticketId, 42);
+      expect(screen.operations, url.contains('operations'));
+      expect(screen.inbox, url.contains('safety') ? 'safety' : 'general');
     }
   });
 

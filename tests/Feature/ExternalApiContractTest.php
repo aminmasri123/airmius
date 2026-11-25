@@ -56,6 +56,26 @@ class ExternalApiContractTest extends TestCase
         $this->getJson("/api/v1/external/clubs/{$otherClub->id}/members")
             ->assertForbidden()
             ->assertJsonPath('code', 'forbidden');
+
+        Sanctum::actingAs($owner, ['external.members:write']);
+
+        $this->postJson("/api/v1/external/clubs/{$otherClub->id}/members", [
+            'name' => 'Forbidden Create',
+            'email' => 'forbidden-create@example.test',
+        ])->assertForbidden()->assertJsonPath('code', 'forbidden');
+
+        $this->putJson("/api/v1/external/clubs/{$otherClub->id}/members/{$otherMember->id}", [
+            'name' => 'Forbidden Update',
+            'email' => $otherMember->email,
+        ])->assertForbidden()->assertJsonPath('code', 'forbidden');
+
+        $this->assertDatabaseMissing('club_external_members', [
+            'email' => 'forbidden-create@example.test',
+        ]);
+        $this->assertDatabaseHas('club_external_members', [
+            'id' => $otherMember->id,
+            'name' => 'Other Tenant',
+        ]);
     }
 
     public function test_external_member_api_paginates_and_exposes_versioned_contract_meta(): void
@@ -153,5 +173,78 @@ class ExternalApiContractTest extends TestCase
         $this->assertSame('updated', $latest->data['operation']);
         $this->assertContains('role', $latest->data['changed_fields']);
         $this->assertContains('member_number', $latest->data['changed_fields']);
+    }
+
+    public function test_revoked_bearer_token_is_rejected_immediately(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $plainTextToken = $owner->createToken('T36-14', [
+            'external.members:read',
+            'external.members:write',
+        ])->plainTextToken;
+
+        $this->withToken($plainTextToken)
+            ->getJson("/api/v1/external/clubs/{$club->id}/members")
+            ->assertOk();
+
+        $owner->tokens()->delete();
+        app('auth')->forgetGuards();
+
+        $this->withToken($plainTextToken)
+            ->getJson("/api/v1/external/clubs/{$club->id}/members")
+            ->assertUnauthorized()
+            ->assertJsonPath('code', 'unauthenticated');
+
+        $this->withToken($plainTextToken)
+            ->postJson("/api/v1/external/clubs/{$club->id}/members", [
+                'name' => 'Must Not Exist',
+                'email' => 'revoked@example.test',
+            ])
+            ->assertUnauthorized()
+            ->assertJsonPath('code', 'unauthenticated');
+
+        $this->assertDatabaseMissing('club_external_members', [
+            'email' => 'revoked@example.test',
+        ]);
+    }
+
+    public function test_invalid_and_repeated_member_payloads_fail_without_partial_or_duplicate_records(): void
+    {
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+
+        Sanctum::actingAs($owner, ['external.members:read', 'external.members:write']);
+
+        $this->postJson("/api/v1/external/clubs/{$club->id}/members", [
+            'name' => 'Missing Email',
+        ])->assertUnprocessable()->assertJsonValidationErrors('email');
+
+        $this->postJson("/api/v1/external/clubs/{$club->id}/members", [
+            'name' => 'Invalid Data',
+            'email' => 'not-an-email',
+            'membership_status' => 'impossible',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['email', 'membership_status']);
+
+        $payload = [
+            'name' => 'Retry Safe',
+            'email' => 'retry-safe@example.test',
+            'membership_status' => 'active',
+        ];
+
+        $this->postJson("/api/v1/external/clubs/{$club->id}/members", $payload)
+            ->assertCreated();
+
+        $this->postJson("/api/v1/external/clubs/{$club->id}/members", $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('email');
+
+        $this->assertSame(1, ClubExternalMember::query()
+            ->where('club_id', $club->id)
+            ->where('email', 'retry-safe@example.test')
+            ->count());
+        $this->assertDatabaseMissing('club_external_members', [
+            'name' => 'Missing Email',
+        ]);
     }
 }

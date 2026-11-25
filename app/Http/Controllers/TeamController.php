@@ -653,7 +653,7 @@ class TeamController extends Controller
                 $invitation->recipient_id => [
                     'role' => 'member',
                     'roles' => ['member'],
-                    'membership_status' => 'non_member',
+                    'membership_status' => 'active',
                     'joined_on' => now()->toDateString(),
                 ],
             ]);
@@ -717,7 +717,7 @@ class TeamController extends Controller
                 $request->user()->id => [
                     'role' => 'member',
                     'roles' => ['member'],
-                    'membership_status' => 'non_member',
+                    'membership_status' => 'active',
                     'joined_on' => now()->toDateString(),
                 ],
             ]);
@@ -828,7 +828,7 @@ class TeamController extends Controller
                 $joinRequest->user_id => [
                     'role' => 'member',
                     'roles' => ['member'],
-                    'membership_status' => 'non_member',
+                    'membership_status' => 'active',
                     'joined_on' => now()->toDateString(),
                 ],
             ]);

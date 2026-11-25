@@ -12,7 +12,8 @@ import 'support_helpdesk_screen.dart';
 /// The screen deliberately exposes only ticket workflow data. User secrets,
 /// authentication tokens and internal diagnostics stay on the server.
 class AdminSupportTicketScreen extends StatefulWidget {
-  const AdminSupportTicketScreen({super.key});
+  const AdminSupportTicketScreen({super.key, this.initialInbox = 'general'});
+  final String initialInbox;
 
   @override
   State<AdminSupportTicketScreen> createState() =>
@@ -23,7 +24,7 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
   Future<AirmiusJson>? _future;
   String _filter = 'open';
   bool _busy = false;
-  String _inbox = 'general';
+  late String _inbox = widget.initialInbox;
   int? _currentUserId;
   Map<String, dynamic> _inboxCopy = {};
   bool _canSafety = false;
@@ -548,7 +549,7 @@ class _AdminSupportTicketScreenState extends State<AdminSupportTicketScreen> {
                   .push(
                     MaterialPageRoute<void>(
                       builder: (_) =>
-                          SupportHelpdeskScreen(initialTicketId: ticket.id),
+                          SupportTicketDetailScreen(ticketId: ticket.id),
                     ),
                   )
                   .then((_) {

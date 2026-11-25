@@ -16,6 +16,7 @@ use App\Support\UploadStorage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Permission\Models\Permission;
@@ -32,6 +33,53 @@ class FileManagerFeatureTest extends TestCase
         }
 
         $user->givePermissionTo($permissions);
+    }
+
+    public function test_non_members_lose_file_access_and_board_files_are_hidden_from_regular_members(): void
+    {
+        $owner = User::factory()->create();
+        $board = User::factory()->create();
+        $member = User::factory()->create();
+        $nonMember = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $club->users()->attach([
+            $board->id => ['role' => 'admin', 'roles' => ['admin'], 'membership_status' => 'active'],
+            $member->id => ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active'],
+            $nonMember->id => ['role' => 'manager', 'roles' => ['manager'], 'membership_status' => 'non_member'],
+        ]);
+
+        $membersFile = File::create([
+            'user_id' => $owner->id, 'club_id' => $club->id, 'audience' => 'club_members',
+            'path' => 'private/club/members.pdf', 'display_name' => 'Mitglieder.pdf',
+            'type' => 'application/pdf', 'size' => 10,
+        ]);
+        $boardFile = File::create([
+            'user_id' => $owner->id, 'club_id' => $club->id, 'audience' => 'board',
+            'path' => 'private/club/board.pdf', 'display_name' => 'Vorstand.pdf',
+            'type' => 'application/pdf', 'size' => 10,
+        ]);
+
+        $this->assertTrue(Gate::forUser($member)->allows('view', $membersFile));
+        $this->assertFalse(Gate::forUser($member)->allows('view', $boardFile));
+        $this->assertTrue(Gate::forUser($board)->allows('view', $boardFile));
+        $this->assertFalse(Gate::forUser($nonMember)->allows('view', $membersFile));
+        $this->assertFalse(Gate::forUser($nonMember)->allows('download', $boardFile));
+
+        $this->actingAs($member)
+            ->get(route('auth.files.index', ['scope' => 'club', 'club_id' => $club->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('files.total', 1)
+                ->where('files.data.0.id', $membersFile->id));
+
+        $this->actingAs($board)
+            ->get(route('auth.files.index', ['scope' => 'club', 'club_id' => $club->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('files.total', 2));
+
+        $this->actingAs($nonMember)
+            ->get(route('auth.files.index', ['scope' => 'club', 'club_id' => $club->id]))
+            ->assertNotFound();
     }
 
     public function test_index_search_escapes_like_special_characters(): void
