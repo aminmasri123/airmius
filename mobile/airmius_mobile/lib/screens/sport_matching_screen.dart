@@ -2487,8 +2487,8 @@ class _SportMatchingScreenState extends State<SportMatchingScreen> {
       Expanded(
         child: FilledButton.icon(
           onPressed: _busy ? null : _openCreate,
-          icon: const Icon(Icons.search),
-          label: Text(_c('Suchen', 'Search', 'Rechercher', 'بحث')),
+          icon: const Icon(Icons.add),
+          label: Text(_c('Erstellen', 'Create', 'Créer', 'إنشاء')),
         ),
       ),
     ],
