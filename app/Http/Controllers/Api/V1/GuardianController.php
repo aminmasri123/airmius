@@ -8,6 +8,7 @@ use App\Models\GuardianChildRelationship;
 use App\Models\TrainingLog;
 use App\Models\User;
 use App\Services\GuardianChildRelationshipService;
+use App\Services\GuardianMembershipOverviewService;
 use App\Support\AppNotification;
 use App\Support\GuardianConsentNotifier;
 use App\Support\GuardianConsentState;
@@ -26,7 +27,10 @@ class GuardianController extends Controller
 
     private const RESPONSE_CONSENT_REVOKED = 'guardian_consent_revoked';
 
-    public function __construct(private readonly GuardianChildRelationshipService $relationships) {}
+    public function __construct(
+        private readonly GuardianChildRelationshipService $relationships,
+        private readonly GuardianMembershipOverviewService $membershipOverview,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -37,7 +41,7 @@ class GuardianController extends Controller
             ->orderByDesc('birth_date')
             ->orderBy('name')
             ->get()
-            ->map(fn (User $child) => $this->childData($child))
+            ->map(fn (User $child) => $this->childData($child, $guardian))
             ->values();
 
         return response()->json([
@@ -86,7 +90,7 @@ class GuardianController extends Controller
         $managedChild = $this->childrenQuery($guardian)
             ->whereKey($child)
             ->firstOrFail();
-        $childData = $this->childData($managedChild);
+        $childData = $this->childData($managedChild, $guardian);
 
         if (! MinorSafety::hasResolvedGuardianConsent($managedChild)) {
             return response()->json([
@@ -322,7 +326,7 @@ class GuardianController extends Controller
         return response()->json([
             'message' => self::RESPONSE_CONSENT_APPROVED,
             'message_text' => __('guardian.responses.consent_approved'),
-            'data' => $this->childData($managedChild),
+            'data' => $this->childData($managedChild, $guardian),
         ]);
     }
 
@@ -342,7 +346,7 @@ class GuardianController extends Controller
         return response()->json([
             'message' => 'guardian_consent_rejected',
             'message_text' => __('guardian.responses.registration_rejected'),
-            'data' => $this->childData($managedChild),
+            'data' => $this->childData($managedChild, $guardian),
         ]);
     }
 
@@ -393,7 +397,7 @@ class GuardianController extends Controller
         return response()->json([
             'message' => self::RESPONSE_CONSENT_REVOKED,
             'message_text' => __('guardian.responses.consent_revoked'),
-            'data' => $this->childData($managedChild),
+            'data' => $this->childData($managedChild, $guardian),
         ]);
     }
 
@@ -433,14 +437,14 @@ class GuardianController extends Controller
             return response()->json([
                 'code' => 'guardian_consent_delivery_failed',
                 'message' => __('guardian.responses.delivery_failed'),
-                'data' => $this->childData($managedChild),
+                'data' => $this->childData($managedChild, $guardian),
             ], 503);
         }
 
         return response()->json([
             'message' => self::RESPONSE_CONSENT_RESENT,
             'message_text' => __('guardian.responses.consent_resent'),
-            'data' => $this->childData($managedChild),
+            'data' => $this->childData($managedChild, $guardian),
         ]);
     }
 
@@ -462,7 +466,7 @@ class GuardianController extends Controller
         return $this->childrenQuery($guardian);
     }
 
-    private function childData(User $child): array
+    private function childData(User $child, User $guardian): array
     {
         MinorSafety::enforcePrivacyDefaults($child);
         $child->refresh();
@@ -482,6 +486,7 @@ class GuardianController extends Controller
             'revoked_at' => $child->guardian_consent_revoked_at?->toJSON(),
             'resend_available_in' => $this->resendAvailableIn($child),
             'consent_version' => $child->guardian_consent_version ?: config('guardian.consent_version'),
+            'clubs' => $this->membershipOverview->forChild($guardian, (string) $guardian->email, $child),
             'privacy' => [
                 'profile_visibility' => $child->profile_visibility,
                 'direct_message_privacy' => $child->direct_message_privacy,

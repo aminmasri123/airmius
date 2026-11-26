@@ -215,6 +215,7 @@ class AirmiusGuardianChild {
     this.directMessagePrivacy = 'friends',
     this.friendRequestPrivacy = 'friends',
     this.directMessagesEnabled = false,
+    this.clubs = const <AirmiusGuardianClubMembership>[],
   });
 
   final int id;
@@ -233,6 +234,7 @@ class AirmiusGuardianChild {
   final String directMessagePrivacy;
   final String friendRequestPrivacy;
   final bool directMessagesEnabled;
+  final List<AirmiusGuardianClubMembership> clubs;
 
   bool get isApproved => status == 'approved';
 
@@ -266,8 +268,68 @@ class AirmiusGuardianChild {
         fallback: 'friends',
       ),
       directMessagesEnabled: _bool(privacy['direct_messages_enabled']),
+      clubs: _jsonList(
+        json['clubs'],
+      ).map(AirmiusGuardianClubMembership.fromJson).toList(growable: false),
     );
   }
+}
+
+class AirmiusGuardianClubMembership {
+  const AirmiusGuardianClubMembership({
+    required this.id,
+    required this.name,
+    required this.membershipStatus,
+    required this.teams,
+    this.role,
+    this.isPrimaryGuardian = false,
+  });
+
+  final int id;
+  final String name;
+  final String membershipStatus;
+  final String? role;
+  final bool isPrimaryGuardian;
+  final List<AirmiusGuardianTeamMembership> teams;
+
+  factory AirmiusGuardianClubMembership.fromJson(JsonMap json) {
+    final relationship = json['guardian_relationship'] is JsonMap
+        ? json['guardian_relationship'] as JsonMap
+        : const <String, dynamic>{};
+
+    return AirmiusGuardianClubMembership(
+      id: _int(json['id']),
+      name: _string(json['name'], fallback: 'Verein'),
+      membershipStatus: _string(
+        json['membership_status'],
+        fallback: 'active',
+      ),
+      role: _nullableString(json['role']),
+      isPrimaryGuardian: _bool(relationship['is_primary']),
+      teams: _jsonList(
+        json['teams'],
+      ).map(AirmiusGuardianTeamMembership.fromJson).toList(growable: false),
+    );
+  }
+}
+
+class AirmiusGuardianTeamMembership {
+  const AirmiusGuardianTeamMembership({
+    required this.id,
+    required this.name,
+    this.role,
+  });
+
+  final int id;
+  final String name;
+  final String? role;
+
+  factory AirmiusGuardianTeamMembership.fromJson(JsonMap json) =>
+      AirmiusGuardianTeamMembership(
+        id: _int(json['id']),
+        name: _string(json['name'], fallback: 'Team'),
+        role: _nullableString(json['role']),
+      );
 }
 
 class AirmiusGuardianInvitationPage {

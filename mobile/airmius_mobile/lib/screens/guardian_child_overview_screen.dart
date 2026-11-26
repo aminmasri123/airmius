@@ -119,6 +119,10 @@ class _OverviewBody extends StatelessWidget {
         children: [
           _ChildHeader(child: child),
           const SizedBox(height: 12),
+          if (child.clubs.isNotEmpty) ...[
+            _ClubMemberships(clubs: child.clubs),
+            const SizedBox(height: 12),
+          ],
           if (!overview.approved)
             AirmiusPanel(
               borderColor: Theme.of(context).colorScheme.tertiary,
@@ -156,6 +160,60 @@ class _OverviewBody extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ClubMemberships extends StatelessWidget {
+  const _ClubMemberships({required this.clubs});
+
+  final List<AirmiusGuardianClubMembership> clubs;
+
+  @override
+  Widget build(BuildContext context) => AirmiusPanel(
+    title: 'Vereine & Teams',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: clubs
+          .map(
+            (club) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.shield_outlined, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          club.name,
+                          style: const TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                      Text(
+                        club.membershipStatus == 'active'
+                            ? 'Aktiv'
+                            : 'Teammitglied',
+                      ),
+                    ],
+                  ),
+                  if (club.teams.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    ...club.teams.map(
+                      (team) => Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 28),
+                        child: Text(
+                          '${team.name}${team.role == null ? '' : ' · ${team.role}'}',
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          )
+          .toList(growable: false),
+    ),
+  );
 }
 
 class _ChildHeader extends StatelessWidget {

@@ -7,6 +7,7 @@ use App\Models\GuardianChildRelationship;
 use App\Models\User;
 use App\Notifications\GuardianAccessCodeRequested;
 use App\Services\GuardianChildRelationshipService;
+use App\Services\GuardianMembershipOverviewService;
 use App\Support\AppNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -56,7 +57,10 @@ class GuardianAccessController extends Controller
 
     private const SESSION_VERIFIED_AT_KEY = 'guardian_access_verified_at';
 
-    public function __construct(private readonly GuardianChildRelationshipService $relationships) {}
+    public function __construct(
+        private readonly GuardianChildRelationshipService $relationships,
+        private readonly GuardianMembershipOverviewService $membershipOverview,
+    ) {}
 
     public function create(): Response
     {
@@ -232,6 +236,7 @@ class GuardianAccessController extends Controller
                     'rejected_at' => $child->guardian_consent_rejected_at,
                     'revoked_at' => $child->guardian_consent_revoked_at,
                     'consent_version' => $child->guardian_consent_version ?: config('guardian.consent_version'),
+                    'clubs' => $this->membershipOverview->forChild($user, $email, $child),
                 ]),
             'invitations' => $this->relationshipInvitations($email, $user),
         ]);

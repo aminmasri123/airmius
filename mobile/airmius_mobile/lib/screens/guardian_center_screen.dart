@@ -779,6 +779,65 @@ class _GuardianChildCard extends StatelessWidget {
               StatusPill(status.label, color: status.color),
             ],
           ),
+          if (child.clubs.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              'Vereine & Teams',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...child.clubs.map(
+              (club) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.shield_outlined, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              club.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            club.membershipStatus == 'active'
+                                ? 'Aktiv'
+                                : 'Teammitglied',
+                            style: Theme.of(context).textTheme.labelMedium,
+                          ),
+                        ],
+                      ),
+                      if (club.teams.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        ...club.teams.map(
+                          (team) => Text(
+                            '${team.name}${team.role == null ? '' : ' · ${team.role}'}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 14),
           Wrap(
             spacing: 8,

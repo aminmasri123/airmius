@@ -268,6 +268,25 @@ const answerInvitation = (invitation, decision) => {
                                     {{ statusBadge(child).text }}
                                 </span>
                             </div>
+
+                            <div v-if="child.clubs?.length" class="mt-4">
+                                <h3 class="text-sm font-semibold text-primary">{{ $t('Vereine & Teams') }}</h3>
+                                <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                                    <div v-for="club in child.clubs" :key="club.id" class="rounded-lg border border-border bg-bg p-3">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <p class="font-semibold text-primary">{{ club.name }}</p>
+                                            <span class="text-xs text-success">
+                                                {{ club.membership_status === 'active' ? $t('Aktiv') : $t('Teammitglied') }}
+                                            </span>
+                                        </div>
+                                        <ul v-if="club.teams?.length" class="mt-2 space-y-1 text-sm text-secondary">
+                                            <li v-for="team in club.teams" :key="team.id">
+                                                {{ team.name }}<span v-if="team.role"> · {{ team.role }}</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <button
