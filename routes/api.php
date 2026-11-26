@@ -1289,6 +1289,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/outfit-deliveries/{delivery}/issue', [MobileOutfitSubscriptionController::class, 'requestDeliveryIssue'])->name('outfit-deliveries.issue.store');
         Route::get('/commerce/seller', [MobileCommerceCheckoutController::class, 'sellerDashboard'])->name('commerce.seller.show');
         Route::get('/clubs/{club}/shop', [MobileCommerceCheckoutController::class, 'clubShop'])->name('commerce.club-shop');
+        Route::get('/clubs/{club}/advertising', [MobileCommerceCheckoutController::class, 'clubAdvertising'])->name('commerce.club-advertising');
         Route::put('/clubs/{club}/shop/payout-account', [\App\Http\Controllers\ClubPayoutController::class, 'store'])->middleware('throttle:payment-actions')->name('commerce.club-shop.account');
         Route::patch('/clubs/{club}/shop/items/{item}', [MobileCommerceCheckoutController::class, 'fulfillClubShopItem'])->name('commerce.club-shop.fulfill');
         Route::post('/commerce/seller/application', [MobileCommerceCheckoutController::class, 'storeSellerApplication'])->name('commerce.seller.application.store');

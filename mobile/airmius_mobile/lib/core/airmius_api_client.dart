@@ -4543,6 +4543,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> submitCommerceSellerApplication(AirmiusJson body) =>
       _json('POST', '/api/v1/commerce/seller/application', body: body);
 
+  Future<AirmiusJson> clubAdvertising(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/advertising');
+
   Future<AirmiusJson> updateCommerceProviderProfile(AirmiusJson body) =>
       _json('PUT', '/api/v1/commerce/seller/provider-profile', body: body);
 

@@ -1389,6 +1389,14 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         color: theme.colorScheme.secondary,
         onTap: () => _open(ClubReportsAnalyticsScreen(club: club)),
       ),
+      if (club.canManageAdvertising)
+        _ClubArea(
+          icon: Icons.campaign_outlined,
+          title: t('clubHub.advertising'),
+          body: '',
+          color: theme.colorScheme.primary,
+          onTap: () => _open(CommerceCenterScreen(advertisingClubId: club.id)),
+        ),
       _ClubArea(
         icon: Icons.tune_outlined,
         title: 'Vereinseinstellungen',

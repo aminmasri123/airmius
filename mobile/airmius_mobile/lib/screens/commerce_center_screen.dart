@@ -20,6 +20,7 @@ class CommerceCenterScreen extends StatefulWidget {
     this.sponsorId,
     this.clubId,
     this.preferredWebsiteClubId,
+    this.advertisingClubId,
   });
 
   final String initialSection;
@@ -27,6 +28,7 @@ class CommerceCenterScreen extends StatefulWidget {
   final int? sponsorId;
   final int? clubId;
   final int? preferredWebsiteClubId;
+  final int? advertisingClubId;
 
   @override
   State<CommerceCenterScreen> createState() => _CommerceCenterScreenState();
@@ -48,7 +50,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
   @override
   void initState() {
     super.initState();
-    _section = widget.initialSection;
+    _section = widget.advertisingClubId != null ? 'ads' : widget.initialSection;
   }
 
   AirmiusApiClient get _client {
@@ -63,7 +65,9 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
   }
 
   Future<Map<String, dynamic>> _load() async => _map(
-    (await _client.commerceSellerDashboard(
+    (widget.advertisingClubId != null
+        ? await _client.clubAdvertising(widget.advertisingClubId!)
+        : await _client.commerceSellerDashboard(
       sponsorId: widget.sponsorId,
       clubId: widget.clubId,
     ))['data'],
@@ -176,6 +180,8 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
           t(
             _clubWebsiteOnly
                 ? 'commerceAdv.requestWebsite'
+                : widget.advertisingClubId != null
+                ? 'clubHub.advertising'
                 : _sponsorTools
                 ? 'sponsorCockpit.toolsTitle'
                 : 'seller.title',
@@ -216,7 +222,12 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
               padding: const EdgeInsets.fromLTRB(16, 18, 16, 36),
               children: [
                 if (!_clubWebsiteOnly) ...[
-                  if (widget.clubId != null)
+                  if (widget.advertisingClubId != null)
+                    Text(
+                      '${_map(data['club'])['name']}',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    )
+                  else if (widget.clubId != null)
                     Text(
                       '${_map(data['club'])['name']}',
                       style: Theme.of(context).textTheme.titleLarge,
@@ -226,7 +237,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
                   else
                     _Header(data: data),
                   const SizedBox(height: 14),
-                  if (widget.clubId == null || data['active'] == true)
+                  if (widget.advertisingClubId == null && (widget.clubId == null || data['active'] == true))
                     _SectionPicker(
                       selected: _section,
                       sponsorTools: _sponsorTools,
@@ -956,6 +967,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
       useSafeArea: true,
       builder: (_) => _CampaignSheet(
         campaign: campaign,
+        preferredClubId: widget.advertisingClubId,
         clubs: _maps(data['clubs']).where((club) {
           if (club['can_manage_advertising'] == true) return true;
           return campaign != null &&
@@ -2128,11 +2140,13 @@ class _CampaignSheet extends StatefulWidget {
     required this.campaign,
     required this.clubs,
     required this.minimumBudgetCents,
+    this.preferredClubId,
   });
 
   final Map<String, dynamic>? campaign;
   final List<Map<String, dynamic>> clubs;
   final int minimumBudgetCents;
+  final int? preferredClubId;
 
   @override
   State<_CampaignSheet> createState() => _CampaignSheetState();
@@ -2259,7 +2273,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
     _objective = _text(campaign['objective'], fallback: 'traffic');
     _placement = _text(campaign['placement'], fallback: 'feed');
     _format = _text(campaign['creative_format'], fallback: 'feed_square');
-    _clubId = campaign['club_id'] == null ? null : _int(campaign['club_id']);
+    _clubId = campaign['club_id'] == null ? widget.preferredClubId : _int(campaign['club_id']);
     _startsAt = _campaignDate(campaign['starts_at']);
     _endsAt = _campaignDate(campaign['ends_at']);
   }
@@ -2391,6 +2405,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
               decoration: InputDecoration(
                 labelText: t('commerceAdv.targetUrl'),
                 helperText: t('commerceAdv.targetUrlHint'),
+                helperMaxLines: 2,
               ),
               validator: (value) => _optionalHttpUrlValidator(context, value),
             ),
@@ -2609,7 +2624,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
                     ),
                   ),
                 ],
-                onChanged: _editing
+                onChanged: _editing || widget.preferredClubId != null
                     ? null
                     : (value) => setState(() => _clubId = value),
               ),
