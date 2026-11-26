@@ -146,6 +146,9 @@ class FrontendLocaleBundleContractTest extends TestCase
         );
         $entry = $manifest['resources/js/app.js'];
         $sponsorPage = 'resources/js/Pages/Auth/Dashboard/Sponsors/Index.vue';
+        $blogPage = 'resources/js/Pages/Auth/Dashboard/Blogs/Index.vue';
+        $this->assertContains($blogPage, $entry['dynamicImports']);
+        $this->assertStringContainsString('blogs_editor', (string) file_get_contents($buildPath.'/'.$manifest[$blogPage]['file']));
         $this->assertContains($sponsorPage, $entry['dynamicImports']);
         $this->assertTrue($manifest[$sponsorPage]['isDynamicEntry'] ?? false);
         $this->assertStringContainsString('sponsors_admin', (string) file_get_contents($buildPath.'/'.$manifest[$sponsorPage]['file']));
@@ -157,6 +160,7 @@ class FrontendLocaleBundleContractTest extends TestCase
                 continue;
             }
             $visited[$dependency] = true;
+            $this->assertNotSame($blogPage, $dependency, 'Blog editor copy must remain lazy.');
             $this->assertNotSame($sponsorPage, $dependency, 'Sponsor copy must not become an eager application dependency.');
             $pending = array_merge($pending, $manifest[$dependency]['imports'] ?? []);
         }
