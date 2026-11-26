@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Club;
 use App\Models\ClubFundingProgram;
+use App\Models\ClubYearPeriod;
 use App\Services\ClubFundingProgramService;
 use App\Support\ClubPermissions;
 use Illuminate\Http\Request;
@@ -28,6 +29,15 @@ class ClubFundingProgramController extends Controller
         return response()->json(['data' => [
             'programs' => $programs->map(fn (ClubFundingProgram $program) => $this->payload($program)),
             'statuses' => ClubFundingProgram::STATUSES,
+            'periods' => ClubYearPeriod::query()
+                ->where('club_id', $club->id)
+                ->where('type', 'business')
+                ->orderByDesc('starts_on')
+                ->get(['id', 'name', 'starts_on', 'ends_on']),
+            'members' => $club->users()
+                ->wherePivot('membership_status', 'active')
+                ->orderBy('name')
+                ->get(['users.id', 'users.name']),
             'can_manage' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_EDIT),
             'can_approve' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
         ]]);
@@ -35,7 +45,7 @@ class ClubFundingProgramController extends Controller
 
     public function store(Request $request, Club $club)
     {
-        $program = $this->programs->create($club, $request->user(), $this->validatedData($request, $club));
+        $program = $this->programs->create($club, $request->user(), $this->validatedData($request, $club, true));
 
         return response()->json(['data' => $this->payload($program)], 201);
     }
@@ -71,7 +81,7 @@ class ClubFundingProgramController extends Controller
         return response()->json(['data' => $this->payload($program)]);
     }
 
-    private function validatedData(Request $request, Club $club): array
+    private function validatedData(Request $request, Club $club, bool $creating = false): array
     {
         $request->merge([
             'program_name' => trim((string) $request->input('program_name')),
@@ -83,7 +93,7 @@ class ClubFundingProgramController extends Controller
             'responsible_user_id' => ['nullable', 'integer', Rule::exists('club_user', 'user_id')->where('club_id', $club->id)],
             'program_name' => ['required', 'string', 'max:180'],
             'provider_name' => ['required', 'string', 'max:180'],
-            'status' => ['nullable', Rule::in(['draft', 'ready'])],
+            ...($creating ? ['status' => ['nullable', Rule::in(['draft', 'ready'])]] : []),
             'deadline_on' => ['nullable', 'date'],
             'requested_amount_cents' => ['required', 'integer', 'min:0', 'max:999999999'],
             'approved_amount_cents' => ['nullable', 'integer', 'min:0', 'max:999999999'],
@@ -101,12 +111,14 @@ class ClubFundingProgramController extends Controller
             'internal_note' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        return array_replace([
-            'status' => 'draft',
-            'approved_amount_cents' => 0,
-            'own_contribution_cents' => 0,
-            'paid_out_amount_cents' => 0,
-        ], $data);
+        return $creating
+            ? array_replace([
+                'status' => 'draft',
+                'approved_amount_cents' => 0,
+                'own_contribution_cents' => 0,
+                'paid_out_amount_cents' => 0,
+            ], $data)
+            : $data;
     }
 
     private function payload(ClubFundingProgram $program): array

@@ -89,6 +89,22 @@ class ClubFundingProgramStatusMachineTest extends TestCase
             ->assertJsonPath('data.status', 'paid_out')
             ->assertJsonPath('data.paid_out_amount_cents', 220000);
 
+        Sanctum::actingAs($editor);
+        $this->getJson("/api/v1/clubs/{$club->id}/funding-programs")
+            ->assertOk()
+            ->assertJsonPath('data.periods.0.id', $period->id)
+            ->assertJsonFragment(['id' => $responsible->id, 'name' => 'Grant Lead']);
+
+        $this->putJson("/api/v1/clubs/{$club->id}/funding-programs/{$programId}", [
+            'program_name' => 'Sportstättenförderung aktualisiert',
+            'provider_name' => 'Landessportbund',
+            'requested_amount_cents' => 250000,
+            'internal_note' => 'Updated without changing lifecycle data',
+        ])->assertOk()
+            ->assertJsonPath('data.status', 'paid_out')
+            ->assertJsonPath('data.approved_amount_cents', 220000)
+            ->assertJsonPath('data.paid_out_amount_cents', 220000);
+
         $activity = Activity::query()->where('type', 'club.funding_program.created')->firstOrFail();
         $this->assertSame('funding_program', $activity->data['entity_type']);
         $this->assertSame(250000, $activity->data['requested_amount_cents']);

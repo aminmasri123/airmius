@@ -1028,6 +1028,31 @@ class AirmiusApiClient {
   Future<AirmiusJson> clubFinanceWorkspace(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/finance-workspace');
 
+  Future<AirmiusJson> clubFundingPrograms(int clubId) =>
+      _json('GET', '/api/v1/clubs/$clubId/funding-programs');
+
+  Future<AirmiusJson> saveClubFundingProgram(
+    int clubId,
+    AirmiusJson payload, {
+    int? programId,
+  }) => _json(
+    programId == null ? 'POST' : 'PUT',
+    programId == null
+        ? '/api/v1/clubs/$clubId/funding-programs'
+        : '/api/v1/clubs/$clubId/funding-programs/$programId',
+    body: payload,
+  );
+
+  Future<AirmiusJson> transitionClubFundingProgram(
+    int clubId,
+    int programId,
+    AirmiusJson payload,
+  ) => _json(
+    'PUT',
+    '/api/v1/clubs/$clubId/funding-programs/$programId/status',
+    body: payload,
+  );
+
   Future<AirmiusJson> clubFinanceList(int clubId, String resource) {
     if (!['budgets', 'procurements'].contains(resource)) {
       throw ArgumentError.value(resource);
@@ -5687,8 +5712,8 @@ class AirmiusApiClient {
     'Accept': 'application/json',
     'Content-Type': 'application/json; charset=utf-8',
     'X-Airmius-Locale': locale,
-    'X-Airmius-Utc-Offset-Minutes':
-        DateTime.now().timeZoneOffset.inMinutes.toString(),
+    'X-Airmius-Utc-Offset-Minutes': DateTime.now().timeZoneOffset.inMinutes
+        .toString(),
     if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
   };
 

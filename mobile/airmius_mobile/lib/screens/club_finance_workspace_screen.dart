@@ -188,7 +188,9 @@ class _ClubFinanceWorkspaceScreenState
   List<Map<String, dynamic>> _budgets = [],
       _orders = [],
       _invoices = [],
-      _payments = [];
+      _payments = [],
+      _fundingPrograms = [];
+  Map<String, dynamic> _fundingData = {};
   bool _loading = true, _busy = false;
   String? _error;
   String? _transferKey;
@@ -235,10 +237,17 @@ class _ClubFinanceWorkspaceScreenState
       final results = await Future.wait([
         _client.clubFinanceList(widget.club.id, 'budgets'),
         _client.clubFinanceList(widget.club.id, 'procurements'),
+        if (data['can_view_club'] == true)
+          _client.clubFundingPrograms(widget.club.id),
         if (data['can_view_club'] == true) _client.clubDetail(widget.club.id),
       ]);
+      var resultIndex = 2;
+      final fundingData = data['can_view_club'] == true
+          ? (results[resultIndex++]['data'] as Map<String, dynamic>? ?? {})
+          : <String, dynamic>{};
       final Map<dynamic, dynamic> management = data['can_view_club'] == true
-          ? ((results[2]['data'] as Map?)?['management'] as Map? ?? const {})
+          ? ((results[resultIndex]['data'] as Map?)?['management'] as Map? ??
+                const {})
           : const {};
       if (mounted) {
         setState(() {
@@ -247,6 +256,8 @@ class _ClubFinanceWorkspaceScreenState
           _orders = rows((results[1]['data'] as Map?)?['procurement_requests']);
           _invoices = rows(management['invoices']);
           _payments = rows(management['payments']);
+          _fundingData = fundingData;
+          _fundingPrograms = rows(fundingData['programs']);
         });
       }
     } catch (error) {
@@ -265,9 +276,14 @@ class _ClubFinanceWorkspaceScreenState
   String status(dynamic value) => c(
     const {
           'draft': 'Entwurf',
+          'ready': 'Bereit',
           'submitted': 'Eingereicht',
           'approved': 'Genehmigt',
           'rejected': 'Abgelehnt',
+          'own_contribution_secured': 'Eigenanteil gesichert',
+          'paid_out': 'Ausgezahlt',
+          'closed': 'Abgeschlossen',
+          'withdrawn': 'Zurückgezogen',
           'archived': 'Archiviert',
           'ordered': 'Bestellt',
           'partially_received': 'Teilweise geliefert',
@@ -418,6 +434,188 @@ class _ClubFinanceWorkspaceScreenState
       row == null ? 'budgets' : 'budgets/${row['id']}',
       value,
     );
+  }
+
+  Future<void> _fundingProgram([Map<String, dynamic>? row]) async {
+    final contact = row?['contact_snapshot'] as Map? ?? const {};
+    final application = row?['application_snapshot'] as Map? ?? const {};
+    final value = await form(
+      row == null ? 'Förderprogramm anlegen' : 'Förderprogramm bearbeiten',
+      [
+        text('program_name', 'Förderprogramm', required: true),
+        text('provider_name', 'Förderstelle', required: true),
+        select(
+          'club_year_period_id',
+          'Geschäftsjahr',
+          options(rows(_fundingData['periods'])),
+        ),
+        select(
+          'responsible_user_id',
+          'Verantwortliche Person',
+          options(rows(_fundingData['members'])),
+        ),
+        text('deadline_on', 'Antragsfrist', date: true),
+        text(
+          'requested_amount',
+          'Beantragter Betrag (EUR)',
+          number: true,
+          required: true,
+        ),
+        text(
+          'own_contribution',
+          'Eigenanteil (EUR)',
+          number: true,
+          required: true,
+        ),
+        if (row == null)
+          select('status', 'Status', {
+            'draft': c('Entwurf'),
+            'ready': c('Bereit'),
+          }, required: true),
+        text('contact_name', 'Kontaktperson'),
+        text('contact_role', 'Funktion der Kontaktperson'),
+        text('contact_email', 'E-Mail der Kontaktperson'),
+        text('contact_phone', 'Telefon der Kontaktperson'),
+        text('reference', 'Aktenzeichen'),
+        text('channel', 'Einreichungsweg'),
+        text('internal_note', 'Interne Notiz'),
+      ],
+      {
+        ...?row,
+        'requested_amount':
+            ((row?['requested_amount_cents'] as num? ?? 0) / 100),
+        'own_contribution':
+            ((row?['own_contribution_cents'] as num? ?? 0) / 100),
+        'status': row?['status'] ?? 'draft',
+        'contact_name': contact['name'],
+        'contact_role': contact['role'],
+        'contact_email': contact['email'],
+        'contact_phone': contact['phone'],
+        'reference': application['reference'],
+        'channel': application['channel'],
+      },
+    );
+    if (value == null || !mounted) return;
+    value['requested_amount_cents'] = cents(value.remove('requested_amount'));
+    value['own_contribution_cents'] = cents(value.remove('own_contribution'));
+    if (row != null) value.remove('status');
+    value['contact_snapshot'] = {
+      'name': value.remove('contact_name'),
+      'role': value.remove('contact_role'),
+      'email': value.remove('contact_email'),
+      'phone': value.remove('contact_phone'),
+    }..removeWhere((_, item) => item == null || '$item'.isEmpty);
+    value['application_snapshot'] = {
+      'reference': value.remove('reference'),
+      'channel': value.remove('channel'),
+    }..removeWhere((_, item) => item == null || '$item'.isEmpty);
+    await _runFunding(
+      () => _client.saveClubFundingProgram(
+        widget.club.id,
+        value,
+        programId: row?['id'] as int?,
+      ),
+    );
+  }
+
+  Future<void> _transitionFundingProgram(
+    Map<String, dynamic> program,
+    String nextStatus,
+  ) async {
+    final fields = <_FinanceField>[
+      select('status', 'Status', {
+        nextStatus: status(nextStatus),
+      }, required: true),
+      if (nextStatus == 'submitted')
+        text('submitted_on', 'Eingereicht am', date: true, required: true),
+      if (nextStatus == 'approved') ...[
+        text('approved_on', 'Genehmigt am', date: true, required: true),
+        text(
+          'approved_amount',
+          'Bewilligter Betrag (EUR)',
+          number: true,
+          required: true,
+        ),
+      ],
+      if (nextStatus == 'own_contribution_secured')
+        text(
+          'own_contribution',
+          'Gesicherter Eigenanteil (EUR)',
+          number: true,
+          required: true,
+        ),
+      if (nextStatus == 'paid_out') ...[
+        text('paid_out_on', 'Ausgezahlt am', date: true, required: true),
+        text(
+          'paid_out_amount',
+          'Ausgezahlter Betrag (EUR)',
+          number: true,
+          required: true,
+        ),
+      ],
+    ];
+    final value = await form('Förderstatus ändern', fields, {
+      'status': nextStatus,
+      if (nextStatus == 'submitted') 'submitted_on': today(),
+      if (nextStatus == 'approved') ...{
+        'approved_on': today(),
+        'approved_amount':
+            ((program['approved_amount_cents'] as num? ??
+                program['requested_amount_cents'] as num? ??
+                0) /
+            100),
+      },
+      if (nextStatus == 'own_contribution_secured')
+        'own_contribution':
+            ((program['own_contribution_cents'] as num? ?? 0) / 100),
+      if (nextStatus == 'paid_out') ...{
+        'paid_out_on': today(),
+        'paid_out_amount':
+            ((program['paid_out_amount_cents'] as num? ??
+                program['approved_amount_cents'] as num? ??
+                0) /
+            100),
+      },
+    });
+    if (value == null || !mounted) return;
+    if (value.containsKey('approved_amount')) {
+      value['approved_amount_cents'] = cents(value.remove('approved_amount'));
+    }
+    if (value.containsKey('own_contribution')) {
+      value['own_contribution_cents'] = cents(value.remove('own_contribution'));
+    }
+    if (value.containsKey('paid_out_amount')) {
+      value['paid_out_amount_cents'] = cents(value.remove('paid_out_amount'));
+    }
+    await _runFunding(
+      () => _client.transitionClubFundingProgram(
+        widget.club.id,
+        program['id'] as int,
+        value,
+      ),
+    );
+  }
+
+  Future<void> _runFunding(Future<AirmiusJson> Function() action) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await action();
+      if (mounted) await _load();
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = error is AirmiusApiException
+              ? error.userMessage
+              : c('Die Aktion konnte nicht abgeschlossen werden.'),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _account([Map<String, dynamic>? row]) async {
@@ -757,14 +955,108 @@ class _ClubFinanceWorkspaceScreenState
       );
   Widget lines(List<Widget> children) =>
       ListView(padding: const EdgeInsets.all(16), children: children);
+
+  Widget _fundingProgramsView() {
+    final canManage = _fundingData['can_manage'] == true;
+    final canApprove = _fundingData['can_approve'] == true;
+    const transitionLabels = {
+      'draft': 'Als Entwurf fortsetzen',
+      'ready': 'Als bereit markieren',
+      'submitted': 'Einreichen',
+      'approved': 'Genehmigen',
+      'rejected': 'Ablehnen',
+      'own_contribution_secured': 'Eigenanteil bestätigen',
+      'paid_out': 'Auszahlung erfassen',
+      'closed': 'Abschließen',
+      'withdrawn': 'Zurückziehen',
+    };
+    return lines([
+      if (canManage)
+        command(
+          'Förderprogramm anlegen',
+          Icons.add_business_outlined,
+          _fundingProgram,
+        ),
+      if (_fundingPrograms.isEmpty) Text(c('Keine Förderprogramme vorhanden.')),
+      for (final program in _fundingPrograms) ...[
+        Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.savings_outlined),
+                  title: Text('${program['program_name']}'),
+                  subtitle: Text(
+                    [
+                      '${program['provider_name']}',
+                      status(program['status']),
+                      if (program['year_period_name'] != null)
+                        '${program['year_period_name']}',
+                      if (program['responsible_name'] != null)
+                        '${program['responsible_name']}',
+                      if (program['deadline_on'] != null)
+                        '${c('Frist')}: ${program['deadline_on']}',
+                    ].join(' · '),
+                  ),
+                ),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  children: [
+                    for (final amount in {
+                      'Beantragt': program['requested_amount_cents'],
+                      'Bewilligt': program['approved_amount_cents'],
+                      'Eigenanteil': program['own_contribution_cents'],
+                      'Ausgezahlt': program['paid_out_amount_cents'],
+                    }.entries)
+                      Text('${c(amount.key)}: ${money(amount.value)}'),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  children: [
+                    if (canManage)
+                      command(
+                        'Förderprogramm bearbeiten',
+                        Icons.edit_outlined,
+                        () => _fundingProgram(program),
+                      ),
+                    if (canApprove)
+                      for (final nextStatus
+                          in (program['allowed_transitions'] as List? ??
+                                  const [])
+                              .whereType<String>()
+                              .where((value) => value != program['status']))
+                        command(
+                          transitionLabels[nextStatus] ?? nextStatus,
+                          nextStatus == 'rejected' || nextStatus == 'withdrawn'
+                              ? Icons.close
+                              : Icons.arrow_forward,
+                          () => _transitionFundingProgram(program, nextStatus),
+                        ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final manage = _data['can_manage'] == true,
         approve = _data['can_approve'] == true,
         manageClub = _data['can_manage_club'] == true,
-        approveClub = _data['can_approve_club'] == true;
+        approveClub = _data['can_approve_club'] == true,
+        showFunding = _data['can_view_club'] == true;
     return DefaultTabController(
-      length: 5,
+      length: showFunding ? 6 : 5,
       initialIndex: widget.initialTabIndex,
       child: Scaffold(
         appBar: AppBar(
@@ -785,6 +1077,7 @@ class _ClubFinanceWorkspaceScreenState
                 'Beschaffungen',
                 'Zuordnungen',
                 'Jahresabschluss',
+                if (showFunding) 'Fördermittel',
               ])
                 Tab(text: c(key)),
             ],
@@ -1106,6 +1399,7 @@ class _ClubFinanceWorkspaceScreenState
                                   : null,
                             ),
                         ]),
+                        if (showFunding) _fundingProgramsView(),
                       ],
                     ),
             ),
