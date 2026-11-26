@@ -22,6 +22,10 @@ void main() {
           list == 'warnings' ? 'moderation' : list,
         );
         final search = find.byKey(ValueKey('$list-search'));
+        if (list == 'warnings') {
+          await _tap(tester, find.byKey(const ValueKey('moderation-warnings')));
+          await _tap(tester, find.byKey(const ValueKey('moderation-filters')));
+        }
         await tester.ensureVisible(search);
         await tester.enterText(search, 'accepted');
         await tester.testTextInput.receiveAction(TextInputAction.search);
@@ -167,12 +171,17 @@ void main() {
     (tester) async {
       final transport = _ListTransport(permission: 'moderation.manage');
       await _pump(tester, transport, 'moderation');
-      expect(find.byType(ChoiceChip), findsOneWidget);
+      expect(transport.lastQuery['reports_status'], 'open');
+      expect(transport.lastQuery['flags_status'], 'open');
+      expect(find.byKey(const ValueKey('warnings-search')), findsNothing);
       for (final list in ['flags', 'reports', 'warnings']) {
+        await _tap(tester, find.byKey(ValueKey('moderation-$list')));
         await _tap(tester, find.byKey(ValueKey('$list-next')));
         expect(transport.lastQuery['${list}_page'], '2');
       }
+      await _tap(tester, find.byKey(const ValueKey('moderation-filters')));
       for (final list in ['flags', 'warnings']) {
+        await _tap(tester, find.byKey(ValueKey('moderation-$list')));
         await _tap(tester, find.byKey(ValueKey('$list-category-all')));
         await _tap(tester, find.text('rare-category').last);
         expect(transport.lastQuery['${list}_category'], 'rare-category');
@@ -183,13 +192,53 @@ void main() {
           findsOneWidget,
         );
       }
+      await _tap(tester, find.byKey(const ValueKey('moderation-reports')));
       await _tap(tester, find.byKey(const ValueKey('reports-appeal-all')));
       await _tap(tester, find.text('Under review').last);
       expect(transport.lastQuery['reports_appeal'], 'pending');
       expect(transport.lastQuery['reports_page'], '1');
       expect(transport.lastQuery['warnings_category'], 'rare-category');
-      expect(find.text('170'), findsOneWidget);
+      expect(find.text('Open cases · 170'), findsOneWidget);
       expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'report opens a detail page and removes only the confirmed target',
+    (tester) async {
+      final transport = _ListTransport(
+        permission: 'moderation.manage',
+        report: {
+          'id': 73,
+          'status': 'open',
+          'reason': 'bullying',
+          'reporter': {'name': 'Reporter A'},
+          'content': {
+            'id': 19,
+            'type': 'Post',
+            'text': 'Example case',
+            'author': 'Author B',
+          },
+        },
+      );
+      await _pump(tester, transport, 'moderation');
+      await _tap(tester, find.text('Example case'));
+      expect(find.widgetWithText(AppBar, 'Case #73'), findsOneWidget);
+      expect(find.text('Reporter A'), findsOneWidget);
+      expect(find.text('Author B'), findsOneWidget);
+      await _tap(tester, find.text('Review moderation case'));
+      await _tap(tester, find.byType(DropdownButtonFormField<String>));
+      await _tap(tester, find.text('Remove content').last);
+      await _tap(tester, find.widgetWithText(FilledButton, 'Remove content'));
+      expect(
+        transport.requests.where((r) => r.method == 'PATCH').single.path,
+        endsWith('/reports/73'),
+      );
+      expect(
+        transport.requests.where((r) => r.method == 'PATCH').single.body,
+        containsPair('remove_content', true),
+      );
+      expect(find.widgetWithText(AppBar, 'Moderation'), findsOneWidget);
     },
   );
 
@@ -301,7 +350,12 @@ Future<void> _pump(
 }
 
 class _ListTransport implements AirmiusApiTransport {
-  _ListTransport({this.permission = 'system.manage', this.clampPages = false});
+  _ListTransport({
+    this.permission = 'system.manage',
+    this.clampPages = false,
+    this.report,
+  });
+  final Map<String, dynamic>? report;
   final String permission;
   final bool clampPages;
   final requests = <AirmiusApiRequest>[];
@@ -365,7 +419,7 @@ class _ListTransport implements AirmiusApiTransport {
               ],
               'moderation': {
                 for (final list in ['flags', 'reports', 'warnings']) ...{
-                  list: [],
+                  list: [if (list == 'reports' && report != null) report],
                   '${list}_meta': meta(list),
                 },
                 'flag_categories': ['rare-category'],
