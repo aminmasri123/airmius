@@ -222,16 +222,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.profile =>
         target.id != null
             ? AirmiusDeepLinkedProfileScreen(target: target)
-            : AirmiusDeepLinkedTargetScreen(
-                target: target,
-                title: 'Profilbereich',
-                body:
-                    'Die App hat einen Profilbereich erkannt und kann nach Auth-Prüfung direkt in dein Profil wechseln.',
-                icon: Icons.person_outline,
-                color: null,
-                actionLabel: 'Profil öffnen',
-                actionScreen: const ProfileScreen(),
-              ),
+            : const ProfileScreen(),
       AirmiusDeepLinkTargetType.memberCard => MemberCardScreen(
         initialClubId: target.id,
         initialVerifyToken: target.token,

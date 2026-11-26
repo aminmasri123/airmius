@@ -264,7 +264,7 @@ class ClubDeletionService
         $externalEmails = $board->pluck('externalMember.email')->filter()->unique()->diff($recipients->pluck('email'));
         $send = function () use ($recipients, $externalEmails, $event, $replace, $url): void {
             foreach ($recipients as $user) {
-                $locale = $user->language === 'de' ? 'de' : 'en';
+                $locale = $user->language === 'en' ? 'en' : 'de';
                 $title = __('club_deletion.'.$event.'_title', [], $locale);
                 $body = __('club_deletion.'.$event.'_body', $replace, $locale);
                 try {

@@ -367,6 +367,18 @@ class ClubDeletionLifecycleTest extends TestCase
         ]);
     }
 
+    public function test_deletion_notification_uses_german_for_a_user_without_saved_language(): void
+    {
+        $club = $this->ownedClub();
+        $club->owner->forceFill(['language' => null])->save();
+
+        $this->requestDeletion($club)->assertAccepted();
+
+        Notification::assertSentTo($club->owner, ClubDeletionChanged::class, function (ClubDeletionChanged $notice): bool {
+            return $notice->title === __('club_deletion.requested_title', [], 'de');
+        });
+    }
+
     public function test_cancel_keeps_data_after_deadline_and_new_request_gets_full_period(): void
     {
         $club = $this->ownedClub();
