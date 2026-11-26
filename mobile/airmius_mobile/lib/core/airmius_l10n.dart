@@ -27582,7 +27582,11 @@ final _strings = {
     'guardian.openChildOverview': 'Sicheren Überblick öffnen',
     'guardian.safeScopeTitle': 'Geschützter Datenumfang',
     'guardian.safeScopeBody':
-        'Du siehst nur anstehende Termine und zusammengefasste Trainingswerte. Private Notizen, Nachrichten und Detailprofile bleiben verborgen.',
+        'Du siehst nur Vereine, Teams, anstehende Termine und zusammengefasste Trainingswerte. Private Notizen, Nachrichten und Detailprofile bleiben verborgen.',
+    'guardian.membershipsTitle': 'Vereine & Teams',
+    'guardian.membershipsEmpty':
+        'Noch keine aktive Vereins- oder Teamzuordnung.',
+    'guardian.noTeamAssignment': 'Ohne Teamzuordnung',
     'guardian.upcomingEvents': 'Anstehende Termine',
     'guardian.noUpcomingEvents': 'Keine anstehenden Termine gefunden.',
     'guardian.trainingSummary': 'Trainingszusammenfassung',
@@ -30274,7 +30278,10 @@ final _strings = {
     'guardian.openChildOverview': 'Open safe overview',
     'guardian.safeScopeTitle': 'Protected data scope',
     'guardian.safeScopeBody':
-        'Only upcoming schedules and summarized training values are shown. Private notes, messages and detailed profiles stay hidden.',
+        'Only clubs, teams, upcoming schedules and summarized training values are shown. Private notes, messages and detailed profiles stay hidden.',
+    'guardian.membershipsTitle': 'Clubs & teams',
+    'guardian.membershipsEmpty': 'No active club or team assignment yet.',
+    'guardian.noTeamAssignment': 'No team assignment',
     'guardian.upcomingEvents': 'Upcoming schedules',
     'guardian.noUpcomingEvents': 'No upcoming schedules found.',
     'guardian.trainingSummary': 'Training summary',
@@ -32932,7 +32939,11 @@ final _strings = {
     'guardian.openChildOverview': 'Ouvrir l’aperçu sécurisé',
     'guardian.safeScopeTitle': 'Données protégées',
     'guardian.safeScopeBody':
-        'Seuls les prochains rendez-vous et les valeurs d’entraînement résumées sont affichés. Les notes privées, messages et profils détaillés restent masqués.',
+        'Seuls les clubs, équipes, prochains rendez-vous et résumés d’entraînement sont affichés. Les notes privées, messages et profils détaillés restent masqués.',
+    'guardian.membershipsTitle': 'Clubs et équipes',
+    'guardian.membershipsEmpty':
+        'Aucune affectation active à un club ou une équipe.',
+    'guardian.noTeamAssignment': 'Sans équipe',
     'guardian.upcomingEvents': 'Prochains rendez-vous',
     'guardian.noUpcomingEvents': 'Aucun rendez-vous à venir.',
     'guardian.trainingSummary': 'Résumé de l’entraînement',
@@ -35464,7 +35475,10 @@ final _strings = {
     'guardian.openChildOverview': 'فتح النظرة الآمنة',
     'guardian.safeScopeTitle': 'نطاق بيانات محمي',
     'guardian.safeScopeBody':
-        'تظهر المواعيد القادمة وقيم التدريب المجمعة فقط. تبقى الملاحظات والرسائل والملفات التفصيلية الخاصة مخفية.',
+        'تظهر الأندية والفرق والمواعيد القادمة وقيم التدريب المجمعة فقط. تبقى الملاحظات والرسائل والملفات التفصيلية الخاصة مخفية.',
+    'guardian.membershipsTitle': 'الأندية والفرق',
+    'guardian.membershipsEmpty': 'لا يوجد ارتباط نشط بنادٍ أو فريق حتى الآن.',
+    'guardian.noTeamAssignment': 'من دون فريق',
     'guardian.upcomingEvents': 'المواعيد القادمة',
     'guardian.noUpcomingEvents': 'لا توجد مواعيد قادمة.',
     'guardian.trainingSummary': 'ملخص التدريب',

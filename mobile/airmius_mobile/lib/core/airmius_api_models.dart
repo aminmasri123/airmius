@@ -423,6 +423,7 @@ class AirmiusGuardianChildOverview {
     required this.approved,
     required this.scope,
     required this.privateDetailsHidden,
+    required this.memberships,
     required this.events,
     required this.training,
   });
@@ -431,6 +432,7 @@ class AirmiusGuardianChildOverview {
   final bool approved;
   final String scope;
   final bool privateDetailsHidden;
+  final List<AirmiusGuardianClubMembership> memberships;
   final List<AirmiusGuardianEventPreview> events;
   final AirmiusGuardianTrainingSummary training;
 
@@ -449,10 +451,35 @@ class AirmiusGuardianChildOverview {
       privateDetailsHidden: access.containsKey('private_details_hidden')
           ? _bool(access['private_details_hidden'])
           : true,
+      memberships: _jsonList(
+        data['memberships'],
+      ).map(AirmiusGuardianClubMembership.fromJson).toList(),
       events: _jsonList(
         data['upcoming_events'],
       ).map(AirmiusGuardianEventPreview.fromJson).toList(),
       training: AirmiusGuardianTrainingSummary.fromJson(data['training']),
+    );
+  }
+}
+
+class AirmiusGuardianClubMembership {
+  const AirmiusGuardianClubMembership({
+    required this.club,
+    required this.teams,
+  });
+
+  final AirmiusNamedItem club;
+  final List<AirmiusNamedItem> teams;
+
+  factory AirmiusGuardianClubMembership.fromJson(JsonMap json) {
+    final club = json['club'] is JsonMap
+        ? json['club'] as JsonMap
+        : const <String, dynamic>{};
+    return AirmiusGuardianClubMembership(
+      club: AirmiusNamedItem.fromJson(club),
+      teams: _jsonList(
+        json['teams'],
+      ).map(AirmiusNamedItem.fromJson).toList(growable: false),
     );
   }
 }

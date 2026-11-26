@@ -53,6 +53,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".qa"
+        }
         release {
             if (!keystorePropertiesFile.exists() && gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }) {
                 throw GradleException(
