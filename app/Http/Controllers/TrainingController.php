@@ -353,6 +353,16 @@ class TrainingController extends Controller
             ], 422);
         }
 
+        // Reject locked accounts before accepting an asynchronous generation job.
+        // Otherwise the app reports a generic background failure instead of the required plan.
+        $trainingAccess = $ai->capabilities($request->user())['training_plan_generation'];
+        if ($trainingAccess['tier'] === 'trainer_club_locked') {
+            return response()->json([
+                'message' => $trainingAccess['access_reason'],
+                'code' => 'training_ai_subscription_required',
+            ], 422);
+        }
+
         $profileReadiness = $sportProfiles->readiness($request->user(), $data['sport_type']);
 
         $profileFieldsToResolve = collect([
