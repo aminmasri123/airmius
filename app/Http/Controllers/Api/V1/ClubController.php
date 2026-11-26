@@ -1855,19 +1855,22 @@ class ClubController extends Controller
         $data = $request->validate([
             'file' => ['required', 'file', 'max:10240'],
             'club_money_account_id' => ['nullable', 'integer'],
+            'mapping' => ['nullable', 'json'],
         ]);
         $accountId = app(ClubMoneyAccountService::class)->resolve((int) $club->id, 'bank', $request->integer('club_money_account_id') ?: null, requireSelection: true);
         $bank = app(ClubMembershipBankReconciliationService::class);
+        $mapper = app(\App\Services\BankCsvMapper::class);
+        $parsed = $mapper->inspect($data['file']->getRealPath(), $mapper->decodeMapping($data['mapping'] ?? null));
         $rows = [];
         $errors = [];
         $stats = ['total' => 0, 'importable' => 0, 'matched' => 0, 'suggested' => 0, 'conflict' => 0, 'duplicates' => 0, 'invalid' => 0];
 
-        foreach ($bank->readRows($data['file']->getRealPath()) as $index => $rawRow) {
+        foreach ($parsed['rows'] as $index => $rawRow) {
             $rowNumber = $index + 2;
             $stats['total']++;
             $transaction = $bank->transactionFromRow($rawRow);
 
-            if (! $transaction || blank($transaction['booking_date']) || (float) $transaction['amount'] <= 0) {
+            if (! $transaction || blank($transaction['booking_date']) || (float) $transaction['amount'] <= 0 || $transaction['currency'] !== 'EUR') {
                 $stats['invalid']++;
                 $errors[] = ['row' => $rowNumber, 'reason' => __('organization.club.bank_preview_invalid_row')];
 
@@ -1929,6 +1932,9 @@ class ClubController extends Controller
             'data' => [
                 'file_name' => $data['file']->getClientOriginalName(),
                 'can_import' => $stats['importable'] > 0,
+                'columns' => $parsed['columns'],
+                'mapping' => $parsed['mapping'],
+                'needs_mapping' => $parsed['needs_mapping'],
                 'stats' => $stats,
                 'rows' => array_slice($rows, 0, 100),
                 'errors' => array_slice($errors, 0, 100),

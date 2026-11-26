@@ -346,6 +346,75 @@ class MobileClubMembershipParityApiTest extends TestCase
         ]);
     }
 
+    public function test_n26_csv_and_unknown_bank_columns_use_the_same_preview_and_import_mapping(): void
+    {
+        [$owner, $club, $member] = $this->managedClub();
+        Sanctum::actingAs($owner);
+        $invoice = Invoice::query()->create([
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+            'number' => 'N26-TEST-001',
+            'title' => 'N26 Bankabgleich',
+            'amount' => 20.00,
+            'status' => 'open',
+            'source' => 'manual',
+            'due_date' => now()->addWeek(),
+            'issued_at' => now(),
+        ]);
+        $n26 = implode("\n", [
+            '"Booking Date","Value Date","Partner Name","Partner Iban","Type","Payment Reference","Account Name","Amount (EUR)","Original Amount","Original Currency","Exchange Rate"',
+            '"2026-11-02","2026-11-02","Testperson","","Credit Transfer","N26-TEST-001","Verein","20.00",,,',
+            '"2026-11-02","2026-11-02","Invest","","Debit Transfer","Ausgabe","Verein","-350.00",,,',
+        ]);
+
+        $this->post('/api/v1/clubs/'.$club->id.'/bank-transactions/preview', [
+            'file' => UploadedFile::fake()->createWithContent('n26.csv', $n26),
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.needs_mapping', false)
+            ->assertJsonPath('data.stats.total', 2)
+            ->assertJsonPath('data.stats.matched', 1)
+            ->assertJsonPath('data.stats.invalid', 1)
+            ->assertJsonPath('data.rows.0.invoice.id', $invoice->id);
+        $this->assertDatabaseCount('bank_transactions', 0);
+        $this->assertDatabaseCount('payments', 0);
+
+        $unknown = "Tag der Buchung;Geldeingang;Text der Buchung;Absender\n2026-11-03;20,00;N26-TEST-001;Testperson\n";
+        $this->post('/api/v1/clubs/'.$club->id.'/bank-transactions/preview', [
+            'file' => UploadedFile::fake()->createWithContent('andere-bank.csv', $unknown),
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.needs_mapping', true)
+            ->assertJsonPath('data.can_import', false);
+
+        $this->post('/api/v1/clubs/'.$club->id.'/bank-transactions/import', [
+            'file' => UploadedFile::fake()->createWithContent('andere-bank.csv', $unknown),
+        ], ['Accept' => 'application/json'])->assertStatus(422);
+        $this->post('/api/v1/clubs/'.$club->id.'/bank-transactions/preview', [
+            'file' => UploadedFile::fake()->createWithContent('andere-bank.csv', $unknown),
+            'mapping' => json_encode(['date' => 0, 'amount' => 0]),
+        ], ['Accept' => 'application/json'])->assertStatus(422);
+        $this->assertDatabaseCount('bank_transactions', 0);
+
+        $mapping = json_encode(['date' => 0, 'amount' => 1, 'purpose' => 2, 'debtor_name' => 3]);
+        $this->post('/api/v1/clubs/'.$club->id.'/bank-transactions/preview', [
+            'file' => UploadedFile::fake()->createWithContent('andere-bank.csv', $unknown),
+            'mapping' => $mapping,
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.needs_mapping', false)
+            ->assertJsonPath('data.stats.matched', 1);
+        $this->assertDatabaseCount('bank_transactions', 0);
+
+        $this->post('/api/v1/clubs/'.$club->id.'/bank-transactions/import', [
+            'file' => UploadedFile::fake()->createWithContent('andere-bank.csv', $unknown),
+            'mapping' => $mapping,
+        ], ['Accept' => 'application/json'])->assertCreated();
+        $this->assertDatabaseCount('bank_transactions', 1);
+        $this->assertDatabaseCount('payments', 0);
+        $this->assertSame('open', $invoice->fresh()->status);
+    }
+
     public function test_member_self_service_and_cross_club_boundaries_are_enforced(): void
     {
         [$owner, $club, $member] = $this->managedClub();

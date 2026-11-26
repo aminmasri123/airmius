@@ -38,6 +38,7 @@ use App\Services\ClubInvoicePaymentService;
 use App\Services\ClubMemberNumberService;
 use App\Services\ClubMemberRemovalService;
 use App\Services\ClubMembershipLifecycleService;
+use App\Services\ClubMembershipBankReconciliationService;
 use App\Services\ClubMetadataSubjectService;
 use App\Services\ClubMoneyAccountService;
 use App\Services\ClubNumberRangeService;
@@ -2350,9 +2351,13 @@ class ClubMembershipController extends Controller
         $data = $request->validate([
             'file' => ['required', 'file', 'max:10240'],
             'club_money_account_id' => ['nullable', 'integer'],
+            'mapping' => ['nullable', 'json'],
         ]);
 
-        $rows = $this->readBankTransactionRows($data['file']->getRealPath());
+        $mapper = app(\App\Services\BankCsvMapper::class);
+        $parsed = $mapper->inspect($data['file']->getRealPath(), $mapper->decodeMapping($data['mapping'] ?? null));
+        abort_if($parsed['needs_mapping'], 422, 'Bitte Datum und Betrag den CSV-Spalten zuordnen.');
+        $rows = $parsed['rows'];
         $accountId = app(ClubMoneyAccountService::class)->resolve(
             (int) $club->id, 'bank', $request->integer('club_money_account_id') ?: null, requireSelection: true,
         );
@@ -2367,9 +2372,9 @@ class ClubMembershipController extends Controller
         ];
 
         foreach ($rows as $row) {
-            $transaction = $this->normalizeBankTransactionRow($row);
+            $transaction = app(ClubMembershipBankReconciliationService::class)->transactionFromRow($row);
 
-            if (! $transaction || blank($transaction['booking_date']) || (float) $transaction['amount'] <= 0) {
+            if (! $transaction || blank($transaction['booking_date']) || (float) $transaction['amount'] <= 0 || $transaction['currency'] !== 'EUR') {
                 $stats['skipped']++;
 
                 continue;
@@ -2425,8 +2430,11 @@ class ClubMembershipController extends Controller
         $data = $request->validate([
             'file' => ['required', 'file', 'max:10240'],
             'club_money_account_id' => ['nullable', 'integer'],
+            'mapping' => ['nullable', 'json'],
         ]);
         $accountId = app(ClubMoneyAccountService::class)->resolve((int) $club->id, 'bank', $request->integer('club_money_account_id') ?: null, requireSelection: true);
+        $mapper = app(\App\Services\BankCsvMapper::class);
+        $parsed = $mapper->inspect($data['file']->getRealPath(), $mapper->decodeMapping($data['mapping'] ?? null));
 
         $rows = [];
         $errors = [];
@@ -2440,12 +2448,12 @@ class ClubMembershipController extends Controller
             'invalid' => 0,
         ];
 
-        foreach ($this->readBankTransactionRows($data['file']->getRealPath()) as $index => $rawRow) {
+        foreach ($parsed['rows'] as $index => $rawRow) {
             $rowNumber = $index + 2;
             $stats['total']++;
-            $transaction = $this->normalizeBankTransactionRow($rawRow);
+            $transaction = app(ClubMembershipBankReconciliationService::class)->transactionFromRow($rawRow);
 
-            if (! $transaction || blank($transaction['booking_date']) || (float) $transaction['amount'] <= 0) {
+            if (! $transaction || blank($transaction['booking_date']) || (float) $transaction['amount'] <= 0 || $transaction['currency'] !== 'EUR') {
                 $stats['invalid']++;
                 $errors[] = [
                     'row' => $rowNumber,
@@ -2489,6 +2497,9 @@ class ClubMembershipController extends Controller
         return [
             'file_name' => $data['file']->getClientOriginalName(),
             'can_import' => $stats['importable'] > 0,
+            'columns' => $parsed['columns'],
+            'mapping' => $parsed['mapping'],
+            'needs_mapping' => $parsed['needs_mapping'],
             'stats' => $stats,
             'rows' => array_slice($rows, 0, 100),
             'errors' => array_slice($errors, 0, 100),
@@ -2881,82 +2892,6 @@ class ClubMembershipController extends Controller
         }
 
         return 'unmatched';
-    }
-
-    private function readBankTransactionRows(string $path): array
-    {
-        $handle = fopen($path, 'r');
-
-        if (! $handle) {
-            return [];
-        }
-
-        $firstLine = fgets($handle) ?: '';
-        rewind($handle);
-        $delimiter = str_contains($firstLine, ';') ? ';' : (str_contains($firstLine, "\t") ? "\t" : ',');
-        $tableRows = [];
-
-        while (($values = fgetcsv($handle, 0, $delimiter)) !== false) {
-            if ($values === [null] || $values === false) {
-                continue;
-            }
-
-            $tableRows[] = $values;
-        }
-
-        fclose($handle);
-
-        return $this->normalizeImportTableRows($tableRows);
-    }
-
-    private function normalizeBankTransactionRow(array $row): ?array
-    {
-        $amount = $this->normalizeMoney(
-            $row['betrag'] ?? $row['amount'] ?? $row['umsatz'] ?? $row['wert'] ?? null
-        );
-
-        if ($amount === null) {
-            return null;
-        }
-
-        $purpose = trim((string) (
-            $row['verwendungszweck']
-            ?? $row['purpose']
-            ?? $row['referenz']
-            ?? $row['reference']
-            ?? $row['buchungstext']
-            ?? ''
-        ));
-        $debtorName = trim((string) (
-            $row['auftraggeber']
-            ?? $row['zahler']
-            ?? $row['name']
-            ?? $row['debtor_name']
-            ?? ''
-        ));
-        $debtorIban = $this->normalizeIban($row['iban'] ?? $row['debtor_iban'] ?? $row['konto'] ?? null);
-        $bookingDate = $this->normalizeImportDate($row['datum'] ?? $row['date'] ?? $row['buchungstag'] ?? $row['booking_date'] ?? null);
-        $currency = strtoupper(trim((string) ($row['währung'] ?? $row['waehrung'] ?? $row['currency'] ?? 'EUR'))) ?: 'EUR';
-
-        $hashPayload = implode('|', [
-            $bookingDate,
-            number_format((float) $amount, 2, '.', ''),
-            $currency,
-            $debtorName,
-            $debtorIban,
-            $purpose,
-        ]);
-
-        return [
-            'transaction_hash' => hash('sha256', $hashPayload),
-            'booking_date' => $bookingDate,
-            'amount' => $amount,
-            'currency' => $currency,
-            'debtor_name' => $debtorName ?: null,
-            'debtor_iban' => $debtorIban,
-            'purpose' => $purpose ?: null,
-            'raw_data' => $row,
-        ];
     }
 
     private function findInvoiceMatchForBankTransaction(Club $club, array $transaction): array

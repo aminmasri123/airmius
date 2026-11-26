@@ -1981,6 +1981,7 @@ class _ClubMembershipManagementScreenState
     if (file == null || !mounted) return;
 
     Map<String, dynamic>? importMapping;
+    Map<String, int>? bankMapping;
     Map<String, dynamic> bankAccount = {};
     var requestInvitationForImportedMembers = false;
     final path = bank
@@ -1997,11 +1998,21 @@ class _ClubMembershipManagementScreenState
         );
         if (selectedAccount == null || !mounted) return;
         bankAccount = selectedAccount;
-        final preview = await _previewBankImport(
+        var preview = await _previewBankImport(
           club,
           file,
           accountId: bankAccount['club_money_account_id'] as int?,
         );
+        if (preview['needs_mapping'] == true) {
+          bankMapping = await _chooseBankImportMapping(preview);
+          if (bankMapping == null) return;
+          preview = await _previewBankImport(
+            club,
+            file,
+            accountId: bankAccount['club_money_account_id'] as int?,
+            mapping: bankMapping,
+          );
+        }
         if (!mounted || !await _confirmBankImport(preview)) return;
       } else {
         var preview = await _previewMembershipImport(club, file);
@@ -2047,6 +2058,9 @@ class _ClubMembershipManagementScreenState
       if (bankAccount['club_money_account_id'] != null) {
         request.fields['club_money_account_id'] =
             '${bankAccount['club_money_account_id']}';
+      }
+      if (bankMapping != null) {
+        request.fields['mapping'] = jsonEncode(bankMapping);
       }
       if (!bank) {
         request.fields['send_invitation'] = requestInvitationForImportedMembers
@@ -2132,12 +2146,16 @@ class _ClubMembershipManagementScreenState
     ClubSummary club,
     PlatformFile file, {
     int? accountId,
+    Map<String, int>? mapping,
   }) async {
     final path = '/api/v1/clubs/${club.id}/bank-transactions/preview';
     final request = http.MultipartRequest('POST', _apiUri(path))
       ..headers.addAll(_apiHeaders());
     if (accountId != null) {
       request.fields['club_money_account_id'] = '$accountId';
+    }
+    if (mapping != null) {
+      request.fields['mapping'] = jsonEncode(mapping);
     }
     if (file.bytes != null) {
       request.files.add(
@@ -2168,6 +2186,78 @@ class _ClubMembershipManagementScreenState
     final data = decoded is Map ? decoded['data'] : null;
     if (data is! Map) throw StateError(_tr('common.errorDetails'));
     return Map<String, dynamic>.from(data);
+  }
+
+  Future<Map<String, int>?> _chooseBankImportMapping(
+    Map<String, dynamic> preview,
+  ) async {
+    final columns = (preview['columns'] as List?)?.map((value) => '$value').toList() ?? [];
+    if (columns.isEmpty) {
+      _toast(_tr('membership.bankMap.noColumns'));
+      return null;
+    }
+    final selected = <String, int>{};
+    final suggested = preview['mapping'];
+    if (suggested is Map) {
+      for (final entry in suggested.entries) {
+        final index = int.tryParse('${entry.value}');
+        if (index != null && index >= 0 && index < columns.length) {
+          selected['${entry.key}'] = index;
+        }
+      }
+    }
+    const fields = ['date', 'amount', 'purpose', 'debtor_name', 'debtor_iban', 'currency'];
+    return showDialog<Map<String, int>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(_tr('membership.bankMap.title')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_tr('membership.bankMap.body')),
+                const SizedBox(height: 12),
+                for (final field in fields)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: DropdownButtonFormField<int?>(
+                      key: ValueKey('bank-map-$field'),
+                      initialValue: selected[field],
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: _tr('membership.bankMap.$field')),
+                      items: [
+                        DropdownMenuItem<int?>(value: null, child: Text(_tr('membership.bankMap.none'))),
+                        for (var index = 0; index < columns.length; index++)
+                          DropdownMenuItem<int?>(value: index, child: Text(columns[index])),
+                      ],
+                      onChanged: (index) => setDialogState(() {
+                        if (index == null) {
+                          selected.remove(field);
+                        } else {
+                          selected[field] = index;
+                        }
+                      }),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(_tr('membership.importPreviewCancel')),
+            ),
+            FilledButton(
+              onPressed: selected.containsKey('date') && selected.containsKey('amount')
+                  ? () => Navigator.pop(dialogContext, selected)
+                  : null,
+              child: Text(_tr('membership.importPreviewContinue')),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<bool> _confirmBankImport(Map<String, dynamic> preview) async {
