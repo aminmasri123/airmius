@@ -5039,8 +5039,17 @@ void main() {
       const ClubCockpitScreen(initialClubId: 4),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Website anfragen'));
-    await tester.pumpAndSettle();
+    expect(find.text('Website anfragen'), findsNothing);
+    for (final label in [
+      'Weitere Bereiche anzeigen',
+      'Commerce',
+      'Website anfragen',
+    ]) {
+      await tester.ensureVisible(find.text(label));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
     expect(
       transport.requests.map((request) => request.path),
       contains('/api/v1/commerce/seller'),
