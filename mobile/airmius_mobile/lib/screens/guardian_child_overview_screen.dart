@@ -4,6 +4,7 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
+import '../navigation/airmius_deep_link_navigator.dart';
 import '../widgets/airmius_widgets.dart';
 
 class GuardianChildOverviewScreen extends StatefulWidget {
@@ -193,48 +194,75 @@ class _ClubMembershipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          Icons.groups_2_outlined,
-          color: Theme.of(context).colorScheme.primary,
-          size: 27,
-        ),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(
+    final clubId = membership.club.id;
+    return Semantics(
+      button: clubId > 0,
+      child: InkWell(
+        key: ValueKey('guardian-club-$clubId'),
+        borderRadius: BorderRadius.circular(10),
+        onTap: clubId <= 0
+            ? null
+            : () => AirmiusDeepLinkNavigator.open(
+                context,
+                'airmius://clubs/$clubId',
+              ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                membership.club.name,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              Icon(
+                Icons.groups_2_outlined,
+                color: Theme.of(context).colorScheme.primary,
+                size: 27,
               ),
-              const SizedBox(height: 7),
-              if (membership.teams.isEmpty)
-                Text(
-                  scope.t('guardian.noTeamAssignment'),
-                  style: Theme.of(context).textTheme.bodySmall,
-                )
-              else
-                Wrap(
-                  spacing: 7,
-                  runSpacing: 7,
-                  children: membership.teams
-                      .map(
-                        (team) => Chip(
-                          avatar: const Icon(Icons.shield_outlined, size: 17),
-                          label: Text(team.name),
-                        ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      membership.club.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    if (membership.teams.isEmpty)
+                      Text(
+                        scope.t('guardian.noTeamAssignment'),
+                        style: Theme.of(context).textTheme.bodySmall,
                       )
-                      .toList(growable: false),
+                    else
+                      Wrap(
+                        spacing: 7,
+                        runSpacing: 7,
+                        children: membership.teams
+                            .map(
+                              (team) => Chip(
+                                avatar: const Icon(
+                                  Icons.shield_outlined,
+                                  size: 17,
+                                ),
+                                label: Text(team.name),
+                              ),
+                            )
+                            .toList(growable: false),
+                      ),
+                  ],
                 ),
+              ),
+              if (clubId > 0) ...[
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ],
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
