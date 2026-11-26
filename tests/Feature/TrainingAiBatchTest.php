@@ -75,15 +75,33 @@ class TrainingAiBatchTest extends TestCase
         $data['items'][0]['steps'][0]['exercise'] = 'Aufwärmen';
         $data['items'][1]['duration_minutes'] = 45;
         unset($data['items'][2]['adaptation']);
+        $data['items'][1]['title'] = 'Geprüfte Technikeinheit';
         $bad['choices'][0]['message']['content'] = json_encode($data);
-        Http::fake(['ionos.test/*' => Http::sequence()->push($this->response(3))->push($bad)->push($this->response(3))]);
+        Http::fake(['ionos.test/*' => Http::sequence()->push($this->response(3))->push($bad)->push($this->response(2))]);
         $result = $this->generate(['weeks' => 2, 'sessions_per_week' => 3]);
         Http::assertSentCount(3);
         $this->assertCount(6, $result['data']['items']);
+        $this->assertSame('Geprüfte Technikeinheit', $result['data']['items'][4]['title']);
+        $this->assertSame(30, $result['data']['items'][4]['duration_minutes']);
         $this->assertSame(150, $result['usage']['output_tokens']);
         Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'KORREKTUR:'));
         Http::assertSent(fn ($request) => str_contains($request['messages'][0]['content'], 'Einheit 1: Schritt 1')
             && str_contains($request['messages'][0]['content'], 'Einheit 3: adaptation fehlt'));
+    }
+
+    public function test_invalid_targeted_repair_cannot_bypass_instruction_checks(): void
+    {
+        $badResponse = function (int $count) {
+            $response = $this->response($count);
+            $data = json_decode($response['choices'][0]['message']['content'], true);
+            unset($data['items'][0]['adaptation']);
+            $response['choices'][0]['message']['content'] = json_encode($data);
+
+            return $response;
+        };
+        Http::fake(['ionos.test/*' => Http::sequence()->push($badResponse(3))->push($badResponse(1))]);
+        $this->expectExceptionMessage('Einheit 1: adaptation fehlt');
+        $this->generate(['weeks' => 1, 'sessions_per_week' => 3]);
     }
 
     public function test_duration_is_calculated_from_steps_without_another_ai_request(): void
