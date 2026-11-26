@@ -5398,16 +5398,16 @@ const saveExternalMember = async () => {
                         <p class="mb-3 text-sm text-secondary">{{ tx('club_memberships.workspace.bank_map_body', 'Wähle das Buchungsdatum und den eingegangenen Betrag. Weitere Spalten verbessern die Zuordnung.') }}</p>
                         <div class="grid gap-3 sm:grid-cols-2">
                             <label v-for="field in [
-                                { key: 'date', label: 'Buchungsdatum' },
-                                { key: 'amount', label: 'Eingegangener Betrag' },
-                                { key: 'purpose', label: 'Verwendungszweck' },
-                                { key: 'debtor_name', label: 'Name des Zahlers' },
-                                { key: 'debtor_iban', label: 'IBAN des Zahlers' },
-                                { key: 'currency', label: 'Währung' },
+                                { key: 'date', label: tx('club_memberships.workspace.bank_map_date', 'Buchungsdatum') },
+                                { key: 'amount', label: tx('club_memberships.workspace.bank_map_amount', 'Eingegangener Betrag') },
+                                { key: 'purpose', label: tx('club_memberships.workspace.bank_map_purpose', 'Verwendungszweck') },
+                                { key: 'debtor_name', label: tx('club_memberships.workspace.bank_map_debtor_name', 'Name des Zahlers') },
+                                { key: 'debtor_iban', label: tx('club_memberships.workspace.bank_map_debtor_iban', 'IBAN des Zahlers') },
+                                { key: 'currency', label: tx('club_memberships.workspace.bank_map_currency', 'Währung') },
                             ]" :key="field.key" class="block text-sm text-secondary">
                                 {{ field.label }}
                                 <select v-model.number="bankImportMapping[field.key]" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                    <option :value="null">Nicht zuordnen</option>
+                                    <option :value="null">{{ tx('club_memberships.workspace.bank_map_none', 'Nicht zuordnen') }}</option>
                                     <option v-for="(column, index) in bankImportPreview.columns" :key="`${field.key}-${index}`" :value="index">{{ column }}</option>
                                 </select>
                             </label>
