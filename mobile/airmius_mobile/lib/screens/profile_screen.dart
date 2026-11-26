@@ -1760,6 +1760,7 @@ String _roleLabel(String role, String Function(String) t) {
   final normalized = role.toLowerCase();
   if (normalized == 'player') return t('profile.role.player');
   if (normalized == 'admin') return t('profile.role.admin');
+  if (normalized == 'club_owner') return t('profile.role.clubOwner');
   if (normalized == 'club_admin') return t('profile.role.clubAdmin');
   if (normalized == 'guest') return t('profile.role.guest');
   return role.isEmpty ? t('profile.role.member') : role;

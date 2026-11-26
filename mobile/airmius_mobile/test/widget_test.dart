@@ -11684,6 +11684,26 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('profile translates club owner role', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 844));
+    final container = await _authenticatedWidgetTestContainer(
+      const AirmiusUser(
+        id: 19,
+        name: 'Verein Test',
+        email: 'verein@example.test',
+        role: 'club_owner',
+      ),
+    );
+
+    await _pumpAirmiusWidget(tester, container, const ProfileScreen());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vereinsinhaber'), findsOneWidget);
+    expect(find.text('club_owner'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('profile closes more-actions sheet before signing out', (
     WidgetTester tester,
   ) async {
