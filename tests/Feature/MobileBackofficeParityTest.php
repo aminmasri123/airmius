@@ -86,6 +86,19 @@ class MobileBackofficeParityTest extends TestCase
         foreach (['pending_transfers', 'subscription_invoices', 'payments'] as $list) {
             $this->assertEmpty(array_intersect(array_column($first[$list], 'id'), array_column($last[$list], 'id')));
         }
+
+        $this->getJson('/api/v1/admin/backoffice?billing_q=SUB-100')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.subscription_invoices')
+            ->assertJsonPath('data.subscription_invoices.0.number', 'SUB-100')
+            ->assertJsonCount(0, 'data.payments');
+
+        $this->getJson('/api/v1/admin/backoffice?billing_status=paid')
+            ->assertOk()
+            ->assertJsonPath('data.pagination.subscription_invoices.total', 50)
+            ->assertJsonPath('data.pagination.payments.total', 50);
+
+        $this->getJson('/api/v1/admin/backoffice?billing_status=invalid')->assertUnprocessable();
     }
 
     public function test_assignment_lookup_searches_all_users_clubs_and_plans_and_is_paginated(): void

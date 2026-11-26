@@ -201,6 +201,9 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
   String _contractsCategory = 'all';
   final _contractsSearch = TextEditingController();
   String _contractsQuery = '';
+  final _billingSearch = TextEditingController();
+  String _billingQuery = '';
+  String _billingStatus = 'all';
   final _appliedSearch = <String, String>{};
   final _pages = <String, int>{};
   final _subscriptionSearch = <String, TextEditingController>{
@@ -211,6 +214,7 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
   @override
   void dispose() {
     _contractsSearch.dispose();
+    _billingSearch.dispose();
     for (final controller in _subscriptionSearch.values) {
       controller.dispose();
     }
@@ -239,6 +243,8 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
       pages: _pages,
       userSubscriptionsQuery: _appliedSearch['user_subscriptions'] ?? '',
       clubSubscriptionsQuery: _appliedSearch['club_subscriptions'] ?? '',
+      billingQuery: _billingQuery,
+      billingStatus: _billingStatus,
       contractsPage: _contractsPage,
       contractsStatus: _contractsStatus,
       contractsCategory: _contractsCategory,
@@ -258,6 +264,19 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
     _contractsCategory = 'all';
     _contractsQuery = '';
     _contractsSearch.clear();
+    _billingQuery = '';
+    _billingStatus = 'all';
+    _billingSearch.clear();
+    _reload();
+  }
+
+  void _applyBillingFilters() {
+    final query = _billingSearch.text.trim();
+    if (query.runes.length > 120) return;
+    _billingQuery = query;
+    for (final list in ['subscription_invoices', 'invoices', 'payments']) {
+      _pages[list] = 1;
+    }
     _reload();
   }
 
@@ -405,43 +424,51 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
           const SizedBox(height: 7),
           Text(t('backoffice.body')),
           const SizedBox(height: 15),
-          Wrap(
-            spacing: 9,
-            runSpacing: 9,
-            children: [
-              _BackofficeMetric(
-                value:
-                    '${_integer(summary['active_user_subscriptions']) + _integer(summary['active_club_subscriptions'])}',
-                label: t('backoffice.activeSubscriptions'),
-                icon: Icons.verified_outlined,
-              ),
-              _BackofficeMetric(
-                value: '${_integer(summary['pending_transfers'])}',
-                label: t('backoffice.pendingTransfers'),
-                icon: Icons.account_balance_outlined,
-              ),
-              _BackofficeMetric(
-                value:
-                    '${_map(data['abilities'])['billing_manage'] == true ? _integer(summary['open_invoices']) : _integer(summary['open_subscription_invoices'])}',
-                label: t('backoffice.openInvoices'),
-                icon: Icons.receipt_long_outlined,
-              ),
-              _BackofficeMetric(
-                value:
-                    _map(data['billing_summary'])['revenue']?.toString() ??
-                    _money(
-                      _integer(summary['subscription_revenue_cents']) +
-                          _integer(summary['payment_revenue_cents']),
-                    ),
-                label: t('backoffice.revenue'),
-                icon: Icons.payments_outlined,
-              ),
-              _BackofficeMetric(
-                value: _money(_integer(summary['monthly_contract_cost_cents'])),
-                label: t('backoffice.monthlyCosts'),
-                icon: Icons.description_outlined,
-              ),
-            ],
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _BackofficeMetric(
+                  value:
+                      '${_integer(summary['active_user_subscriptions']) + _integer(summary['active_club_subscriptions'])}',
+                  label: t('backoffice.activeSubscriptions'),
+                  icon: Icons.verified_outlined,
+                ),
+                _BackofficeMetric(
+                  value: '${_integer(summary['pending_transfers'])}',
+                  label: t('backoffice.pendingTransfers'),
+                  icon: Icons.account_balance_outlined,
+                ),
+                _BackofficeMetric(
+                  value:
+                      '${_map(data['abilities'])['billing_manage'] == true ? _integer(summary['open_invoices']) : _integer(summary['open_subscription_invoices'])}',
+                  label: t('backoffice.openInvoices'),
+                  icon: Icons.receipt_long_outlined,
+                ),
+                _BackofficeMetric(
+                  value:
+                      _map(data['billing_summary'])['revenue']?.toString() ??
+                      _money(
+                        _integer(summary['subscription_revenue_cents']) +
+                            _integer(summary['payment_revenue_cents']),
+                      ),
+                  label: t('backoffice.revenue'),
+                  icon: Icons.payments_outlined,
+                ),
+                _BackofficeMetric(
+                  value: _money(
+                    _integer(summary['monthly_contract_cost_cents']),
+                  ),
+                  label: t('backoffice.monthlyCosts'),
+                  icon: Icons.description_outlined,
+                ),
+              ].map(
+                (metric) => Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 9),
+                  child: metric,
+                ),
+              ).toList(),
+            ),
           ),
         ],
       ),
@@ -877,6 +904,84 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        AirmiusPanel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                key: const ValueKey('billing-search'),
+                controller: _billingSearch,
+                maxLength: 120,
+                textInputAction: TextInputAction.search,
+                onSubmitted: (_) => _applyBillingFilters(),
+                decoration: InputDecoration(
+                  labelText: t('adminNative.search'),
+                  hintText:
+                      '${t('backoffice.invoice')} · ${t('backoffice.club')} · ${t('backoffice.user')}',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _billingQuery.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: t('events.resetFilters'),
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            _billingSearch.clear();
+                            _billingQuery = '';
+                            _applyBillingFilters();
+                          },
+                        ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                key: const ValueKey('billing-status-filter'),
+                initialValue: _billingStatus,
+                decoration: InputDecoration(
+                  labelText: t('backoffice.status'),
+                  prefixIcon: const Icon(Icons.filter_alt_outlined),
+                ),
+                items: [
+                  DropdownMenuItem(
+                    value: 'all',
+                    child: Text(t('adminNative.all')),
+                  ),
+                  DropdownMenuItem(value: 'open', child: Text(_status('open'))),
+                  DropdownMenuItem(value: 'paid', child: Text(_status('paid'))),
+                  DropdownMenuItem(
+                    value: 'overdue',
+                    child: Text(_status('overdue')),
+                  ),
+                ],
+                onChanged: _busy
+                    ? null
+                    : (value) {
+                        _billingStatus = value ?? 'all';
+                        _applyBillingFilters();
+                      },
+              ),
+              if (_billingQuery.isNotEmpty || _billingStatus != 'all') ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    key: const ValueKey('billing-reset-filters'),
+                    onPressed: _busy
+                        ? null
+                        : () {
+                            _billingSearch.clear();
+                            _billingQuery = '';
+                            _billingStatus = 'all';
+                            _applyBillingFilters();
+                          },
+                    icon: const Icon(Icons.filter_alt_off_outlined),
+                    label: Text(t('events.resetFilters')),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
         if (canBilling)
           Wrap(
             spacing: 9,

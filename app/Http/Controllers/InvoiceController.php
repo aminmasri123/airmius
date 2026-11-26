@@ -41,6 +41,32 @@ class InvoiceController extends Controller
             ->sortByDesc(fn (array $invoice) => $invoice['sort_date'] ?? '')
             ->values();
 
+        $query = trim((string) $request->query('billing_q', ''));
+        $status = (string) $request->query('billing_status', 'all');
+        if ($query !== '') {
+            $needle = Str::lower($query);
+            $records = $records->filter(function (array $invoice) use ($needle) {
+                $searchable = [
+                    $invoice['number'] ?? null,
+                    $invoice['title'] ?? null,
+                    $invoice['type_label'] ?? null,
+                    data_get($invoice, 'club.name'),
+                    data_get($invoice, 'user.name'),
+                    data_get($invoice, 'user.email'),
+                ];
+
+                return collect($searchable)->contains(
+                    fn ($value) => filled($value) && Str::contains(Str::lower((string) $value), $needle),
+                );
+            })->values();
+        }
+        if ($status !== 'all') {
+            $openStatuses = ['open', 'pending', 'awaiting_transfer'];
+            $records = $records->filter(fn (array $invoice) => $status === 'open'
+                ? in_array($invoice['status'] ?? null, $openStatuses, true)
+                : ($invoice['status'] ?? null) === $status)->values();
+        }
+
         $page = LengthAwarePaginator::resolveCurrentPage();
         $perPage = 25;
         $invoices = new LengthAwarePaginator(

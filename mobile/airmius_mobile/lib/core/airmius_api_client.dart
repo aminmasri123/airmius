@@ -5120,6 +5120,8 @@ class AirmiusApiClient {
     Map<String, int> pages = const {},
     String userSubscriptionsQuery = '',
     String clubSubscriptionsQuery = '',
+    String billingQuery = '',
+    String billingStatus = 'all',
     int contractsPage = 1,
     String contractsStatus = 'all',
     String contractsCategory = 'all',
@@ -5142,6 +5144,8 @@ class AirmiusApiClient {
         'user_subscriptions_q': userSubscriptionsQuery.trim(),
       if (clubSubscriptionsQuery.trim().isNotEmpty)
         'club_subscriptions_q': clubSubscriptionsQuery.trim(),
+      if (billingQuery.trim().isNotEmpty) 'billing_q': billingQuery.trim(),
+      if (billingStatus != 'all') 'billing_status': billingStatus,
       'contracts_page': '$contractsPage',
       'contracts_status': contractsStatus,
       'contracts_category': contractsCategory,

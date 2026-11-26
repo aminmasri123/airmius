@@ -47,6 +47,8 @@ class AdminBackofficeController extends Controller
             'payments_page' => ['nullable', 'integer', 'min:1'],
             'user_subscriptions_q' => ['nullable', 'string', 'max:120'],
             'club_subscriptions_q' => ['nullable', 'string', 'max:120'],
+            'billing_q' => ['nullable', 'string', 'max:120'],
+            'billing_status' => ['nullable', Rule::in(['all', 'open', 'paid', 'overdue'])],
             'contracts_page' => ['nullable', 'integer', 'min:1'],
             'contracts_status' => ['nullable', Rule::in(array_merge(['all'], OperatingContract::STATUSES))],
             'contracts_category' => ['nullable', Rule::in(array_merge(['all'], OperatingContract::CATEGORIES))],
@@ -94,9 +96,20 @@ class AdminBackofficeController extends Controller
         }
 
         $subscriptionInvoices = collect();
+        $billingQuery = trim($filters['billing_q'] ?? '');
+        $billingStatus = $filters['billing_status'] ?? 'all';
         if ($abilities['subscriptions_manage'] || $abilities['billing_manage']) {
             $subscriptionInvoices = SubscriptionInvoice::query()
                 ->with(['user:id,name,email', 'club:id,name', 'plan:id,name'])
+                ->when($billingQuery !== '', fn ($query) => $query->where(fn ($query) => $query
+                    ->where('number', 'like', "%{$billingQuery}%")
+                    ->orWhere('title', 'like', "%{$billingQuery}%")
+                    ->orWhereHas('user', fn ($user) => $this->searchUser($user, $billingQuery))
+                    ->orWhereHas('club', fn ($club) => $club->where('name', 'like', "%{$billingQuery}%"))
+                    ->orWhereHas('plan', fn ($plan) => $plan->where('name', 'like', "%{$billingQuery}%"))))
+                ->when($billingStatus !== 'all', fn ($query) => $billingStatus === 'open'
+                    ? $query->whereIn('status', ['open', 'pending', 'awaiting_transfer'])
+                    : $query->where('status', $billingStatus))
                 ->latest('id')
                 ->paginate(50, ['*'], 'subscription_invoices_page');
             $pagination['subscription_invoices'] = $this->pageMeta($subscriptionInvoices);
@@ -112,6 +125,15 @@ class AdminBackofficeController extends Controller
         if ($abilities['billing_manage']) {
             $payments = Payment::query()
                 ->with(['club:id,name', 'user:id,name,email', 'invoice:id,number,title,status'])
+                ->when($billingQuery !== '', fn ($query) => $query->where(fn ($query) => $query
+                    ->where('reference', 'like', "%{$billingQuery}%")
+                    ->orWhere('method', 'like', "%{$billingQuery}%")
+                    ->orWhereHas('user', fn ($user) => $this->searchUser($user, $billingQuery))
+                    ->orWhereHas('club', fn ($club) => $club->where('name', 'like', "%{$billingQuery}%"))
+                    ->orWhereHas('invoice', fn ($invoice) => $invoice
+                        ->where('number', 'like', "%{$billingQuery}%")
+                        ->orWhere('title', 'like', "%{$billingQuery}%"))))
+                ->when($billingStatus !== 'all', fn ($query) => $query->where('status', $billingStatus))
                 ->latest('paid_at')
                 ->latest('id')
                 ->paginate(25, ['*'], 'payments_page');
