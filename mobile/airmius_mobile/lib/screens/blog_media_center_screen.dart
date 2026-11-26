@@ -6,6 +6,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/editorial_rich_editor.dart';
 import 'editorial_management_screen.dart';
 
 class BlogMediaCenterScreen extends StatefulWidget {
@@ -246,7 +247,7 @@ class _PostCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (imageUrl.isNotEmpty)
-            AirmiusMediaImage(
+            _BlogCoverImage(
               url: imageUrl,
               height: 170,
               borderRadius: 14,
@@ -355,7 +356,17 @@ class _PublicBlogPostScreenState extends State<_PublicBlogPostScreen> {
             Theme.of(context).appBarTheme.backgroundColor ??
             Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
-        title: Text(t('content.article')),
+        title: FutureBuilder<JsonMap>(
+          future: _future,
+          builder: (context, snapshot) => Text(
+            _contentText(
+              _contentMap(snapshot.data?['data'])['title'],
+              fallback: t('content.article'),
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ),
       body: FutureBuilder<JsonMap>(
         future: _future,
@@ -378,8 +389,13 @@ class _PublicBlogPostScreenState extends State<_PublicBlogPostScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Text(
+                  _contentText(post['title'], fallback: t('content.article')),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 14),
                 if (imageUrl.isNotEmpty)
-                  AirmiusMediaImage(
+                  _BlogCoverImage(
                     url: imageUrl,
                     height: 230,
                     borderRadius: 18,
@@ -405,17 +421,21 @@ class _PublicBlogPostScreenState extends State<_PublicBlogPostScreen> {
                 ),
                 const SizedBox(height: 14),
                 AirmiusPanel(
-                  child: SelectableText(
-                    _contentText(
-                      post['content_text'],
-                      fallback: t('content.noContent'),
-                    ),
-                    style: TextStyle(
-                      color: airmiusTextColor(context),
-                      fontSize: 16,
-                      height: 1.65,
-                    ),
-                  ),
+                  child: _contentText(post['content_html']).isNotEmpty
+                      ? EditorialHtmlPreview(
+                          htmlContent: _contentText(post['content_html']),
+                        )
+                      : SelectableText(
+                          _contentText(
+                            post['content_text'],
+                            fallback: t('content.noContent'),
+                          ),
+                          style: TextStyle(
+                            color: airmiusTextColor(context),
+                            fontSize: 16,
+                            height: 1.65,
+                          ),
+                        ),
                 ),
               ],
             ),
@@ -424,6 +444,38 @@ class _PublicBlogPostScreenState extends State<_PublicBlogPostScreen> {
       ),
     );
   }
+}
+
+class _BlogCoverImage extends StatelessWidget {
+  const _BlogCoverImage({
+    required this.url,
+    required this.height,
+    required this.borderRadius,
+    required this.semanticLabel,
+  });
+  final String url;
+  final double height;
+  final double borderRadius;
+  final String semanticLabel;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(borderRadius),
+    child: ColoredBox(
+      color: Theme.of(context).colorScheme.surface,
+      child: Image.network(
+        url,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.contain,
+        semanticLabel: semanticLabel,
+        errorBuilder: (_, _, _) => SizedBox(
+          height: height,
+          child: const Center(child: Icon(Icons.broken_image_outlined)),
+        ),
+      ),
+    ),
+  );
 }
 
 class _CategoryChip extends StatelessWidget {

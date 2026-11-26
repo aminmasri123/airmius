@@ -51,6 +51,28 @@ class NativeEditorialRichContentTest extends TestCase
         $this->assertDatabaseCount('blog_posts', 1);
     }
 
+    public function test_published_native_rich_article_is_readable_by_another_account(): void
+    {
+        $this->editor(['blog.create', 'blog.publish']);
+        $category = BlogCategory::create(['name' => 'News', 'slug' => 'rich-news', 'is_active' => true]);
+        $html = '<p><strong>Test fett</strong></p><p><u>Test unterstreichen</u></p><p><em>Test kursiv</em></p><figure class="blog-image"><img src="https://example.test/inline.png" width="250" alt="Inline image"></figure><p>'.str_repeat('Training ', 460).'</p>';
+        $created = $this->postJson('/api/v1/editorial/posts', $this->payload([
+            'title' => 'Ein ausreichend langer Titel fuer unseren Artikel',
+            'excerpt' => str_repeat('Beschreibung ', 10),
+            'content' => $html,
+            'blog_category_id' => $category->id,
+            'cover_image' => 'https://example.test/cover.png',
+            'status' => 'published',
+        ]))->assertCreated();
+        $post = BlogPost::findOrFail($created->json('data.id'));
+        Sanctum::actingAs(User::factory()->create());
+        $response = $this->getJson('/api/v1/public/blog/'.$post->slug)->assertOk();
+        $response->assertJsonPath('data.content_html', $post->content);
+        foreach (['<strong>Test fett</strong>', '<u>Test unterstreichen</u>', '<em>Test kursiv</em>', 'src="https://example.test/inline.png"', 'width="250"'] as $fragment) {
+            $this->assertStringContainsString($fragment, $response->json('data.content_html'));
+        }
+    }
+
     public function test_rich_input_and_preview_strip_executable_html_and_obfuscated_urls(): void
     {
         $this->editor();
