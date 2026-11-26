@@ -808,8 +808,10 @@ class ClubController extends Controller
             'donation_campaign' => ['nullable', 'string', 'max:255'],
             'method' => ['nullable', 'string', Rule::in(['cash', 'bank_transfer', 'sepa_debit', 'manual'])],
             'reference' => ['nullable', 'string', 'max:255'],
-            'paid_at' => ['nullable', 'date', 'before_or_equal:today'],
+            'paid_at' => ['nullable', 'date', 'before_or_equal:'.LocalDateTime::todayFor($request->user(), $request)],
             'notes' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'paid_at.before_or_equal' => __('organization.club.payment_date_future'),
         ]);
 
         $donor = app(ClubDonationDonorService::class)->resolve($club, $data);

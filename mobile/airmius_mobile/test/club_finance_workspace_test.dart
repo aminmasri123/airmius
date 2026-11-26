@@ -26,6 +26,10 @@ void main() {
     await tester.pumpAndSettle();
     final request = transport.requests.lastWhere((r) => r.method == 'POST');
     expect(request.path, '/api/v1/clubs/7/money-accounts');
+    expect(
+      request.headers['X-Airmius-Utc-Offset-Minutes'],
+      DateTime.now().timeZoneOffset.inMinutes.toString(),
+    );
     expect(request.body?['type'], 'bank');
     expect(find.text('Was möchtest du anlegen?'), findsNothing);
     expect(tester.takeException(), isNull);

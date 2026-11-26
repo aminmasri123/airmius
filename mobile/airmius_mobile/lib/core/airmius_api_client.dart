@@ -5687,6 +5687,8 @@ class AirmiusApiClient {
     'Accept': 'application/json',
     'Content-Type': 'application/json; charset=utf-8',
     'X-Airmius-Locale': locale,
+    'X-Airmius-Utc-Offset-Minutes':
+        DateTime.now().timeZoneOffset.inMinutes.toString(),
     if (token != null && token!.isNotEmpty) 'Authorization': 'Bearer $token',
   };
 
