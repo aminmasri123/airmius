@@ -208,6 +208,9 @@ class AdminCommerceController extends Controller
 
         if ($product->status === 'published') {
             MarketplaceProductQualityGate::applyPublicationGate($product->fresh(['user.approvedSellerApplications', 'club', 'inventories']));
+            if ($product->fresh()->status === 'published') {
+                $product->update(['moderation_status' => 'approved']);
+            }
         }
 
         return back()->with('success', 'Marketplace-Produkt erstellt.');
@@ -1295,7 +1298,9 @@ class AdminCommerceController extends Controller
             'image_uploads.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             ...MarketplaceTaxonomy::productRules($request),
             'category' => ['required', 'string', 'max:50'],
-            'product_type' => ['nullable', Rule::in(['single', 'variable', 'digital'])],
+            'product_type' => ['nullable', Rule::in(['single', 'variable', 'digital', 'teamwear'])],
+            'club_id' => ['required_if:product_type,teamwear', 'nullable', 'integer', 'exists:clubs,id'],
+            'teamwear_supplier' => ['nullable', 'string', 'max:160'],
             'sku' => ['nullable', 'string', 'max:80'],
             'is_shippable' => ['boolean'],
             'manages_stock' => ['boolean'],
