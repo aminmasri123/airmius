@@ -827,7 +827,8 @@ PROMPT;
                 ."Erstelle jetzt ausschließlich {$count} Einheiten ab Einheit {$first} in Woche {$week}. "
                 ."Die Vorgabe weeks=1 beschreibt nur diesen Abschnitt. Berücksichtige die Position im Gesamtplan für Progression und Erholung. "
                 ."Wiederhole keine bereits gelieferten Einheiten oder Trainingstage derselben Woche. "
-                ."Formuliere die Planübersicht für den gesamten Zeitraum. Kontext der vorherigen Einheiten: {$continuity}";
+                .($plan === null ? 'Formuliere die Planübersicht für den gesamten Zeitraum. ' : '')
+                ."Kontext der vorherigen Einheiten: {$continuity}";
             $started = microtime(true);
             // Only independent whole weeks share a pool; split weeks stay sequential.
             if ($provider === 'ionos' && $plan !== null && $sessions <= 3 && $prefetched === []
@@ -840,12 +841,15 @@ PROMPT;
                     $offset + $count => str_replace("ab Einheit {$first} in Woche {$week}.", "ab Einheit {$first} in Woche {$nextWeek}.", $prompt).$shared,
                 ], min($this->trainingPlanTimeout(), $remaining));
             }
+            $repairIndices = [];
+            $originalSection = null;
             for ($attempt = 0; $attempt < 2; $attempt++) {
                 $remaining = (int) floor($deadline - microtime(true));
                 if ($remaining < 15) {
                     throw new RuntimeException('Die vollständige Planerstellung hat das Zeitlimit erreicht.');
                 }
                 $timeout = min($this->trainingPlanTimeout(), $remaining);
+                $requestStarted = microtime(true);
                 $result = $attempt === 0 && array_key_exists($offset, $prefetched) ? $prefetched[$offset] : match ($provider) {
                     'google' => $this->generateTextWithGoogle($prompt, $timeout, 4000),
                     'openai' => $this->generateTextWithOpenAi($prompt, $timeout, 4000),
@@ -856,19 +860,40 @@ PROMPT;
                 if ($result instanceof Throwable) {
                     throw $result;
                 }
+                if ($attempt > 0) {
+                    Log::info('AI training correction response received.', [
+                        'provider' => $provider, 'week' => $week, 'section_size' => $count,
+                        'requested_items' => $originalSection !== null ? count($repairIndices) : $count,
+                        'duration_ms' => round((microtime(true) - $requestStarted) * 1000),
+                    ]);
+                }
                 foreach (array_keys($usage) as $key) {
                     $usage[$key] += (int) ($result['usage'][$key] ?? 0);
                 }
                 $data = $result['data'] ?? [];
                 try {
+                    if ($originalSection !== null) {
+                        $replacements = $data['items'] ?? null;
+                        if (! is_array($replacements) || ! array_is_list($replacements) || count($replacements) !== count($repairIndices)) {
+                            throw new RuntimeException('Die KI hat nicht alle angeforderten Korrekturen geliefert.');
+                        }
+                        $warnings = $data['warnings'] ?? [];
+                        $data = $originalSection;
+                        foreach ($repairIndices as $position => $index) {
+                            $data['items'][$index] = $replacements[$position];
+                        }
+                        $data['warnings'] = array_values(array_unique([...($data['warnings'] ?? []), ...$warnings]));
+                    }
                     if (! is_array($data['items'] ?? null) || count($data['items']) !== $count) {
                         throw new RuntimeException('Die KI hat nicht alle angeforderten Trainingseinheiten geliefert.');
                     }
                     $issues = [];
                     foreach ($data['items'] as $index => $item) {
+                        $issueCount = count($issues);
                         $label = 'Einheit '.($index + 1).': ';
                         if (! is_array($item)) {
                             $issues[] = $label.'Objekt fehlt';
+                            $repairIndices[] = $index;
                             continue;
                         }
                         $steps = is_array($item['steps'] ?? null) ? $item['steps'] : [];
@@ -900,6 +925,9 @@ PROMPT;
                         } catch (RuntimeException $invalidItem) {
                             $issues[] = $label.$invalidItem->getMessage();
                         }
+                        if (count($issues) > $issueCount) {
+                            $repairIndices[] = $index;
+                        }
                     }
                     if ($issues !== []) {
                         throw new RuntimeException(implode('; ', array_unique($issues)));
@@ -911,6 +939,15 @@ PROMPT;
                         throw $invalid;
                     }
                     Log::info('AI training section correction requested.', ['provider' => $provider, 'week' => $week, 'reason' => $invalid->getMessage()]);
+                    if ($repairIndices !== [] && count($repairIndices) < $count) {
+                        $originalSection = $data;
+                        $positions = implode(', ', array_map(fn ($index) => $index + 1, $repairIndices));
+                        $prompt .= "\nKORREKTUR: ".$invalid->getMessage()
+                            ." Ersetze ausschließlich die Einheiten an den Abschnittspositionen {$positions}, in dieser Reihenfolge. "
+                            ."Gib nur diese vollständigen Einheiten als items und neue warnings aus. Behalte Tage, Ziele und Belastungsverlauf bei."
+                            ." Der bisherige Abschnitt dient als Kontext: ".json_encode($data, JSON_UNESCAPED_UNICODE);
+                        continue;
+                    }
                     $prompt .= "\nKORREKTUR: Der vorherige Abschnitt wurde abgewiesen: ".$invalid->getMessage()
                         ." Gib den vollständigen korrigierten Abschnitt als JSON zurück. Vorherige Antwort: "
                         .json_encode($data, JSON_UNESCAPED_UNICODE);

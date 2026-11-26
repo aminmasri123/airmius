@@ -34,6 +34,10 @@ class GenerateTrainingAiPreview implements ShouldQueue
             return;
         }
         $generation = TrainingAiGeneration::findOrFail($this->generationId);
+        Log::info('AI training preview started.', [
+            'generation_id' => $generation->id,
+            'queue_wait_ms' => max(0, $generation->updated_at->getTimestampMs() - $generation->created_at->getTimestampMs()),
+        ]);
         $started = microtime(true);
         try {
             $user = User::findOrFail($generation->user_id);
