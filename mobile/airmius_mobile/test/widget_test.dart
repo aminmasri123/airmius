@@ -7776,6 +7776,8 @@ void main() {
       textScaler: const TextScaler.linear(1.35),
     );
 
+    expect(find.text('Passe Sprache, Darstellung und Privatsphäre an deine Bedürfnisse an.'), findsOneWidget);
+    expect(find.textContaining('Interne Test- und Verwaltungswerkzeuge'), findsNothing);
     expect(find.text('Einstellungen'), findsWidgets);
     expect(find.text('Profil & Kontosicherheit'), findsOneWidget);
     expect(find.text('Datenschutz & Datenrechte'), findsOneWidget);

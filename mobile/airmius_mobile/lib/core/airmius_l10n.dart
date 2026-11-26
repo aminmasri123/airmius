@@ -1878,7 +1878,7 @@ const _settingsDe = {
   'settings.sectionSupport': 'Recht & Hilfe',
   'settings.headline': 'Einfach einstellen, sicher verwenden',
   'settings.body':
-      'Alle sichtbaren Aktionen arbeiten mit deinem angemeldeten Konto. Interne Test- und Verwaltungswerkzeuge bleiben ausgeblendet.',
+      'Passe Sprache, Darstellung und Privatsphäre an deine Bedürfnisse an.',
   'settings.yes': 'Ja',
   'settings.no': 'Nein',
   'settings.active': 'Aktiv',
@@ -1963,7 +1963,7 @@ final _settingsEn = {
   'settings.sectionSupport': 'Legal & support',
   'settings.headline': 'Easy to configure, safe to use',
   'settings.body':
-      'Every visible action uses your signed-in account. Internal testing and administration tools stay hidden.',
+      'Adjust language, appearance, and privacy to suit your needs.',
   'settings.yes': 'Yes',
   'settings.no': 'No',
   'settings.active': 'Active',
@@ -2047,7 +2047,7 @@ final _settingsFr = {
   'settings.sectionSupport': 'Droit et assistance',
   'settings.headline': 'Simple à configurer, sûr à utiliser',
   'settings.body':
-      'Toutes les actions visibles utilisent votre compte connecté. Les outils internes de test et d’administration restent masqués.',
+      'Adaptez la langue, l’affichage et la confidentialité à vos besoins.',
   'settings.yes': 'Oui',
   'settings.no': 'Non',
   'settings.active': 'Actif',
@@ -2130,7 +2130,7 @@ final _settingsAr = {
   'settings.sectionSupport': 'الدعم والقانون',
   'settings.headline': 'إعداد سهل واستخدام آمن',
   'settings.body':
-      'تستخدم جميع الإجراءات الظاهرة حسابك المسجل. تبقى أدوات الاختبار والإدارة الداخلية مخفية.',
+      'اضبط اللغة والمظهر والخصوصية بما يناسب احتياجاتك.',
   'settings.yes': 'نعم',
   'settings.no': 'لا',
   'settings.active': 'نشط',
