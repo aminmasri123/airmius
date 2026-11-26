@@ -1122,7 +1122,7 @@ PROMPT;
         if ($trainerOrClub && ! $premiumTrainerOrClub) {
             return [
                 'allowed' => false,
-                'reason' => 'KI-Trainingspläne für Trainer und Vereine sind nur mit Trainer/Verein Premium verfügbar.',
+                'reason' => 'Für KI-Trainingspläne brauchst du Trainer Pro oder ein aktives Vereinsabo: Club, Pro, Elite oder Verein Komplett. Prüfe dein Abo in den Kontoeinstellungen.',
                 'tier' => 'trainer_club_locked',
                 'label' => 'Trainer/Verein',
                 'monthly_limit' => 0,
