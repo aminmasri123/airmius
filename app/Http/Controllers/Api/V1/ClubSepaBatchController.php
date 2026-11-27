@@ -21,6 +21,8 @@ use App\Services\ClubSepaReturnImportService;
 use App\Services\ClubSepaSettlementService;
 use App\Services\PlanFeatureService;
 use App\Support\ClubPermissions;
+use App\Support\ClubAuditLog;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
@@ -67,6 +69,9 @@ class ClubSepaBatchController extends Controller
         }
 
         return response()->json(['can_manage' => $manage, 'notices_available' => $noticesAvailable, 'results_available' => $resultsAvailable, 'fees_available' => $feesAvailable, 'fee_corrections_available' => $correctionsAvailable, 'fee_recharge_drafts_available' => $rechargesAvailable, 'fee_recharge_voids_available' => $voidsAvailable, 'fee_recharge_credits_available' => $creditsAvailable, 'fee_recharge_approvals_available' => $rechargesAvailable && Schema::hasColumn('club_sepa_fee_recharges', 'invoice_id'),
+            'approval_mode' => $club->sepa_approval_mode === 'single' ? 'single' : 'dual',
+            'can_configure_approval' => (int) $club->owner_id === (int) $request->user()->id,
+            'can_approve' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
             'data' => ClubSepaBatch::where('club_id', $club->id)->with($relations)->latest('id')
                 ->paginate(25)->through(fn ($batch) => $this->payload($batch, $manage))])->header('Cache-Control', 'private, no-store');
     }
@@ -88,7 +93,32 @@ class ClubSepaBatchController extends Controller
     {
         $this->access($request, $club, true, $batch, ClubPermissions::FINANCE_APPROVE);
 
-        return response()->json(['data' => $this->payload($service->approve($batch, $request->user()))]);
+        $request->validate(['confirmed' => ['sometimes', 'boolean']]);
+
+        return response()->json(['data' => $this->payload($service->approve($batch, $request->user(), $request->boolean('confirmed')))]);
+    }
+
+    public function approvalSettings(Request $request, Club $club)
+    {
+        $this->access($request, $club, false);
+        abort_unless((int) $club->owner_id === (int) $request->user()->id, 403);
+        $data = $request->validate([
+            'approval_mode' => ['required', Rule::in(['single', 'dual'])],
+            'confirmed' => ['required', 'accepted'],
+        ]);
+        DB::transaction(function () use ($club, $request, $data) {
+            $locked = Club::query()->lockForUpdate()->findOrFail($club->id);
+            abort_unless((int) $locked->owner_id === (int) $request->user()->id, 403);
+            $previous = $locked->sepa_approval_mode;
+            $locked->forceFill(['sepa_approval_mode' => $data['approval_mode']])->save();
+            if ($previous !== $data['approval_mode']) {
+                ClubAuditLog::record($locked, $request->user(), 'club.sepa.approval_mode_changed', $locked, [
+                    'previous_mode' => $previous, 'approval_mode' => $data['approval_mode'],
+                ]);
+            }
+        });
+
+        return response()->json(['approval_mode' => $data['approval_mode']]);
     }
 
     public function notice(Request $request, Club $club, ClubSepaBatch $batch, ClubSepaBatchService $service)

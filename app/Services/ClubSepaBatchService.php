@@ -46,15 +46,22 @@ final class ClubSepaBatchService
         });
     }
 
-    public function approve(ClubSepaBatch $batch, User $actor): ClubSepaBatch
+    public function approve(ClubSepaBatch $batch, User $actor, bool $confirmed = false): ClubSepaBatch
     {
-        return $this->change($batch, function ($locked) use ($actor) {
+        return $this->change($batch, function ($locked) use ($actor, $confirmed) {
             abort_unless($locked->status === 'draft', 422, __('sepa.state'));
-            abort_if((int) $locked->created_by === $actor->id, 422, __('sepa.second_person'));
+            $single = $locked->club->sepa_approval_mode === 'single';
+            $selfApproval = (int) $locked->created_by === $actor->id;
+            abort_if($selfApproval && ! $single, 422, __('sepa.second_person'));
+            abort_if($selfApproval && ! $confirmed, 422, __('sepa.self_approval_confirm'));
             $this->assertUnchanged($locked);
             $this->checkLeadTime($locked->collection_date, $locked->notice_days, today());
             $locked->update(['status' => 'approved', 'approved_by' => $actor->id, 'approved_at' => now()]);
-            $this->audit($locked, $actor, 'approved');
+            ClubAuditLog::record($locked->club, $actor, 'club.sepa.approved', $locked, [
+                'reference' => $locked->reference,
+                'approval_mode' => $single ? 'single' : 'dual',
+                'self_approved' => $selfApproval,
+            ]);
         });
     }
 

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'self_approval_confirm' => "I have checked the recipients, amounts and collection date and approve this batch.",
     'recharge_void_bank' => 'This invoice has payment or bank activity. Review the bank status and the separate refund workflow first.',
     'recharge_title' => 'Returned-debit fee recharge',
     'recharge_account' => 'The separate recharge account is missing or matches the bank account.',

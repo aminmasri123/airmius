@@ -777,6 +777,12 @@ class AirmiusApiClient {
   Future<AirmiusJson> createClubSepaBatch(int clubId, AirmiusJson payload) =>
       _json('POST', '/api/v1/clubs/$clubId/sepa-batches', body: payload);
 
+  Future<AirmiusJson> setClubSepaApprovalMode(int clubId, String mode) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/sepa-approval-settings',
+    body: {'approval_mode': mode, 'confirmed': true},
+  );
+
   Future<AirmiusJson> updateClubSepaBatch(
     int clubId,
     int batchId,

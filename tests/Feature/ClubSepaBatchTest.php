@@ -58,6 +58,57 @@ class ClubSepaBatchTest extends TestCase
         return "/api/v1/clubs/{$this->club->id}/sepa-batches";
     }
 
+    public function test_owner_can_enable_confirmed_self_approval_for_existing_draft(): void
+    {
+        $id = $this->prepare();
+        $this->getJson($this->base())->assertJsonPath('approval_mode', 'dual')->assertJsonPath('can_configure_approval', true);
+        $this->postJson($this->base()."/{$id}/approve", ['confirmed' => true])->assertUnprocessable();
+        $this->postJson("/api/v1/clubs/{$this->club->id}/sepa-approval-settings", [
+            'approval_mode' => 'single', 'confirmed' => true,
+        ])->assertOk();
+        $this->postJson($this->base()."/{$id}/approve")->assertUnprocessable();
+        $this->postJson($this->base()."/{$id}/approve", ['confirmed' => true])->assertOk();
+        $this->assertDatabaseHas('club_sepa_batches', ['id' => $id, 'approved_by' => $this->owner->id]);
+        $this->assertDatabaseHas('activities', ['club_id' => $this->club->id, 'type' => 'club.sepa.approval_mode_changed']);
+        $this->assertDatabaseHas('activities', ['club_id' => $this->club->id, 'type' => 'club.sepa.approved']);
+        $audit = \App\Models\Activity::where('club_id', $this->club->id)->where('type', 'club.sepa.approved')->firstOrFail();
+        $this->assertSame('single', $audit->data['approval_mode']);
+        $this->assertTrue($audit->data['self_approved']);
+    }
+
+    public function test_finance_reviewer_cannot_change_approval_policy(): void
+    {
+        Sanctum::actingAs($this->reviewer);
+        $this->getJson($this->base())->assertJsonPath('can_configure_approval', false);
+        $this->postJson("/api/v1/clubs/{$this->club->id}/sepa-approval-settings", [
+            'approval_mode' => 'single', 'confirmed' => true,
+        ])->assertForbidden();
+        $this->assertSame('dual', $this->club->fresh()->sepa_approval_mode);
+    }
+
+    public function test_policy_requires_confirmation_and_can_restore_dual_control(): void
+    {
+        $url = "/api/v1/clubs/{$this->club->id}/sepa-approval-settings";
+        $this->postJson($url, ['approval_mode' => 'single'])->assertUnprocessable();
+        $this->postJson($url, ['approval_mode' => 'invalid', 'confirmed' => true])->assertUnprocessable();
+        $this->postJson($url, ['approval_mode' => 'single', 'confirmed' => true])->assertOk();
+        $id = $this->prepare();
+        $this->postJson($url, ['approval_mode' => 'dual', 'confirmed' => true])->assertOk();
+        $this->postJson($this->base()."/{$id}/approve", ['confirmed' => true])->assertUnprocessable();
+        $this->approve($id);
+    }
+
+    public function test_single_approval_does_not_grant_finance_permission_to_members(): void
+    {
+        $id = $this->prepare();
+        $this->club->forceFill(['sepa_approval_mode' => 'single'])->save();
+        Sanctum::actingAs(User::findOrFail($this->invoice->user_id));
+        $this->postJson($this->base()."/{$id}/approve", ['confirmed' => true])->assertForbidden();
+        $this->postJson("/api/v1/clubs/{$this->club->id}/sepa-approval-settings", [
+            'approval_mode' => 'dual', 'confirmed' => true,
+        ])->assertForbidden();
+    }
+
     private function prepare(): int
     {
         return $this->postJson($this->base(), [

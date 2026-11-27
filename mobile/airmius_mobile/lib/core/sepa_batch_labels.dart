@@ -1,5 +1,16 @@
 const sepaBatchLabels = <String, Map<String, String>>{
   "de": {
+    "introSingle":
+        "Einzel-Freigabe: Prüfe Rechnungen, Empfänger, Beträge und Einzugsdatum vor der Freigabe. Danach Vorabinformationen versenden und die Bankdatei herunterladen.",
+    "approvalMode": "Freigaberegel",
+    "singleApproval": "Einzel-Freigabe",
+    "dualApproval": "Zwei-Personen-Freigabe",
+    "approvalHelp":
+        "Nur der Vereinsbesitzer kann diese Regel ändern. Einzel-Freigabe erlaubt berechtigten Personen, eigene Entwürfe freizugeben. Die Regel gilt auch für vorhandene Entwürfe. Änderungen und Freigaben werden protokolliert.",
+    "reviewApproval":
+        "Ich habe Empfänger, Beträge und Einzugsdatum dieses Laufs geprüft und gebe ihn frei.",
+    "confirmApproval": "Bestätigen",
+    "back": "Abbrechen",
     "title": "Lastschriftläufe",
     "intro":
         "Rechnungen auswählen, durch eine zweite Person freigeben und Vorabinformation dokumentieren. Danach kann die Bankdatei heruntergeladen werden.",
@@ -85,6 +96,17 @@ const sepaBatchLabels = <String, Map<String, String>>{
     "paymentReturned": "Zurückgegeben",
   },
   "en": {
+    "introSingle":
+        "Single approval: Check invoices, recipients, amounts and collection date before approval. Then send advance notices and download the bank file.",
+    "approvalMode": "Approval rule",
+    "singleApproval": "Single approval",
+    "dualApproval": "Two-person approval",
+    "approvalHelp":
+        "Only the club owner can change this rule. Single approval allows authorized users to approve their own drafts, including existing drafts. Changes and approvals are recorded.",
+    "reviewApproval":
+        "I have checked the recipients, amounts and collection date and approve this batch.",
+    "confirmApproval": "Confirm",
+    "back": "Cancel",
     "title": "Direct debit batches",
     "intro":
         "Select invoices, obtain approval from a second person and record the advance notice. Then download the bank file.",
@@ -169,6 +191,17 @@ const sepaBatchLabels = <String, Map<String, String>>{
     "paymentReturned": "Returned",
   },
   "fr": {
+    "introSingle":
+        "Validation individuelle : vérifiez les factures, destinataires, montants et date de prélèvement. Envoyez ensuite les préavis et téléchargez le fichier bancaire.",
+    "approvalMode": "Règle de validation",
+    "singleApproval": "Validation individuelle",
+    "dualApproval": "Validation à deux personnes",
+    "approvalHelp":
+        "Seul le propriétaire du club peut modifier cette règle. La validation individuelle autorise les personnes habilitées à valider leurs propres brouillons, même existants. Les changements et validations sont consignés.",
+    "reviewApproval":
+        "J’ai vérifié les destinataires, montants et date de prélèvement et je valide ce lot.",
+    "confirmApproval": "Confirmer",
+    "back": "Annuler",
     "title": "Lots de prélèvement",
     "intro":
         "Sélectionnez les factures, obtenez une seconde approbation et documentez la notification préalable, puis téléchargez le fichier bancaire.",
@@ -255,6 +288,17 @@ const sepaBatchLabels = <String, Map<String, String>>{
     "paymentReturned": "Retourné",
   },
   "ar": {
+    "introSingle":
+        "موافقة فردية: تحقق من الفواتير والمستلمين والمبالغ وتاريخ الخصم قبل الموافقة، ثم أرسل الإشعارات المسبقة ونزّل الملف البنكي.",
+    "approvalMode": "قاعدة الموافقة",
+    "singleApproval": "موافقة فردية",
+    "dualApproval": "موافقة شخصين",
+    "approvalHelp":
+        "يمكن لمالك النادي فقط تغيير القاعدة. تسمح الموافقة الفردية للمخولين بالموافقة على مسوداتهم، بما فيها المسودات الحالية. يتم تسجيل التغييرات والموافقات.",
+    "reviewApproval":
+        "راجعت المستلمين والمبالغ وتاريخ الخصم وأوافق على هذه الدفعة.",
+    "confirmApproval": "تأكيد",
+    "back": "إلغاء",
     "title": "دفعات الخصم المباشر",
     "intro":
         "اختر الفواتير واحصل على اعتماد شخص آخر وسجّل الإشعار المسبق، ثم نزّل ملف البنك.",

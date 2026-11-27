@@ -929,6 +929,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/member-card/verify', [ClubMemberCardController::class, 'verify'])->middleware('throttle:content-comments')->name('clubs.member-card.verify');
         Route::put('/clubs/{club}/membership/settings', [ClubController::class, 'updateMembershipSettings'])->name('clubs.membership.settings.update');
         Route::get('/clubs/{club}/sepa-batches', [ClubSepaBatchController::class, 'index'])->middleware('throttle:payment-actions')->name('clubs.sepa-batches.index');
+        Route::post('/clubs/{club}/sepa-approval-settings', [ClubSepaBatchController::class, 'approvalSettings'])->middleware('throttle:payment-actions')->name('clubs.sepa-approval-settings.update');
         Route::post('/clubs/{club}/sepa-batches', [ClubSepaBatchController::class, 'store'])->middleware('throttle:payment-actions')->name('clubs.sepa-batches.store');
         Route::post('/clubs/{club}/sepa-batches/{batch}/approve', [ClubSepaBatchController::class, 'approve'])->middleware('throttle:payment-actions')->name('clubs.sepa-batches.approve');
         Route::post('/clubs/{club}/sepa-batches/{batch}/notice', [ClubSepaBatchController::class, 'notice'])->middleware('throttle:payment-actions')->name('clubs.sepa-batches.notice');

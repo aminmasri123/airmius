@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'self_approval_confirm' => "J’ai vérifié les destinataires, montants et date de prélèvement et je valide ce lot.",
     'recharge_void_bank' => 'Cette facture comporte des paiements ou des opérations bancaires. Vérifiez leur état et le processus distinct de remboursement.',
     'recharge_title' => 'Refacturation des frais de rejet',
     'recharge_account' => 'Le compte distinct de refacturation manque ou correspond au compte bancaire.',

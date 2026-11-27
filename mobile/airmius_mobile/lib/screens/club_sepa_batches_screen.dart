@@ -33,6 +33,8 @@ class ClubSepaBatchesScreen extends StatefulWidget {
 class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
   bool _started = false, _busy = false, _more = false;
   bool _canManage = false;
+  bool _canApprove = false, _canConfigureApproval = false;
+  String _approvalMode = 'dual';
   bool _noticesAvailable = false;
   bool _resultsAvailable = false;
   bool _feesAvailable = false;
@@ -52,6 +54,92 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
     locale: AirmiusScope.of(context).language.locale.languageCode,
     name: 'EUR',
   ).format((cents as num) / 100);
+
+  Future<bool> _confirmApproval(String message) async =>
+      await _showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(c('approve')),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(c('back')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(c('confirmApproval')),
+            ),
+          ],
+        ),
+      ) ==
+      true;
+
+  Future<void> _approveBatch(AirmiusJson batch) async {
+    if (!await _confirmApproval(c('reviewApproval')) || !mounted) return;
+    await _run(() async {
+      await _client.updateClubSepaBatch(
+        widget.clubId,
+        batch['id'] as int,
+        'approve',
+        {'confirmed': true},
+      );
+    });
+  }
+
+  Future<void> _configureApproval() async {
+    var selected = _approvalMode;
+    final mode = await _showDialog<String>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(c('approvalMode')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(c('approvalHelp')),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: selected,
+                isExpanded: true,
+                items: ['dual', 'single']
+                    .map(
+                      (mode) => DropdownMenuItem(
+                        value: mode,
+                        child: Text(
+                          c(
+                            mode == 'single'
+                                ? 'singleApproval'
+                                : 'dualApproval',
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) =>
+                    setDialogState(() => selected = value ?? selected),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(c('back')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, selected),
+              child: Text(c('confirmApproval')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (mode == null || !mounted || mode == _approvalMode) return;
+    await _run(() async {
+      await _client.setClubSepaApprovalMode(widget.clubId, mode);
+    });
+  }
+
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
     return services.clientForSession(services.authState.session);
@@ -76,6 +164,9 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
     if (!mounted) return;
     setState(() {
       _canManage = response['can_manage'] == true;
+      _canApprove = response['can_approve'] == true;
+      _canConfigureApproval = response['can_configure_approval'] == true;
+      _approvalMode = response['approval_mode'] == 'single' ? 'single' : 'dual';
       _noticesAvailable = response['notices_available'] == true;
       _resultsAvailable = response['results_available'] == true;
       _feesAvailable = response['fees_available'] == true;
@@ -169,9 +260,8 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                           labelText: c('date'),
                           hintText: 'DD.MM.YYYY',
                         ),
-                        validator: (v) => parseAirmiusDate(v) == null
-                            ? c('date')
-                            : null,
+                        validator: (v) =>
+                            parseAirmiusDate(v) == null ? c('date') : null,
                       ),
                       TextFormField(
                         controller: days,
@@ -285,8 +375,7 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                             labelText: c('bookedOn'),
                             hintText: 'DD.MM.YYYY',
                           ),
-                          validator: (value) =>
-                              parseAirmiusDate(value) == null
+                          validator: (value) => parseAirmiusDate(value) == null
                               ? c('bookedOn')
                               : null,
                         ),
@@ -674,7 +763,9 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                           '${c('provider_${notice['provider_status']}')}'
                           '${notice['provider_status'] == 'bounced' && notice['bounce_type'] != null ? ' · ${notice['bounce_type']}' : ''}',
                           style: notice['provider_status'] == 'bounced'
-                              ? TextStyle(color: Theme.of(context).colorScheme.error)
+                              ? TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                )
                               : null,
                         ),
                       if (notice['error_code'] != null)
@@ -731,9 +822,8 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                           labelText: c('sentOn'),
                           hintText: 'DD.MM.YYYY',
                         ),
-                        validator: (v) => parseAirmiusDate(v) == null
-                            ? c('sentOn')
-                            : null,
+                        validator: (v) =>
+                            parseAirmiusDate(v) == null ? c('sentOn') : null,
                       ),
                       DropdownButtonFormField<String>(
                         initialValue: channel,
@@ -880,7 +970,20 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(c('intro')),
+          Text(c(_approvalMode == 'single' ? 'introSingle' : 'intro')),
+          ListTile(
+            title: Text(c('approvalMode')),
+            subtitle: Text(
+              c(_approvalMode == 'single' ? 'singleApproval' : 'dualApproval'),
+            ),
+            trailing: _canConfigureApproval
+                ? IconButton(
+                    tooltip: c('approvalMode'),
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: _busy ? null : _configureApproval,
+                  )
+                : null,
+          ),
           if (_busy) const LinearProgressIndicator(),
           if (_error != null)
             Semantics(
@@ -920,7 +1023,8 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                         _bankResults(batch, item),
                     ],
                     if (batch['status'] == 'draft' &&
-                        batch['created_by'] == userId)
+                        batch['created_by'] == userId &&
+                        _approvalMode != 'single')
                       Text(c('secondPerson')),
                     if (batch['notice_sent_on'] != null)
                       Text(
@@ -955,42 +1059,40 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                               sepaReturnLabels['en']!)['title']!,
                         ),
                       ),
-                    if (_canManage)
+                    if (_canManage || _canApprove)
                       Wrap(
                         spacing: 8,
                         children: [
-                          if (batch['status'] == 'draft')
+                          if (batch['status'] == 'draft' && _canApprove)
                             OutlinedButton(
-                              onPressed: _busy || batch['created_by'] == userId
+                              onPressed:
+                                  _busy ||
+                                      (batch['created_by'] == userId &&
+                                          _approvalMode != 'single')
                                   ? null
-                                  : () => _run(() async {
-                                      await _client.updateClubSepaBatch(
-                                        widget.clubId,
-                                        batch['id'] as int,
-                                        'approve',
-                                        {},
-                                      );
-                                    }),
+                                  : () => _approveBatch(batch),
                               child: Text(c('approve')),
                             ),
-                          if (batch['status'] == 'approved')
+                          if (_canManage && batch['status'] == 'approved')
                             OutlinedButton(
                               onPressed: _busy ? null : () => _notice(batch),
                               child: Text(c('record')),
                             ),
-                          if ([
-                            'notified',
-                            'exported',
-                          ].contains(batch['status']))
+                          if (_canManage &&
+                              [
+                                'notified',
+                                'exported',
+                              ].contains(batch['status']))
                             OutlinedButton(
                               onPressed: _busy ? null : () => _export(batch),
                               child: Text(c('export')),
                             ),
-                          if ([
-                            'draft',
-                            'approved',
-                            'notified',
-                          ].contains(batch['status']))
+                          if (_canManage &&
+                              [
+                                'draft',
+                                'approved',
+                                'notified',
+                              ].contains(batch['status']))
                             TextButton(
                               onPressed: _busy ? null : () => _cancel(batch),
                               child: Text(c('cancel')),
