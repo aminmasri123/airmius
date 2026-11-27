@@ -37,12 +37,19 @@ class WebsiteRequest extends Model
             'consent_at' => 'datetime',
             'status_changed_at' => 'datetime',
             'retention_expires_at' => 'datetime',
+            'processing_started_at' => 'datetime',
+            'withdrawn_at' => 'datetime',
         ];
     }
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::deleting(fn (self $project) => app(\App\Services\WebsiteProjectFiles::class)->scheduleDeletion($project->messages()->pluck('id')));
     }
 
     public function messages()

@@ -1319,7 +1319,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::delete('/commerce/seller/campaigns/{campaign}', [MobileCommerceCheckoutController::class, 'destroyOwnCampaign'])->name('commerce.seller.campaigns.destroy');
         Route::post('/commerce/seller/website-requests', [MobileCommerceCheckoutController::class, 'storeWebsiteRequest'])->name('commerce.seller.website-requests.store');
         Route::get('/commerce/website-requests/{websiteRequest}', [WebsiteProjectController::class, 'show'])->middleware(EnsurePlatformAdminTwoFactor::class)->name('commerce.website-project.show');
-        Route::post('/commerce/website-requests/{websiteRequest}/messages', [WebsiteProjectController::class, 'storeMessage'])->middleware([EnsurePlatformAdminTwoFactor::class, 'throttle:content-comments'])->name('commerce.website-project.messages');
+        Route::patch('/commerce/website-requests/{websiteRequest}', [WebsiteProjectController::class, 'update'])->middleware(EnsurePlatformAdminTwoFactor::class)->name('commerce.website-project.update');
+        Route::post('/commerce/website-requests/{websiteRequest}/withdraw', [WebsiteProjectController::class, 'withdraw'])->middleware(EnsurePlatformAdminTwoFactor::class)->name('commerce.website-project.withdraw');
+        // The controller fingerprints text AND file bytes using request_key.
+        Route::post('/commerce/website-requests/{websiteRequest}/messages', [WebsiteProjectController::class, 'storeMessage'])->withoutMiddleware(EnsureIdempotentApiRequest::class)->middleware([EnsurePlatformAdminTwoFactor::class, 'throttle:content-comments'])->name('commerce.website-project.messages');
 
         Route::middleware(EnsurePlatformAdminTwoFactor::class)->group(function () {
             Route::get('/admin/system', [AdminSystemController::class, 'dashboard'])->name('admin.system.dashboard');

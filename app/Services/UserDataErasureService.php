@@ -390,12 +390,7 @@ class UserDataErasureService
         ]);
 
         if ($this->hasTable('website_requests')) {
-            $deleted += DB::table('website_requests')
-                ->where(function (Builder $query) use ($user, $userId): void {
-                    $query->where('user_id', $userId)
-                        ->orWhere('guest_email', $user->email);
-                })
-                ->delete();
+            $deleted += app(WebsiteProjectFiles::class)->eraseForUser($user);
         }
 
         $allOrderIds = $this->ids($this->tableRowsForUser('commerce_orders', $userId, ['id']));

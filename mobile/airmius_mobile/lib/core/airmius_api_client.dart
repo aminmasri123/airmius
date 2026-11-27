@@ -4738,6 +4738,12 @@ class AirmiusApiClient {
   Future<AirmiusJson> sendWebsiteProjectMessage(int id, AirmiusJson body) =>
       _json('POST', '/api/v1/commerce/website-requests/$id/messages', body: body);
 
+  Future<AirmiusJson> updateWebsiteProject(int id, AirmiusJson body) =>
+      _json('PATCH', '/api/v1/commerce/website-requests/$id', body: body);
+
+  Future<AirmiusJson> withdrawWebsiteProject(int id) =>
+      _json('POST', '/api/v1/commerce/website-requests/$id/withdraw');
+
   Future<AirmiusJson> createCommerceWebsiteRequest(AirmiusJson body) =>
       _json('POST', '/api/v1/commerce/seller/website-requests', body: body);
 

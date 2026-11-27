@@ -15,6 +15,7 @@ import '../screens/support_ticket_service_center_suite_screen.dart';
 import '../screens/sport_matching_screen.dart';
 import '../screens/admin_platform_settings_screen.dart';
 import '../screens/admin_commerce_operations_screen.dart';
+import '../screens/website_project_screen.dart';
 import '../screens/billing_detail_screen.dart';
 import '../screens/chat_detail_screen.dart';
 import '../screens/challenges_screen.dart';
@@ -97,18 +98,21 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.sportMatching => SportMatchingScreen(
         initialMatchingId: target.id,
       ),
-      AirmiusDeepLinkTargetType.support => SupportTicketServiceCenterSuiteScreen(
-        ticketId: target.id,
-        operations: target.query['tab'] == 'operations',
-        inbox: target.query['inbox'] == 'safety' ? 'safety' : 'general',
-      ),
+      AirmiusDeepLinkTargetType.support =>
+        SupportTicketServiceCenterSuiteScreen(
+          ticketId: target.id,
+          operations: target.query['tab'] == 'operations',
+          inbox: target.query['inbox'] == 'safety' ? 'safety' : 'general',
+        ),
       AirmiusDeepLinkTargetType.sponsorApplication =>
         target.section == 'overview'
             ? SponsorCockpitScreen(
                 initialSponsorId:
                     target.id ?? int.tryParse(target.query['sponsor_id'] ?? ''),
                 initialClubId: int.tryParse(target.query['club_id'] ?? ''),
-                initialDeliverableId: int.tryParse(target.query['deliverable_id'] ?? ''),
+                initialDeliverableId: int.tryParse(
+                  target.query['deliverable_id'] ?? '',
+                ),
                 initialSection: target.query['section'] == 'partnerships'
                     ? 2
                     : 0,
@@ -124,7 +128,9 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.adminSponsorManagement =>
         SponsorManagementScreen(
           initialSponsorId: target.id,
-          initialPartnershipId: int.tryParse(target.query['partnership_id'] ?? ''),
+          initialPartnershipId: int.tryParse(
+            target.query['partnership_id'] ?? '',
+          ),
         ),
       AirmiusDeepLinkTargetType.club =>
         target.section == 'membership-requests'
@@ -216,6 +222,9 @@ class AirmiusDeepLinkNavigator {
         const AdminPlatformSettingsScreen(),
       AirmiusDeepLinkTargetType.adminCommerce =>
         const AdminCommerceOperationsScreen(initialSection: 'fulfillment'),
+      AirmiusDeepLinkTargetType.websiteProject => WebsiteProjectScreen(
+        projectId: target.id!,
+      ),
       AirmiusDeepLinkTargetType.marketplaceOrder => const MarketplaceScreen(
         initialSection: 'orders',
       ),
@@ -275,6 +284,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.billingInvoice => 'Meine Rechnung',
       AirmiusDeepLinkTargetType.adminSettings => 'Admin-Einstellungen',
       AirmiusDeepLinkTargetType.adminCommerce => 'Admin-Commerce',
+      AirmiusDeepLinkTargetType.websiteProject => 'Website-Projekt',
       AirmiusDeepLinkTargetType.marketplaceOrder => 'Marketplace-Bestellung',
       AirmiusDeepLinkTargetType.profile => 'Profil',
       AirmiusDeepLinkTargetType.memberCard => 'Mitgliedskarte',
@@ -399,11 +409,9 @@ class _AirmiusDeepLinkedClubServiceHoursScreenState
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _clubFuture ??= AirmiusServicesScope.of(context)
-        .repositories
-        .clubs
-        .club(widget.clubId)
-        .then(ClubSummary.fromAirmiusClub);
+    _clubFuture ??= AirmiusServicesScope.of(
+      context,
+    ).repositories.clubs.club(widget.clubId).then(ClubSummary.fromAirmiusClub);
   }
 
   @override

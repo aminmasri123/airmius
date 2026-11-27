@@ -56,6 +56,9 @@ class User extends Authenticatable implements HasLocalePreference, MustVerifyEma
             }
             app(UserFinancialRetentionService::class)->preserveBeforeAccountDeletion($user);
             app(UserClubContentPreservationService::class)->detachBeforeAccountDeletion($user);
+            if (\Illuminate\Support\Facades\Schema::hasTable('website_request_attachments')) {
+                app(\App\Services\WebsiteProjectFiles::class)->eraseForUser($user);
+            }
         });
     }
 

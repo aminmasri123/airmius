@@ -1,6 +1,20 @@
 import { useI18n } from 'vue-i18n'
 
 const copy = {
+    'Entwurf': ['Draft', 'Brouillon', 'مسودة'],
+    'Als Entwurf speichern': ['Save as draft', 'Enregistrer comme brouillon', 'حفظ كمسودة'],
+    'Anfrage bearbeiten': ['Edit request', 'Modifier la demande', 'تعديل الطلب'],
+    'Anfrage absenden': ['Submit request', 'Envoyer la demande', 'إرسال الطلب'],
+    'Anfrage zurückziehen': ['Withdraw request', 'Retirer la demande', 'سحب الطلب'],
+    'Anfrage wirklich zurückziehen? Der Verlauf bleibt erhalten.': ['Withdraw this request? The history will be retained.', 'Retirer la demande ? L’historique sera conservé.', 'هل تريد سحب الطلب؟ سيبقى السجل محفوظاً.'],
+    'Zurückgezogen': ['Withdrawn', 'Retirée', 'تم السحب'],
+    'Änderungen speichern': ['Save changes', 'Enregistrer les modifications', 'حفظ التعديلات'],
+    'Abbrechen': ['Cancel', 'Annuler', 'إلغاء'],
+    'Dateien hinzufügen': ['Attach files', 'Ajouter des fichiers', 'إرفاق ملفات'],
+    'Maximal 5 Dateien, jeweils bis 10 MB.': ['Up to 5 files, each up to 10 MB.', '5 fichiers maximum, jusqu’à 10 Mo chacun.', 'حتى 5 ملفات، بحد أقصى 10 ميغابايت لكل ملف.'],
+    'Anfrage bearbeitet': ['Request edited', 'Demande modifiée', 'تم تعديل الطلب'],
+    'Speichern fehlgeschlagen. Bitte erneut versuchen.': ['Saving failed. Please try again.', 'Échec de l’enregistrement. Réessayez.', 'فشل الحفظ. يرجى المحاولة مجدداً.'],
+    'Die Anfrage ist für Änderungen gesperrt. Rückfragen sind über die Kommentare möglich, solange das Projekt offen ist.': ['Editing is locked. You can use comments while the project is open.', 'La modification est verrouillée. Les commentaires restent disponibles tant que le projet est ouvert.', 'التعديل مقفل. يمكنك التعليق ما دام المشروع مفتوحاً.'],
     'Projekttitel': ['Project title', 'Titre du projet', 'عنوان المشروع'],
     'Zielgruppe': ['Target audience', 'Public cible', 'الجمهور المستهدف'],
     'Inspirationswebsites': ['Inspiration websites', 'Sites d’inspiration', 'مواقع للإلهام'],

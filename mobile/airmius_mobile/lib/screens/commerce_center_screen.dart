@@ -1065,7 +1065,9 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     if (payload == null || !mounted) return;
     await _run(
       () async => _client.createCommerceWebsiteRequest(payload),
-      success: AirmiusScope.of(context).t('commerceAdv.websiteRequested'),
+      success: payload['status'] == 'draft'
+          ? websiteText(context, 'saveDraft')
+          : AirmiusScope.of(context).t('commerceAdv.websiteRequested'),
     );
   }
 
@@ -2110,7 +2112,11 @@ class _WebsiteRequestCard extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           StatusPill(
-            t('commerceAdv.websiteStatus.$status'),
+            request['withdrawn_at'] != null
+                ? websiteText(context, 'withdrawn')
+                : status == 'draft'
+                ? websiteText(context, 'draft')
+                : t('commerceAdv.websiteStatus.$status'),
             color: status == 'done'
                 ? _commerceTone(context, AirmiusColors.green)
                 : _commerceTone(context, AirmiusColors.amber),
@@ -2849,6 +2855,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
   final _audience = TextEditingController();
   final _inspiration = TextEditingController();
   int? _clubId;
+  bool _saveDraft = false;
   bool _acceptedPrivacy = false;
   bool _submitted = false;
 
@@ -2998,8 +3005,15 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
               ),
             ],
             const SizedBox(height: 16),
+            CheckboxListTile(
+              value: _saveDraft,
+              title: Text(websiteText(context, 'saveDraft')),
+              onChanged: (value) => setState(() => _saveDraft = value ?? false),
+            ),
             AirmiusButton(
-              label: t('commerceAdv.sendRequest'),
+              label: _saveDraft
+                  ? websiteText(context, 'saveDraft')
+                  : t('commerceAdv.sendRequest'),
               icon: Icons.send_outlined,
               onPressed: () {
                 setState(() => _submitted = true);
@@ -3020,6 +3034,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
                   'goals': _goals.text.trim(),
                   'notes': _notes.text.trim(),
                   'accepted_privacy': true,
+                  'status': _saveDraft ? 'draft' : 'new',
                 });
               },
             ),

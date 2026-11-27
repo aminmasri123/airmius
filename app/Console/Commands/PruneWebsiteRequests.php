@@ -19,7 +19,7 @@ class PruneWebsiteRequests extends Command
         $ids = WebsiteRequest::query()
             ->whereNotNull('retention_expires_at')
             ->where('retention_expires_at', '<=', now())
-            ->whereIn('status', ['new', 'contacted', 'quoted', 'done', 'cancelled'])
+            ->whereIn('status', ['draft', 'new', 'contacted', 'quoted', 'done', 'cancelled'])
             ->oldest('id')
             ->limit($limit)
             ->pluck('id');
@@ -32,7 +32,7 @@ class PruneWebsiteRequests extends Command
 
         $deleted = $ids->isEmpty()
             ? 0
-            : WebsiteRequest::query()->whereIn('id', $ids)->delete();
+            : \Illuminate\Support\Facades\DB::transaction(fn () => WebsiteRequest::query()->whereIn('id', $ids)->get()->each(fn ($project) => $project->delete())->count());
 
         $this->info("Pruned {$deleted} expired agency requests.");
 

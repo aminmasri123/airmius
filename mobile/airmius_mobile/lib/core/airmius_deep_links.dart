@@ -17,6 +17,7 @@ enum AirmiusDeepLinkTargetType {
   billingInvoice,
   adminSettings,
   adminCommerce,
+  websiteProject,
   marketplaceOrder,
   profile,
   memberCard,
@@ -92,6 +93,7 @@ class AirmiusDeepLinkTarget {
     AirmiusDeepLinkTargetType.billingInvoice => 'billing_invoice',
     AirmiusDeepLinkTargetType.adminSettings => 'admin_settings',
     AirmiusDeepLinkTargetType.adminCommerce => 'admin_commerce',
+    AirmiusDeepLinkTargetType.websiteProject => 'website_project',
     AirmiusDeepLinkTargetType.marketplaceOrder => 'marketplace_order',
     AirmiusDeepLinkTargetType.profile => 'profile',
     AirmiusDeepLinkTargetType.memberCard => 'member_card',
@@ -149,6 +151,23 @@ class AirmiusDeepLinkResolver {
             : AirmiusDeepLinkTargetType.unknown,
         path: path,
         id: course,
+        query: query,
+      );
+    }
+    if (root == 'website-projects' ||
+        (root == 'commerce' &&
+            pathSegments.length > 1 &&
+            pathSegments[1] == 'website-projects')) {
+      final rawId = pathSegments.length > (root == 'commerce' ? 2 : 1)
+          ? pathSegments[root == 'commerce' ? 2 : 1]
+          : '';
+      final projectId = int.tryParse(rawId);
+      return AirmiusDeepLinkTarget(
+        type: projectId != null && projectId > 0
+            ? AirmiusDeepLinkTargetType.websiteProject
+            : AirmiusDeepLinkTargetType.unknown,
+        path: path,
+        id: projectId,
         query: query,
       );
     }
@@ -420,7 +439,8 @@ class AirmiusDeepLinkResolver {
         query: query,
       );
     }
-    if (root == 'admin' && pathSegments.length > 1 &&
+    if (root == 'admin' &&
+        pathSegments.length > 1 &&
         pathSegments[1].toLowerCase() == 'commerce') {
       return AirmiusDeepLinkTarget(
         type: AirmiusDeepLinkTargetType.adminCommerce,

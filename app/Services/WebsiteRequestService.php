@@ -31,6 +31,7 @@ class WebsiteRequestService
     {
         return [
             'project_title' => ['nullable', 'string', 'max:255'],
+            'status' => ['sometimes', Rule::in(['draft', 'new'])],
             'target_audience' => ['nullable', 'string', 'max:2000'],
             'inspiration_urls' => ['nullable', 'array', 'max:5'],
             'inspiration_urls.*' => ['required', 'url:http,https', 'max:2048'],
@@ -47,6 +48,7 @@ class WebsiteRequestService
         return $this->create([
             ...$data,
             'user_id' => $user?->id,
+            'status' => 'new',
         ]);
     }
 
@@ -63,10 +65,13 @@ class WebsiteRequestService
     {
         return DB::transaction(function () use ($websiteRequest, $actor, $data): WebsiteRequest {
             $locked = WebsiteRequest::query()->lockForUpdate()->findOrFail($websiteRequest->id);
+            abort_if($locked->status === 'draft' || ($locked->withdrawn_at && $data['status'] !== 'cancelled'), 409, __('website_project.closed'));
             $statusChanged = $locked->status !== $data['status'];
 
             $locked->forceFill([
                 'status' => $data['status'],
+                'processing_started_at' => $locked->processing_started_at
+                    ?? (in_array($data['status'], ['in_progress', 'done'], true) ? now() : null),
                 'notes' => array_key_exists('notes', $data) ? $data['notes'] : $locked->notes,
                 'status_changed_at' => $statusChanged ? now() : $locked->status_changed_at,
                 'status_changed_by' => $statusChanged ? $actor->id : $locked->status_changed_by,
@@ -76,9 +81,10 @@ class WebsiteRequestService
             ])->save();
 
             if ($statusChanged) {
-                $locked->messages()->create([
+                $message = $locked->messages()->create([
                     'user_id' => $actor->id, 'kind' => 'status', 'status' => $data['status'],
                 ]);
+                app(WebsiteProjectNotifications::class)->send($locked, $actor, 'status', 'status:'.$message->id);
             }
 
             return $locked->fresh(['user', 'club', 'statusChangedBy']);
@@ -88,13 +94,18 @@ class WebsiteRequestService
     /** @param array<string, mixed> $data */
     private function create(array $data): WebsiteRequest
     {
-        return WebsiteRequest::query()->create([
-            ...collect($data)->except('accepted_privacy')->all(),
-            'status' => 'new',
-            'package' => 'website_plus',
-            'consent_at' => now(),
-            'status_changed_at' => now(),
-            'retention_expires_at' => now()->addYear(),
-        ]);
+        return DB::transaction(function () use ($data) {
+            $project = WebsiteRequest::query()->create([
+                ...collect($data)->except('accepted_privacy')->all(),
+                'status' => $data['status'] ?? 'new',
+                'package' => 'website_plus',
+                'consent_at' => now(),
+                'status_changed_at' => now(),
+                'retention_expires_at' => now()->addYear(),
+            ]);
+            app(WebsiteProjectNotifications::class)->send($project, $project->user, 'created', 'created:'.$project->id);
+
+            return $project;
+        });
     }
 }

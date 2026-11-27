@@ -211,9 +211,8 @@ class CommerceCheckoutController extends Controller
             'currentSponsor' => $sponsorContext
                 ? $this->sponsorOrganizationResource($request, $sponsorContext)
                 : null,
-            'websiteRequests' => WebsiteRequest::query()
+            'websiteRequests' => app(\App\Services\WebsiteProjectAccess::class)->requesterProjects($request->user())
                 ->with('club:id,name')
-                ->where('user_id', $request->user()->id)
                 ->latest('id')
                 ->limit(10)
                 ->get(),
@@ -397,9 +396,8 @@ class CommerceCheckoutController extends Controller
                 'current_sponsor' => $sponsorContext
                     ? $this->sponsorOrganizationResource($request, $sponsorContext)
                     : null,
-                'website_requests' => WebsiteRequest::query()
+                'website_requests' => app(\App\Services\WebsiteProjectAccess::class)->requesterProjects($user)
                     ->with('club:id,name')
-                    ->where('user_id', $user->id)
                     ->latest('id')
                     ->limit(50)
                     ->get(),
@@ -2565,7 +2563,7 @@ class CommerceCheckoutController extends Controller
             ], 201);
         }
 
-        return back()->with('success', __('commerce.flash.website_request_sent'));
+        return back()->with('success', $websiteRequest->status === 'draft' ? __('website_project.draft_saved') : __('commerce.flash.website_request_sent'));
     }
 
     public function storePublicWebsiteRequest(Request $request)

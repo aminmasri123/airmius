@@ -124,6 +124,9 @@ final class NotificationRouting
     /** @return array<string, mixed> */
     public static function normalizeActionData(string $type, array $data): array
     {
+        if (Str::startsWith($type, 'club.website_project.') && ($projectId = self::positiveIdentifier($data['website_request_id'] ?? null)) !== null) {
+            return self::withAction($data, '/commerce/website-projects/'.$projectId, 'airmius://website-projects/'.$projectId, false);
+        }
         if (Str::startsWith($type, 'learning.assignment.') && ($courseId = self::positiveIdentifier($data['course_id'] ?? null)) !== null) {
             $query = array_filter(['course' => $courseId, 'assignment' => self::positiveIdentifier($data['assignment_id'] ?? null), 'submission' => self::positiveIdentifier($data['submission_id'] ?? null), 'lesson' => self::positiveIdentifier($data['lesson_id'] ?? null)]);
             $studio = $type === 'learning.assignment.submitted';

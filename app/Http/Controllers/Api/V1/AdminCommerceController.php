@@ -81,7 +81,7 @@ class AdminCommerceController extends Controller
                     'commission_cents' => CommerceOrder::query()->where('status', 'completed')->sum('commission_cents'),
                     'payouts_prepared' => MarketplacePayout::query()->where('status', 'prepared')->count(),
                     'seller_applications' => MarketplaceSellerApplication::query()->count(),
-                    'website_requests' => WebsiteRequest::query()->count(),
+                    'website_requests' => WebsiteRequest::query()->where('status', '!=', 'draft')->count(),
                     'campaigns' => AdCampaign::query()->count(),
                     'public_contact_requests' => PublicContactRequest::query()->count(),
                     'public_contact_requests_new' => PublicContactRequest::query()->where('status', 'new')->count(),
@@ -110,7 +110,7 @@ class AdminCommerceController extends Controller
             'seller_applications' => $this->listPage($request, MarketplaceSellerApplication::query()->with([
                 'user:id,name,email', 'user.marketplaceProviderProfile.locations', 'user.payoutProfile',
             ]), 'seller_applications', ['business_name', 'user.email']),
-            'website_requests' => $this->listPage($request, WebsiteRequest::query()->with(['user:id,name,email', 'club:id,name']), 'website_requests', ['club_name', 'domain', 'guest_email', 'user.email', 'club.name']),
+            'website_requests' => $this->listPage($request, WebsiteRequest::query()->where('status', '!=', 'draft')->with(['user:id,name,email', 'club:id,name']), 'website_requests', ['club_name', 'domain', 'guest_email', 'user.email', 'club.name']),
             'campaigns' => $this->listPage($request, AdCampaign::query()->with('creatives'), 'campaigns', ['name', 'headline']),
             'public_contact_requests' => $this->listPage($request, PublicContactRequest::query()->with(['user:id,name,email', 'statusChanger:id,name,email']), 'public_contact_requests', ['name', 'email', 'subject']),
             'audit_logs' => $this->listPage($request, CommerceAuditLog::query()->with('user:id,name,email'), 'audit_logs', ['action', 'note', 'user.email'], null),

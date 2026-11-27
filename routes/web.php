@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Inertia\Inertia;
 
+Route::get('/website-projects/{websiteRequest}/attachments/{attachment}', [\App\Http\Controllers\Api\V1\WebsiteProjectController::class, 'attachment'])
+    ->middleware('throttle:60,1')->name('website-project.attachment');
+
 Route::get('/session-status', fn () => response()->noContent()
     ->header('Cache-Control', 'no-store, private'))
     ->middleware(['auth', config('jetstream.auth_session', \Laravel\Jetstream\Http\Middleware\AuthenticateSession::class)])

@@ -29,7 +29,7 @@ class AdminCommerceDashboardPayloadService
             'orders' => CommerceOrder::query()->count(),
             'commission_cents' => (clone $completedOrders)->sum('commission_cents'),
             'payout_cents' => (clone $completedOrders)->sum('amount_cents') - (clone $completedOrders)->sum('commission_cents'),
-            'website_requests' => WebsiteRequest::query()->count(),
+            'website_requests' => WebsiteRequest::query()->where('status', '!=', 'draft')->count(),
         ];
     }
 

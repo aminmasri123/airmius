@@ -69,7 +69,8 @@ watch(() => props.websiteRequestModal, () => { inspirationText.value = props.web
                         <input v-model="websiteForm.accepted_privacy" type="checkbox" class="mt-0.5 rounded border-border bg-inputBg text-air-blue focus:ring-air-blue">
                         <span>{{ t('agency.privacy_accept') }}</span>
                     </label>
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="websiteForm.processing || !websiteForm.accepted_privacy">{{ t('agency.send') }}</button>
+                    <label class="flex gap-2"><input v-model="websiteForm.status" type="checkbox" true-value="draft" false-value="new">{{ w('Als Entwurf speichern') }}</label>
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="websiteForm.processing || !websiteForm.accepted_privacy">{{ websiteForm.status === 'draft' ? w('Als Entwurf speichern') : t('agency.send') }}</button>
                 </div>
             </form>
         </div>

@@ -42,13 +42,56 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('editing locks and withdrawal closes the conversation', (
+    tester,
+  ) async {
+    final transport = _ProjectTransport()..status = 'in_progress';
+    await _pump(tester, transport, const WebsiteProjectScreen(projectId: 7));
+    expect(find.text('Anfrage bearbeiten'), findsNothing);
+    final withdraw = find.text('Anfrage zurückziehen');
+    await tester.ensureVisible(withdraw);
+    await tester.tap(withdraw);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Anfrage zurückziehen'));
+    await tester.pumpAndSettle();
+    expect(transport.status, 'cancelled');
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Anfrage bearbeiten'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('saved attachments remain visible after refreshing the project', (
+    tester,
+  ) async {
+    final transport = _ProjectTransport()..withFiles = true;
+    await _pump(tester, transport, const WebsiteProjectScreen(projectId: 7));
+    await tester.scrollUntilVisible(
+      find.text('plan.pdf'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('plan.pdf'), findsOneWidget);
+    expect(find.text('design.png'), findsOneWidget);
+    await tester.tap(find.byTooltip('Aktualisieren'));
+    await tester.pumpAndSettle();
+    expect(find.text('plan.pdf'), findsOneWidget);
+    expect(find.text('design.png'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _ProjectTransport implements AirmiusApiTransport {
   final permission = 'marketplace.manage';
   final sent = <AirmiusApiRequest>[];
+  String status = 'new';
+  bool withFiles = false;
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
+    if (request.path.endsWith('/withdraw')) {
+      status = 'cancelled';
+      return AirmiusApiResponse(statusCode: 200, body: '{"ok":true}');
+    }
     if (request.path.endsWith('/messages')) {
       sent.add(request);
       return AirmiusApiResponse(statusCode: 200, body: '{"ok":true}');
@@ -59,12 +102,41 @@ class _ProjectTransport implements AirmiusApiTransport {
         'data': {
           'id': 7,
           'project_title': 'Neue Website',
-          'status': 'new',
+          'status': status,
+          'can_comment': status != 'cancelled',
+          'can_edit': status == 'new',
+          'can_withdraw': status != 'cancelled',
+          'withdrawn_at': status == 'cancelled' ? '2026-11-27T12:30:00Z' : null,
           'goals': 'Mitglieder gewinnen',
           'inspiration_urls': ['https://example.org'],
           'created_at': '2026-11-27T12:00:00Z',
         },
-        'messages': {'data': [], 'last_page': 1},
+        'messages': {
+          'data': [
+            if (withFiles)
+              {
+                'id': 1,
+                'kind': 'comment',
+                'body': 'Unser Plan',
+                'author': 'Projektteam',
+                'attachments': [
+                  {
+                    'id': 1,
+                    'name': 'plan.pdf',
+                    'download_url':
+                        '/website-projects/7/attachments/1?signature=test',
+                  },
+                  {
+                    'id': 2,
+                    'name': 'design.png',
+                    'download_url':
+                        '/website-projects/7/attachments/2?signature=test',
+                  },
+                ],
+              },
+          ],
+          'last_page': 1,
+        },
       }),
     );
   }

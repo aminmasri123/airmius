@@ -32,13 +32,15 @@ const emit = defineEmits(['update-website-request'])
                             <p v-if="request.guest_name" class="text-xs text-secondary">{{ request.guest_name }}</p>
                         </td>
                         <td class="px-5 py-3 text-secondary">{{ request.domain || '-' }}</td>
-                        <td class="px-5 py-3 text-secondary">{{ w(statuses[request.status] || request.status) }}</td>
+                        <td class="px-5 py-3 text-secondary">{{ request.withdrawn_at ? w('Zurückgezogen') : w(statuses[request.status] || request.status) }}</td>
                         <td class="px-5 py-3 text-end">
                                                         <div class="flex flex-wrap justify-end gap-3">
                                 <button type="button" class="rounded-lg border border-border px-3 py-2" @click="selected = request.id">{{ w('Projekt und Nachrichten') }}</button>
-                                <select :value="request.status" :aria-label="w('Projektstatus ändern')" class="rounded-lg border-border bg-inputBg text-primary" @change="emit('update-website-request', request, $event.target.value)"><option v-for="(label, status) in statuses" :key="status" :value="status">{{ w(label) }}</option></select>
-                                <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('update-website-request', request, 'contacted')">{{ w('Kontaktiert') }}</button>
-                                <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('update-website-request', request, 'quoted')">{{ t('commerce.ui.offer') }}</button>
+                                <template v-if="!request.withdrawn_at">
+                                    <select :value="request.status" :aria-label="w('Projektstatus ändern')" class="rounded-lg border-border bg-inputBg text-primary" @change="emit('update-website-request', request, $event.target.value)"><option v-for="(label, status) in statuses" :key="status" :value="status">{{ w(label) }}</option></select>
+                                    <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('update-website-request', request, 'contacted')">{{ w('Kontaktiert') }}</button>
+                                    <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('update-website-request', request, 'quoted')">{{ t('commerce.ui.offer') }}</button>
+                                </template>
                             </div>
                         </td>
                     </tr>

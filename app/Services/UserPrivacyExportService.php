@@ -377,6 +377,11 @@ class UserPrivacyExportService
                 ])->values(),
             ],
             'agency' => [
+                'messages' => \App\Models\WebsiteRequestMessage::with('attachments')->where('user_id', $user->id)->get()
+                    ->map(fn ($message) => [
+                        ...$message->only(['id', 'website_request_id', 'kind', 'status', 'body', 'created_at']),
+                        'attachments' => $message->attachments->map(fn ($file) => $file->only(['id', 'name', 'mime_type', 'size', 'created_at'])),
+                    ]),
                 'requests' => $agencyRequests->map(fn (WebsiteRequest $agencyRequest) => [
                     'id' => $agencyRequest->id,
                     'club' => $agencyRequest->club?->only(['id', 'name']),
@@ -385,6 +390,9 @@ class UserPrivacyExportService
                     'guest_email' => $agencyRequest->guest_email,
                     'guest_phone' => $agencyRequest->guest_phone,
                     'domain' => $agencyRequest->domain,
+                    'project_title' => $agencyRequest->project_title,
+                    'target_audience' => $agencyRequest->target_audience,
+                    'inspiration_urls' => $agencyRequest->inspiration_urls,
                     'goals' => $agencyRequest->goals,
                     'notes' => $agencyRequest->notes,
                     'status' => $agencyRequest->status,

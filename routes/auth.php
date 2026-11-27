@@ -330,6 +330,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::delete('/commerce/campaigns/{campaign}', [CommerceCheckoutController::class, 'destroyOwnCampaign'])->name('auth.commerce.campaigns.destroy');
     Route::post('/commerce/website-requests', [CommerceCheckoutController::class, 'storeWebsiteRequest'])->name('auth.commerce.website-requests.store');
     Route::get('/commerce/website-requests/{websiteRequest}/project', [WebsiteProjectController::class, 'show'])->middleware(HardenAdminArea::class)->name('auth.commerce.website-project.show');
+    Route::get('/commerce/website-projects/{websiteRequest}', [WebsiteProjectController::class, 'page'])->middleware(HardenAdminArea::class)->name('auth.commerce.website-project.page');
+    Route::patch('/commerce/website-requests/{websiteRequest}', [WebsiteProjectController::class, 'update'])->middleware(HardenAdminArea::class)->name('auth.commerce.website-project.update');
+    Route::post('/commerce/website-requests/{websiteRequest}/withdraw', [WebsiteProjectController::class, 'withdraw'])->middleware(HardenAdminArea::class)->name('auth.commerce.website-project.withdraw');
     Route::post('/commerce/website-requests/{websiteRequest}/messages', [WebsiteProjectController::class, 'storeMessage'])->middleware([HardenAdminArea::class, 'throttle:content-comments'])->name('auth.commerce.website-project.messages');
     Route::post('/commerce/payout-profile', [CommerceCheckoutController::class, 'storePayoutProfile'])->name('auth.commerce.payout-profile.store');
     Route::post('/commerce/payouts/request', [CommerceCheckoutController::class, 'requestPayout'])->name('auth.commerce.payouts.request');

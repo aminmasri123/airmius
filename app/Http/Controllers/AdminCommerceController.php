@@ -141,6 +141,7 @@ class AdminCommerceController extends Controller
                 ->limit(50)
                 ->get(),
             'websiteRequests' => WebsiteRequest::query()
+                ->where('status', '!=', 'draft')
                 ->with(['user:id,name,email', 'club:id,name'])
                 ->latest('id')
                 ->limit(50)
