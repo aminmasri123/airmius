@@ -10,7 +10,7 @@ Diese Datei ist die interne Nachweis- und VVT-Hilfe für Auftragsverarbeiter und
 | --- | --- | --- | --- |
 | Hosting | Hostinger | Server-/Datenbankbetrieb ausserhalb des Codes, Rechtstexte nennen Hostinger | Aktiv vorgesehen, DPA-Nachweis liegt als PDF vor |
 | Storage/CDN/Backups | Cloudflare R2/CDN | `FILESYSTEM_DISK=r2`, `UPLOAD_DISK=r2`, `BACKUP_DISK=r2` | Aktiv vorgesehen, Customer DPA liegt als PDF vor |
-| Mail | Amazon SES, Stockholm. Hostinger für Airmius-Postfächer | `MAIL_MAILER=ses`, `AWS_SES_REGION=eu-north-1` | Domain und Testzustellung bestätigt. Produktionszugang und Umstellung gesondert prüfen. |
+| Mail | SMTP/Log je nach Umgebung. Produktive Sicherheitsmails über Hostinger SMTP, Amazon SES in Stockholm vorbereitet | `MAIL_MAILER=ses`, `AWS_SES_REGION=eu-north-1` | Domain und Testzustellung bestätigt. Produktionszugang und Umstellung gesondert prüfen. |
 | Payments | Stripe, PayPal, Bankueberweisung ohne externen Payment-Provider | `STRIPE_*`, `PAYPAL_*`, Checkout/Webhook-Code | Stripe/PayPal nur produktiv aktivieren, wenn DPA/Datenschutznotiz geprueft ist |
 | Analytics/Tracking | Keine externen Analytics-, Marketing-, Retargeting- oder Pixel-Skripte aktiv eingebunden | `docs/COOKIE_TRACKING_CONSENT.md`, `resources/js/services/privacyConsent.js` | Keine Analytics-Subprozessoren im MVP; neue Tags erst nach Opt-in und Dokumentation |
 | Push | FCM und APNS vorbereitet, Dispatch aktuell projektintern simuliert | `MOBILE_PUSH_PROVIDER=fcm`, `FCM_*`, `APNS_*`, `MobilePushDeliveryService` | Vor echter Auslieferung Google Firebase/Apple APNS als Empfaenger dokumentieren |
