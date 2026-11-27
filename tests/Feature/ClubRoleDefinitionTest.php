@@ -11,6 +11,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\ClubPermissions;
+use App\Support\ClubRoleTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -22,6 +23,18 @@ class ClubRoleDefinitionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_standard_role_catalog_has_explanations_and_only_known_permissions(): void
+    {
+        $templates = ClubRoleTemplates::payload();
+        $this->assertCount(24, $templates);
+        foreach ($templates as $template) {
+            $this->assertNotEmpty($template['description']);
+            $this->assertNotEmpty($template['scenario']);
+            $this->assertContains($template['risk'], ['normal', 'elevated', 'high']);
+            $this->assertSame([], array_diff($template['permissions'], ClubPermissions::ALL));
+        }
+    }
+
     public function test_owner_can_manage_club_scoped_role_definitions_from_complete_templates(): void
     {
         [$club, $owner] = $this->clubWithOwner();
@@ -29,9 +42,17 @@ class ClubRoleDefinitionTest extends TestCase
 
         $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")
             ->assertOk()
-            ->assertJsonCount(11, 'data.templates')
+            ->assertJsonCount(24, 'data.templates')
+            ->assertJsonCount(24, 'data.roles')
+            ->assertJsonFragment(['key' => 'standard_treasurer', 'name' => 'Kassenwart'])
             ->assertJsonFragment(['key' => 'treasurer', 'name' => 'Kassenwart'])
-            ->assertJsonFragment(['key' => 'external_contact', 'name' => 'Externe Ansprechpartner']);
+            ->assertJsonFragment(['key' => 'external_contact', 'name' => 'Externe Ansprechpartner'])
+            ->assertJsonFragment(['key' => 'membership_office', 'name' => 'Mitgliederverwaltung'])
+            ->assertJsonPath('data.templates.0.can_assign', true);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")
+            ->assertOk()
+            ->assertJsonCount(24, 'data.roles');
 
         $created = $this->postJson("/api/v1/clubs/{$club->id}/role-definitions", [
             'key' => 'veranstaltungsleitung',
@@ -84,6 +105,11 @@ class ClubRoleDefinitionTest extends TestCase
         ]);
         Sanctum::actingAs($editor);
 
+        $templates = $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")
+            ->assertOk()->json('data.templates');
+        $financeTemplate = collect($templates)->firstWhere('key', 'finance_assistant');
+        $this->assertFalse($financeTemplate['can_assign']);
+
         $this->postJson("/api/v1/clubs/{$club->id}/role-definitions", [
             'key' => 'finance_escalation',
             'name' => 'Finance escalation',
@@ -124,6 +150,39 @@ class ClubRoleDefinitionTest extends TestCase
 
         $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")->assertForbidden();
         $this->postJson("/api/v1/clubs/{$club->id}/role-definitions", [])->assertForbidden();
+    }
+
+    public function test_existing_standard_role_can_be_assigned_without_creating_it_manually(): void
+    {
+        [$club, $owner, $member] = $this->clubWithOwner(true);
+        Sanctum::actingAs($owner);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")->assertOk();
+        $role = $club->roleDefinitions()->where('key', 'standard_treasurer')->firstOrFail();
+
+        $this->putJson("/api/v1/clubs/{$club->id}/members/{$member->id}/role-definitions", [
+            'role_definition_ids' => [$role->id],
+        ])->assertOk()->assertJsonPath('data.roles.0.name', 'Kassenwart');
+
+        $this->assertTrue(ClubPermissions::allows($club, $member, ClubPermissions::FINANCE_VIEW));
+    }
+
+    public function test_standard_role_backfill_keeps_existing_club_changes(): void
+    {
+        [$club, $owner] = $this->clubWithOwner();
+        $role = $this->role($club, 'standard_treasurer', [ClubPermissions::FINANCE_VIEW], false);
+        $role->update(['name' => 'Eigene Kassenrolle']);
+        Sanctum::actingAs($owner);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")
+            ->assertOk()
+            ->assertJsonCount(24, 'data.roles');
+
+        $this->assertDatabaseHas('club_role_definitions', [
+            'id' => $role->id,
+            'name' => 'Eigene Kassenrolle',
+            'is_active' => false,
+        ]);
     }
 
     public function test_multiple_configured_roles_add_permissions_without_changing_legacy_roles(): void

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
 use App\Support\ClubRoleTemplates;
+use App\Support\ClubStandardRoles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -21,10 +22,15 @@ class ClubRoleDefinitionController extends Controller
     public function index(Request $request, Club $club)
     {
         $this->authorizeManage($request, $club);
+        ClubStandardRoles::ensureFor($club);
+        $effective = ClubPermissions::effectiveFor($club, $request->user());
 
         return response()->json(['data' => [
-            'roles' => $club->roleDefinitions()->withCount('assignments')->orderBy('name')->limit(100)->get()->map(fn (ClubRoleDefinition $role) => $this->payload($role)),
-            'templates' => ClubRoleTemplates::payload(),
+            'roles' => $club->roleDefinitions()->withCount('assignments')->orderBy('name')->limit(124)->get()->map(fn (ClubRoleDefinition $role) => $this->payload($role)),
+            'templates' => collect(ClubRoleTemplates::payload())->map(fn (array $template) => [
+                ...$template,
+                'can_assign' => collect($template['permissions'])->every(fn (string $permission) => $effective[$permission] ?? false),
+            ])->values(),
             'permission_catalog' => ClubPermissions::catalog(),
         ]]);
     }
@@ -32,7 +38,7 @@ class ClubRoleDefinitionController extends Controller
     public function store(Request $request, Club $club)
     {
         $this->authorizeManage($request, $club);
-        abort_if($club->roleDefinitions()->count() >= 100, 422, __('validation.role_definition_limit'));
+        abort_if($club->roleDefinitions()->count() >= 124, 422, __('validation.role_definition_limit'));
         $data = $this->validated($request, $club);
         $role = $club->roleDefinitions()->create($data);
         $this->audit($club, $request, 'club.role_definition.created', $role);
