@@ -12252,6 +12252,43 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('member manager sees a direct club management action', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1800));
+    final transport = _SequencedTransport([
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":[{"id":4,"name":"Airmius Club","city":"Berlin","is_member":true,"can_manage_members":true}]}',
+      ),
+      const AirmiusApiResponse(
+        statusCode: 200,
+        body:
+            '{"data":{"id":4,"name":"Airmius Club","city":"Berlin","is_member":true,"can_manage_members":true,"teams":[]}}',
+      ),
+    ]);
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      ClubsScreen(
+        requestedClubIds: const {},
+        onRequestClub: (_) {},
+        onWithdrawClub: (_) {},
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Airmius Club'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Schnellzugriff'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mitglieder & Finanzen'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'club membership exposes pause and termination actions from the API',
     (WidgetTester tester) async {

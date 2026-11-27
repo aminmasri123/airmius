@@ -184,6 +184,8 @@ return [
         'club_member_limit_reached' => 'Das Mitgliederlimit des aktuellen Vereinsplans ist erreicht.',
     ],
     'notifications' => [
+        'club_role_assignments_title' => 'Vereinsrollen geändert',
+        'club_role_assignments_body' => 'Deine zugewiesenen Rollen in :club wurden geändert. Öffne den Verein, um deinen Zugang zu sehen.',
         'club_role_title' => 'Vereinsrolle geändert',
         'club_role_body' => 'Deine Rolle in :club wurde von :previous auf :next geändert.',
         'member_linked_title' => 'Du wurdest mit :club verknüpft',

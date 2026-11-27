@@ -184,6 +184,8 @@ return [
         'club_member_limit_reached' => 'The current club plan’s member limit has been reached.',
     ],
     'notifications' => [
+        'club_role_assignments_title' => 'Club roles changed',
+        'club_role_assignments_body' => 'Your assigned roles in :club have changed. Open the club to see your access.',
         'club_role_title' => 'Club role changed',
         'club_role_body' => 'Your role in :club changed from :previous to :next.',
         'member_linked_title' => 'You were linked to :club',

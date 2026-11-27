@@ -7,6 +7,7 @@ use App\Models\ClubDepartment;
 use App\Models\ClubRoleDefinition;
 use App\Models\ClubSubscription;
 use App\Models\Event;
+use App\Models\Notification;
 use App\Models\SubscriptionPlan;
 use App\Models\Team;
 use App\Models\User;
@@ -165,6 +166,50 @@ class ClubRoleDefinitionTest extends TestCase
         ])->assertOk()->assertJsonPath('data.roles.0.name', 'Kassenwart');
 
         $this->assertTrue(ClubPermissions::allows($club, $member, ClubPermissions::FINANCE_VIEW));
+    }
+
+    public function test_membership_office_role_exposes_management_access_to_assigned_member(): void
+    {
+        [$club, $owner, $member] = $this->clubWithOwner(true);
+        Sanctum::actingAs($owner);
+        $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")->assertOk();
+        $role = $club->roleDefinitions()->where('key', 'standard_membership_office')->firstOrFail();
+        $this->putJson("/api/v1/clubs/{$club->id}/members/{$member->id}/role-definitions", [
+            'role_definition_ids' => [$role->id],
+        ])->assertOk();
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs?mine=1")
+            ->assertOk()
+            ->assertJsonFragment(['id' => $club->id, 'can_manage_members' => true]);
+        $this->getJson("/api/v1/clubs/{$club->id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_manage_members', true)
+            ->assertJsonPath('data.management.can_manage', true);
+    }
+
+    public function test_member_is_notified_once_per_actual_role_assignment_change(): void
+    {
+        [$club, $owner, $member] = $this->clubWithOwner(true);
+        $member->update(['language' => 'de']);
+        Sanctum::actingAs($owner);
+        $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")->assertOk();
+        $role = $club->roleDefinitions()->where('key', 'standard_membership_office')->firstOrFail();
+        $url = "/api/v1/clubs/{$club->id}/members/{$member->id}/role-definitions";
+
+        $this->putJson($url, ['role_definition_ids' => [$role->id]])->assertOk();
+        $notification = Notification::query()
+            ->where('user_id', $member->id)
+            ->where('type', 'club.member.role_assignments_updated')->sole();
+        $this->assertSame('Vereinsrollen geändert', $notification->data['title']);
+        $this->assertSame([$role->name], $notification->data['role_names']);
+        $this->assertSame('airmius://clubs/'.$club->id, $notification->data['mobile_url']);
+
+        $this->putJson($url, ['role_definition_ids' => [$role->id]])->assertOk();
+        $this->assertSame(1, Notification::query()->where('type', 'club.member.role_assignments_updated')->count());
+
+        $this->putJson($url, ['role_definition_ids' => []])->assertOk();
+        $this->assertSame(2, Notification::query()->where('type', 'club.member.role_assignments_updated')->count());
     }
 
     public function test_standard_role_backfill_keeps_existing_club_changes(): void

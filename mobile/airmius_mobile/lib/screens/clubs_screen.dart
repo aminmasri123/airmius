@@ -1877,6 +1877,18 @@ class _ClubInlineWorkspace extends StatelessWidget {
                 label: t('clubs.clubProfile'),
                 onPressed: onOpenProfile,
               ),
+              if (club.canAccessMembershipWorkspace)
+                _SmallInlineButton(
+                  label: t('clubs.workspace.membersFinance'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ClubMembershipManagementScreen(
+                        initialClubId: club.id,
+                      ),
+                    ),
+                  ),
+                ),
               if (club.isMember || club.canManage)
                 _SmallInlineButton(
                   label: t('inventory.title'),
