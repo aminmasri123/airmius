@@ -96,6 +96,8 @@ Route::post('/webhooks/mail/postmark', PostmarkMailWebhookController::class)
 Route::get('/ads/active', [CommerceCheckoutController::class, 'activeAd'])->name('ads.active');
 Route::get('/ads/{campaign}/click', [CommerceCheckoutController::class, 'clickAd'])->name('ads.click');
 Route::post('/ads/{campaign}/conversion', [CommerceCheckoutController::class, 'conversionAd'])->name('ads.conversion');
+Route::get('/ads/posts/{post}', [\App\Http\Controllers\Api\V1\FeedController::class, 'show'])->middleware('auth');
+Route::post('/ads/impression', [CommerceCheckoutController::class, 'confirmAdImpression'])->middleware('throttle:120,1');
 Route::get('/shared-files/{token}', [FileController::class, 'sharedDownload'])
     ->middleware('throttle:file-shared-download')
     ->name('files.shared-download');

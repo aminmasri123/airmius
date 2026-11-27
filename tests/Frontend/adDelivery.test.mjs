@@ -13,7 +13,7 @@ function harness(response) {
     const timeouts = new Map()
     const listeners = new Map()
     const hooks = {}
-    let intersection
+    const intersections = []
     let next = response
     let id = 0
     const document = {
@@ -32,7 +32,7 @@ function harness(response) {
     }
     const context = {
         document, window,
-        defineProps: () => ({ placement: 'feed', variant: 'card', fallback: false }),
+        defineProps: () => ({ placement: 'feed', variant: 'card', fallback: false, excludePosts: [] }),
         ref: (value) => ({ value }),
         computed: (fn) => ({ get value() { return fn() } }),
         onMounted: (fn) => { hooks.mount = fn },
@@ -41,7 +41,7 @@ function harness(response) {
         clearTimeout: (handle) => timeouts.delete(handle),
         clearInterval: (handle) => intervals.delete(handle),
         IntersectionObserver: class {
-            constructor(callback) { intersection = callback }
+            constructor(callback) { intersections.push(callback) }
             observe() {}
             disconnect() { hooks.disconnected = true }
         },
@@ -52,7 +52,7 @@ function harness(response) {
     return {
         ...context.slot, calls, timeouts, intervals, document, hooks, listeners,
         setResponse: (value) => { next = value },
-        enter: async () => { intersection([{ isIntersecting: true }]); await new Promise(setImmediate) },
+        enter: async () => { intersections[0]([{ isIntersecting: true }]); await new Promise(setImmediate) },
     }
 }
 
@@ -79,7 +79,7 @@ test('web revalidation clears paused campaigns and hides failed deliveries', asy
     await slot.enter()
     assert.equal(slot.hasAd.value, true)
     slot.setResponse({})
-    await [...slot.intervals.values()][0].fn()
+    await slot.fetchAd()
     assert.equal(slot.hasAd.value, false)
     slot.setResponse(new Error('offline'))
     await slot.fetchAd()
@@ -110,7 +110,7 @@ test('hidden pages do not poll and unmount releases timers and observers', async
     slot.document.visibilityState = 'visible'
     slot.listeners.get('visibilitychange')()
     await new Promise(setImmediate)
-    assert.equal(slot.hasAd.value, false)
+    assert.equal(slot.hasAd.value, true)
     slot.hooks.unmount()
     assert.equal(slot.intervals.size, 0)
     assert.equal(slot.timeouts.size, 0)

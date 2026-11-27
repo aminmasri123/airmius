@@ -103,7 +103,7 @@ void main() {
     'sponsor_section',
   ]) {
     testWidgets(
-      '$placement renders a labelled ad and clears a paused delivery on refresh',
+      '$placement renders a labelled ad without rotating while reading',
       (tester) async {
         final transport = _AdTransport();
         await _pump(tester, transport, AirmiusAdSlot(placement: placement));
@@ -114,7 +114,7 @@ void main() {
         transport.ad = null;
         await tester.pump(const Duration(minutes: 1));
         await tester.pumpAndSettle();
-        expect(find.text('Unser Verein wirbt'), findsNothing);
+        expect(find.text('Unser Verein wirbt'), findsOneWidget);
         await tester.pumpWidget(const SizedBox());
       },
     );
@@ -164,7 +164,6 @@ void main() {
   });
 
   for (final entry in <(Widget, List<String>)>[
-    (const FeedCommunitySocialSuiteScreen(), ['feed', 'sidebar']),
     (const MarketplaceScreen(guest: true), ['marketplace_card']),
     (const SponsorsCenterScreen(), ['sponsor_section']),
   ]) {
@@ -183,6 +182,22 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
   }
+
+  testWidgets('empty feed does not insert ads without five organic posts', (
+    tester,
+  ) async {
+    final transport = _AdTransport();
+    await _pump(
+      tester,
+      transport,
+      const SizedBox(height: 1400, child: FeedCommunitySocialSuiteScreen()),
+    );
+    expect(
+      transport.requests.where((r) => r.path.endsWith('/ads/active')),
+      isEmpty,
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
 
   test(
     'signed-in delivery uses the bearer API rather than the guest endpoint',

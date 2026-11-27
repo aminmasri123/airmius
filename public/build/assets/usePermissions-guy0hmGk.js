@@ -1,0 +1,1 @@
+import{B as r}from"./vendor-vue-CNoKevdV.js";const h=()=>{const e=r(),n=s=>!!e.props.auth?.user?.can?.[s],a=s=>e.props.auth?.user?.roles?.includes(s)||!1;return{can:n,hasRole:a,hasAnyRole:s=>s.some(o=>a(o)),hasAny:s=>s.some(o=>n(o))}};export{h as u};

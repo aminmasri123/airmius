@@ -346,11 +346,8 @@ const visitPage = (url) => url && router.visit(url, {
                 </div>
             </div>
 
-            <AdSlot placement="feed" variant="banner" :fallback="false" />
-
+            <template v-for="(post, postIndex) in posts.data" :key="post.id">
             <article
-                v-for="post in posts.data"
-                :key="post.id"
                 class="surface-card min-w-0 overflow-hidden"
             >
                 <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
@@ -408,6 +405,7 @@ const visitPage = (url) => url && router.visit(url, {
                     </div>
 
                     <div class="flex justify-end gap-1">
+                        <Link v-if="post.user_id === user?.id && post.visibility === 'public' && post.moderation_status === 'approved'" :href="route('auth.commerce.index', { tab: 'ads', boost_post: post.id })" class="rounded p-2 text-primary">Beitrag bewerben</Link>
                         <button
                             v-if="post.user_id !== user?.id"
                             class="rounded p-2 text-secondary hover:bg-muted hover:text-primary"
@@ -734,6 +732,9 @@ const visitPage = (url) => url && router.visit(url, {
                 />
             </article>
 
+            <AdSlot v-if="((posts.from || 1) + postIndex) >= 5 && (((posts.from || 1) + postIndex) - 5) % 8 === 0" placement="feed" :exclude-posts="posts.data.map(item => item.id)" :fallback="false" />
+            </template>
+
             <div
                 v-if="posts.data.length === 0"
                 class="surface-card p-8 text-center text-secondary"
@@ -761,7 +762,7 @@ const visitPage = (url) => url && router.visit(url, {
         </section>
 
         <aside class="min-w-0 hidden md:block space-y-4 xl:sticky xl:top-24 xl:self-start">
-            <AdSlot placement="feed" variant="card" :fallback="false" />
+            <AdSlot placement="sidebar" variant="sidebar" :fallback="false" />
 
             <div class="surface-card p-4">
                 <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">

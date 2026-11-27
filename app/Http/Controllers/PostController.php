@@ -60,7 +60,7 @@ class PostController extends Controller
                             ->whereIn('moderation_status', ['flagged', 'reported']);
                     });
             })
-            ->where(function ($query) use ($user, $feedUserIds) {
+            ->where(function ($query) use ($user, $feedUserIds, $targetPostId) {
                 $query->where('user_id', $user->id)
                     ->orWhere(function ($query) use ($user) {
                         $query->where('visibility', 'friends')
@@ -70,6 +70,7 @@ class PostController extends Controller
                         $query->where('visibility', 'public')
                             ->whereIn('user_id', $feedUserIds);
                     })
+                    ->when($targetPostId, fn ($query) => $query->orWhere(fn ($query) => $query->whereKey($targetPostId)->where('visibility', 'public')))
                     ->orWhere(function ($query) use ($user) {
                         $query->where('visibility', 'organization')
                             ->whereHas('club', fn ($clubQuery) => $clubQuery

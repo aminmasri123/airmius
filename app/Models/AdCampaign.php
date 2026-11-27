@@ -12,6 +12,19 @@ class AdCampaign extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::updating(function (AdCampaign $campaign) {
+            // The source is immutable, including edits through the admin form.
+            $original = $campaign->getOriginal('audience') ?: [];
+            if (! empty($original['promoted_post_id'])) {
+                $campaign->audience = [...($campaign->audience ?: []), 'promoted_post_id' => $original['promoted_post_id']];
+                $campaign->placement = 'feed';
+                $campaign->target_url = route('auth.posts.index', ['post' => $original['promoted_post_id']]);
+            }
+        });
+    }
+
     protected $fillable = [
         'sponsor_id',
         'user_id',

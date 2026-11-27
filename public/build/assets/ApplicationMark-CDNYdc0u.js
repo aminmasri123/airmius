@@ -1,0 +1,1 @@
+import{u as l}from"./app-C7OmgDWs.js";import{a as r,l as c}from"./logoAssets-BLo38WhH.js";import{m,c as n,d as a,k as p}from"./vendor-vue-CNoKevdV.js";const u=["src"],d={__name:"ApplicationMark",setup(i){const{isDark:s}=l(),t=p(()=>c(s.value));return(_,o)=>(m(),n("img",{src:t.value,alt:"AIRMIUS Logo",onError:o[0]||(o[0]=(...e)=>a(r)&&a(r)(...e))},null,40,u))}};export{d as _};

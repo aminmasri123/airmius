@@ -3842,13 +3842,15 @@ class AirmiusApiClient {
   Future<AirmiusJson> publicSponsors() =>
       _json('GET', '/api/v1/public/sponsors');
 
-  Future<AirmiusJson> publicActiveAd({String placement = 'feed', String? device}) =>
+  Future<AirmiusJson> publicActiveAd({String placement = 'feed', String? device, List<int> excludePosts = const [], String? feedSession}) =>
       _json(
         'GET',
         token == null ? '/api/v1/public/ads/active' : '/api/v1/ads/active',
-        query: {'placement': placement},
+        query: {'placement': placement, 'exclude_posts': excludePosts.join(','), if (token != null) 'defer_impression': '1', if (feedSession != null) 'feed_session': feedSession},
         headers: {if (device != null) 'X-Airmius-Ad-Device': device},
       );
+
+  Future<AirmiusJson> confirmAdImpression(String deliveryToken) => _json('POST', '/api/v1/ads/impression', body: {'token': deliveryToken});
 
   Future<AirmiusJson> publicRecruitingJobs({
     String? query,

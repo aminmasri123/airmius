@@ -1258,6 +1258,7 @@ const {
             <article class="surface-card p-5">
                 <p class="text-xs font-semibold uppercase text-air-blue">Schritt 1</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Kampagne erstellen</h2>
+                <p v-if="campaignForm.promoted_post_id" class="mt-3 rounded border border-border p-3">Beitrag #{{ campaignForm.promoted_post_id }} bewerben: Der öffentliche Originalbeitrag wird im Feed angezeigt. Likes und Kommentare bleiben am Original. Wähle Budget, Zielgruppe und Laufzeit; die Auslieferung beginnt nach Zahlung und Freigabe.</p>
                 <p class="mt-1 text-sm text-secondary">Erstelle zuerst den Container. Anzeigegruppen, Zielgruppen, Anzeigen und Varianten kommen danach darunter.</p>
                 <form v-if="!currentSponsor || currentSponsor.can_manage_campaigns" class="mt-4 grid gap-3" @submit.prevent="storeCampaign">
                     <label v-if="sponsorOrganizations.length">

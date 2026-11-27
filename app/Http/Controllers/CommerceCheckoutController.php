@@ -2022,6 +2022,7 @@ class CommerceCheckoutController extends Controller
         $minimumBudget = (int) Setting::valueFor('ads_min_budget_cents', 1000);
 
         $data = $request->validate([
+            'promoted_post_id' => ['nullable', 'integer', 'exists:posts,id'],
             'sponsor_id' => ['nullable', 'integer', Rule::exists('sponsors', 'id')],
             'club_id' => ['nullable', Rule::exists('clubs', 'id')],
             'name' => ['required', 'string', 'max:255'],
@@ -2059,6 +2060,14 @@ class CommerceCheckoutController extends Controller
             'start_payment' => ['boolean'],
         ]);
 
+        $promotedPost = null;
+        if (! empty($data['promoted_post_id'])) {
+            $promotedPost = \App\Models\Post::findOrFail($data['promoted_post_id']);
+            abort_unless($promotedPost->user_id === $request->user()->id, 403);
+            abort_unless($promotedPost->visibility === 'public' && $promotedPost->moderation_status === 'approved', 422, 'Nur freigegebene öffentliche Beiträge können beworben werden.');
+            $data['placement'] = 'feed';
+            $data['target_url'] = route('auth.posts.index', ['post' => $promotedPost->id]);
+        }
         $this->authorizedCommerceClub(
             $request,
             $data['club_id'] ?? null,
@@ -2095,11 +2104,13 @@ class CommerceCheckoutController extends Controller
         }
 
         $data['audience'] = [
+            'promoted_post_id' => $promotedPost?->id,
             'locations' => $this->splitCampaignList($data['audience_locations'] ?? ''),
             'interests' => $this->splitCampaignList($data['audience_interests'] ?? ''),
             'age_min' => $data['audience_age_min'] ?? null,
             'age_max' => $data['audience_age_max'] ?? null,
         ];
+        unset($data['promoted_post_id']);
         $creativeRows = $data['creatives'] ?? [];
         $provider = $data['provider'] ?? 'bank_transfer';
         if ($startPayment && $provider === 'bank_transfer') {
@@ -2424,6 +2435,7 @@ class CommerceCheckoutController extends Controller
 
         $creativeRows = $data['creatives'] ?? [];
         $data['audience'] = [
+            'promoted_post_id' => $campaign->audience['promoted_post_id'] ?? null,
             'locations' => $this->splitCampaignList($data['audience_locations'] ?? ''),
             'interests' => $this->splitCampaignList($data['audience_interests'] ?? ''),
             'age_min' => $data['audience_age_min'] ?? null,
@@ -2690,6 +2702,20 @@ class CommerceCheckoutController extends Controller
 
     public function activeAd(Request $request)
     {
+        $sessionKey = null;
+        if ($request->filled('feed_session')) {
+            $request->validate(['feed_session' => ['string', 'max:80']]);
+            $sessionKey = 'ad-feed:'.hash('sha256', ($request->user()?->id ?? 'guest').':'.$request->string('feed_session'));
+            if (! $request->attributes->get('ad_feed_locked')) {
+                return \Illuminate\Support\Facades\Cache::lock($sessionKey.':lock', 15)->block(5, function () use ($request) {
+                    $request->attributes->set('ad_feed_locked', true);
+                    return $this->activeAd($request);
+                });
+            }
+        }
+        $excludedPosts = array_slice(array_filter(array_map('intval', explode(',', $request->string('exclude_posts')->toString()))), 0, 200);
+        $excludedCampaigns = array_slice(array_filter(array_map('intval', explode(',', $request->string('exclude_campaigns')->toString()))), 0, 200);
+        if ($sessionKey) $excludedCampaigns = array_merge($excludedCampaigns, \Illuminate\Support\Facades\Cache::get($sessionKey, []));
         $placement = $request->string('placement')->toString();
         $objective = $request->string('objective')->toString();
 
@@ -2718,6 +2744,13 @@ class CommerceCheckoutController extends Controller
         $this->loadCampaignDeliverySignals($campaigns, $request);
 
         $campaigns = $campaigns
+            ->reject(fn (AdCampaign $campaign) => in_array($campaign->id, $excludedCampaigns, true))
+            ->filter(function (AdCampaign $campaign) use ($excludedPosts, $request) {
+                $postId = $campaign->audience['promoted_post_id'] ?? null;
+                if (! $postId) return true;
+                if (! $request->user() || in_array((int) $postId, $excludedPosts, true)) return false;
+                return \App\Models\Post::whereKey($postId)->where('visibility', 'public')->where('moderation_status', 'approved')->exists();
+            })
             ->filter(fn (AdCampaign $campaign) => $this->campaignHasBudgetFor($campaign, 'impression'))
             ->filter(fn (AdCampaign $campaign) => $this->campaignPassesFrequencyCap($request, $campaign))
             ->filter(fn (AdCampaign $campaign) => $this->campaignPassesBudgetPacing($campaign))
@@ -2730,11 +2763,19 @@ class CommerceCheckoutController extends Controller
         }
 
         $this->loadCreativeDeliverySignals($campaign);
+        if ($sessionKey) \Illuminate\Support\Facades\Cache::put($sessionKey, array_slice([...$excludedCampaigns, $campaign->id], -200), now()->addHours(2));
         $creative = $this->chooseCreativeForDelivery($campaign);
-        $this->recordAdEvent($request, $campaign, 'impression', 0, [], $creative);
+        $deferred = $request->boolean('defer_impression');
+        if (! $deferred) $this->recordAdEvent($request, $campaign, 'impression', 0, [], $creative);
 
         return response()->json([
             'id' => $campaign->id,
+            'promoted_post_id' => $campaign->audience['promoted_post_id'] ?? null,
+            'impression_token' => $deferred ? \Illuminate\Support\Facades\Crypt::encryptString(json_encode([
+                'campaign' => $campaign->id, 'creative' => $creative?->id,
+                'viewer' => $request->user()?->id, 'expires' => now()->addHours(2)->timestamp,
+                'nonce' => (string) \Illuminate\Support\Str::uuid(),
+            ])) : null,
             'creative_id' => $creative?->id,
             'name' => $campaign->name,
             'creative_name' => $creative?->name,
@@ -2749,6 +2790,28 @@ class CommerceCheckoutController extends Controller
             'image_url' => $this->creativeImageUrl($creative) ?: (UploadStorage::url($campaign->creative_image_path) ?: $campaign->creative_image_url),
             'click_url' => route('ads.click', array_filter(['campaign' => $campaign->id, 'c' => $creative?->id])),
         ])->header('Cache-Control', 'private, no-store');
+    }
+
+    public function confirmAdImpression(Request $request)
+    {
+        $request->validate(['token' => ['required', 'string', 'max:4096']]);
+        try {
+            $delivery = json_decode(\Illuminate\Support\Facades\Crypt::decryptString($request->input('token')), true, flags: JSON_THROW_ON_ERROR);
+        } catch (\Throwable) { abort(422); }
+        abort_unless(($delivery['viewer'] ?? null) === $request->user()?->id && ($delivery['expires'] ?? 0) >= now()->timestamp, 403);
+        return \Illuminate\Support\Facades\Cache::lock('ad-visible:'.$delivery['nonce'], 10)->block(3, function () use ($request, $delivery) {
+            $key = 'ad-counted:'.$delivery['nonce'];
+            if (\Illuminate\Support\Facades\Cache::has($key)) return response()->noContent();
+            $campaign = AdCampaign::findOrFail($delivery['campaign']);
+            $postId = $campaign->audience['promoted_post_id'] ?? null;
+            abort_if($postId && ! \App\Models\Post::whereKey($postId)->where('visibility', 'public')->where('moderation_status', 'approved')->exists(), 404);
+            if ($this->campaignPassesFrequencyCap($request, $campaign)) {
+                $creative = $delivery['creative'] ? $campaign->creatives()->find($delivery['creative']) : null;
+                $this->recordAdEvent($request, $campaign, 'impression', 0, ['delivery' => $delivery['nonce']], $creative);
+            }
+            \Illuminate\Support\Facades\Cache::put($key, true, now()->addHours(3));
+            return response()->noContent();
+        });
     }
 
     public function clickAd(Request $request, AdCampaign $campaign)

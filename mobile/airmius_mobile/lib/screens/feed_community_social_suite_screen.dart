@@ -14,6 +14,7 @@ import '../widgets/airmius_widgets.dart';
 import '../widgets/content_report_dialog.dart';
 import 'feed_post_detail_screen.dart';
 import 'daily_flow_screen.dart';
+import 'commerce_center_screen.dart';
 
 class FeedCommunitySocialSuiteScreen extends StatefulWidget {
   const FeedCommunitySocialSuiteScreen({super.key});
@@ -29,6 +30,8 @@ class _FeedCommunitySocialSuiteScreenState
   final Map<int, AirmiusPost> _postOverrides = {};
   final List<AirmiusPost> _localPosts = [];
   final Set<int> _removedPostIds = {};
+  final String _feedAdSession = 'feed-${DateTime.now().microsecondsSinceEpoch}';
+  bool _loadingMore = false;
   late Future<AirmiusPage<AirmiusPost>> _feedFuture;
   late Future<List<AirmiusStory>> _storiesFuture;
   late Future<AirmiusPage<AirmiusClub>> _clubsFuture;
@@ -79,6 +82,42 @@ class _FeedCommunitySocialSuiteScreenState
 
   Future<List<AirmiusStory>> _loadStories() {
     return AirmiusServicesScope.of(context).repositories.feed.stories();
+  }
+
+  Future<void> _loadMore() async {
+    if (_loadingMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final current = await _feedFuture;
+      if (!mounted) return;
+      final next = await AirmiusServicesScope.of(
+        context,
+      ).repositories.feed.feed(page: current.currentPage + 1);
+      if (!mounted) return;
+      final ids = current.items.map((post) => post.id).toSet();
+      setState(
+        () => _feedFuture = Future.value(
+          AirmiusPage<AirmiusPost>(
+            items: [
+              ...current.items,
+              ...next.items.where((post) => !ids.contains(post.id)),
+            ],
+            currentPage: next.currentPage,
+            lastPage: next.lastPage,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Weitere Beiträge konnten nicht geladen werden.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   Future<AirmiusPage<AirmiusClub>> _loadClubs() {
@@ -350,7 +389,6 @@ class _FeedCommunitySocialSuiteScreenState
             composer: _ComposerTrigger(onTap: _openComposer),
             child: Column(
               children: [
-                AirmiusAdSlot(placement: 'feed', revision: _adRevision),
                 posts.isEmpty
                     ? _FeedEmpty(onCreate: _openComposer)
                     : Column(
@@ -375,16 +413,39 @@ class _FeedCommunitySocialSuiteScreenState
                               ),
                             ),
                             const SizedBox(height: 12),
-                            if (index == 1)
+                            if (index >= 4 && (index - 4) % 8 == 0)
                               AirmiusAdSlot(
-                                placement: 'sidebar',
+                                placement: 'feed',
+                                feedSession: _feedAdSession,
+                                excludePosts: posts
+                                    .map((post) => post.id)
+                                    .toList(),
+                                promotedPostBuilder: (post) => _PostCard(
+                                  post: _postOverrides[post.id] ?? post,
+                                  onChanged: _reload,
+                                  onDeleted: _removePostLocally,
+                                  onDeleteFailed: _restorePostLocally,
+                                  onPostChanged: (nextPost) => setState(
+                                    () =>
+                                        _postOverrides[nextPost.id] = nextPost,
+                                  ),
+                                ),
                                 revision: _adRevision,
                               ),
                           ],
+                          if (snapshot.data != null &&
+                              snapshot.data!.currentPage <
+                                  snapshot.data!.lastPage)
+                            TextButton(
+                              onPressed: _loadingMore ? null : _loadMore,
+                              child: Text(
+                                _loadingMore
+                                    ? 'Wird geladen…'
+                                    : 'Weitere Beiträge laden',
+                              ),
+                            ),
                         ],
                       ),
-                if (posts.length < 2)
-                  AirmiusAdSlot(placement: 'sidebar', revision: _adRevision),
               ],
             ),
           );
@@ -401,7 +462,8 @@ class _FeedCommunitySocialSuiteScreenState
           .clientForSession(services.authState.session)
           .settings();
       if (!mounted) return;
-      final value = response['data']?['privacy_settings']?['default_post_visibility']
+      final value =
+          response['data']?['privacy_settings']?['default_post_visibility']
               ?.toString() ??
           'public';
       _setVisibility(value);
@@ -2814,6 +2876,17 @@ class _PostCardState extends State<_PostCard> {
                 icon: Icon(Icons.more_horiz, color: airmiusMutedColor(context)),
                 color: airmiusSurfaceColor(context),
                 onSelected: (value) {
+                  if (value == 'boost') {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => CommerceCenterScreen(
+                          initialSection: 'ads',
+                          openCampaignComposer: true,
+                          promotedPostId: post.id,
+                        ),
+                      ),
+                    );
+                  }
                   if (value == 'edit') {
                     _editPost();
                   }
@@ -2833,6 +2906,13 @@ class _PostCardState extends State<_PostCard> {
                       currentUserId > 0 &&
                       post.userId == currentUserId;
                   return [
+                    if (isOwnPost &&
+                        post.visibility == 'public' &&
+                        post.moderationStatus == 'approved')
+                      const PopupMenuItem(
+                        value: 'boost',
+                        child: Text('Beitrag bewerben'),
+                      ),
                     if (post.canUpdate || isOwnPost)
                       PopupMenuItem(
                         value: 'edit',

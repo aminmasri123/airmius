@@ -19,6 +19,7 @@ class CommerceCenterScreen extends StatefulWidget {
     super.key,
     this.initialSection = 'overview',
     this.openCampaignComposer = false,
+    this.promotedPostId,
     this.sponsorId,
     this.clubId,
     this.preferredWebsiteClubId,
@@ -27,6 +28,7 @@ class CommerceCenterScreen extends StatefulWidget {
 
   final String initialSection;
   final bool openCampaignComposer;
+  final int? promotedPostId;
   final int? sponsorId;
   final int? clubId;
   final int? preferredWebsiteClubId;
@@ -991,6 +993,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
       useSafeArea: true,
       builder: (_) => _CampaignSheet(
         campaign: campaign,
+        promotedPostId: campaign == null ? widget.promotedPostId : null,
         preferredClubId: widget.advertisingClubId,
         clubs: _maps(data['clubs']).where((club) {
           if (club['can_manage_advertising'] == true) return true;
@@ -1002,6 +1005,10 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     );
     if (payload == null || !mounted) return;
     final image = payload.remove('creative_image_upload') as PlatformFile?;
+    if (campaign == null && widget.promotedPostId != null) {
+      payload['promoted_post_id'] = widget.promotedPostId;
+      payload['placement'] = 'feed';
+    }
     await _run(
       () async {
         if (campaign == null) {
@@ -2174,12 +2181,14 @@ class _CampaignSheet extends StatefulWidget {
     required this.clubs,
     required this.minimumBudgetCents,
     this.preferredClubId,
+    this.promotedPostId,
   });
 
   final Map<String, dynamic>? campaign;
   final List<Map<String, dynamic>> clubs;
   final int minimumBudgetCents;
   final int? preferredClubId;
+  final int? promotedPostId;
 
   @override
   State<_CampaignSheet> createState() => _CampaignSheetState();
@@ -2279,6 +2288,9 @@ class _CampaignSheetState extends State<_CampaignSheet> {
     final campaign = widget.campaign ?? const <String, dynamic>{};
     final audience = _map(campaign['audience']);
     _name = TextEditingController(text: _text(campaign['name']));
+    if (widget.promotedPostId != null) {
+      _name.text = 'Beitrag #${widget.promotedPostId} bewerben';
+    }
     _headline = TextEditingController(text: _text(campaign['headline']));
     _description = TextEditingController(text: _text(campaign['description']));
     _targetUrl = TextEditingController(text: _text(campaign['target_url']));
@@ -2304,6 +2316,7 @@ class _CampaignSheetState extends State<_CampaignSheet> {
           : '',
     );
     _objective = _text(campaign['objective'], fallback: 'traffic');
+    if (widget.promotedPostId != null) _objective = 'awareness';
     _placement = _text(campaign['placement'], fallback: 'feed');
     _format = _text(campaign['creative_format'], fallback: 'feed_square');
     _clubId = campaign['club_id'] == null
@@ -2415,6 +2428,13 @@ class _CampaignSheetState extends State<_CampaignSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (widget.promotedPostId != null)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Beitrag bewerben: Der öffentliche Originalbeitrag erscheint im Feed. Likes und Kommentare bleiben am Original. Die Auslieferung beginnt nach Zahlung und Freigabe.',
+                ),
+              ),
             TextFormField(
               controller: _name,
               decoration: InputDecoration(

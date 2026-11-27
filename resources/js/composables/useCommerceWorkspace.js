@@ -108,6 +108,7 @@ export function useCommerceWorkspace(props) {
         sellerApplication: () => props.sellerApplication,
     })
     const campaignForm = useForm({
+        promoted_post_id: new URLSearchParams(String(page.url || '').split('?')[1] || '').get('boost_post') || null,
         sponsor_id: props.currentSponsor?.id || '',
         club_id: '',
         name: '',
@@ -135,6 +136,11 @@ export function useCommerceWorkspace(props) {
         client_reference: '',
         start_payment: false,
     })
+    if (campaignForm.promoted_post_id) {
+        campaignForm.placement = 'feed'
+        campaignForm.objective = 'awareness'
+        campaignForm.name = `Beitrag #${campaignForm.promoted_post_id} bewerben`
+    }
     const adGroupForm = useForm({
         name: '',
         placement: 'feed',

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/airmius_api_client.dart';
+import '../core/airmius_api_models.dart';
 import '../core/airmius_external_url.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
@@ -16,11 +17,17 @@ class AirmiusAdSlot extends StatefulWidget {
     required this.placement,
     this.revision = 0,
     this.guest = false,
+    this.excludePosts = const [],
+    this.promotedPostBuilder,
+    this.feedSession,
   });
 
   final String placement;
   final int revision;
   final bool guest;
+  final List<int> excludePosts;
+  final String? feedSession;
+  final Widget Function(AirmiusPost)? promotedPostBuilder;
 
   @override
   State<AirmiusAdSlot> createState() => _AirmiusAdSlotState();
@@ -29,12 +36,16 @@ class AirmiusAdSlot extends StatefulWidget {
 class _AirmiusAdSlotState extends State<AirmiusAdSlot>
     with WidgetsBindingObserver {
   AirmiusJson? _ad;
+  AirmiusPost? _promotedPost;
   Timer? _refreshTimer;
   Timer? _expiryTimer;
   String? _identity;
   bool _initialized = false;
   bool _wasVisible = false;
   bool _foreground = true;
+  final _visibilityKey = GlobalKey();
+  DateTime? _visibleSince;
+  bool _impressionSent = false;
   int _request = 0;
 
   AirmiusApiClient get _client {
@@ -48,7 +59,10 @@ class _AirmiusAdSlotState extends State<AirmiusAdSlot>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _refreshTimer = Timer.periodic(const Duration(minutes: 1), (_) => _load());
+    _refreshTimer = Timer.periodic(
+      const Duration(milliseconds: 250),
+      (_) => _measureVisibility(),
+    );
   }
 
   @override
@@ -83,7 +97,42 @@ class _AirmiusAdSlotState extends State<AirmiusAdSlot>
     if (_foreground) _load();
   }
 
+  void _measureVisibility() {
+    if (!mounted || _impressionSent || _ad?['impression_token'] == null) return;
+    final box = _visibilityKey.currentContext?.findRenderObject();
+    if (!_foreground ||
+        ModalRoute.of(context)?.isCurrent == false ||
+        box is! RenderBox ||
+        !box.hasSize) {
+      _visibleSince = null;
+      return;
+    }
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    final viewport = Offset.zero & MediaQuery.sizeOf(context);
+    final intersection = rect.intersect(viewport);
+    final visible =
+        rect.width * rect.height > 0 &&
+        intersection.width > 0 &&
+        intersection.height > 0 &&
+        intersection.width * intersection.height >=
+            rect.width * rect.height * 0.5;
+    if (!visible) {
+      _visibleSince = null;
+      return;
+    }
+    _visibleSince ??= DateTime.now();
+    if (DateTime.now().difference(_visibleSince!).inMilliseconds >= 1000) {
+      _impressionSent = true;
+      _client.confirmAdImpression('${_ad!['impression_token']}').catchError((
+        Object _,
+      ) {
+        return <String, dynamic>{};
+      });
+    }
+  }
+
   Future<void> _load() async {
+    if (_ad != null) return;
     if (!mounted ||
         !_foreground ||
         ModalRoute.of(context)?.isCurrent == false ||
@@ -96,6 +145,8 @@ class _AirmiusAdSlotState extends State<AirmiusAdSlot>
     try {
       final response = await _client.publicActiveAd(
         placement: widget.placement,
+        excludePosts: widget.excludePosts,
+        feedSession: widget.feedSession,
         device: kIsWeb
             ? null
             : switch (defaultTargetPlatform) {
@@ -109,6 +160,15 @@ class _AirmiusAdSlotState extends State<AirmiusAdSlot>
       if (!mounted || request != _request) return;
       // An empty delivery response is not a campaign, even when API metadata is present.
       if (response['id'] == null || response['click_url'] == null) return;
+      final postId = response['promoted_post_id'];
+      _promotedPost = null;
+      if (postId != null) {
+        final postResponse = await _client.feedPost(int.parse('$postId'));
+        if (!mounted || request != _request) return;
+        _promotedPost = AirmiusPost.fromJson(
+          Map<String, dynamic>.from(postResponse['data'] as Map),
+        );
+      }
       final rawExpiry = response['ends_at'];
       final expiry = rawExpiry == null ? null : DateTime.tryParse('$rawExpiry');
       if (rawExpiry != null &&
@@ -163,6 +223,19 @@ class _AirmiusAdSlotState extends State<AirmiusAdSlot>
     final ad = _ad;
     if (ad == null) return const SizedBox.shrink();
     final t = AirmiusScope.of(context).t;
+    if (_promotedPost != null && widget.promotedPostBuilder != null) {
+      return Column(
+        key: _visibilityKey,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(t('publicGrowth.sponsored')),
+          ),
+          widget.promotedPostBuilder!(_promotedPost!),
+        ],
+      );
+    }
     final ratio = switch (ad['creative_format']) {
       'feed_square' => 1.0,
       'feed_portrait' => 4 / 5,
@@ -173,6 +246,7 @@ class _AirmiusAdSlotState extends State<AirmiusAdSlot>
     final body = '${ad['primary_text'] ?? ad['description'] ?? ''}';
     final image = '${ad['image_url'] ?? ''}';
     return Padding(
+      key: _visibilityKey,
       padding: const EdgeInsets.only(bottom: 14),
       child: Card(
         clipBehavior: Clip.antiAlias,
