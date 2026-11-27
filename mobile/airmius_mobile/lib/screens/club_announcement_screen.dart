@@ -9,6 +9,18 @@ import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 
+String resolveAnnouncementClubName(String text, String clubName) {
+  final name = clubName.trim();
+  if (name.isEmpty) return text;
+  return text.replaceAll(
+    RegExp(
+      r'\[(?:Vereinsname|Club name)\]|\((?:Vereinsname|Club name)\)',
+      caseSensitive: false,
+    ),
+    name,
+  );
+}
+
 class ClubAnnouncementScreen extends StatefulWidget {
   const ClubAnnouncementScreen({
     super.key,
@@ -200,6 +212,7 @@ class _ClubAnnouncementScreenState extends State<ClubAnnouncementScreen> {
     final payload = await showDialog<JsonMap>(
       context: context,
       builder: (_) => _CreateAnnouncementDialog(
+        clubName: widget.club.name,
         teams: widget.club.teamList,
         existing: existing,
         canPublish: widget.club.canPublishAnnouncements,
@@ -583,10 +596,12 @@ class _AnnouncementCard extends StatelessWidget {
 
 class _CreateAnnouncementDialog extends StatefulWidget {
   const _CreateAnnouncementDialog({
+    required this.clubName,
     required this.teams,
     required this.canPublish,
     this.existing,
   });
+  final String clubName;
   final List<TeamSummary> teams;
   final bool canPublish;
   final AirmiusClubAnnouncement? existing;
@@ -706,6 +721,11 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
             'instructions': scope.t('clubs.announcements.aiInstructions'),
             'source_context': [
               {
+                'label': 'Club name',
+                'reference': 'current-club-name',
+                'excerpt': widget.clubName,
+              },
+              {
                 'label': scope.t('clubs.announcements.aiSourceLabel'),
                 'reference': 'user-provided-announcement-brief',
                 'excerpt': purposeText,
@@ -722,8 +742,8 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
           path: '/api/v1/ai/communication-drafts',
         );
       }
-      _title.text = subject;
-      _body.text = body;
+      _title.text = resolveAnnouncementClubName(subject, widget.clubName);
+      _body.text = resolveAnnouncementClubName(body, widget.clubName);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(scope.t('clubs.announcements.aiReady'))),
@@ -946,9 +966,9 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
                     showDialog<void>(
                       context: context,
                       builder: (_) => AlertDialog(
-                        title: Text(_title.text.trim()),
+                        title: Text(resolveAnnouncementClubName(_title.text.trim(), widget.clubName)),
                         content: SingleChildScrollView(
-                          child: Text(_body.text.trim()),
+                          child: Text(resolveAnnouncementClubName(_body.text.trim(), widget.clubName)),
                         ),
                         actions: [
                           TextButton(
@@ -1011,8 +1031,8 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
               if (confirmed != true || !context.mounted) return;
             }
             Navigator.pop(context, {
-              'title': _title.text.trim(),
-              'body': _body.text.trim(),
+              'title': resolveAnnouncementClubName(_title.text.trim(), widget.clubName),
+              'body': resolveAnnouncementClubName(_body.text.trim(), widget.clubName),
               'audience_type': _audience,
               if (_teamId != null) 'team_id': _teamId,
               'publication_mode': _mode,
