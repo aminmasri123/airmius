@@ -311,7 +311,10 @@ class ClubNewsletterTest extends TestCase
             ->assertJsonPath('failures.0.email', 'hard@example.org')
             ->assertJsonPath('failures.0.bounce_type', 'hard')
             ->assertJsonPath('suppressions.0.email', 'hard@example.org')
-            ->assertJsonPath('suppressions.0.reason', 'hard_bounce');
+            ->assertJsonPath('suppressions.0.reason', 'hard_bounce')
+            ->assertJsonPath('recent_deliveries.0.id', $delivery->id)
+            ->assertJsonPath('recent_deliveries.0.email', 'hard@example.org')
+            ->assertJsonPath('recent_deliveries.0.status', 'bounced');
     }
 
     public function test_authenticated_postmark_bounce_suppresses_matching_newsletter_only(): void

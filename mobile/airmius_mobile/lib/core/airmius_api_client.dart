@@ -4042,6 +4042,36 @@ class AirmiusApiClient {
     body: {'email': email.trim(), 'reason': reason},
   );
 
+  Future<AirmiusJson> sendClubNewsletter(
+    int clubId, {
+    required String subject,
+    required String body,
+    required String idempotencyKey,
+  }) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/newsletter/send',
+    body: {
+      'subject': subject.trim(),
+      'body': body.trim(),
+      'idempotency_key': idempotencyKey,
+    },
+  );
+
+  Future<AirmiusJson> markClubNewsletterDeliveryBounced(
+    int clubId,
+    int deliveryId, {
+    required String bounceType,
+    String failureReason = '',
+  }) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/newsletter/deliveries/$deliveryId/bounce',
+    body: {
+      'bounce_type': bounceType,
+      if (failureReason.trim().isNotEmpty)
+        'failure_reason': failureReason.trim(),
+    },
+  );
+
   Future<AirmiusJson> clubNewsletterStatus(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/newsletter/status');
 

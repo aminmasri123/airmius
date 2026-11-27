@@ -70,6 +70,19 @@ class ClubNewsletterController extends Controller
             ->latest('suppressed_at')
             ->limit(30)
             ->get(['email', 'reason', 'suppressed_at']);
+        $payload['recent_deliveries'] = ClubNewsletterDelivery::query()
+            ->where('club_id', $club->id)
+            ->latest('id')
+            ->limit(30)
+            ->get([
+                'id',
+                'email',
+                'status',
+                'sent_at',
+                'bounced_at',
+                'bounce_type',
+                'failure_reason',
+            ]);
 
         return response()->json($payload);
     }

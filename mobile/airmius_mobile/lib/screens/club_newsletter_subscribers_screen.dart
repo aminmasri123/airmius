@@ -20,6 +20,7 @@ class _ClubNewsletterSubscribersScreenState
     extends State<ClubNewsletterSubscribersScreen> {
   Future<Map<String, dynamic>>? _future;
   int _page = 1;
+  bool _mutating = false;
 
   @override
   void didChangeDependencies() {
@@ -39,6 +40,191 @@ class _ClubNewsletterSubscribersScreenState
       _page = page ?? _page;
       _future = _load();
     });
+  }
+
+  Future<void> _sendNewsletter() async {
+    final subject = TextEditingController();
+    final body = TextEditingController();
+    String? error;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(_copy(context, 'sendNewsletter')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_copy(context, 'sendHint')),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: subject,
+                  autofocus: true,
+                  maxLength: 180,
+                  decoration: InputDecoration(
+                    labelText: _copy(context, 'subject'),
+                  ),
+                ),
+                TextField(
+                  controller: body,
+                  minLines: 4,
+                  maxLines: 8,
+                  maxLength: 10000,
+                  decoration: InputDecoration(
+                    labelText: _copy(context, 'message'),
+                    errorText: error,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(_copy(context, 'cancel')),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                if (subject.text.trim().isEmpty || body.text.trim().isEmpty) {
+                  setDialogState(
+                    () => error = _copy(context, 'requiredFields'),
+                  );
+                  return;
+                }
+                Navigator.pop(dialogContext, true);
+              },
+              icon: const Icon(Icons.send_outlined),
+              label: Text(_copy(context, 'sendNow')),
+            ),
+          ],
+        ),
+      ),
+    );
+    final subjectValue = subject.text.trim();
+    final bodyValue = body.text.trim();
+    if (confirmed != true || !mounted) return;
+    setState(() => _mutating = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      final response = await services
+          .clientForSession(services.authState.session)
+          .sendClubNewsletter(
+            widget.clubId,
+            subject: subjectValue,
+            body: bodyValue,
+            idempotencyKey: 'mobile-${DateTime.now().microsecondsSinceEpoch}',
+          );
+      if (!mounted) return;
+      final data = response['data'] as Map? ?? const {};
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _copy(
+              context,
+              'sentCount',
+            ).replaceAll('{count}', '${data['deliveries_count'] ?? 0}'),
+          ),
+        ),
+      );
+      _reload(1);
+    } catch (exception) {
+      if (!mounted) return;
+      final message = exception is AirmiusApiException
+          ? exception.userMessage
+          : _copy(context, 'sendError');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _mutating = false);
+    }
+  }
+
+  Future<void> _markBounce(Map row) async {
+    var bounceType = 'hard';
+    final reason = TextEditingController(text: 'T26-05 App-Test');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(_copy(context, 'recordFailure')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${row['email'] ?? ''}'),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: bounceType,
+                  decoration: InputDecoration(
+                    labelText: _copy(context, 'failureType'),
+                  ),
+                  items: const ['hard', 'soft', 'complaint', 'unknown']
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(_copy(context, value)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) =>
+                      setDialogState(() => bounceType = value ?? 'hard'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reason,
+                  maxLength: 1000,
+                  decoration: InputDecoration(
+                    labelText: _copy(context, 'failureReason'),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(_copy(context, 'hardBounceHint')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(_copy(context, 'cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(_copy(context, 'confirmFailure')),
+            ),
+          ],
+        ),
+      ),
+    );
+    final reasonValue = reason.text.trim();
+    if (confirmed != true || !mounted) return;
+    setState(() => _mutating = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      await services
+          .clientForSession(services.authState.session)
+          .markClubNewsletterDeliveryBounced(
+            widget.clubId,
+            row['id'] as int,
+            bounceType: bounceType,
+            failureReason: reasonValue,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_copy(context, 'failureRecorded'))),
+      );
+      _reload(1);
+    } catch (exception) {
+      if (!mounted) return;
+      final message = exception is AirmiusApiException
+          ? exception.userMessage
+          : _copy(context, 'failureError');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      if (mounted) setState(() => _mutating = false);
+    }
   }
 
   Future<void> _suppressAddress() async {
@@ -79,7 +265,6 @@ class _ClubNewsletterSubscribersScreenState
       ),
     );
     final value = email.text.trim();
-    email.dispose();
     if (confirmed != true || !mounted) return;
     try {
       final services = AirmiusServicesScope.of(context);
@@ -108,12 +293,17 @@ class _ClubNewsletterSubscribersScreenState
       title: Text(ClubNewsletterSubscribersScreen.title(context)),
       actions: [
         IconButton(
-          onPressed: _suppressAddress,
+          onPressed: _mutating ? null : _sendNewsletter,
+          tooltip: _copy(context, 'sendNewsletter'),
+          icon: const Icon(Icons.send_outlined),
+        ),
+        IconButton(
+          onPressed: _mutating ? null : _suppressAddress,
           tooltip: _copy(context, 'suppress'),
           icon: const Icon(Icons.block_outlined),
         ),
         IconButton(
-          onPressed: _reload,
+          onPressed: _mutating ? null : _reload,
           tooltip: AirmiusScope.of(context).t('common.refresh'),
           icon: const Icon(Icons.refresh),
         ),
@@ -153,6 +343,9 @@ class _ClubNewsletterSubscribersScreenState
             .whereType<Map>()
             .toList();
         final suppressions = (data['suppressions'] as List? ?? [])
+            .whereType<Map>()
+            .toList();
+        final deliveries = (data['recent_deliveries'] as List? ?? [])
             .whereType<Map>()
             .toList();
         final lastPage = int.tryParse('${data['last_page']}') ?? 1;
@@ -213,6 +406,26 @@ class _ClubNewsletterSubscribersScreenState
             ),
             const SizedBox(height: 24),
             _DeliverySection(
+              title: _copy(context, 'recentDeliveries'),
+              empty: _copy(context, 'noDeliveries'),
+              rows: deliveries,
+              detail: (row) => [
+                _copy(context, '${row['status']}'),
+                _formatNewsletterDate(
+                  row['bounced_at'] ?? row['sent_at'],
+                  locale,
+                ),
+              ].where((value) => value.isNotEmpty).join(' · '),
+              trailing: (row) => row['status'] == 'sent'
+                  ? TextButton.icon(
+                      onPressed: _mutating ? null : () => _markBounce(row),
+                      icon: const Icon(Icons.report_problem_outlined),
+                      label: Text(_copy(context, 'recordFailure')),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 16),
+            _DeliverySection(
               title: _copy(context, 'failures'),
               empty: _copy(context, 'noFailures'),
               rows: failures,
@@ -248,6 +461,7 @@ class _DeliverySection extends StatelessWidget {
     required this.rows,
     required this.detail,
     this.intro,
+    this.trailing,
   });
 
   final String title;
@@ -255,6 +469,7 @@ class _DeliverySection extends StatelessWidget {
   final String? intro;
   final List<Map> rows;
   final String Function(Map row) detail;
+  final Widget? Function(Map row)? trailing;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -280,6 +495,7 @@ class _DeliverySection extends StatelessWidget {
               ),
               title: SelectableText('${row['email'] ?? '–'}'),
               subtitle: Text(detail(row)),
+              trailing: trailing?.call(row),
             ),
         ],
       ),
@@ -352,6 +568,95 @@ String _copy(BuildContext context, String key) {
     ],
     'previous': ['Zurück', 'Previous', 'Précédent', 'السابق'],
     'next': ['Weiter', 'Next', 'Suivant', 'التالي'],
+    'sendNewsletter': [
+      'Newsletter senden',
+      'Send newsletter',
+      'Envoyer la newsletter',
+      'إرسال النشرة البريدية',
+    ],
+    'sendHint': [
+      'Der Newsletter wird sofort an alle bestätigten, nicht gesperrten Adressen gesendet.',
+      'The newsletter is sent immediately to all confirmed, unblocked addresses.',
+      'La newsletter est envoyée immédiatement à toutes les adresses confirmées et non bloquées.',
+      'تُرسل النشرة فورًا إلى جميع العناوين المؤكدة وغير المحظورة.',
+    ],
+    'subject': ['Betreff', 'Subject', 'Objet', 'الموضوع'],
+    'message': ['Nachricht', 'Message', 'Message', 'الرسالة'],
+    'requiredFields': [
+      'Betreff und Nachricht sind erforderlich.',
+      'Subject and message are required.',
+      'L’objet et le message sont obligatoires.',
+      'الموضوع والرسالة مطلوبان.',
+    ],
+    'sendNow': ['Jetzt senden', 'Send now', 'Envoyer maintenant', 'إرسال الآن'],
+    'sentCount': [
+      '{count} Zustellungen wurden erstellt.',
+      '{count} deliveries were created.',
+      '{count} envois ont été créés.',
+      'تم إنشاء {count} عملية إرسال.',
+    ],
+    'sendError': [
+      'Newsletter konnte nicht gesendet werden.',
+      'Could not send the newsletter.',
+      'Impossible d’envoyer la newsletter.',
+      'تعذر إرسال النشرة البريدية.',
+    ],
+    'recentDeliveries': [
+      'Letzte Zustellungen',
+      'Recent deliveries',
+      'Derniers envois',
+      'عمليات الإرسال الأخيرة',
+    ],
+    'noDeliveries': [
+      'Noch keine Zustellungen vorhanden.',
+      'No deliveries yet.',
+      'Aucun envoi pour le moment.',
+      'لا توجد عمليات إرسال بعد.',
+    ],
+    'recordFailure': [
+      'Zustellfehler erfassen',
+      'Record delivery failure',
+      'Enregistrer un échec de livraison',
+      'تسجيل فشل التسليم',
+    ],
+    'failureType': [
+      'Art des Zustellfehlers',
+      'Delivery failure type',
+      'Type d’échec de livraison',
+      'نوع فشل التسليم',
+    ],
+    'failureReason': [
+      'Fehlerbeschreibung',
+      'Failure description',
+      'Description de l’échec',
+      'وصف الفشل',
+    ],
+    'hardBounceHint': [
+      'Dauerhaft unzustellbar und Spam-Beschwerde sperren die Adresse automatisch. Vorübergehende Fehler tun das nicht.',
+      'Hard bounces and spam complaints block the address automatically. Temporary failures do not.',
+      'Les rejets permanents et plaintes pour spam bloquent automatiquement l’adresse. Les erreurs temporaires ne la bloquent pas.',
+      'التعذر الدائم وشكاوى البريد المزعج يحظران العنوان تلقائيًا، أما الأخطاء المؤقتة فلا تفعل ذلك.',
+    ],
+    'confirmFailure': [
+      'Fehler speichern',
+      'Save failure',
+      'Enregistrer l’échec',
+      'حفظ الفشل',
+    ],
+    'failureRecorded': [
+      'Zustellfehler wurde gespeichert.',
+      'Delivery failure was recorded.',
+      'L’échec de livraison a été enregistré.',
+      'تم حفظ فشل التسليم.',
+    ],
+    'failureError': [
+      'Zustellfehler konnte nicht gespeichert werden.',
+      'Could not record the delivery failure.',
+      'Impossible d’enregistrer l’échec de livraison.',
+      'تعذر حفظ فشل التسليم.',
+    ],
+    'sent': ['Gesendet', 'Sent', 'Envoyé', 'تم الإرسال'],
+    'bounced': ['Unzustellbar', 'Bounced', 'Non distribuable', 'تعذر التسليم'],
     'suppress': [
       'Adresse sperren',
       'Block address',
