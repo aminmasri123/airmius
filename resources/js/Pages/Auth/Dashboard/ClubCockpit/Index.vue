@@ -62,6 +62,12 @@ const clubTaskDraft = ref({ title: '', description: '', priority: 'normal', stat
 const clubTaskDraftFiles = ref([])
 const clubTaskComments = ref({})
 const activeWorkPanel = computed(() => new URLSearchParams(String(page.url || '').split('?')[1] || '').get('panel') === 'calendar' ? 'calendar' : 'tasks')
+watch(() => page.url, (url) => {
+    const params = new URLSearchParams(String(url || '').split('?')[1] || '')
+    const clubId = Number(params.get('club_id') || 0)
+    selectedClubId.value = props.clubs.find((club) => Number(club.id) === clubId)?.id || props.clubs[0]?.id || null
+    showAllClubTasks.value = params.get('task_scope') === 'all'
+})
 const selectWorkPanel = (panel) => {
     const url = new URL(page.url, window.location.origin)
     url.searchParams.set('panel', panel)

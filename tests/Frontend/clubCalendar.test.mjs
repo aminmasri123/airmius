@@ -2,24 +2,27 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
-import { computed, ref, reactive } from 'vue'
+import { computed, ref, reactive, watch } from 'vue'
 import { parse, compileScript, compileTemplate } from '@vue/compiler-sfc'
 
 const source = await readFile(new URL('../../resources/js/Pages/Auth/Dashboard/ClubCockpit/Index.vue', import.meta.url), 'utf8')
 const { descriptor } = parse(source)
 
-function calendar(locale = 'de') {
+function calendar(locale = 'de', clubs = []) {
     const page = reactive({ props: { locale }, url: '/club-cockpit?panel=calendar&club_id=7&task_scope=all' })
     const visits = []
     // Execute the actual SFC state with external services stubbed; no network calls.
     return runInNewContext(`${descriptor.scriptSetup.content.replace(/^import .*$/gm, '')}
         ;({ clubCalendarView, clubCalendarCursor, clubTasks, clubTaskMeta,
             calendarBuckets, calendarTitle, moveClubCalendar, weekDays, formatDate,
-            activeWorkPanel, selectWorkPanel, page, visits })`, {
-        Date, Intl, URL, URLSearchParams, computed, ref, watch: () => {}, AppLayout: {}, visits,
+            activeWorkPanel, selectWorkPanel, selectedClubId, showAllClubTasks, page, visits })`, {
+        Date, Intl, URL, URLSearchParams, computed, ref, AppLayout: {}, visits,
+        watch: (source, callback) => {
+            if (typeof source === 'function' && source() === page.url) watch(source, callback, { flush: 'sync' })
+        },
         window: { location: { origin: 'http://localhost' } },
         router: { push: (visit) => { visits.push(visit); page.url = visit.url } },
-        defineOptions: () => {}, defineProps: () => ({ clubs: [] }),
+        defineOptions: () => {}, defineProps: () => ({ clubs }),
         usePage: () => page,
         useI18n: () => ({ t: value => value }), usePermissions: () => ({ can: () => true }),
     })
@@ -37,6 +40,22 @@ test('work panel navigation preserves filters and follows browser history state'
     assert.equal(c.visits[0].preserveScroll, true)
     c.page.url = '/club-cockpit?panel=calendar&club_id=7'
     assert.equal(c.activeWorkPanel.value, 'calendar')
+})
+
+test('history restores the selected club and task scope as well as the panel', () => {
+    const c = calendar('de', [{ id: 7 }, { id: 9 }])
+    c.selectedClubId.value = 9
+    c.showAllClubTasks.value = false
+    c.selectWorkPanel('tasks')
+    assert.equal(c.selectedClubId.value, 9)
+    assert.equal(c.showAllClubTasks.value, false)
+    c.page.url = '/club-cockpit?club_id=7&panel=calendar&task_scope=all'
+    assert.equal(c.selectedClubId.value, 7)
+    assert.equal(c.showAllClubTasks.value, true)
+    assert.equal(c.activeWorkPanel.value, 'calendar')
+    c.page.url = '/club-cockpit?club_id=999&panel=tasks'
+    assert.equal(c.selectedClubId.value, 7)
+    assert.equal(c.showAllClubTasks.value, false)
 })
 
 test('calendar SFC compiles and exposes day/week/month/year controls', () => {

@@ -1124,6 +1124,6 @@ Details und bestehende, am unveraenderten Ausgangsstand reproduzierte Regression
 - [x] Mobile Gastnavigation auf vier sichtbare Ziele plus lokalisiertes „Mehr“-Menü reduzieren; alle weiteren Ziele im gemeinsamen Dialog erreichbar halten.
 - [x] Cookie-Schaltfläche oberhalb der mobilen Navigationsleiste positionieren und unteren Geräte-Sicherheitsabstand berücksichtigen.
 - [x] Vereinsübersicht, Aufgaben und Kalender anhand des `panel`-Parameters getrennt markieren; Bereichswechsel mit URL, Verlauf, Filtern und erhaltenem Formularzustand verbinden.
-- [x] Zehn gezielte Frontend-Regressionstests sowie Web-Produktionsbuild erfolgreich.
+- [x] Elf gezielte Frontend-Regressionstests einschließlich Vereins-/Bereichswechsel im Browserverlauf sowie Web-Produktionsbuild erfolgreich.
 - [x] Lokale Browserprüfung der echten Vue-Komponenten bei 320/390 Pixel Breite: Menü sichtbar, Escape/Fokusrückgabe, Zielgruppen-Pfeiltasten und echte Sponsor-/Vereinslinks geprüft. Vorschau verwendet lokale Routendaten ohne Backend-Anmeldung.
 - [ ] Weitere Analyseempfehlungen umsetzen: kompaktere Vereinsübersicht, aufgabenbezogene Startbereiche, kürzere Registrierung und gruppierte Einstellungen.
