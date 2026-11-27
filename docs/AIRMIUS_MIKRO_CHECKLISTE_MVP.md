@@ -1136,3 +1136,11 @@ Details und bestehende, am unveraenderten Ausgangsstand reproduzierte Regression
 - [x] Centbeträge vollständig formatieren und Länderplatzhalter auch ohne Übersetzung ersetzen.
 - [x] Sechs Frontendtests erfolgreich: kompakte Übersicht, vollständige Details, Tarif-/Zielgruppenwechsel, Fokus, Deep Links, Preise, Übersetzungen und Vue-Kompilierung.
 - [x] Lokale Browserprüfung mit Testdaten: Tabs per Pfeiltaste, Hinweis per Enter, Werbeagentur-Sonderfall und Bestelldialog ohne Zahlung geprüft. Kein horizontaler Überlauf bei 320/390/1280 Pixeln. Bei 390 Pixeln mit identischen Sportler-Testtarifen Seitenhöhe von 41.337 auf 2.837 Pixel reduziert; keine Messung produktiver Tarife.
+
+## 27.11.2026 – Aboseite visuell neu ordnen
+
+- [x] Die vorherige Dropdown-Anordnung durch direkt sichtbare Zielgruppen, begrenzte Inhaltsbreite und kompakte Tarifkarten ersetzen; Typografie, Abstände und Kontraste in heller und dunkler Darstellung abstimmen.
+- [x] Leistungsansicht mit Tarifauswahl neben dem Inhalt, Suche und thematisch gebündelten Hinweisen aufbauen. Tatsächlich enthaltene Leistungen anhand einer expliziten Kataloggrenze von Voraussetzungen trennen; sämtliche Angaben erhalten.
+- [x] Zahlart und Rabattcode im gemeinsamen Bestelldialog anbieten; Fokusführung, Escape, Einwilligung, Vereinsauswahl und idempotenter Checkout erhalten.
+- [x] 21 Frontendtests bestanden; Browserprüfung mit lokalen Testdaten bei 320, 390, 1440 und 1920 Pixeln, einschließlich Suche, Tarifwechsel, Zahlungsdialog sowie Französisch und Arabisch/RTL ohne horizontalen Überlauf.
+- [x] Neun gezielte Backendtests mit 75 Assertions bestanden, einschließlich Feature-Grenze, Checkout-Rechten, Zustimmung und Wiederholungsschutz.

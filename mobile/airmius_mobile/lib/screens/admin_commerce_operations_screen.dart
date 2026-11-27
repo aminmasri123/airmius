@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/commerce_payment_confirmation.dart';
 import '../widgets/marketplace_taxonomy_fields.dart';
 import '../widgets/airmius_form.dart';
 import 'package:flutter/services.dart';
@@ -821,6 +822,19 @@ class _AdminCommerceOperationsScreenState
     );
   }
 
+  Future<void> _confirmOrderPayment(Map<String, dynamic> order) async {
+    final body = await confirmCommercePayment(
+      context,
+      orderLabel: _text(order['reference'], fallback: '#${_int(order['id'])}'),
+      amountLabel: _money(_int(order['amount_cents'])),
+    );
+    if (body == null || !mounted) return;
+    await _run(
+      () => _client.adminMarkCommerceOrderPaid(_int(order['id']), body: body),
+      success: AirmiusScope.of(context).t('adminHub.orderPaid'),
+    );
+  }
+
   Widget _orderCard(Map<String, dynamic> order) {
     final issueStatus = _text(order['issue_status'], fallback: 'none');
     final refunded = _int(order['refunded_cents']);
@@ -839,6 +853,13 @@ class _AdminCommerceOperationsScreenState
             Text(
               '${_money(_int(order['amount_cents']))} · ${t('commerceOps.shipping')}: ${_text(order['shipping_status'], fallback: 'open')}',
             ),
+            if (order['received_payment_method'] != null)
+              Text(
+                commerceReceivedMethodLabel(
+                  context,
+                  _text(order['received_payment_method']),
+                ),
+              ),
             if (issueStatus != 'none') ...[
               const SizedBox(height: 5),
               Text(
@@ -863,6 +884,20 @@ class _AdminCommerceOperationsScreenState
                   icon: const Icon(Icons.local_shipping_outlined),
                   label: Text(t('commerceOps.shipping')),
                 ),
+                if ([
+                      'pending',
+                      'awaiting_transfer',
+                    ].contains(order['status']) &&
+                    [
+                      'bank_transfer',
+                      'cash',
+                      'manual',
+                    ].contains(order['provider']))
+                  FilledButton.icon(
+                    onPressed: _busy ? null : () => _confirmOrderPayment(order),
+                    icon: const Icon(Icons.done_all_outlined),
+                    label: Text(commercePaymentLabel(context)),
+                  ),
                 OutlinedButton.icon(
                   onPressed: _busy ? null : () => _editIssue(order),
                   icon: const Icon(Icons.support_agent_outlined),

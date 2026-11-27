@@ -11,6 +11,7 @@ use App\Notifications\ClubInvoiceCreated;
 use App\Support\AppNotification;
 use App\Support\ClubAuditLog;
 use App\Support\ClubMembershipInput;
+use App\Support\EncryptedIbanValue;
 use App\Support\TransactionalMail;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -181,6 +182,7 @@ class ClubContributionInvoiceRunService
             ->get()
             ->map(function ($row) {
                 $data = get_object_vars($row);
+                $data['sepa_iban'] = EncryptedIbanValue::decrypt($data['sepa_iban']);
                 $data['contribution_next_invoice_on'] = ClubMembershipInput::normalizedNextInvoiceDate($data);
 
                 return [

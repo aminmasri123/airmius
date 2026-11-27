@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\User;
 use App\Support\ClubAuditLog;
 use App\Support\ClubMembershipInput;
+use App\Support\EncryptedIbanValue;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -45,15 +46,22 @@ final class ClubSepaBatchService
         });
     }
 
-    public function approve(ClubSepaBatch $batch, User $actor): ClubSepaBatch
+    public function approve(ClubSepaBatch $batch, User $actor, bool $confirmed = false): ClubSepaBatch
     {
-        return $this->change($batch, function ($locked) use ($actor) {
+        return $this->change($batch, function ($locked) use ($actor, $confirmed) {
             abort_unless($locked->status === 'draft', 422, __('sepa.state'));
-            abort_if((int) $locked->created_by === $actor->id, 422, __('sepa.second_person'));
+            $single = $locked->club->sepa_approval_mode === 'single';
+            $selfApproval = (int) $locked->created_by === $actor->id;
+            abort_if($selfApproval && ! $single, 422, __('sepa.second_person'));
+            abort_if($selfApproval && ! $confirmed, 422, __('sepa.self_approval_confirm'));
             $this->assertUnchanged($locked);
             $this->checkLeadTime($locked->collection_date, $locked->notice_days, today());
             $locked->update(['status' => 'approved', 'approved_by' => $actor->id, 'approved_at' => now()]);
-            $this->audit($locked, $actor, 'approved');
+            ClubAuditLog::record($locked->club, $actor, 'club.sepa.approved', $locked, [
+                'reference' => $locked->reference,
+                'approval_mode' => $single ? 'single' : 'dual',
+                'self_approved' => $selfApproval,
+            ]);
         });
     }
 
@@ -167,7 +175,7 @@ final class ClubSepaBatchService
 
         return [
             'name' => $invoice->user?->name, 'number' => $invoice->number, 'title' => $invoice->title,
-            'sepa_iban' => ClubMembershipInput::normalizeIban($member->sepa_iban),
+            'sepa_iban' => ClubMembershipInput::normalizeIban(EncryptedIbanValue::decrypt($member->sepa_iban)),
             'sepa_bic' => ClubMembershipInput::normalizeBic($member->sepa_bic),
             'sepa_mandate_reference' => $member->sepa_mandate_reference,
             'sepa_mandate_signed_on' => Carbon::parse($member->sepa_mandate_signed_on)->toDateString(),

@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\ClubPermissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -178,10 +179,14 @@ class ClubMembershipLifecycleIntegrationTest extends TestCase
             'membership_status' => 'active',
             'club_membership_type_id' => $activeType->id,
             'payment_method' => 'sepa_debit',
-            'sepa_iban' => 'DE12500105170648489890',
             'sepa_bic' => 'INGDDEFFXXX',
             'sepa_mandate_active' => true,
         ]);
+        $storedIban = DB::table('club_user')->where('club_id', $club->id)
+            ->where('user_id', $applicant->id)->value('sepa_iban');
+        $this->assertStringStartsWith('iban:v1:', $storedIban);
+        $this->assertSame('DE12500105170648489890', $club->users()
+            ->whereKey($applicant->id)->firstOrFail()->pivot->sepa_iban);
         $welcomeNotification = Notification::query()
             ->where('user_id', $applicant->id)
             ->where('type', 'club.membership_request_approved')

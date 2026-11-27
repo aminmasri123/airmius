@@ -357,7 +357,37 @@ class AdminCommerceController extends Controller
     {
         $this->authorizeCommerceAdmin($request);
 
-        app(CommerceCheckoutController::class)->activate($order);
+        $data = $request->validate([
+            'payment_method' => ['sometimes', 'required', Rule::in(['bank_transfer', 'cash'])],
+            'confirmed' => $request->has('payment_method') ? ['required', 'accepted'] : ['sometimes', 'accepted'],
+        ]);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($order, $request, $data) {
+            $locked = CommerceOrder::query()->lockForUpdate()->findOrFail($order->id);
+            if ($locked->status === 'completed') {
+                return;
+            }
+            abort_unless(in_array($locked->status, ['pending', 'awaiting_transfer'], true), 422);
+            abort_unless(in_array($locked->provider, ['bank_transfer', 'cash', 'manual'], true), 422);
+            $before = $locked->only(['status', 'provider']);
+            $receipt = [
+                'method' => $data['payment_method'] ?? 'bank_transfer',
+                'planned_provider' => $locked->provider,
+                'amount_cents' => $locked->amount_cents,
+                'confirmed_by' => $request->user()->id,
+                'confirmed_at' => now()->toIso8601String(),
+            ];
+            $locked->update(['payload' => array_merge($locked->payload ?? [], ['manual_payment' => $receipt])]);
+            app(CommerceCheckoutController::class)->activate($locked);
+            CommerceAuditLog::create([
+                'user_id' => $request->user()->id,
+                'auditable_type' => CommerceOrder::class,
+                'auditable_id' => $locked->id,
+                'action' => 'order.payment_confirmed',
+                'before' => $before,
+                'after' => ['status' => 'completed', 'manual_payment' => $receipt],
+            ]);
+        });
 
         return new CommerceOrderResource($order->fresh(['club', 'items']));
     }

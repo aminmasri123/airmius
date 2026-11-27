@@ -24,6 +24,7 @@ class CommerceOrderResource extends JsonResource
             'orderable_id' => $this->orderable_id,
             'type' => $this->type,
             'provider' => $this->provider,
+            'received_payment_method' => data_get($payload, 'manual_payment.method'),
             'billing_interval' => $this->billing_interval,
             'status' => $this->status,
             'shipping_status' => $this->shipping_status,

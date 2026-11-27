@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedIban;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -25,7 +26,7 @@ class ClubBusinessPartner extends Model
 
     protected function casts(): array
     {
-        return ['contact' => 'array', 'metadata' => 'array', 'is_active' => 'boolean'];
+        return ['iban' => EncryptedIban::class, 'contact' => 'array', 'metadata' => 'array', 'is_active' => 'boolean'];
     }
 
     public function club()

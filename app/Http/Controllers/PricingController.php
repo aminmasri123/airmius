@@ -63,6 +63,9 @@ class PricingController extends Controller
                     return null;
                 }
 
+                $catalogFeatures = $plan->catalogFeatures();
+                $includedFeatureCount = count($plan->features ?? []);
+
                 return [
                     'id' => $plan->id,
                     'slug' => $plan->slug,
@@ -80,7 +83,8 @@ class PricingController extends Controller
                     'member_limit' => $plan->member_limit,
                     'team_limit' => $plan->team_limit,
                     'storage_gb' => $plan->storage_gb,
-                    'features' => $plan->catalogFeatures(),
+                    'features' => $catalogFeatures,
+                    'included_feature_count' => $includedFeatureCount,
                     'cta_label' => $plan->cta_label,
                     'badge' => $plan->badge,
                     'is_owned' => $activePlanIds->contains($plan->id),

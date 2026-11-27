@@ -777,6 +777,12 @@ class AirmiusApiClient {
   Future<AirmiusJson> createClubSepaBatch(int clubId, AirmiusJson payload) =>
       _json('POST', '/api/v1/clubs/$clubId/sepa-batches', body: payload);
 
+  Future<AirmiusJson> setClubSepaApprovalMode(int clubId, String mode) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/sepa-approval-settings',
+    body: {'approval_mode': mode, 'confirmed': true},
+  );
+
   Future<AirmiusJson> updateClubSepaBatch(
     int clubId,
     int batchId,
@@ -4039,6 +4045,36 @@ class AirmiusApiClient {
     body: {'email': email.trim(), 'reason': reason},
   );
 
+  Future<AirmiusJson> sendClubNewsletter(
+    int clubId, {
+    required String subject,
+    required String body,
+    required String idempotencyKey,
+  }) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/newsletter/send',
+    body: {
+      'subject': subject.trim(),
+      'body': body.trim(),
+      'idempotency_key': idempotencyKey,
+    },
+  );
+
+  Future<AirmiusJson> markClubNewsletterDeliveryBounced(
+    int clubId,
+    int deliveryId, {
+    required String bounceType,
+    String failureReason = '',
+  }) => _json(
+    'POST',
+    '/api/v1/clubs/$clubId/newsletter/deliveries/$deliveryId/bounce',
+    body: {
+      'bounce_type': bounceType,
+      if (failureReason.trim().isNotEmpty)
+        'failure_reason': failureReason.trim(),
+    },
+  );
+
   Future<AirmiusJson> clubNewsletterStatus(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/newsletter/status');
 
@@ -5135,8 +5171,14 @@ class AirmiusApiClient {
         body: body,
       );
 
-  Future<AirmiusJson> adminMarkCommerceOrderPaid(int orderId) =>
-      _json('POST', '/api/v1/admin/commerce/orders/$orderId/mark-paid');
+  Future<AirmiusJson> adminMarkCommerceOrderPaid(
+    int orderId, {
+    AirmiusJson? body,
+  }) => _json(
+    'POST',
+    '/api/v1/admin/commerce/orders/$orderId/mark-paid',
+    body: body,
+  );
 
   Future<AirmiusJson> adminUpdateCommerceShipping(
     int orderId,

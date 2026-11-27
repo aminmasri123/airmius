@@ -181,6 +181,7 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
                 _isPlanningRequest(request) ||
                 _isClubFinanceRequest(request) ||
                 request.path.contains('/sepa-batches') ||
+                request.path.contains('/sepa-approval-settings') ||
                 request.path.contains('/organization') ||
                 request.path.contains('/governance') ||
                 request.path.contains('/year-periods') ||
@@ -249,7 +250,8 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
         path.contains('/work-automation') ||
         path.contains('/metadata') ||
         path.endsWith('/share') ||
-        path.contains('/sepa-batches');
+        path.contains('/sepa-batches') ||
+        path.contains('/sepa-approval-settings');
   }
 
   bool _isClubFinanceRequest(AirmiusApiRequest request) =>

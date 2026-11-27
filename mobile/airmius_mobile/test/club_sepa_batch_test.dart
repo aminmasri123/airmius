@@ -15,6 +15,8 @@ class _Transport implements AirmiusApiTransport {
   final requests = <AirmiusApiRequest>[];
   bool fail = false;
   bool canManage = true;
+  bool canConfigureApproval = false;
+  String approvalMode = 'dual';
   bool enableNotices = false;
   bool enableResults = false;
   bool enableFees = false;
@@ -41,6 +43,9 @@ class _Transport implements AirmiusApiTransport {
       );
     }
     if (request.method == 'POST') {
+      if (request.path.endsWith('/sepa-approval-settings'))
+        approvalMode = request.body!['approval_mode'] as String;
+      if (request.path.endsWith('/approve')) status = 'approved';
       if (request.path.endsWith('/notice')) status = 'notified';
       if (request.path.endsWith('/notices')) preparedNotices = true;
       if (request.path.endsWith('/notices/send')) mailStatus = 'queued';
@@ -68,6 +73,9 @@ class _Transport implements AirmiusApiTransport {
       statusCode: 200,
       body: jsonEncode({
         'can_manage': canManage,
+        'can_approve': canManage,
+        'can_configure_approval': canConfigureApproval,
+        'approval_mode': approvalMode,
         'notices_available': enableNotices,
         'results_available': enableResults,
         'fees_available': enableFees,
@@ -191,6 +199,69 @@ Future<void> _screen(
 }
 
 void main() {
+  test(
+    'approval settings never retry or queue after a transport failure',
+    () async {
+      final inner = _Transport()..fail = true;
+      final queue = AirmiusQueuedTransport(
+        inner: inner,
+        timeout: const Duration(seconds: 1),
+      );
+      final result = await queue.send(
+        const AirmiusApiRequest(
+          method: 'POST',
+          path: '/api/v1/clubs/2/sepa-approval-settings',
+          body: {'approval_mode': 'single', 'confirmed': true},
+        ),
+      );
+      expect(result.statusCode, 599);
+      expect(inner.requests, hasLength(1));
+      expect(queue.queue, isEmpty);
+    },
+  );
+  testWidgets('owner changes approval mode and explicitly confirms a batch', (
+    tester,
+  ) async {
+    final transport = _Transport()
+      ..canConfigureApproval = true
+      ..status = 'draft';
+    await _screen(tester, transport);
+    await tester.tap(find.byTooltip('Freigaberegel'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Einzel-Freigabe').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bestätigen'));
+    await tester.pumpAndSettle();
+    expect(transport.approvalMode, 'single');
+    final approve = find.widgetWithText(OutlinedButton, 'Freigeben');
+    await tester.ensureVisible(approve);
+    await tester.tap(approve);
+    await tester.pumpAndSettle();
+    expect(
+      transport.requests.where((r) => r.path.endsWith('/approve')),
+      isEmpty,
+    );
+    await tester.tap(find.text('Bestätigen'));
+    await tester.pumpAndSettle();
+    expect(
+      transport.requests
+          .lastWhere((r) => r.path.endsWith('/approve'))
+          .body?['confirmed'],
+      true,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('finance user cannot open owner approval settings', (
+    tester,
+  ) async {
+    await _screen(tester, _Transport());
+    expect(find.byTooltip('Freigaberegel'), findsNothing);
+    expect(find.text('Zwei-Personen-Freigabe'), findsOneWidget);
+  });
+
   test('SEPA XML stays raw and carries authenticated POST headers', () async {
     final transport = _Transport();
     final client = AirmiusApiClient(
@@ -302,7 +373,7 @@ void main() {
       expect(find.text(sepaBatchLabels['de']!['noticeHelp']!), findsOneWidget);
       final submit = find.widgetWithText(FilledButton, label);
       expect(tester.widget<FilledButton>(submit).onPressed, isNull);
-      await tester.enterText(find.byType(TextFormField).at(0), '2026-09-23');
+      await tester.enterText(find.byType(TextFormField).at(0), '23.09.2026');
       await tester.enterText(
         find.byType(TextFormField).at(1),
         'Versandnachweis 123',
@@ -424,7 +495,7 @@ void main() {
       final submit = find.widgetWithText(FilledButton, labels['returnItem']!);
       expect(tester.widget<FilledButton>(submit).onPressed, isNull);
       for (final entry in [
-        '2026-10-11',
+        '11.10.2026',
         'BANK-RETURN',
         'Bank return reason',
         '3,50',
@@ -631,7 +702,7 @@ void main() {
       await tester.ensureVisible(find.text(labels['settleItem']!));
       await tester.tap(find.text(labels['settleItem']!));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField).at(0), '2026-10-10');
+      await tester.enterText(find.byType(TextFormField).at(0), '10.10.2026');
       await tester.enterText(find.byType(TextFormField).at(1), 'BANK-CREDIT');
       FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();

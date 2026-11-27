@@ -81,6 +81,7 @@ class ClubAuditLog
         'club.donation.recorded' => 'Spende erfasst',
         'club.sepa.created' => 'Lastschriftlauf vorbereitet',
         'club.sepa.approved' => 'Lastschriftlauf freigegeben',
+        'club.sepa.approval_mode_changed' => 'Freigaberegel für Lastschriftläufe geändert',
         'club.sepa.notice_recorded' => 'Vorabinformation dokumentiert',
         'club.sepa.notices_prepared' => 'Vorabinformationen vorbereitet',
         'club.sepa.notices_queued' => 'Vorabinformationen zum Versand freigegeben',

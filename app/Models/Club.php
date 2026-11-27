@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedIban;
 use App\Support\ClubRoles;
 use App\Support\ClubWorkspaceAccess;
 use App\Support\Roles;
@@ -104,6 +105,7 @@ class Club extends Model
     protected function casts(): array
     {
         return [
+            'sepa_iban' => EncryptedIban::class,
             'deletion_requested_at' => 'datetime',
             'deletion_scheduled_at' => 'datetime',
             'deletion_reminded_at' => 'datetime',

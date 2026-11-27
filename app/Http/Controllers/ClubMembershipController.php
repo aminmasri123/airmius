@@ -53,6 +53,7 @@ use App\Support\ClubFinanceWorkspaceReadiness;
 use App\Support\ClubMemberDuplicates;
 use App\Support\ClubMembershipApplication;
 use App\Support\ClubMembershipInput;
+use App\Support\EncryptedIbanValue;
 use App\Support\ClubPermissions;
 use App\Support\ClubRoleLifecycle;
 use App\Support\ClubRoles;
@@ -1661,6 +1662,11 @@ class ClubMembershipController extends Controller
             ->where('club_id', $club->id)
             ->whereIn('user_id', $invoices->pluck('user_id')->filter()->unique()->values())
             ->get()
+            ->map(function ($membership) {
+                $membership->sepa_iban = EncryptedIbanValue::decrypt($membership->sepa_iban);
+
+                return $membership;
+            })
             ->keyBy('user_id');
 
         $exportable = $invoices
@@ -2930,7 +2936,7 @@ class ClubMembershipController extends Controller
                 ->where('user_id', $invoice->user_id)
                 ->first();
 
-            if ($membership && $transaction['debtor_iban'] && $this->normalizeIban($membership->sepa_iban ?? null) === $transaction['debtor_iban']) {
+            if ($membership && $transaction['debtor_iban'] && $this->normalizeIban(EncryptedIbanValue::decrypt($membership->sepa_iban ?? null)) === $transaction['debtor_iban']) {
                 return [
                     'invoice' => $invoice,
                     'status' => 'matched',

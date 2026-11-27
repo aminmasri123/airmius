@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'self_approval_confirm' => "Ich habe Empfänger, Beträge und Einzugsdatum dieses Laufs geprüft und gebe ihn frei.",
     'recharge_void_bank' => 'Die Rechnung besitzt Zahlungs- oder Bankvorgänge. Bitte zuerst den Bankstatus und den gesonderten Erstattungsablauf prüfen.',
     'recharge_title' => 'Gebührenweiterbelastung',
     'recharge_account' => 'Das gesonderte Buchhaltungskonto für die Weiterbelastung fehlt oder entspricht dem Bankkonto.',

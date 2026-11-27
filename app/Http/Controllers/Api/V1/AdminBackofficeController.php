@@ -132,6 +132,11 @@ class AdminBackofficeController extends Controller
                 $invoice['paid_amount_display'] = $invoice['paid_amount'];
                 $invoice['can_update_status'] = filled($invoice['status_update_url'] ?? null);
                 $invoice['can_delete'] = filled($invoice['delete_url'] ?? null);
+                $invoice['can_confirm_payment'] = ($invoice['can_confirm_payment'] ?? false)
+                    && (auth()->user()->can('subscriptions.manage')
+                        || auth()->user()->can('marketplace.manage')
+                        || auth()->user()->can('system.manage')
+                        || auth()->user()->hasAnyRole(\App\Support\Roles::FULL_ACCESS));
                 $invoice['can_download'] = filled($invoice['download_url'] ?? null) && $abilities['subscriptions_manage'];
                 unset($invoice['download_url'], $invoice['status_update_url'], $invoice['delete_url']);
 

@@ -7,7 +7,7 @@ use App\Models\Invoice;
 use App\Models\User;
 use App\Services\ClubMembershipSepaService;
 use Illuminate\Support\Collection;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class ClubMembershipSepaServiceTest extends TestCase
 {
@@ -17,9 +17,11 @@ class ClubMembershipSepaServiceTest extends TestCase
             'name' => 'Airmius SV',
             'sepa_creditor_id' => 'DE98ZZZ09999999999',
             'sepa_account_holder' => 'Airmius SV e.V.',
-            'sepa_iban' => 'DE02 1203 0000 0000 2020 51',
             'sepa_bic' => '',
         ]);
+        $club->setRawAttributes(array_merge($club->getAttributes(), [
+            'sepa_iban' => 'DE02 1203 0000 0000 2020 51',
+        ]));
         $club->id = 42;
 
         $invoice = new Invoice([

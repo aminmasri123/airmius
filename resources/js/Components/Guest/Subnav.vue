@@ -108,11 +108,11 @@ const mobileMoreItems = computed(() => items.value.filter((item) => !mobilePrima
 
     <div
         v-else
-        class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-7xl border-y border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur transition-all duration-300 md:bottom-auto md:top-16 md:h-16 md:px-6 md:pb-0"
+        class="fixed inset-x-0 bottom-0 z-40 border-y border-border bg-card pb-[env(safe-area-inset-bottom)] transition-all duration-300 md:bottom-auto md:top-16 md:h-16 md:px-6 md:pb-0"
         role="navigation"
         :aria-label="$t('guest.subnav.quick_navigation')"
     >
-        <div class="hidden items-center justify-center gap-6 py-2 text-sm font-medium text-secondary md:flex">
+        <div class="mx-auto hidden max-w-7xl items-center justify-center gap-6 py-2 text-sm font-medium text-secondary md:flex">
             <Link
                 v-for="[icon, label, href] in items"
                 :key="label"

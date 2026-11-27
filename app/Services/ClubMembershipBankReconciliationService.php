@@ -8,6 +8,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Support\AppNotification;
 use App\Support\ClubMembershipInput;
+use App\Support\EncryptedIbanValue;
 use Illuminate\Support\Facades\DB;
 
 class ClubMembershipBankReconciliationService
@@ -103,7 +104,7 @@ class ClubMembershipBankReconciliationService
                 ->where('user_id', $invoice->user_id)
                 ->first();
 
-            if ($membership && $transaction['debtor_iban'] && ClubMembershipInput::normalizeIban($membership->sepa_iban ?? null) === $transaction['debtor_iban']) {
+            if ($membership && $transaction['debtor_iban'] && ClubMembershipInput::normalizeIban(EncryptedIbanValue::decrypt($membership->sepa_iban ?? null)) === $transaction['debtor_iban']) {
                 return [
                     'invoice' => $invoice,
                     'status' => 'matched',
