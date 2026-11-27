@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import axios from 'axios'
 import Nav from '@/Components/Guest/Nav.vue'
@@ -7,6 +7,7 @@ import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import { useI18n } from 'vue-i18n'
+import pricingCopy from './pricingCopy.json'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -22,58 +23,34 @@ const audiences = [
     {
         key: 'sportler',
         label: 'Sportler',
-        icon: 'las la-running',
-        title: 'Kostenlos starten, sportlich sichtbar werden.',
-        description: 'Sportler bleiben im Kern kostenlos. Pro-Funktionen kommen später für Portfolio, Statistiken und mehr Sichtbarkeit.',
     },
     {
         key: 'trainer',
         label: 'Trainer',
-        icon: 'las la-chalkboard-teacher',
-        title: 'Training organisieren, Teams begleiten, Wissen verkaufen.',
-        description: 'Trainer arbeiten kostenlos im Vereinsplan. Solo-Trainer bekommen später eigene Gruppen, Camps und Kursverkauf.',
     },
     {
         key: 'verein',
         label: 'Vereine',
-        icon: 'las la-users',
-        title: 'Vereinsverwaltung, Community und Kommunikation in einem System.',
-        description: 'Die Vereinspläne sind der Hauptumsatz: Mitglieder, Teams, Beiträge, Rechnungen, Dateien und Sponsoren.',
     },
     {
         key: 'eltern',
         label: 'Eltern',
-        icon: 'las la-shield-alt',
-        title: 'Sicherheit für Minderjährige bleibt kostenlos.',
-        description: 'Elternzustimmung, Widerruf und Kinderüberblick sind Vertrauensfunktionen und werden nicht separat monetarisiert.',
     },
     {
         key: 'sponsor',
         label: 'Sponsoren',
-        icon: 'las la-bullhorn',
-        title: 'Regionale Sichtbarkeit im Sportumfeld.',
-        description: 'Sponsorprofile, Kampagnen und lokale Anzeigen kommen als B2B-Umsatzsäule, sobald genug Aktivität vorhanden ist.',
     },
     {
         key: 'anbieter',
         label: 'Anbieter',
-        icon: 'las la-store',
-        title: 'Marketplace für Produkte, Kurse und Services.',
-        description: 'Anbieter können später Produkte, Camps, Kurse und Dienstleistungen rund um Sport verkaufen.',
     },
     {
         key: 'werbeagentur',
         label: 'Werbeagentur',
-        icon: 'las la-laptop-code',
-        title: 'Websites, Kampagnen und digitale Sichtbarkeit für Vereine.',
-        description: 'Airmius bietet Vereinen Website-Erstellung, Landingpages und digitale Kampagnen als Angebotsservice nach Anfrage.',
     },
     {
         key: 'enterprise',
         label: 'Enterprise',
-        icon: 'las la-network-wired',
-        title: 'Individuelle Lösungen für Verbände und große Organisationen.',
-        description: 'Enterprise ist für Mandantenfähigkeit, Migration, Schnittstellen, Schulung und SLA gedacht.',
     },
 ]
 
@@ -125,7 +102,7 @@ const checkoutText = (key, params = {}) => {
 
 const tx = (value, params = {}) => {
     const key = String(value ?? '')
-    return te(key) ? t(key, params) : key
+    return te(key) ? t(key, params) : key.replace(/\{(\w+)\}/g, (match, name) => params[name] ?? match)
 }
 const couponCode = ref('')
 const checkoutModal = ref({
@@ -150,105 +127,27 @@ if (requestedAudience && audiences.some((audience) => audience.key === requested
 const currentAudience = computed(() => audiences.find((audience) => audience.key === selectedAudience.value) || audiences[2])
 const visiblePlans = computed(() => props.planGroups[selectedAudience.value] || [])
 
-const planPill = (label, tone = 'neutral') => ({ label, tone })
+const ui = computed(() => pricingCopy[String(locale.value).split('-')[0]] || pricingCopy.de)
+const activeView = ref('plans')
+const selectedPlanId = ref(null)
+const detailPlan = computed(() => visiblePlans.value.find(plan => String(plan.id) === String(selectedPlanId.value)) || visiblePlans.value[0])
+const planTab = ref(null)
+const detailTab = ref(null)
+const summaryFeatures = plan => (plan.features || []).filter(feature => String(feature).length <= 180).slice(0, 3)
 
-const audienceDecisionMatrix = {
-    sportler: [
-        { area: 'Training dokumentieren', free: planPill('frei'), premium: planPill('Pro nur für KI/Analyse', 'pro'), note: 'Dokumentation soll nicht blockiert werden.' },
-        { area: 'Sportkarte & Tracking', free: planPill('frei'), premium: planPill('mehr Route-Limit', 'pro'), note: 'OSM-Karte und GPS bleiben Basisfunktion.' },
-        { area: 'Routen generieren', free: planPill('10/Monat'), premium: planPill('150/Monat', 'pro'), note: 'Externe Routingkosten bleiben kontrollierbar.' },
-        { area: 'KI-Bildanalyse Ernährung', free: planPill('nicht enthalten', 'locked'), premium: planPill('Sportler Pro', 'pro'), note: 'Bild-KI kostet Anbieter-Geld und braucht klare Zustimmung.' },
-        { area: 'KI-Trainingspläne', free: planPill('kurz limitiert'), premium: planPill('länger + mehr Versuche', 'pro'), note: 'Free testet, Pro bekommt ernsthafte Planung.' },
-    ],
-    trainer: [
-        { area: 'Im Verein trainieren', free: planPill('frei im Vereinsplan'), premium: planPill('Club/Pro für Verein', 'pro'), note: 'Trainer sollen innerhalb eines Vereins nicht extra bezahlen müssen.' },
-        { area: 'Eigene Gruppen', free: planPill('nicht enthalten', 'locked'), premium: planPill('Trainer Pro', 'pro'), note: 'Eigene Kundengruppen sind ein eigener Business-Use-Case.' },
-        { area: 'KI-Planung & Regelprüfung', free: planPill('nicht enthalten', 'locked'), premium: planPill('Trainer Pro / Vereins-Pro', 'pro'), note: 'Mehr Verantwortung, KI-Kosten und Prüfpflicht.' },
-        { area: 'Kurse & Camps', free: planPill('Eigene Entwürfe'), premium: planPill('Eigene Entwürfe'), note: 'Kostenlose Kurs- und Campentwürfe lassen sich mit beiden Tarifen verwalten. Für eigene Kurse können Ersteller Teilnehmer freischalten und den Zugang widerrufen.' },
-    ],
-    verein: [
-        { area: 'Starten mit Verein', free: planPill('Free: 1 Team / 25 Mitglieder'), premium: planPill('Starter für Wachstum', 'pro'), note: 'Kleine Vereine können risikofrei testen.' },
-        { area: 'Mitglieder aufnehmen', free: planPill('limitiert'), premium: planPill('Starter', 'pro'), note: 'Onboarding, Import und saubere Stammdaten sparen echte Büroarbeit.' },
-        { area: 'Rechnungen & Zahlungen', free: planPill('nicht enthalten', 'locked'), premium: planPill('Starter / Pro', 'pro'), note: 'Finanzen brauchen Verlässlichkeit, Protokollierung und Support.' },
-        { area: 'Trainer- & Vereins-Cockpit', free: planPill('Basis'), premium: planPill('Club', 'pro'), note: 'Operative Steuerung ist der Kernnutzen für zahlende Vereine.' },
-        { area: 'SEPA, DATEV, Bankabgleich', free: planPill('nicht enthalten', 'locked'), premium: planPill('Pro', 'pro'), note: 'Buchhaltung ist ein klarer professioneller Mehrwert.' },
-        { area: 'API, eigene Regeln, Audit', free: planPill('nicht enthalten', 'locked'), premium: planPill('Elite', 'pro'), note: 'Das braucht Sonderlogik, Sicherheit und Begleitung.' },
-    ],
-    eltern: [
-        { area: 'Kinderübersicht', free: planPill('frei'), premium: planPill('kein Eltern-Premium geplant'), note: 'Kinderschutz und Zustimmung bleiben Vertrauensbasis.' },
-        { area: 'Vereinsinfos & Termine', free: planPill('frei über Verein'), premium: planPill('abhängig vom Verein', 'pro'), note: 'Eltern zahlen nicht doppelt für Vereinsorganisation.' },
-    ],
-    sponsor: [
-        { area: 'Sponsorprofil', free: planPill('nicht öffentlich buchbar'), premium: planPill('Sponsor Local', 'pro'), note: 'B2B-Sichtbarkeit wird als eigenes Angebot verkauft.' },
-        { area: 'Reporting & Kampagnen', free: planPill('nicht enthalten', 'locked'), premium: planPill('Sponsor Pro später', 'pro'), note: 'Messung und Laufzeiten brauchen Betreuung.' },
-    ],
-    anbieter: [
-        { area: 'Produkte & Services', free: planPill('Marketplace-Basis'), premium: planPill('Provision/Add-on', 'pro'), note: 'Airmius verdient dort, wo Umsatz entsteht.' },
-        { area: 'Standorte & Abholung', free: planPill('Basis'), premium: planPill('Premium-Sichtbarkeit später', 'pro'), note: 'Echte Filialen und Abholstationen stärken Vertrauen.' },
-    ],
+const selectView = async (view, focus = false) => {
+    activeView.value = view
+    if (focus) {
+        await nextTick()
+        const tab = view === 'plans' ? planTab : detailTab
+        tab.value?.focus()
+    }
 }
 
-const currentDecisionRows = computed(() => audienceDecisionMatrix[selectedAudience.value] || [])
-const decisionPillClass = (tone) => ({
-    pro: 'border-air-blue/40 bg-air-blue/10 text-air-blue',
-    locked: 'border-warning/40 bg-warning/10 text-warning',
-    neutral: 'border-border bg-bg text-primary',
-})[tone || 'neutral']
-
-const accessRules = {
-    sportler: [
-        { feature: 'Persönliches Dashboard, Feed, Chat, Dateien 1 GB', plan: 'Free', reason: 'Soll Einstieg und tägliche Nutzung nicht blockieren.' },
-        { feature: 'Sportkarte, Tracking, Sportplätze, 10 automatische Routenvorschläge/Monat', plan: 'Free', reason: 'Basis-Bewegung und Orte sollen kostenlos bleiben; externe Routingkosten bleiben begrenzt.' },
-        { feature: 'KI-Ernährungsbild, Trainings-KI kurz, Profilportfolio (geplant)', plan: 'Sportler Pro', reason: 'Hat externe Kosten und persönlichen Premium-Nutzen.' },
-        { feature: 'Erweiterte Analyse, Sichtbarkeit, Bewerbungsmappe, bis 150 Routenvorschläge/Monat', plan: 'Sportler Pro', reason: 'Mehrwert für ambitionierte Sportler und kontrollierte Providerkosten.' },
-    ],
-    trainer: [
-        { feature: 'Trainer-Cockpit im Verein, Teamkommunikation, Training dokumentieren', plan: 'Free im Vereinsplan', reason: 'Trainer sollen im Verein ohne Extra-Hürde arbeiten.' },
-        { feature: 'Eigene Trainingsgruppen, Vorlagen, Kurse, Camps', plan: 'Trainer Pro', reason: 'Solo-Trainer erzeugen eigenen Verwaltungs- und Umsatznutzen.' },
-        { feature: 'KI-Planung, Regelprüfung, Belastungswarnungen', plan: 'Trainer Pro / Vereins-Pro', reason: 'Kostet KI und braucht höhere Verantwortung.' },
-    ],
-    verein: [
-        { feature: 'Vereinsprofil, 1 Team, Basis-Mitglieder, Basis-Chat', plan: 'Free', reason: 'Kleine Vereine können starten und Airmius testen.' },
-        { feature: 'Mitglieder-Onboarding, Import, Rechnungen, Zahlungshistorie', plan: 'Starter', reason: 'Echte Verwaltung spart Arbeit und rechtfertigt Abo.' },
-        { feature: 'Vereins-Cockpit, QR-Anwesenheit, Sponsoren, Mahnungen, Sportorte/Standorte', plan: 'Club', reason: 'Das sind operative Vereinsfunktionen mit dauerhaftem Nutzen.' },
-        { feature: 'Saisonplanung, Belastungssteuerung, SEPA, DATEV, Bankabgleich', plan: 'Pro', reason: 'Professionelle Verwaltung und Analyse für größere Vereine.' },
-        { feature: 'API, Multi-Standort, Audit, eigene Regeln', plan: 'Elite', reason: 'Braucht Support, Sicherheit und Sonderlogik.' },
-    ],
-    eltern: [
-        { feature: 'Kinderüberblick, Zustimmung, Widerruf, Sicherheit', plan: 'Free', reason: 'Kinderschutz und Vertrauen dürfen nicht hinter Paywall liegen.' },
-        { feature: 'Zahlungsübersicht, Termine, Vereinsinfos', plan: 'Free / Vereinsplan', reason: 'Hängt vom Verein ab, nicht vom Eltern-Abo.' },
-    ],
-    sponsor: [
-        { feature: 'Sponsorprofil, Vereinsplatzierungen, Kampagnen', plan: 'Sponsor Local', reason: 'B2B-Sichtbarkeit ist ein eigener Umsatzbereich.' },
-        { feature: 'Reporting, Laufzeiten, Zielgruppen, Conversion', plan: 'Sponsor Pro später', reason: 'Erweiterte Werbung braucht Messung und Support.' },
-    ],
-    anbieter: [
-        { feature: 'Marketplace-Profil, Produkte, Standorte, Abholung', plan: 'Anbieter Marketplace', reason: 'Anbieter nutzen Airmius kommerziell.' },
-        { feature: 'Premium-Platzierungen, Kampagnen, Auszahlungen', plan: 'Provision / Add-on', reason: 'Kosten entstehen durch Reichweite, Zahlung und Support.' },
-    ],
-    werbeagentur: [
-        { feature: 'Vereinswebsite, Landingpages, Kampagnen', plan: 'Angebot', reason: 'Umfang ist individuell und wird nicht pauschal bepreist.' },
-        { feature: 'SEO, Texte, Sponsorenbereiche, rechtliche Grundstruktur', plan: 'Angebot', reason: 'Projektarbeit mit Abnahme statt Standard-Abo.' },
-    ],
-    enterprise: [
-        { feature: 'Mandanten, Migration, Schnittstellen, SLA, AVV', plan: 'Enterprise', reason: 'Braucht Vertrag, Support und technische Begleitung.' },
-        { feature: 'Eigene Regeln, API, Audit, Datenexporte', plan: 'Enterprise', reason: 'Für Verbände und große Organisationen.' },
-    ],
+const showDetails = async plan => {
+    selectedPlanId.value = plan.id
+    await selectView('details', true)
 }
-
-const roadmap = [
-    { phase: '1', title: 'Vereins-Cockpit', plan: 'Club', text: 'Offene Anfragen, Rechnungen, SEPA-Lücken, Events, Speicher, Aufgaben und Schnellaktionen.' },
-    { phase: '2', title: 'Trainer-Cockpit', plan: 'Free im Verein / Trainer Pro', text: 'Heute anstehende Einheiten, offene Feedbacks, Teamform, Verletzungen und schnelle Dokumentation.' },
-    { phase: '3', title: 'QR-Anwesenheit', plan: 'Club', text: 'Check-in für Trainings und Events, manuelle Korrektur, Abwesenheitsgründe und Auswertung.' },
-    { phase: '4', title: 'Übungsbibliothek', plan: 'Free lesen / Pro verwalten', text: 'Airmius-Übungen, eigene Vereinsübungen, Medien, Ziele, Equipment und Risiken.' },
-    { phase: '5', title: 'Mitglieder-Onboarding', plan: 'Starter', text: 'Schrittweise Aufnahme mit Team, Beitrag, Einwilligungen, Elternlogik und Einladung.' },
-    { phase: '6', title: 'Saisonplanung', plan: 'Pro', text: 'Saisonphasen, Wochen, Ziele, Tests, Spiele/Wettkämpfe und Planfortschritt.' },
-    { phase: '7', title: 'Belastung & Risiko', plan: 'Pro', text: 'Umfang, Intensität, Regeneration, Verletzungswarnungen und klare Empfehlungen.' },
-    { phase: '8', title: 'KI + Airmius-Regeln', plan: 'Sportler Pro / Trainer Pro / Club Pro', text: 'KI erstellt, Airmius prüft Umfang, Pace, Regeneration, Risiko und Nachvollziehbarkeit.' },
-    { phase: '9', title: 'Verwaltung Plus', plan: 'Pro / Elite', text: 'Material, Hallen, Helfer, Medienrechte, Sponsoren-CRM, Vereinsberichte und Exporte.' },
-]
-
-const currentAccessRules = computed(() => accessRules[selectedAudience.value] || [])
 
 const formatPrice = (cents, currency = 'EUR') => {
     const numberLocale = {
@@ -261,7 +160,6 @@ const formatPrice = (cents, currency = 'EUR') => {
     return new Intl.NumberFormat(numberLocale, {
         style: 'currency',
         currency,
-        maximumFractionDigits: 0,
     }).format((Number(cents) || 0) / 100)
 }
 
@@ -458,117 +356,39 @@ const startCheckout = async () => {
         <Subnav />
 
         <main id="main-content" class="px-4 mb-8 pt-36 md:pt-44" tabindex="-1">
-            <section class="mx-auto max-w-6xl text-center">
-                <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ tx('Preise') }}</p>
-                <h1 class="mx-auto mt-3 max-w-4xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
-                    {{ tx('Ein Preismodell für alle, die Sport organisieren, erleben oder unterstützen.') }}
-                </h1>
-                <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-secondary">
-                    {{ tx('Sportler und Eltern starten kostenlos. Vereine zahlen fair nach Größe. Trainer, Sponsoren und Anbieter bekommen eigene Wege, wenn ihre Funktionen wachsen.') }}
-                </p>
-            </section>
+            <header class="mx-auto max-w-7xl">
+                <h1 class="font-heading text-3xl font-900 sm:text-4xl">{{ ui.title }}</h1>
+                <p class="mt-2 text-secondary">{{ ui.intro }}</p>
+            </header>
 
-            <section class="mx-auto mt-10 max-w-7xl">
-                <div class="flex gap-2 overflow-x-auto rounded-lg border border-border bg-card p-2">
-                    <button
-                        v-for="audience in audiences"
-                        :key="audience.key"
-                        type="button"
-                        class="flex shrink-0 items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition"
-                        :class="selectedAudience === audience.key ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-muted hover:text-primary'"
-                        @click="selectedAudience = audience.key"
-                    >
-                        <i :class="audience.icon"></i>
-                        <span>{{ tx(audience.label) }}</span>
+            <section class="mx-auto mt-6 max-w-7xl">
+                <label for="pricing-audience" class="mb-2 block text-sm font-semibold">{{ ui.audience }}</label>
+                <select id="pricing-audience" v-model="selectedAudience" class="min-h-11 w-full rounded-lg border-border bg-inputBg text-primary sm:max-w-sm">
+                    <option v-for="audience in audiences" :key="audience.key" :value="audience.key">{{ tx(audience.label) }}</option>
+                </select>
+                <div role="tablist" :aria-label="ui.title" class="mt-5 flex gap-2 border-b border-border">
+                    <button id="pricing-plans-tab" ref="planTab" type="button" role="tab" aria-controls="pricing-plans"
+                        :aria-selected="activeView === 'plans'" :tabindex="activeView === 'plans' ? 0 : -1"
+                        class="min-h-11 border-b-2 px-3 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-air-blue"
+                        :class="activeView === 'plans' ? 'border-air-blue text-primary' : 'border-transparent text-secondary'"
+                        @click="selectView('plans')" @keydown.right.prevent="selectView('details', true)" @keydown.left.prevent="selectView('details', true)"
+                        @keydown.home.prevent="selectView('plans', true)" @keydown.end.prevent="selectView('details', true)">
+                        {{ ui.plans }}
+                    </button>
+                    <button id="pricing-details-tab" ref="detailTab" type="button" role="tab" aria-controls="pricing-details"
+                        :aria-selected="activeView === 'details'" :tabindex="activeView === 'details' ? 0 : -1"
+                        class="min-h-11 border-b-2 px-3 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-air-blue"
+                        :class="activeView === 'details' ? 'border-air-blue text-primary' : 'border-transparent text-secondary'"
+                        @click="selectView('details')" @keydown.right.prevent="selectView('plans', true)" @keydown.left.prevent="selectView('plans', true)"
+                        @keydown.home.prevent="selectView('plans', true)" @keydown.end.prevent="selectView('details', true)">
+                        {{ ui.details }}
                     </button>
                 </div>
             </section>
 
-            <section v-if="currentDecisionRows.length" class="mx-auto mt-6 max-w-7xl rounded-lg border border-border bg-card p-5">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Abo-Entscheidung') }}</p>
-                        <h2 class="mt-1 text-2xl font-bold text-primary">{{ tx('Was bleibt frei, was gehört in Premium?') }}</h2>
-                    </div>
-                    <p class="max-w-2xl text-sm leading-6 text-secondary">
-                        {{ tx('Die Tabelle macht die Produktlogik sichtbar: Basisnutzung bleibt niedrigschwellig, kostenintensive oder professionelle Funktionen werden begrenzt oder bezahlt.') }}
-                    </p>
-                </div>
-
-                <div class="mt-5 overflow-hidden rounded-lg border border-border">
-                    <div class="hidden grid-cols-[1.1fr_0.8fr_0.8fr_1.4fr] gap-0 border-b border-border bg-bg px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary md:grid">
-                        <span>{{ tx('Funktion') }}</span>
-                        <span>{{ tx('Free/Basis') }}</span>
-                        <span>{{ tx('Premium') }}</span>
-                        <span>{{ tx('Warum?') }}</span>
-                    </div>
-                    <div
-                        v-for="row in currentDecisionRows"
-                        :key="row.area"
-                        class="grid gap-3 border-b border-border px-4 py-4 text-sm last:border-b-0 md:grid-cols-[1.1fr_0.8fr_0.8fr_1.4fr] md:items-center"
-                    >
-                        <div>
-                            <p class="font-semibold text-primary">{{ tx(row.area) }}</p>
-                        </div>
-                        <span class="inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold" :class="decisionPillClass(row.free.tone)">
-                            {{ tx(row.free.label) }}
-                        </span>
-                        <span class="inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold" :class="decisionPillClass(row.premium.tone)">
-                            {{ tx(row.premium.label) }}
-                        </span>
-                        <p class="text-sm leading-6 text-secondary">{{ tx(row.note) }}</p>
-                    </div>
-                </div>
-            </section>
-
-            <section class="mx-auto mt-8 max-w-7xl">
-                <div class="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
-                    <aside class="rounded-lg border border-border bg-card p-6">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx(currentAudience.label) }}</p>
-                        <h2 class="mt-2 text-2xl font-bold text-primary">{{ tx(currentAudience.title) }}</h2>
-                        <p class="mt-3 text-sm leading-relaxed text-secondary">{{ tx(currentAudience.description) }}</p>
-                        <div class="mt-6 rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
-                            <p class="font-semibold text-primary">{{ tx('Produktregel') }}</p>
-                            <p class="mt-2">
-                                {{ tx('Airmius bleibt für Sportler und Eltern niedrigschwellig. Bezahlt wird dort, wo echte Verwaltung, Reichweite, Support oder Umsatz entsteht.') }}
-                            </p>
-                        </div>
-                        <div v-if="currentAccessRules.length" class="mt-4 rounded-lg border border-air-blue/30 bg-air-blue/10 p-4 text-sm">
-                            <p class="font-semibold text-primary">{{ tx('Free oder Premium?') }}</p>
-                            <p class="mt-2 text-secondary">
-                                {{ tx('Basis bleibt frei. Premium beginnt dort, wo Airmius Verwaltung automatisiert, externe Kosten erzeugt oder professionellen Support braucht.') }}
-                            </p>
-                        </div>
-                        <div v-if="selectedAudience === 'werbeagentur'" class="mt-4 rounded-lg border border-air-blue/40 bg-air-blue/10 p-4 text-sm text-secondary">
-                            <p class="font-semibold text-primary">{{ tx('Website-Service') }}</p>
-                            <p class="mt-2">
-                                {{ tx('Der Preis hängt vom Umfang ab. Vereine stellen zuerst eine Anfrage und erhalten danach ein klares Angebot.') }}
-                            </p>
-                            <Link :href="route('guest.werbeagentur')" class="mt-3 inline-flex rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
-                                {{ tx('Werbeagentur ansehen') }}
-                            </Link>
-                        </div>
-                        <div class="mt-4 rounded-lg border border-border bg-bg p-4">
-                            <label class="text-xs font-semibold uppercase text-secondary">{{ tx('Rabattcode') }}</label>
-                            <input
-                                v-model="couponCode"
-                                type="text"
-                                class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm uppercase text-primary"
-                                :aria-label="tx('Rabattcode')"
-                                :placeholder="tx('z. B. BETA50')"
-                            >
-                            <p class="mt-2 text-xs text-secondary">{{ tx('Der Code wird beim Bezahlen automatisch berücksichtigt.') }}</p>
-                        </div>
-                        <div class="mt-4 rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
-                            <p class="font-semibold text-primary">{{ tx('Land & Währung') }}</p>
-                            <p class="mt-2">
-                                {{ tx('Preise für {country} erkannt', { country: pricingCountry }) }}
-                                <span class="text-xs">({{ pricingCountrySource }})</span>.
-                            </p>
-                        </div>
-                    </aside>
-
-                    <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <section id="pricing-plans" v-show="activeView === 'plans'" role="tabpanel" aria-labelledby="pricing-plans-tab" tabindex="0" class="mx-auto mt-6 max-w-7xl">
+                <h2 class="sr-only">{{ tx(currentAudience.label) }} – {{ ui.plans }}</h2>
+                    <div class="mx-auto grid items-start gap-5" :class="visiblePlans.length === 1 ? 'max-w-xl' : visiblePlans.length === 2 ? 'max-w-4xl md:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-3'">
                         <article
                             v-if="selectedAudience === 'werbeagentur' && !visiblePlans.length"
                             class="surface-card flex flex-col p-5 md:col-span-2 xl:col-span-3"
@@ -653,14 +473,18 @@ const startCheckout = async () => {
                                 </div>
                             </dl>
 
-                            <ul class="mt-5 flex-1 space-y-2 text-sm text-secondary">
-                                <li v-for="feature in plan.features" :key="feature" class="flex gap-2">
+                            <ul class="mt-5 space-y-2 text-sm text-secondary">
+                                <li v-for="feature in summaryFeatures(plan)" :key="feature" class="flex gap-2">
                                     <i class="las la-check mt-0.5 text-air-green"></i>
                                     <span>{{ tx(feature) }}</span>
                                 </li>
                             </ul>
 
-                            <div class="mt-6 grid gap-2">
+                            <button type="button" class="mt-3 min-h-11 text-start text-sm font-semibold text-air-blue underline underline-offset-2" :aria-label="ui.details + ': ' + tx(plan.name)" @click="showDetails(plan)">
+                                {{ ui.allDetails }}
+                            </button>
+
+                            <div class="mt-4 grid gap-2">
                                 <div
                                     v-if="ownsPlan(plan)"
                                     class="rounded-lg border border-air-green/40 bg-air-green/10 px-4 py-3 text-center text-sm font-semibold text-air-green"
@@ -702,64 +526,36 @@ const startCheckout = async () => {
                             </div>
                         </article>
                     </div>
-                </div>
+                <p v-if="!visiblePlans.length && selectedAudience !== 'werbeagentur'" class="rounded-lg border border-border bg-card p-5 text-secondary">{{ ui.empty }}</p>
             </section>
 
-            <section v-if="currentAccessRules.length" class="mx-auto mt-10 max-w-7xl rounded-lg border border-border bg-card p-5">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Funktionslogik') }}</p>
-                        <h2 class="mt-1 text-2xl font-bold text-primary">{{ tx('Was ist kostenlos, was gehört in Premium?') }}</h2>
-                    </div>
-                    <p class="max-w-2xl text-sm leading-6 text-secondary">
-                        {{ tx('Diese Einordnung ist die Grundlage für die nächsten Module. So bleibt Airmius fair für kleine Nutzer, aber tragfähig für Vereine, Trainer und Anbieter.') }}
-                    </p>
-                </div>
-
-                <div class="mt-5 grid gap-3 lg:grid-cols-3">
-                    <article
-                        v-for="rule in currentAccessRules"
-                        :key="`${selectedAudience}-${rule.feature}`"
-                        class="rounded-lg border border-border bg-bg p-4"
-                    >
-                        <span class="inline-flex rounded-full bg-air-blue/10 px-2 py-1 text-xs font-semibold text-air-blue">{{ tx(rule.plan) }}</span>
-                        <h3 class="mt-3 text-base font-bold text-primary">{{ tx(rule.feature) }}</h3>
-                        <p class="mt-2 text-sm leading-6 text-secondary">{{ tx(rule.reason) }}</p>
+            <section id="pricing-details" v-show="activeView === 'details'" role="tabpanel" aria-labelledby="pricing-details-tab" tabindex="0" class="mx-auto mt-6 max-w-7xl">
+                <template v-if="detailPlan">
+                    <label for="pricing-detail-plan" class="mb-2 block text-sm font-semibold">{{ ui.choosePlan }}</label>
+                    <select id="pricing-detail-plan" :value="detailPlan.id" @change="selectedPlanId = $event.target.value" class="min-h-11 w-full rounded-lg border-border bg-inputBg text-primary sm:max-w-sm">
+                        <option v-for="plan in visiblePlans" :key="plan.id" :value="plan.id">{{ tx(plan.name) }} – {{ formatPrice(plan.monthly_price_cents, plan.currency) }} {{ tx(priceCaption(plan)) }}</option>
+                    </select>
+                    <article :key="detailPlan.id" class="mt-4 rounded-lg border border-border bg-card p-5">
+                        <h2 class="text-xl font-bold">{{ tx(detailPlan.name) }}</h2>
+                        <p class="mt-2 text-sm text-secondary">{{ ui.detailsHelp }}</p>
+                        <ul class="mt-4 divide-y divide-border text-sm">
+                            <li v-for="(feature, index) in detailPlan.features" :key="index" class="py-3 leading-6">
+                                <details v-if="String(feature).length > 180">
+                                    <summary class="cursor-pointer font-semibold text-primary">{{ tx(feature).slice(0, 120) }}…</summary>
+                                    <p class="mt-2 whitespace-pre-line text-secondary">{{ tx(feature) }}</p>
+                                </details>
+                                <span v-else>{{ tx(feature) }}</span>
+                            </li>
+                        </ul>
                     </article>
-                </div>
-            </section>
-
-            <section class="mx-auto mt-10 max-w-7xl rounded-lg border border-border bg-card p-5">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Ausbauplan') }}</p>
-                        <h2 class="mt-1 text-2xl font-bold text-primary">{{ tx('Reihenfolge für die fehlenden Vereins- und Trainerfunktionen') }}</h2>
-                    </div>
-                    <p class="max-w-2xl text-sm leading-6 text-secondary">
-                        {{ tx('Die Reihenfolge ist bewusst produktorientiert: erst Cockpits und Anwesenheit, danach Planung, Analyse und schwere Verwaltungsfunktionen.') }}
-                    </p>
-                </div>
-
-                <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    <article
-                        v-for="item in roadmap"
-                        :key="item.phase"
-                        class="rounded-lg border border-border bg-bg p-4"
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-bold text-buttonTextPrimary">{{ item.phase }}</span>
-                            <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">{{ tx(item.plan) }}</span>
-                        </div>
-                        <h3 class="mt-4 text-lg font-bold text-primary">{{ tx(item.title) }}</h3>
-                        <p class="mt-2 text-sm leading-6 text-secondary">{{ tx(item.text) }}</p>
-                    </article>
-                </div>
+                </template>
+                <p v-else class="rounded-lg border border-border bg-card p-5 text-secondary">{{ ui.empty }}</p>
             </section>
         </main>
 
         <Teleport to="body">
             <div v-if="checkoutModal.open && checkoutModal.plan" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
-                <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
+                <div class="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-2xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Abo kostenpflichtig bestellen') }}</p>
@@ -799,6 +595,12 @@ const startCheckout = async () => {
                             <span v-if="!checkoutClubs.length" class="text-xs leading-5 text-warning">{{ checkoutText('no_club') }}</span>
                         </label>
                     </div>
+
+                    <label class="mt-4 block text-sm font-semibold text-primary">
+                        {{ tx('Rabattcode') }}
+                        <input v-model="couponCode" type="text" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm uppercase text-primary" :aria-label="tx('Rabattcode')" :placeholder="tx('z. B. BETA50')">
+                        <span class="mt-1 block text-xs font-normal text-secondary">{{ tx('Der Code wird beim Bezahlen automatisch berücksichtigt.') }}</span>
+                    </label>
 
                     <label class="mt-4 flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                         <input v-model="checkoutModal.accepted" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
