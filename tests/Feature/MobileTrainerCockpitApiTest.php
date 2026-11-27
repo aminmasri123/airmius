@@ -20,6 +20,69 @@ class MobileTrainerCockpitApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_periods_count_only_completed_visible_logs_and_compare_equal_windows(): void
+    {
+        $this->travelTo(now()->setDate(2026, 11, 27)->setTime(12, 0));
+        [$coach, $athlete, $team] = $this->coachTeam();
+        Sanctum::actingAs($coach);
+        foreach (['week' => 7, 'month' => 30, 'year' => 365] as $period => $days) {
+            TrainingLog::query()->delete();
+            $start = now()->startOfDay()->subDays($days - 1);
+            foreach ([
+                ['completed', $start, 30, 'trainer', 4],
+                ['completed', now(), 60, 'trainer', 8],
+                ['completed', $start->copy()->subDay(), 90, 'trainer', 2],
+                ['planned', now(), 300, 'trainer', 10],
+                ['missed', now(), 300, 'trainer', 10],
+                ['in_progress', now(), 300, 'trainer', 10],
+                ['partial', now(), 300, 'trainer', 10],
+                ['completed', now()->addHour(), 300, 'trainer', 10],
+                ['completed', now(), 300, 'private', 10],
+                ['completed', $start->copy()->subDays($days)->subSecond(), 300, 'trainer', 10],
+            ] as [$status, $date, $minutes, $privacy, $rpe]) {
+                TrainingLog::create([
+                    'user_id' => $athlete->id, 'created_by' => $athlete->id,
+                    'trainer_id' => $coach->id, 'team_id' => $team->id,
+                    'title' => 'Period test', 'status' => $status, 'performed_at' => $date,
+                    'duration_minutes' => $minutes, 'metrics' => ['privacy_scope' => $privacy, 'wellness' => ['rpe' => $rpe]],
+                ]);
+            }
+            $this->getJson('/api/v1/trainer-cockpit?period='.$period)->assertOk()
+                ->assertJsonPath('data.coachPeriod.days', $days)
+                ->assertJsonPath('data.coachPeriod.current.session_count', 2)
+                ->assertJsonPath('data.coachPeriod.current.duration_minutes', 90)
+                ->assertJsonPath('data.coachPeriod.current.average_rpe', 6)
+                ->assertJsonPath('data.coachPeriod.previous.session_count', 1)
+                ->assertJsonPath('data.coachPeriod.sessions_percent', 100);
+        }
+        $this->getJson('/api/v1/trainer-cockpit?period=invalid')->assertUnprocessable();
+    }
+
+    public function test_empty_comparison_is_null_and_historical_load_is_not_a_current_warning(): void
+    {
+        [$coach, $athlete, $team] = $this->coachTeam();
+        Sanctum::actingAs($coach);
+        $this->getJson('/api/v1/trainer-cockpit')->assertOk()
+            ->assertJsonPath('data.coachPeriod.sessions_percent', null)
+            ->assertJsonPath('data.coachWeekly.trend.sessions_percent', null);
+        TrainingLog::create([
+            'user_id' => $athlete->id, 'created_by' => $athlete->id,
+            'trainer_id' => $coach->id, 'team_id' => $team->id,
+            'title' => 'Old load', 'status' => 'completed', 'performed_at' => now()->subDays(20),
+            'duration_minutes' => 60, 'metrics' => ['wellness' => ['rpe' => 10, 'pain' => 8]],
+        ]);
+        $this->getJson('/api/v1/trainer-cockpit?period=year')->assertOk()
+            ->assertJsonPath('data.coachPeriod.current.session_count', 1)
+            ->assertJsonPath('data.coachPeriod.sessions_percent', null)
+            ->assertJsonCount(0, 'data.coachWeekly.risk_athletes')
+            ->assertJsonPath('data.coachWeekly.risk_level', 'empty');
+        TrainingLog::query()->update(['performed_at' => now()->subDays(400)]);
+        $this->getJson('/api/v1/trainer-cockpit?period=year')->assertOk()
+            ->assertJsonPath('data.coachPeriod.current.session_count', 0)
+            ->assertJsonPath('data.coachPeriod.current.average_rpe', null)
+            ->assertJsonPath('data.coachPeriod.sessions_percent', -100);
+    }
+
     public function test_coach_receives_only_managed_team_control_data(): void
     {
         [$coach, $athlete, $team] = $this->coachTeam();

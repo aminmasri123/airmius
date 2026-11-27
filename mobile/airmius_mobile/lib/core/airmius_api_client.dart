@@ -3124,8 +3124,8 @@ class AirmiusApiClient {
   Future<AirmiusJson> closeEventDecision(int eventId, int decisionId) =>
       _json('POST', '/api/v1/events/$eventId/decisions/$decisionId/close');
 
-  Future<AirmiusJson> trainerCockpit() =>
-      _json('GET', '/api/v1/trainer-cockpit');
+  Future<AirmiusJson> trainerCockpit({String period = 'week'}) =>
+      _json('GET', '/api/v1/trainer-cockpit', query: {'period': period});
 
   Future<AirmiusJson> trainingPlanEvaluation(Map<String, String> filters) =>
       _json('GET', '/api/v1/trainer-cockpit/plan-evaluation', query: filters);

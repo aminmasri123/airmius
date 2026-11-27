@@ -50,6 +50,7 @@ class TrainerCockpitController extends Controller
         $hasTrainerAccess = $this->hasTrainerAccess($user);
 
         abort_unless($hasTrainerAccess, 403);
+        $period = $request->validate(['period' => ['sometimes', 'in:week,month,year']])['period'] ?? 'week';
 
         $teamIds = $this->trainerTeamIds($user);
         $teamCount = $teamIds->count();
@@ -97,6 +98,7 @@ class TrainerCockpitController extends Controller
             'recentLogs' => $recentLogs,
             'plans' => $plans,
             'coachWeekly' => $coachWeekly,
+            'coachPeriod' => $this->trainingPeriod($user, $teamIds, $period),
         ];
 
         if ($request->expectsJson()) {
@@ -366,6 +368,28 @@ class TrainerCockpitController extends Controller
             ->values();
     }
 
+    private function trainingPeriod(User $user, $teamIds, string $period): array
+    {
+        $days = ['week' => 7, 'month' => 30, 'year' => 365][$period];
+        $end = now();
+        $start = $end->copy()->startOfDay()->subDays($days - 1);
+        $previousStart = $start->copy()->subDays($days);
+        $previousEnd = $start->copy()->subDay()->endOfDay();
+        $logs = $this->visibleTrainingLogs($user)
+            ->whereIn('team_id', $teamIds)->where('status', 'completed')
+            ->whereBetween('performed_at', [$previousStart, $end])->get();
+        $current = $this->trainingWindowStats($logs->filter(fn ($log) => $log->performed_at->gte($start)));
+        $previous = $this->trainingWindowStats($logs->filter(fn ($log) => $log->performed_at->lt($start)));
+
+        return [
+            'period' => $period, 'days' => $days,
+            'from' => $start->toDateString(), 'to' => $end->toDateString(),
+            'previous_from' => $previousStart->toDateString(), 'previous_to' => $previousEnd->toDateString(),
+            'current' => $current, 'previous' => $previous,
+            'sessions_percent' => $this->trendPercent($current['session_count'], $previous['session_count']),
+        ];
+    }
+
     private function coachWeekly($teamIds, $teams, $feedbackOpen, $overdueItems, User $user): array
     {
         if ($teamIds->isEmpty()) {
@@ -375,9 +399,9 @@ class TrainerCockpitController extends Controller
                 'current_week' => $this->trainingWindowStats(collect()),
                 'previous_week' => $this->trainingWindowStats(collect()),
                 'trend' => [
-                    'sessions_percent' => 0,
-                    'duration_percent' => 0,
-                    'distance_percent' => 0,
+                    'sessions_percent' => null,
+                    'duration_percent' => null,
+                    'distance_percent' => null,
                 ],
                 'team_cards' => [],
                 'risk_athletes' => [],
@@ -391,9 +415,10 @@ class TrainerCockpitController extends Controller
 
         $logs = $this->visibleTrainingLogs($user)
             ->whereIn('team_id', $teamIds)
+            ->where('status', 'completed')
             ->whereNotNull('performed_at')
             ->where('performed_at', '>=', $previousStart)
-            ->where('performed_at', '<=', now()->endOfDay())
+            ->where('performed_at', '<=', now())
             ->with(['athlete:id,name,first_name,last_name,profile_photo_path', 'team:id,name'])
             ->get();
 
@@ -574,10 +599,10 @@ class TrainerCockpitController extends Controller
         return $values->isEmpty() ? null : round((float) $values->avg(), 1);
     }
 
-    private function trendPercent(float $current, float $previous): float
+    private function trendPercent(float $current, float $previous): ?float
     {
         if ($previous <= 0.0) {
-            return $current > 0.0 ? 100.0 : 0.0;
+            return null;
         }
 
         return round((($current - $previous) / $previous) * 100, 1);
