@@ -4709,6 +4709,12 @@ class AirmiusApiClient {
     body: {'confirmation': 'delete'},
   );
 
+  Future<AirmiusJson> websiteProject(int id, {int page = 1}) =>
+      _json('GET', '/api/v1/commerce/website-requests/$id', query: {'page': '$page'});
+
+  Future<AirmiusJson> sendWebsiteProjectMessage(int id, AirmiusJson body) =>
+      _json('POST', '/api/v1/commerce/website-requests/$id/messages', body: body);
+
   Future<AirmiusJson> createCommerceWebsiteRequest(AirmiusJson body) =>
       _json('POST', '/api/v1/commerce/seller/website-requests', body: body);
 

@@ -30,6 +30,10 @@ class WebsiteRequestService
     public static function authenticatedRules(): array
     {
         return [
+            'project_title' => ['nullable', 'string', 'max:255'],
+            'target_audience' => ['nullable', 'string', 'max:2000'],
+            'inspiration_urls' => ['nullable', 'array', 'max:5'],
+            'inspiration_urls.*' => ['required', 'url:http,https', 'max:2048'],
             'club_id' => ['nullable', Rule::exists('clubs', 'id')],
             'domain' => ['nullable', 'string', 'max:255'],
             'goals' => ['nullable', 'string', 'max:2000'],
@@ -70,6 +74,12 @@ class WebsiteRequestService
                     ? now()->addMonths(6)
                     : now()->addYear(),
             ])->save();
+
+            if ($statusChanged) {
+                $locked->messages()->create([
+                    'user_id' => $actor->id, 'kind' => 'status', 'status' => $data['status'],
+                ]);
+            }
 
             return $locked->fresh(['user', 'club', 'statusChangedBy']);
         }, 3);

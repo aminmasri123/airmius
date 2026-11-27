@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'website_project_screen.dart';
+import '../core/website_project_copy.dart';
 import '../widgets/commerce_payment_confirmation.dart';
 import '../widgets/marketplace_taxonomy_fields.dart';
 import '../widgets/airmius_form.dart';
@@ -122,6 +124,7 @@ class _AdminCommerceOperationsScreenState
               ),
             ),
           ),
+          if (statuses.isNotEmpty) const SizedBox(height: 20),
           if (statuses.isNotEmpty)
             DropdownButtonFormField<String>(
               key: ValueKey(
@@ -140,6 +143,8 @@ class _AdminCommerceOperationsScreenState
                           ? t('commerceOps.active')
                           : status == '0'
                           ? t('commerceOps.inactive')
+                          : list == 'website_requests'
+                          ? t('commerceAdv.websiteStatus.$status')
                           : status,
                     ),
                   ),
@@ -148,6 +153,7 @@ class _AdminCommerceOperationsScreenState
                   ? null
                   : (value) => _filter(list, 'status', value ?? ''),
             ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(child: Text('$page / $last · ${_int(meta['total'])}')),
@@ -1113,6 +1119,7 @@ class _AdminCommerceOperationsScreenState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final list in ['seller_applications', 'website_requests']) ...[
+          if (list == 'website_requests') const SizedBox(height: 28),
           _sectionHeader(
             title: t(
               list == 'seller_applications'
@@ -1138,7 +1145,9 @@ class _AdminCommerceOperationsScreenState
                         _map(item['club'])['name'],
                         fallback: _text(item['club_name']),
                       ),
-                status: _text(item['status']),
+                status: list == 'website_requests'
+                    ? t('commerceAdv.websiteStatus.${item['status']}')
+                    : _text(item['status']),
                 subtitle: [
                   _text(
                     _map(item['user'])['email'],
@@ -1153,7 +1162,25 @@ class _AdminCommerceOperationsScreenState
                   ))
                     if (check['done'] != true) _text(check['label']),
                 ].where((value) => value.isNotEmpty).join('\n'),
-                onEdit: () => _reviewApplication(list, item),
+                actionLabel: list == 'website_requests'
+                    ? websiteText(context, 'open')
+                    : null,
+                onEdit: () async {
+                  if (list == 'website_requests') {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WebsiteProjectScreen(
+                          projectId: _int(item['id']),
+                          admin: true,
+                        ),
+                      ),
+                    );
+                    if (mounted) _reload();
+                  } else {
+                    _reviewApplication(list, item);
+                  }
+                },
               ),
             ),
         ],
@@ -1271,7 +1298,7 @@ class _AdminCommerceOperationsScreenState
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
-                Text(body),
+                if (body.isNotEmpty) Text(body),
               ],
             ),
           ),
@@ -1424,7 +1451,7 @@ class _AdminCommerceOperationsScreenState
             ],
           ),
           const SizedBox(height: 8),
-          Text(body),
+          if (body.isNotEmpty) Text(body),
           const SizedBox(height: 11),
           FilledButton.tonalIcon(
             onPressed: _busy ? null : onPressed,

@@ -1,5 +1,9 @@
-﻿<script setup>
+<script setup>
 import { useI18n } from 'vue-i18n'
+import { ref } from 'vue'
+import WebsiteProjectConversation from '@/Components/Commerce/WebsiteProjectConversation.vue'
+const selected = ref(null)
+const statuses = { new: 'Anfrage eingegangen', contacted: 'In Klärung', quoted: 'Angebot erstellt', in_progress: 'In Umsetzung', done: 'Abgeschlossen', cancelled: 'Storniert' }
 
 const { t } = useI18n()
 
@@ -26,9 +30,11 @@ const emit = defineEmits(['update-website-request'])
                             <p v-if="request.guest_name" class="text-xs text-secondary">{{ request.guest_name }}</p>
                         </td>
                         <td class="px-5 py-3 text-secondary">{{ request.domain || '-' }}</td>
-                        <td class="px-5 py-3 text-secondary">{{ request.status }}</td>
+                        <td class="px-5 py-3 text-secondary">{{ statuses[request.status] || request.status }}</td>
                         <td class="px-5 py-3 text-end">
-                            <div class="flex justify-end gap-2">
+                                                        <div class="flex flex-wrap justify-end gap-3">
+                                <button type="button" class="rounded-lg border border-border px-3 py-2" @click="selected = request.id">Projekt und Nachrichten</button>
+                                <select :value="request.status" aria-label="Projektstatus ändern" class="rounded-lg border-border bg-inputBg text-primary" @change="emit('update-website-request', request, $event.target.value)"><option v-for="(label, status) in statuses" :key="status" :value="status">{{ label }}</option></select>
                                 <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('update-website-request', request, 'contacted')">Kontaktiert</button>
                                 <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="emit('update-website-request', request, 'quoted')">{{ t('commerce.ui.offer') }}</button>
                             </div>
@@ -38,5 +44,6 @@ const emit = defineEmits(['update-website-request'])
             </table>
             <p v-if="!websiteRequests.length" class="px-5 py-6 text-sm text-secondary">Noch keine Website-Anfragen.</p>
         </div>
+        <WebsiteProjectConversation v-if="selected" :key="`${selected}-${websiteRequests.find(r => r.id === selected)?.status}`" :project-id="selected" class="m-5" />
     </section>
 </template>

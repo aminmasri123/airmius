@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'website_project_screen.dart';
+import '../core/website_project_copy.dart';
 import '../widgets/marketplace_taxonomy_fields.dart';
 import 'package:file_picker/file_picker.dart';
 import '../widgets/airmius_form.dart';
@@ -68,9 +70,9 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
     (widget.advertisingClubId != null
         ? await _client.clubAdvertising(widget.advertisingClubId!)
         : await _client.commerceSellerDashboard(
-      sponsorId: widget.sponsorId,
-      clubId: widget.clubId,
-    ))['data'],
+            sponsorId: widget.sponsorId,
+            clubId: widget.clubId,
+          ))['data'],
   );
 
   String _errorMessage(AirmiusApiException error) => error.statusCode == 599
@@ -237,7 +239,8 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
                   else
                     _Header(data: data),
                   const SizedBox(height: 14),
-                  if (widget.advertisingClubId == null && (widget.clubId == null || data['active'] == true))
+                  if (widget.advertisingClubId == null &&
+                      (widget.clubId == null || data['active'] == true))
                     _SectionPicker(
                       selected: _section,
                       sponsorTools: _sponsorTools,
@@ -838,7 +841,28 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
           ...requests.map(
             (request) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: _WebsiteRequestCard(request: request),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _WebsiteRequestCard(request: request),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.forum_outlined),
+                    label: Text(websiteText(context, 'open')),
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => WebsiteProjectScreen(
+                            projectId: _int(request['id']),
+                          ),
+                        ),
+                      );
+                      if (mounted) _reload();
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
       ],
@@ -1011,15 +1035,24 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
   }
 
   Future<void> _showWebsiteRequest(Map<String, dynamic> data) async {
-    final payload = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _WebsiteRequestSheet(
-        clubs: _maps(
-          data['clubs'],
-        ).where((club) => club['can_request_website'] == true).toList(),
-        preferredClubId: widget.preferredWebsiteClubId,
+    final payload = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(
+            title: Text(
+              AirmiusScope.of(context).t('commerceAdv.requestWebsite'),
+            ),
+          ),
+          body: SafeArea(
+            child: _WebsiteRequestSheet(
+              clubs: _maps(
+                data['clubs'],
+              ).where((club) => club['can_request_website'] == true).toList(),
+              preferredClubId: widget.preferredWebsiteClubId,
+            ),
+          ),
+        ),
       ),
     );
     if (payload == null || !mounted) return;
@@ -2273,7 +2306,9 @@ class _CampaignSheetState extends State<_CampaignSheet> {
     _objective = _text(campaign['objective'], fallback: 'traffic');
     _placement = _text(campaign['placement'], fallback: 'feed');
     _format = _text(campaign['creative_format'], fallback: 'feed_square');
-    _clubId = campaign['club_id'] == null ? widget.preferredClubId : _int(campaign['club_id']);
+    _clubId = campaign['club_id'] == null
+        ? widget.preferredClubId
+        : _int(campaign['club_id']);
     _startsAt = _campaignDate(campaign['starts_at']);
     _endsAt = _campaignDate(campaign['ends_at']);
   }
@@ -2314,7 +2349,11 @@ class _CampaignSheetState extends State<_CampaignSheet> {
     );
     if (time == null || !mounted) return;
     final selected = DateTime(
-      picked.year, picked.month, picked.day, time.hour, time.minute,
+      picked.year,
+      picked.month,
+      picked.day,
+      time.hour,
+      time.minute,
     );
     setState(() {
       if (start) {
@@ -2347,7 +2386,9 @@ class _CampaignSheetState extends State<_CampaignSheet> {
             ])
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Text('${t('commerceAdv.format.${format.$1}')}\n${format.$2}'),
+                child: Text(
+                  '${t('commerceAdv.format.${format.$1}')}\n${format.$2}',
+                ),
               ),
             Text(t('commerceAdv.imageUploadHint')),
           ],
@@ -2784,6 +2825,9 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
   final _domain = TextEditingController();
   final _goals = TextEditingController();
   final _notes = TextEditingController();
+  final _title = TextEditingController();
+  final _audience = TextEditingController();
+  final _inspiration = TextEditingController();
   int? _clubId;
   bool _acceptedPrivacy = false;
   bool _submitted = false;
@@ -2803,19 +2847,34 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
     _domain.dispose();
     _goals.dispose();
     _notes.dispose();
+    _title.dispose();
+    _audience.dispose();
+    _inspiration.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AirmiusScope.of(context).t;
-    return _SheetFrame(
-      title: t('commerceAdv.requestWebsite'),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
       child: AirmiusForm(
         key: _form,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Text(websiteText(context, 'formHelp')),
+            const SizedBox(height: 16),
+            Text(websiteText(context, 'noCharge')),
+            const SizedBox(height: 24),
+            TextFormField(
+              controller: _title,
+              maxLength: 255,
+              decoration: InputDecoration(
+                labelText: websiteText(context, 'title'),
+              ),
+            ),
+            const SizedBox(height: 20),
             if (widget.clubs.isNotEmpty) ...[
               DropdownButtonFormField<int?>(
                 initialValue: _clubId,
@@ -2835,7 +2894,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
                 ],
                 onChanged: (value) => setState(() => _clubId = value),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 20),
             ],
             TextFormField(
               controller: _domain,
@@ -2844,7 +2903,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
                 hintText: 'mein-verein.de',
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _goals,
               minLines: 3,
@@ -2855,12 +2914,50 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
                   ? t('commerceAdv.required')
                   : null,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _notes,
               minLines: 2,
               maxLines: 5,
               decoration: InputDecoration(labelText: t('commerceAdv.notes')),
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _audience,
+              minLines: 2,
+              maxLines: 4,
+              maxLength: 2000,
+              decoration: InputDecoration(
+                labelText: websiteText(context, 'audience'),
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _inspiration,
+              minLines: 2,
+              maxLines: 6,
+              decoration: InputDecoration(
+                labelText: websiteText(context, 'inspiration'),
+                helperText: websiteText(context, 'linksHelp'),
+                helperMaxLines: 5,
+              ),
+              validator: (value) {
+                final links = (value ?? '')
+                    .split('\n')
+                    .map((e) => e.trim())
+                    .where((e) => e.isNotEmpty)
+                    .toList();
+                if (links.length > 5 ||
+                    links.any((link) {
+                      final uri = Uri.tryParse(link);
+                      return uri == null ||
+                          !['http', 'https'].contains(uri.scheme) ||
+                          uri.host.isEmpty;
+                    })) {
+                  return websiteText(context, 'invalidLinks');
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
             CheckboxListTile(
@@ -2892,6 +2989,13 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
                 }
                 Navigator.pop(context, {
                   'club_id': _clubId,
+                  'project_title': _title.text.trim(),
+                  'target_audience': _audience.text.trim(),
+                  'inspiration_urls': _inspiration.text
+                      .split('\n')
+                      .map((e) => e.trim())
+                      .where((e) => e.isNotEmpty)
+                      .toList(),
                   'domain': _domain.text.trim(),
                   'goals': _goals.text.trim(),
                   'notes': _notes.text.trim(),

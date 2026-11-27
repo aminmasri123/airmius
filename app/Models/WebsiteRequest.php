@@ -21,6 +21,9 @@ class WebsiteRequest extends Model
         'domain',
         'goals',
         'notes',
+        'project_title',
+        'target_audience',
+        'inspiration_urls',
         'consent_at',
         'status_changed_at',
         'status_changed_by',
@@ -30,6 +33,7 @@ class WebsiteRequest extends Model
     protected function casts(): array
     {
         return [
+            'inspiration_urls' => 'array',
             'consent_at' => 'datetime',
             'status_changed_at' => 'datetime',
             'retention_expires_at' => 'datetime',
@@ -39,6 +43,11 @@ class WebsiteRequest extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function messages()
+    {
+        return $this->hasMany(WebsiteRequestMessage::class);
     }
 
     public function club()

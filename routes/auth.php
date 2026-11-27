@@ -1,9 +1,11 @@
 <?php
 
 use App\Http\Controllers\AccountRoleApplicationController;
+use App\Http\Controllers\Api\V1\EventCompetitivenessController;
 use App\Http\Controllers\Api\V1\SponsorDeliverableManagementController;
 use App\Http\Controllers\Api\V1\TeamPenaltyController;
 use App\Http\Controllers\Api\V1\TrainingExerciseController;
+use App\Http\Controllers\Api\V1\WebsiteProjectController;
 use App\Http\Controllers\ChallengeController;
 use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\ClubController;
@@ -11,8 +13,9 @@ use App\Http\Controllers\ClubDeletionController;
 use App\Http\Controllers\ClubInventoryPageController;
 use App\Http\Controllers\ClubMemberRemovalController;
 use App\Http\Controllers\ClubMembershipController;
-use App\Http\Controllers\ClubNewsletterPageController;
 use App\Http\Controllers\ClubMemberTimelineController;
+use App\Http\Controllers\ClubNewsletterPageController;
+use App\Http\Controllers\ClubPayoutController;
 use App\Http\Controllers\ClubStaffSchedulingPageController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CommerceCheckoutController;
@@ -20,7 +23,6 @@ use App\Http\Controllers\ContentReportController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
-use App\Http\Controllers\Api\V1\EventCompetitivenessController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\FolderController;
 use App\Http\Controllers\FollowController;
@@ -75,6 +77,7 @@ use App\Http\Controllers\WorkAutomationPageController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureIdempotentApiRequest;
+use App\Http\Middleware\EnsurePlatformAdminTwoFactor;
 use Illuminate\Support\Facades\Route;
 
 Route::options('/team-join-requests/{joinRequest}/approve', fn () => response('', 204))
@@ -307,7 +310,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('/commerce/seller-application', [CommerceCheckoutController::class, 'storeSellerApplication'])->name('auth.commerce.seller-application.store');
     Route::post('/commerce/provider-profile', [CommerceCheckoutController::class, 'storeProviderProfile'])->name('auth.commerce.provider-profile.store');
     Route::get('/clubs/{club}/shop', [CommerceCheckoutController::class, 'clubShop'])->name('auth.club-shop');
-    Route::put('/clubs/{club}/shop/payout-account', [\App\Http\Controllers\ClubPayoutController::class, 'store'])->middleware('throttle:payment-actions')->name('auth.club-shop.account');
+    Route::put('/clubs/{club}/shop/payout-account', [ClubPayoutController::class, 'store'])->middleware('throttle:payment-actions')->name('auth.club-shop.account');
     Route::patch('/clubs/{club}/shop/items/{item}', [CommerceCheckoutController::class, 'fulfillClubShopItem'])->name('auth.club-shop.fulfill');
     Route::post('/commerce/provider-locations', [CommerceCheckoutController::class, 'storeProviderLocation'])->name('auth.commerce.provider-locations.store');
     Route::put('/commerce/provider-locations/{location}', [CommerceCheckoutController::class, 'updateProviderLocation'])->name('auth.commerce.provider-locations.update');
@@ -326,6 +329,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/commerce/campaigns/{campaign}/status', [CommerceCheckoutController::class, 'updateOwnCampaignStatus'])->name('auth.commerce.campaigns.status.update');
     Route::delete('/commerce/campaigns/{campaign}', [CommerceCheckoutController::class, 'destroyOwnCampaign'])->name('auth.commerce.campaigns.destroy');
     Route::post('/commerce/website-requests', [CommerceCheckoutController::class, 'storeWebsiteRequest'])->name('auth.commerce.website-requests.store');
+    Route::get('/commerce/website-requests/{websiteRequest}/project', [WebsiteProjectController::class, 'show'])->middleware(EnsurePlatformAdminTwoFactor::class)->name('auth.commerce.website-project.show');
+    Route::post('/commerce/website-requests/{websiteRequest}/messages', [WebsiteProjectController::class, 'storeMessage'])->middleware([EnsurePlatformAdminTwoFactor::class, 'throttle:content-comments'])->name('auth.commerce.website-project.messages');
     Route::post('/commerce/payout-profile', [CommerceCheckoutController::class, 'storePayoutProfile'])->name('auth.commerce.payout-profile.store');
     Route::post('/commerce/payouts/request', [CommerceCheckoutController::class, 'requestPayout'])->name('auth.commerce.payouts.request');
     Route::get('/outfit-subscriptions', [OutfitSubscriptionController::class, 'index'])->name('auth.outfit-subscriptions.index');

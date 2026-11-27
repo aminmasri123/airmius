@@ -104,10 +104,12 @@ use App\Http\Controllers\Api\V1\TrainingSessionController;
 use App\Http\Controllers\Api\V1\UploadController;
 use App\Http\Controllers\Api\V1\UserBadgeController as MobileUserBadgeController;
 use App\Http\Controllers\Api\V1\UserSocialProfileController;
+use App\Http\Controllers\Api\V1\WebsiteProjectController;
 use App\Http\Controllers\Api\V1\WorkAutomationJobController;
 use App\Http\Controllers\ClubDeletionController;
 use App\Http\Controllers\ClubMemberRemovalController;
 use App\Http\Controllers\ClubMemberTimelineController;
+use App\Http\Controllers\ClubPayoutController;
 use App\Http\Controllers\CommerceCheckoutController as MobileCommerceCheckoutController;
 use App\Http\Controllers\ContentReportController;
 use App\Http\Controllers\CountryCatalogController;
@@ -1292,7 +1294,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/commerce/seller', [MobileCommerceCheckoutController::class, 'sellerDashboard'])->name('commerce.seller.show');
         Route::get('/clubs/{club}/shop', [MobileCommerceCheckoutController::class, 'clubShop'])->name('commerce.club-shop');
         Route::get('/clubs/{club}/advertising', [MobileCommerceCheckoutController::class, 'clubAdvertising'])->name('commerce.club-advertising');
-        Route::put('/clubs/{club}/shop/payout-account', [\App\Http\Controllers\ClubPayoutController::class, 'store'])->middleware('throttle:payment-actions')->name('commerce.club-shop.account');
+        Route::put('/clubs/{club}/shop/payout-account', [ClubPayoutController::class, 'store'])->middleware('throttle:payment-actions')->name('commerce.club-shop.account');
         Route::patch('/clubs/{club}/shop/items/{item}', [MobileCommerceCheckoutController::class, 'fulfillClubShopItem'])->name('commerce.club-shop.fulfill');
         Route::post('/commerce/seller/application', [MobileCommerceCheckoutController::class, 'storeSellerApplication'])->name('commerce.seller.application.store');
         Route::put('/commerce/seller/provider-profile', [MobileCommerceCheckoutController::class, 'storeProviderProfile'])->name('commerce.seller.provider-profile.update');
@@ -1311,6 +1313,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::patch('/commerce/seller/campaigns/{campaign}/status', [MobileCommerceCheckoutController::class, 'updateOwnCampaignStatus'])->name('commerce.seller.campaigns.status');
         Route::delete('/commerce/seller/campaigns/{campaign}', [MobileCommerceCheckoutController::class, 'destroyOwnCampaign'])->name('commerce.seller.campaigns.destroy');
         Route::post('/commerce/seller/website-requests', [MobileCommerceCheckoutController::class, 'storeWebsiteRequest'])->name('commerce.seller.website-requests.store');
+        Route::get('/commerce/website-requests/{websiteRequest}', [WebsiteProjectController::class, 'show'])->middleware(EnsurePlatformAdminTwoFactor::class)->name('commerce.website-project.show');
+        Route::post('/commerce/website-requests/{websiteRequest}/messages', [WebsiteProjectController::class, 'storeMessage'])->middleware([EnsurePlatformAdminTwoFactor::class, 'throttle:content-comments'])->name('commerce.website-project.messages');
 
         Route::middleware(EnsurePlatformAdminTwoFactor::class)->group(function () {
             Route::get('/admin/system', [AdminSystemController::class, 'dashboard'])->name('admin.system.dashboard');

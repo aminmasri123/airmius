@@ -1,4 +1,4 @@
-﻿import { router, useForm } from '@inertiajs/vue3'
+import { router, useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { centsToMajor, majorToCents, transformMoneyFields } from '@/utils/currency'
 
@@ -97,6 +97,9 @@ export function useCommerceProducts({
         inventories: [],
     })
     const websiteForm = useForm({
+        project_title: '',
+        target_audience: '',
+        inspiration_urls: [],
         club_id: '',
         domain: '',
         goals: '',
@@ -449,7 +452,7 @@ export function useCommerceProducts({
     const storeWebsiteRequest = () => websiteForm.post(route('auth.commerce.website-requests.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            websiteForm.reset('domain', 'goals', 'notes', 'accepted_privacy')
+            websiteForm.reset('domain', 'goals', 'notes', 'accepted_privacy', 'project_title', 'target_audience', 'inspiration_urls')
             websiteRequestModal.value = false
         },
     })

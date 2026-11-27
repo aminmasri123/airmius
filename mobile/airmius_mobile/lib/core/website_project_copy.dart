@@ -1,0 +1,120 @@
+import 'package:flutter/material.dart';
+import 'airmius_l10n.dart';
+
+String websiteText(BuildContext context, String key) =>
+    (_copy[AirmiusScope.of(context).language.locale.languageCode] ??
+        _copy['en']!)[key] ??
+    key;
+
+const _copy = {
+  'de': {
+    'project': 'Website-Projekt',
+    'title': 'Projektname',
+    'audience': 'Für wen ist die Website?',
+    'inspiration': 'Inspirationswebsites',
+    'linksHelp':
+        'Bis zu 5 Links mit https://, ein Link pro Zeile. Beschreibe unter Hinweise, was dir daran gefällt.',
+    'invalidLinks':
+        'Bitte höchstens 5 gültige HTTP- oder HTTPS-Links eingeben.',
+    'brief': 'Wünsche & Inhalte',
+    'open': 'Projekt & Austausch öffnen',
+    'conversation': 'Fragen & Antworten',
+    'message': 'Deine Frage oder Nachricht',
+    'send': 'Nachricht senden',
+    'empty': 'Noch keine Nachrichten. Stelle hier deine erste Frage.',
+    'shared':
+        'Nachrichten sind für die berechtigten Vereinsverantwortlichen und die Plattformverwaltung sichtbar.',
+    'noCharge':
+        'Unverbindliche Anfrage: Hier wird kein kostenpflichtiges Paket aktiviert.',
+    'more': 'Ältere Einträge laden',
+    'status': 'Projektstatus',
+    'statusChanged': 'Status geändert',
+    'created': 'Anfrage eingegangen',
+    'unknown': 'Ehemaliges Konto',
+    'sent': 'Nachricht gesendet',
+    'steps': 'Anfrage → Rückfragen → Angebot → Umsetzung → Abschluss',
+    'formHelp':
+        'Beschreibe dein Vorhaben. Inhalte, Zielgruppe und Beispiele helfen uns, ein passendes Angebot vorzubereiten.',
+  },
+  'en': {
+    'project': 'Website project',
+    'title': 'Project name',
+    'audience': 'Who is the website for?',
+    'inspiration': 'Inspiration websites',
+    'linksHelp':
+        'Up to 5 https:// links, one per line. Describe what you like in the notes.',
+    'invalidLinks': 'Enter at most 5 valid HTTP or HTTPS links.',
+    'brief': 'Goals & content',
+    'open': 'Open project & conversation',
+    'conversation': 'Questions & answers',
+    'message': 'Your question or message',
+    'send': 'Send message',
+    'empty': 'No messages yet. Ask your first question here.',
+    'shared':
+        'Messages are visible to authorized club staff and platform administrators.',
+    'noCharge': 'Non-binding request: no paid package is activated here.',
+    'more': 'Load older entries',
+    'status': 'Project status',
+    'statusChanged': 'Status changed',
+    'created': 'Request received',
+    'unknown': 'Former account',
+    'sent': 'Message sent',
+    'steps': 'Request → Questions → Quote → Implementation → Completion',
+    'formHelp':
+        'Describe your project. Content, audience and examples help us prepare a suitable proposal.',
+  },
+  'fr': {
+    'project': 'Projet web',
+    'title': 'Nom du projet',
+    'audience': 'À qui s’adresse le site ?',
+    'inspiration': 'Sites d’inspiration',
+    'linksHelp':
+        '5 liens https:// maximum, un par ligne. Expliquez vos préférences dans les notes.',
+    'invalidLinks': 'Saisissez au maximum 5 liens HTTP ou HTTPS valides.',
+    'brief': 'Objectifs et contenus',
+    'open': 'Ouvrir le projet et les échanges',
+    'conversation': 'Questions et réponses',
+    'message': 'Votre question ou message',
+    'send': 'Envoyer le message',
+    'empty': 'Aucun message. Posez votre première question ici.',
+    'shared':
+        'Messages visibles par les responsables autorisés du club et les administrateurs.',
+    'noCharge':
+        'Demande sans engagement : aucun forfait payant n’est activé ici.',
+    'more': 'Charger les entrées précédentes',
+    'status': 'Statut du projet',
+    'statusChanged': 'Statut modifié',
+    'created': 'Demande reçue',
+    'unknown': 'Ancien compte',
+    'sent': 'Message envoyé',
+    'steps': 'Demande → Questions → Devis → Réalisation → Livraison',
+    'formHelp':
+        'Décrivez votre projet, les contenus, le public visé et des exemples pour préparer une offre adaptée.',
+  },
+  'ar': {
+    'project': 'مشروع الموقع',
+    'title': 'اسم المشروع',
+    'audience': 'لمن هذا الموقع؟',
+    'inspiration': 'مواقع للإلهام',
+    'linksHelp':
+        'حتى 5 روابط https://، رابط في كل سطر. اشرح ما يعجبك في الملاحظات.',
+    'invalidLinks': 'أدخل حتى 5 روابط HTTP أو HTTPS صالحة.',
+    'brief': 'الأهداف والمحتوى',
+    'open': 'فتح المشروع والمحادثة',
+    'conversation': 'أسئلة وأجوبة',
+    'message': 'سؤالك أو رسالتك',
+    'send': 'إرسال الرسالة',
+    'empty': 'لا توجد رسائل. اطرح سؤالك الأول هنا.',
+    'shared': 'الرسائل مرئية لمسؤولي النادي المخولين وإدارة المنصة.',
+    'noCharge': 'طلب غير ملزم: لا يتم تفعيل أي باقة مدفوعة هنا.',
+    'more': 'تحميل الإدخالات السابقة',
+    'status': 'حالة المشروع',
+    'statusChanged': 'تم تغيير الحالة',
+    'created': 'تم استلام الطلب',
+    'unknown': 'حساب سابق',
+    'sent': 'تم إرسال الرسالة',
+    'steps': 'طلب ← أسئلة ← عرض ← تنفيذ ← إنجاز',
+    'formHelp':
+        'صف مشروعك والمحتوى والجمهور وأمثلة تساعدنا على إعداد عرض مناسب.',
+  },
+};
