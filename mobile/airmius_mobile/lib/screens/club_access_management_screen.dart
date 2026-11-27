@@ -32,6 +32,7 @@ class _ClubAccessManagementScreenState
   bool _saving = false;
   String? _error;
   bool _canRetryError = false;
+  String _templateSearch = '';
 
   String _errorMessage(Object error) => error is AirmiusApiException
       ? error.userMessage
@@ -53,7 +54,12 @@ class _ClubAccessManagementScreenState
       : <JsonMap>[];
   List<JsonMap> get _catalog => _maps(_permissionData['catalog']);
   List<JsonMap> get _permissionCatalog => _maps(_roleData['permission_catalog']);
+  String _permissionLabel(String key) => '${_permissionCatalog.cast<JsonMap?>().firstWhere(
+    (item) => item?['key'] == key,
+    orElse: () => null,
+  )?['label'] ?? key}';
   List<JsonMap> get _roles => _maps(_roleData['roles']);
+  List<JsonMap> get _templates => _maps(_roleData['templates']);
   List<JsonMap> get _assignments => _maps(_assignmentData['assignments']);
   List<JsonMap> get _departments => _maps(_organizationData['departments']);
   List<JsonMap> get _teams => _maps(_organizationData['team_assignments']);
@@ -327,6 +333,123 @@ class _ClubAccessManagementScreenState
         .map(JsonMap.from)
         .toList();
     await _saveAssignments(next);
+  }
+
+  Future<void> _assignTemplate(JsonMap template) async {
+    final existingRole = _roles.cast<JsonMap?>().firstWhere(
+      (item) => item?['key'] == 'standard_${template['key']}',
+      orElse: () => null,
+    );
+    final templatePermissions = (template['permissions'] as List? ?? const [])
+        .map((item) => '$item').toSet();
+    final existingPermissions = (existingRole?['permissions'] as List? ?? const [])
+        .map((item) => '$item').toSet();
+    if (existingRole != null &&
+        (existingRole['is_active'] != true ||
+            existingPermissions.length != templatePermissions.length ||
+            !existingPermissions.containsAll(templatePermissions))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_tr('membership.access.templateChanged'))),
+      );
+      return;
+    }
+    var scopeType = 'club';
+    int? scopeId;
+    final selection = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('${template['name']}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('${template['description'] ?? ''}'),
+                const SizedBox(height: 8),
+                Text('${template['scenario'] ?? ''}', style: Theme.of(context).textTheme.bodySmall),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  initialValue: scopeType,
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: _tr('membership.access.scope')),
+                  items: [
+                    ('club', _tr('membership.access.scopeClub')),
+                    if (_departments.isNotEmpty)
+                      ('department', _tr('membership.access.scopeDepartment')),
+                    if (_teams.isNotEmpty)
+                      ('team', _tr('membership.access.scopeTeam')),
+                  ].map((item) => DropdownMenuItem(value: item.$1, child: Text(item.$2))).toList(),
+                  onChanged: (value) => setDialogState(() {
+                    scopeType = value ?? 'club';
+                    scopeId = null;
+                  }),
+                ),
+                if (scopeType != 'club') ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<int>(
+                    key: ValueKey(scopeType),
+                    initialValue: scopeId,
+                    isExpanded: true,
+                    decoration: InputDecoration(labelText: _tr('membership.access.scopeTarget')),
+                    items: _scopeTargets(scopeType).map((target) => DropdownMenuItem(
+                      value: _integer(target['id']),
+                      child: Text('${target['name']}', overflow: TextOverflow.ellipsis),
+                    )).toList(),
+                    onChanged: (value) => setDialogState(() => scopeId = value),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(_tr('membership.cancel'))),
+            FilledButton(
+              onPressed: scopeType != 'club' && scopeId == null ? null : () => Navigator.pop(dialogContext, {
+                'scope_type': scopeType,
+                'scope_id': scopeId,
+              }),
+              child: Text(_tr('membership.access.assignment')),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selection == null || !mounted) return;
+
+    await _run(() async {
+      final key = 'standard_${template['key']}';
+      var role = _roles.cast<JsonMap?>().firstWhere(
+        (item) => item?['key'] == key,
+        orElse: () => null,
+      );
+      if (role == null) {
+        role = await _repo.createClubRoleDefinition(widget.clubId, {
+          'key': key,
+          'name': template['name'],
+          'permissions': template['permissions'],
+          'is_active': true,
+        });
+        _roleData = {..._roleData, 'roles': [..._roles, role]};
+      }
+      final next = _assignments.map(JsonMap.from).toList();
+      final roleId = _integer(role['id']);
+      if (!next.any((item) =>
+          _integer(item['role_definition_id']) == roleId &&
+          item['scope_type'] == selection['scope_type'] &&
+          _integer(item['scope_id']) == _integer(selection['scope_id']))) {
+        next.add({
+          'role_definition_id': roleId,
+          'scope_type': selection['scope_type'],
+          'scope_id': selection['scope_id'],
+        });
+      }
+      _assignmentData = await _repo.updateClubMemberRoleDefinitions(
+        widget.clubId, widget.memberId, {'assignments': next},
+      );
+      _roleData = await _repo.clubRoleDefinitions(widget.clubId);
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _editRole([JsonMap? existing]) async {
@@ -663,9 +786,14 @@ class _ClubAccessManagementScreenState
       Row(
         children: [
           Expanded(child: Text(_tr('membership.access.assignments'), style: Theme.of(context).textTheme.titleMedium)),
-          IconButton(onPressed: _saving ? null : () => _editAssignment(), icon: const Icon(Icons.add_circle_outline)),
+          IconButton(
+            onPressed: _saving || _roles.isEmpty ? null : () => _editAssignment(),
+            icon: const Icon(Icons.add_circle_outline),
+          ),
         ],
       ),
+      if (_roles.isEmpty)
+        Text(_tr('membership.access.templateFirst')),
       for (final assignment in _assignments)
         Card(
           child: ListTile(
@@ -677,6 +805,74 @@ class _ClubAccessManagementScreenState
               onPressed: _saving ? null : () => _removeAssignment(assignment),
               icon: const Icon(Icons.delete_outline),
             ),
+          ),
+        ),
+      const SizedBox(height: 16),
+      Text(
+        _tr('membership.access.templateIntro'),
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search),
+          labelText: _tr('membership.access.templateSearch'),
+        ),
+        onChanged: (value) => setState(() => _templateSearch = value.trim().toLowerCase()),
+      ),
+      const SizedBox(height: 8),
+      for (final template in _templates.where((item) =>
+          _templateSearch.isEmpty ||
+          '${item['name']} ${item['description']} ${item['scenario']}'
+              .toLowerCase().contains(_templateSearch)))
+        Card(
+          child: ExpansionTile(
+            title: Text('${template['name']}'),
+            subtitle: Text('${template['description'] ?? ''}', maxLines: 2, overflow: TextOverflow.ellipsis),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text('${template['scenario'] ?? ''}'),
+              ),
+              if (template['risk'] == 'high' || template['risk'] == 'elevated') ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    _tr('membership.access.templateRisk'),
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ),
+              ],
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: Text(_tr('membership.access.templatePermissions')),
+                children: [
+                  for (final permission in (template['permissions'] as List? ?? const []))
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text('• ${_permissionLabel('$permission')}'),
+                      ),
+                    ),
+                ],
+              ),
+              if (template['can_assign'] == false)
+                Text(_tr('membership.access.templateUnavailable')),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _saving || template['can_assign'] == false
+                      ? null
+                      : () => _assignTemplate(template),
+                  icon: const Icon(Icons.person_add_alt_1_outlined),
+                  label: Text(_tr('membership.access.templateAssign')),
+                ),
+              ),
+            ],
           ),
         ),
       const SizedBox(height: 16),

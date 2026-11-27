@@ -11,6 +11,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\Team;
 use App\Models\User;
 use App\Support\ClubPermissions;
+use App\Support\ClubRoleTemplates;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -22,6 +23,18 @@ class ClubRoleDefinitionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_standard_role_catalog_has_explanations_and_only_known_permissions(): void
+    {
+        $templates = ClubRoleTemplates::payload();
+        $this->assertCount(24, $templates);
+        foreach ($templates as $template) {
+            $this->assertNotEmpty($template['description']);
+            $this->assertNotEmpty($template['scenario']);
+            $this->assertContains($template['risk'], ['normal', 'elevated', 'high']);
+            $this->assertSame([], array_diff($template['permissions'], ClubPermissions::ALL));
+        }
+    }
+
     public function test_owner_can_manage_club_scoped_role_definitions_from_complete_templates(): void
     {
         [$club, $owner] = $this->clubWithOwner();
@@ -29,9 +42,11 @@ class ClubRoleDefinitionTest extends TestCase
 
         $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")
             ->assertOk()
-            ->assertJsonCount(11, 'data.templates')
+            ->assertJsonCount(24, 'data.templates')
             ->assertJsonFragment(['key' => 'treasurer', 'name' => 'Kassenwart'])
-            ->assertJsonFragment(['key' => 'external_contact', 'name' => 'Externe Ansprechpartner']);
+            ->assertJsonFragment(['key' => 'external_contact', 'name' => 'Externe Ansprechpartner'])
+            ->assertJsonFragment(['key' => 'membership_office', 'name' => 'Mitgliederverwaltung'])
+            ->assertJsonPath('data.templates.0.can_assign', true);
 
         $created = $this->postJson("/api/v1/clubs/{$club->id}/role-definitions", [
             'key' => 'veranstaltungsleitung',
@@ -83,6 +98,11 @@ class ClubRoleDefinitionTest extends TestCase
             'permission_overrides' => [ClubPermissions::MEMBERS_ROLES => true],
         ]);
         Sanctum::actingAs($editor);
+
+        $templates = $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")
+            ->assertOk()->json('data.templates');
+        $financeTemplate = collect($templates)->firstWhere('key', 'finance_assistant');
+        $this->assertFalse($financeTemplate['can_assign']);
 
         $this->postJson("/api/v1/clubs/{$club->id}/role-definitions", [
             'key' => 'finance_escalation',
