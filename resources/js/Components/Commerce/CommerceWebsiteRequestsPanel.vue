@@ -1,4 +1,6 @@
 <script setup>
+import { useWebsiteProjectCopy } from '@/composables/useWebsiteProjectCopy'
+const w = useWebsiteProjectCopy()
 import { useI18n } from 'vue-i18n'
 import { ref, watch } from 'vue'
 import WebsiteProjectConversation from './WebsiteProjectConversation.vue'
@@ -52,17 +54,17 @@ watch(() => props.websiteRequestModal, () => { inspirationText.value = props.web
                     <p class="mt-1 text-sm text-secondary">{{ t('agency.form_intro') }}</p>
                 </div>
                                 <div class="grid gap-6">
-                    <p class="rounded-lg border border-border p-4 text-sm text-secondary">Unverbindliche Anfrage: Es wird kein kostenpflichtiges Paket automatisch aktiviert. Beschreibe Ziele, Zielgruppe und gewünschte Funktionen.</p>
-                    <label class="grid gap-2">Projekttitel<input v-model="websiteForm.project_title" maxlength="255" class="rounded-lg border-border bg-inputBg text-primary"></label>
-                    <label class="grid gap-2">Zielgruppe<textarea v-model="websiteForm.target_audience" maxlength="2000" rows="2" class="rounded-lg border-border bg-inputBg text-primary"></textarea></label>
-                    <label class="grid gap-2">Inspirationswebsites<textarea v-model="inspirationText" rows="3" class="rounded-lg border-border bg-inputBg text-primary"></textarea><span class="text-xs text-secondary">Bis zu fünf vollständige HTTP-/HTTPS-Links, ein Link pro Zeile.</span></label>
+                    <p class="rounded-lg border border-border p-4 text-sm text-secondary">{{ w('Unverbindliche Anfrage: Es wird kein kostenpflichtiges Paket automatisch aktiviert. Beschreibe Ziele, Zielgruppe und gewünschte Funktionen.') }}</p>
+                    <label class="grid gap-2">{{ w('Projekttitel') }}<input v-model="websiteForm.project_title" maxlength="255" class="rounded-lg border-border bg-inputBg text-primary"></label>
+                    <label class="grid gap-2">{{ w('Zielgruppe') }}<textarea v-model="websiteForm.target_audience" maxlength="2000" rows="2" class="rounded-lg border-border bg-inputBg text-primary"></textarea></label>
+                    <label class="grid gap-2">{{ w('Inspirationswebsites') }}<textarea v-model="inspirationText" rows="3" class="rounded-lg border-border bg-inputBg text-primary"></textarea><span class="text-xs text-secondary">{{ w('Bis zu fünf vollständige HTTP-/HTTPS-Links, ein Link pro Zeile.') }}</span></label>
                     <ul v-if="Object.keys(websiteForm.errors).length" role="alert" class="text-error"><li v-for="(error, field) in websiteForm.errors" :key="field">{{ error }}</li></ul>
-                    <label class="grid gap-2">Verein<select v-model="websiteForm.club_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                    <label class="grid gap-2">{{ w('Verein') }}<select v-model="websiteForm.club_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select></label>
-                    <label class="grid gap-2">Gewünschte Domain<input v-model="websiteForm.domain" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('agency.domain')"></label>
-                    <label class="grid gap-2">Ziele und Funktionen<textarea v-model="websiteForm.goals" required maxlength="2000" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('agency.goals')"></textarea></label>
-                    <label class="grid gap-2">Weitere Hinweise<textarea v-model="websiteForm.notes" maxlength="2000" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('agency.notes')"></textarea></label>
+                    <label class="grid gap-2">{{ w('Gewünschte Domain') }}<input v-model="websiteForm.domain" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('agency.domain')"></label>
+                    <label class="grid gap-2">{{ w('Ziele und Funktionen') }}<textarea v-model="websiteForm.goals" required maxlength="2000" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('agency.goals')"></textarea></label>
+                    <label class="grid gap-2">{{ w('Weitere Hinweise') }}<textarea v-model="websiteForm.notes" maxlength="2000" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="t('agency.notes')"></textarea></label>
                     <label class="flex cursor-pointer items-start gap-2 rounded-lg border border-border bg-bg p-3 text-sm font-semibold text-primary">
                         <input v-model="websiteForm.accepted_privacy" type="checkbox" class="mt-0.5 rounded border-border bg-inputBg text-air-blue focus:ring-air-blue">
                         <span>{{ t('agency.privacy_accept') }}</span>
@@ -74,7 +76,7 @@ watch(() => props.websiteRequestModal, () => { inspirationText.value = props.web
         <div class="mt-6 space-y-4">
             <article v-for="request in websiteRequests" :key="request.id" class="rounded-xl border border-border p-5">
                 <button type="button" class="flex w-full flex-wrap items-center justify-between gap-4 text-start" :aria-expanded="selected === request.id" @click="selected = selected === request.id ? null : request.id">
-                    <span class="font-semibold">{{ request.project_title || request.club?.name || `Website-Projekt #${request.id}` }}</span><span class="text-air-blue">Projekt und Nachrichten öffnen</span>
+                    <span class="font-semibold">{{ request.project_title || request.club?.name || `${w('Website-Projekt')} #${request.id}` }}</span><span class="text-air-blue">{{ w('Projekt und Nachrichten öffnen') }}</span>
                 </button>
                 <WebsiteProjectConversation v-if="selected === request.id" :project-id="request.id" class="mt-5" />
             </article>
