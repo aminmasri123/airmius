@@ -77,7 +77,7 @@ use App\Http\Controllers\WorkAutomationPageController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureIdempotentApiRequest;
-use App\Http\Middleware\EnsurePlatformAdminTwoFactor;
+use App\Http\Middleware\HardenAdminArea;
 use Illuminate\Support\Facades\Route;
 
 Route::options('/team-join-requests/{joinRequest}/approve', fn () => response('', 204))
@@ -329,8 +329,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::put('/commerce/campaigns/{campaign}/status', [CommerceCheckoutController::class, 'updateOwnCampaignStatus'])->name('auth.commerce.campaigns.status.update');
     Route::delete('/commerce/campaigns/{campaign}', [CommerceCheckoutController::class, 'destroyOwnCampaign'])->name('auth.commerce.campaigns.destroy');
     Route::post('/commerce/website-requests', [CommerceCheckoutController::class, 'storeWebsiteRequest'])->name('auth.commerce.website-requests.store');
-    Route::get('/commerce/website-requests/{websiteRequest}/project', [WebsiteProjectController::class, 'show'])->middleware(EnsurePlatformAdminTwoFactor::class)->name('auth.commerce.website-project.show');
-    Route::post('/commerce/website-requests/{websiteRequest}/messages', [WebsiteProjectController::class, 'storeMessage'])->middleware([EnsurePlatformAdminTwoFactor::class, 'throttle:content-comments'])->name('auth.commerce.website-project.messages');
+    Route::get('/commerce/website-requests/{websiteRequest}/project', [WebsiteProjectController::class, 'show'])->middleware(HardenAdminArea::class)->name('auth.commerce.website-project.show');
+    Route::post('/commerce/website-requests/{websiteRequest}/messages', [WebsiteProjectController::class, 'storeMessage'])->middleware([HardenAdminArea::class, 'throttle:content-comments'])->name('auth.commerce.website-project.messages');
     Route::post('/commerce/payout-profile', [CommerceCheckoutController::class, 'storePayoutProfile'])->name('auth.commerce.payout-profile.store');
     Route::post('/commerce/payouts/request', [CommerceCheckoutController::class, 'requestPayout'])->name('auth.commerce.payouts.request');
     Route::get('/outfit-subscriptions', [OutfitSubscriptionController::class, 'index'])->name('auth.outfit-subscriptions.index');

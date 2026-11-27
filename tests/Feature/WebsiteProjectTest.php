@@ -28,6 +28,18 @@ class WebsiteProjectTest extends TestCase
         $this->actingAs(User::factory()->create())->getJson($show)->assertForbidden();
     }
 
+    public function test_web_admin_uses_session_confirmation_instead_of_mobile_token(): void
+    {
+        $owner = User::factory()->create();
+        $project = app(WebsiteRequestService::class)->createForUser($owner, []);
+        $admin = User::factory()->create(['two_factor_secret' => 'test', 'two_factor_confirmed_at' => now()]);
+        $admin->assignRole(Role::findOrCreate('super_admin', 'web'));
+        $url = route('auth.commerce.website-project.messages', $project);
+        $this->actingAs($admin)->getJson(route('auth.commerce.website-project.show', $project))->assertOk();
+        $this->postJson($url, ['body' => 'Antwort', 'request_key' => 'web-admin'])->assertForbidden();
+        $this->withSession(['auth.password_confirmed_at' => now()->timestamp])->postJson($url, ['body' => 'Antwort', 'request_key' => 'web-admin'])->assertOk();
+    }
+
     public function test_club_owner_and_stepped_up_admin_share_project_but_outsiders_cannot(): void
     {
         $owner = User::factory()->create();

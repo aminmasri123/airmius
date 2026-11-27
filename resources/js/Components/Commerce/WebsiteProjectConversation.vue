@@ -3,12 +3,13 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 const props = defineProps({ projectId: { type: Number, required: true } })
 const project = ref(null), messages = ref([]), busy = ref(false), error = ref(''), body = ref(''), page = ref(1), lastPage = ref(1)
+const confirmIdentity = ref(false)
 let retryKey = null, retryBody = null
 const statuses = { new: 'Anfrage eingegangen', contacted: 'In Klärung', quoted: 'Angebot erstellt', in_progress: 'In Umsetzung', done: 'Abgeschlossen', cancelled: 'Storniert' }
 const date = value => value ? new Date(value).toLocaleString() : ''
 const safeLink = value => { try { return ['https:', 'http:'].includes(new URL(value).protocol) } catch { return false } }
 async function load(more = false) {
-    busy.value = true; error.value = ''
+    busy.value = true; error.value = ''; confirmIdentity.value = false
     try {
         const next = more ? page.value + 1 : 1
         const { data } = await axios.get(route('auth.commerce.website-project.show', props.projectId), { params: { page: next } })
@@ -22,12 +23,15 @@ async function send() {
     const text = body.value.trim()
     if (busy.value || !text) return
     if (text !== retryBody) { retryKey = crypto.randomUUID(); retryBody = text }
-    busy.value = true; error.value = ''
+    busy.value = true; error.value = ''; confirmIdentity.value = false
     try {
         await axios.post(route('auth.commerce.website-project.messages', props.projectId), { body: text, request_key: retryKey })
         body.value = ''; retryKey = null; retryBody = null
         await load()
-    } catch { error.value = 'Nachricht nicht bestätigt. Bitte erneut senden; Wiederholungen werden nicht doppelt gespeichert.' }
+    } catch (failure) {
+        confirmIdentity.value = failure.response?.data?.code === 'admin_step_up_required'
+        error.value = failure.response?.data?.message || 'Nachricht nicht bestätigt. Bitte erneut senden; Wiederholungen werden nicht doppelt gespeichert.'
+    }
     finally { busy.value = false }
 }
 onMounted(() => load())
@@ -40,6 +44,7 @@ onMounted(() => load())
             <button type="button" class="rounded-lg border border-border px-4 py-2" :disabled="busy" @click="load()">Aktualisieren</button>
         </div>
         <p v-if="error" role="alert" class="text-error">{{ error }}</p>
+        <a v-if="confirmIdentity" :href="route('password.confirm')" target="_blank" rel="noopener" class="text-air-blue underline">Identität bestätigen, dann Nachricht erneut senden</a>
         <template v-if="project">
             <p class="font-semibold text-air-blue">{{ statuses[project.status] || project.status }}</p>
             <p class="text-sm text-secondary">Anfrage → Rückfragen → Angebot → Umsetzung → Abschluss</p>
