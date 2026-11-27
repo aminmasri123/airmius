@@ -514,22 +514,19 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
 
     return Semantics(
       label: t('sponsorCockpit.workspaceNavigation'),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (var index = 0; index < tabs.length; index++) ...[
-              if (index > 0) const SizedBox(width: 8),
-              ChoiceChip(
-                selected: _selectedSection == index,
-                showCheckmark: false,
-                avatar: Icon(tabs[index].$1, size: 18),
-                label: Text(tabs[index].$2),
-                onSelected: (_) => setState(() => _selectedSection = index),
-              ),
-            ],
-          ],
-        ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        children: [
+          for (var index = 0; index < tabs.length; index++)
+            ChoiceChip(
+              selected: _selectedSection == index,
+              showCheckmark: false,
+              avatar: Icon(tabs[index].$1, size: 18),
+              label: Text(tabs[index].$2),
+              onSelected: (_) => setState(() => _selectedSection = index),
+            ),
+        ],
       ),
     );
   }

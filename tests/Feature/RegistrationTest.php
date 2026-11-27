@@ -7,11 +7,13 @@ use App\Models\UserRoleApplication;
 use App\Notifications\AccountWelcomeNotification;
 use App\Notifications\GuardianConsentRequested;
 use Database\Seeders\RolesPermissionsSeeder;
+use Illuminate\Contracts\Notifications\Dispatcher as NotificationDispatcher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Features;
 use Laravel\Sanctum\Sanctum;
+use Mockery;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -127,6 +129,34 @@ class RegistrationTest extends TestCase
         $user = User::where('email', 'mobile@example.com')->firstOrFail();
         $this->assertTrue($user->hasRole('player'));
         Notification::assertSentTo($user, AccountWelcomeNotification::class);
+    }
+
+    public function test_mobile_registration_returns_created_account_when_verification_mail_fails(): void
+    {
+        $this->seed(RolesPermissionsSeeder::class);
+
+        $dispatcher = Mockery::mock(NotificationDispatcher::class);
+        $dispatcher->shouldReceive('send')->andThrow(new \RuntimeException('SMTP unavailable'));
+        $this->app->instance(NotificationDispatcher::class, $dispatcher);
+
+        $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Mobile',
+            'last_name' => 'Coach',
+            'email' => 'mobile-coach-mail-failure@example.test',
+            'country' => 'DE',
+            'birth_date' => '1995-04-12',
+            'gender' => 'not_specified',
+            'account_type' => 'coach',
+            'password' => 'Airmius-QA-2026!',
+            'password_confirmation' => 'Airmius-QA-2026!',
+            'terms' => true,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.verification_email_sent', false)
+            ->assertJsonPath('data.user.email', 'mobile-coach-mail-failure@example.test');
+
+        $this->assertDatabaseCount('users', 1);
+        $this->assertTrue(User::firstOrFail()->hasRole('coach'));
     }
 
     public function test_mobile_user_can_complete_profile_after_registration(): void

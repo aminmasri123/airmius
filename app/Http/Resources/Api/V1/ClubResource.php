@@ -141,6 +141,8 @@ class ClubResource extends JsonResource
                 && ClubPermissions::allows($this->resource, $request->user(), ClubPermissions::SUBSCRIPTIONS_VIEW)),
             'can_edit_subscriptions' => (bool) ($request->user()
                 && ClubPermissions::allows($this->resource, $request->user(), ClubPermissions::SUBSCRIPTIONS_EDIT)),
+            'can_manage_advertising' => (bool) ($request->user()
+                && ClubPermissions::allows($this->resource, $request->user(), ClubPermissions::ADVERTISING_EDIT)),
             'can_edit_jobs' => (bool) ($request->user()
                 && ClubPermissions::allows($this->resource, $request->user(), ClubPermissions::JOBS_EDIT)),
             'can_publish_jobs' => (bool) ($request->user()

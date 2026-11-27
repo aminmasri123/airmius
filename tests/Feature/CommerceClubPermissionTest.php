@@ -211,6 +211,41 @@ class CommerceClubPermissionTest extends TestCase
         $this->getJson(route('api.v1.sponsor-workspace.index'))->assertForbidden();
     }
 
+    public function test_club_advertising_is_scoped_and_shared_only_with_authorized_club_managers(): void
+    {
+        $owner = User::factory()->create();
+        $advertiser = User::factory()->create();
+        $member = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+        $otherClub = Club::factory()->create();
+        foreach ([$advertiser, $member] as $user) {
+            $club->users()->attach($user->id, ['role' => 'member', 'roles' => ['member'], 'membership_status' => 'active']);
+        }
+        $this->assign($club, $owner, $advertiser, 'club_advertiser', [ClubPermissions::ADVERTISING_EDIT]);
+        // A dual-role user must be able to create club ads independently of their sponsor.
+        Sponsor::create(['name' => 'Eigener Sponsor', 'scope' => 'platform', 'owner_user_id' => $owner->id]);
+        Sanctum::actingAs($owner);
+        $response = $this->postJson('/api/v1/commerce/seller/campaigns', $this->campaignPayload($club->id))
+            ->assertCreated()->assertJsonPath('data.sponsor_id', null);
+        $campaignId = $response->json('data.id');
+        AdCampaign::create(['user_id' => $owner->id, 'club_id' => $otherClub->id,
+            'name' => 'Fremder Verein', 'status' => 'draft', 'budget_cents' => 2500]);
+        Sanctum::actingAs($advertiser);
+        $this->getJson("/api/v1/clubs/{$club->id}")->assertOk()->assertJsonPath('data.can_manage_advertising', true);
+        $this->getJson("/api/v1/clubs/{$club->id}/advertising")->assertOk()
+            ->assertJsonCount(1, 'data.campaigns')
+            ->assertJsonPath('data.campaigns.0.id', $campaignId)
+            ->assertJsonPath('data.clubs.0.id', $club->id);
+        $this->putJson("/api/v1/commerce/seller/campaigns/{$campaignId}", [
+            ...$this->campaignPayload($club->id), 'name' => 'Vereinswerbung aktualisiert',
+        ])->assertOk();
+        $this->getJson("/api/v1/clubs/{$otherClub->id}/advertising")->assertForbidden();
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs/{$club->id}")->assertOk()->assertJsonPath('data.can_manage_advertising', false);
+        $this->getJson("/api/v1/clubs/{$club->id}/advertising")->assertForbidden();
+        $this->putJson("/api/v1/commerce/seller/campaigns/{$campaignId}", $this->campaignPayload($club->id))->assertForbidden();
+    }
+
     private function productPayload(int $clubId): array
     {
         return [

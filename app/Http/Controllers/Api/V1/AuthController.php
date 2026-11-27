@@ -12,6 +12,7 @@ use App\Support\MobileTwoFactorChallenge;
 use App\Support\ProgressiveLoginLockout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Features;
 
@@ -41,13 +42,23 @@ class AuthController extends Controller
 
         $user = $creator->create($request->all());
         $tokenName = trim((string) $request->input('device_name', '')) ?: 'mobile';
-        $user->notify(new MobileVerifyEmail);
+        $verificationEmailSent = true;
+        try {
+            $user->notify(new MobileVerifyEmail);
+        } catch (\Throwable $exception) {
+            $verificationEmailSent = false;
+            Log::warning('Registration verification notification could not be sent.', [
+                'user_id' => $user->id,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'data' => [
                 'token' => $user->createToken($tokenName)->plainTextToken,
                 'token_type' => 'Bearer',
                 'user' => new UserResource($user->loadMissing(['roles', 'permissions'])),
+                'verification_email_sent' => $verificationEmailSent,
             ],
         ], 201);
     }

@@ -15,6 +15,7 @@ function calendar(locale = 'de', clubs = []) {
     return runInNewContext(`${descriptor.scriptSetup.content.replace(/^import .*$/gm, '')}
         ;({ clubCalendarView, clubCalendarCursor, clubTasks, clubTaskMeta,
             calendarBuckets, calendarTitle, moveClubCalendar, weekDays, formatDate,
+            visibleCalendarItems, toggleCalendarBucket,
             activeWorkPanel, selectWorkPanel, selectedClubId, showAllClubTasks, page, visits })`, {
         Date, Intl, URL, URLSearchParams, computed, ref, AppLayout: {}, visits,
         watch: (source, callback) => {
@@ -133,4 +134,21 @@ test('month and year buckets group tasks and events without losing the selected 
     assert.equal(c.calendarBuckets.value[0].items.length, 2)
     assert.equal(c.clubCalendarCursor.value.getTime(), cursor.getTime())
     assert.equal(c.formatDate(cursor), c.formatDate('2028-02-29'))
+})
+
+test('busy calendar days reveal every entry on demand', () => {
+    const c = calendar()
+    const day = new Date(2028, 1, 29)
+    c.clubCalendarCursor.value = day
+    c.clubCalendarView.value = 'day'
+    c.clubTasks.value = Array.from({ length: 10 }, (_, index) => ({
+        id: index + 1, title: `Task ${index + 1}`, due_at: '2028-02-29',
+    }))
+    const bucket = c.calendarBuckets.value[0]
+    assert.equal(c.visibleCalendarItems(bucket).length, 8)
+    c.toggleCalendarBucket(bucket.key)
+    assert.equal(c.visibleCalendarItems(bucket).length, 10)
+    c.toggleCalendarBucket(bucket.key)
+    assert.equal(c.visibleCalendarItems(bucket).length, 8)
+    assert.match(descriptor.template.content, /:aria-expanded="expandedCalendarBuckets\.includes\(bucket\.key\)"/)
 })

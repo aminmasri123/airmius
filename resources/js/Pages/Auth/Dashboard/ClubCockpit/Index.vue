@@ -256,6 +256,15 @@ const calendarBuckets = computed(() => {
         items: clubCalendarItems.value.filter((item) => sameDay(item.date, date)),
     }))
 })
+const expandedCalendarBuckets = ref([])
+const visibleCalendarItems = (bucket) => expandedCalendarBuckets.value.includes(bucket.key)
+    ? bucket.items
+    : bucket.items.slice(0, 8)
+const toggleCalendarBucket = (key) => {
+    expandedCalendarBuckets.value = expandedCalendarBuckets.value.includes(key)
+        ? expandedCalendarBuckets.value.filter((item) => item !== key)
+        : [...expandedCalendarBuckets.value, key]
+}
 
 const calendarTitle = computed(() => {
     if (clubCalendarView.value === 'year') return `${clubCalendarCursor.value.getFullYear()}`
@@ -810,7 +819,7 @@ async function uploadClubTaskAttachments(task, event) {
                                 <span class="rounded-full bg-card px-2 py-1 text-xs font-bold text-secondary">{{ bucket.items.length }}</span>
                             </div>
                             <div class="mt-3 space-y-2">
-                                <div v-for="item in bucket.items.slice(0, 8)" :key="item.id" class="flex items-start gap-3 rounded-lg bg-card px-3 py-2">
+                                <div v-for="item in visibleCalendarItems(bucket)" :key="item.id" class="flex items-start gap-3 rounded-lg bg-card px-3 py-2">
                                     <i :class="[item.icon, item.type === 'task' ? 'text-emerald-300' : 'text-buttonPrimary', 'mt-0.5 text-lg']"></i>
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-bold text-primary">{{ item.title }}</p>
@@ -818,7 +827,9 @@ async function uploadClubTaskAttachments(task, event) {
                                     </div>
                                 </div>
                                 <p v-if="!bucket.items.length" class="rounded-lg border border-dashed border-border p-4 text-center text-sm text-secondary">{{ t('Keine Termine oder Fristen.') }}</p>
-                                <p v-if="bucket.items.length > 8" class="text-xs font-bold text-secondary">{{ t('{count} weitere', { count: bucket.items.length - 8 }) }}</p>
+                                <button v-if="bucket.items.length > 8" type="button" class="min-h-10 rounded-lg px-2 text-left text-sm font-bold text-buttonPrimary hover:bg-card" :aria-expanded="expandedCalendarBuckets.includes(bucket.key)" @click="toggleCalendarBucket(bucket.key)">
+                                    {{ expandedCalendarBuckets.includes(bucket.key) ? t('Weniger anzeigen') : t('{count} weitere anzeigen', { count: bucket.items.length - 8 }) }}
+                                </button>
                             </div>
                         </article>
                     </div>

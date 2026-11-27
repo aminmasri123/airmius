@@ -69,6 +69,8 @@ class ClubAnnouncementApiTest extends TestCase
 
         Sanctum::actingAs($member);
         $this->getJson('/api/v1/clubs/'.$club->id.'/announcements')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/clubs/'.$club->id.'/announcements/'.$draftId)->assertNotFound();
+        $this->getJson('/api/v1/clubs/'.$club->id.'/announcements/'.$scheduledId)->assertNotFound();
         $this->postJson('/api/v1/clubs/'.$club->id.'/announcements/'.$draftId.'/read')->assertNotFound();
         $this->postJson('/api/v1/clubs/'.$club->id.'/announcements/'.$scheduledId.'/read')->assertNotFound();
 
@@ -109,6 +111,11 @@ class ClubAnnouncementApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.id', $announcementId)
             ->assertJsonPath('data.0.read_by_me', false);
+        $this->getJson('/api/v1/clubs/'.$club->id.'/announcements/'.$announcementId)
+            ->assertOk()
+            ->assertJsonPath('data.id', $announcementId)
+            ->assertJsonPath('data.body', 'Bitte meldet euch bis Freitag an.')
+            ->assertJsonPath('data.read_by_me', false);
 
         $this->postJson('/api/v1/clubs/'.$club->id.'/announcements/'.$announcementId.'/read')
             ->assertOk()
@@ -117,9 +124,12 @@ class ClubAnnouncementApiTest extends TestCase
         $this->getJson('/api/v1/clubs/'.$club->id.'/announcements')
             ->assertJsonPath('data.0.read_by_me', true)
             ->assertJsonPath('data.0.read_count', 1);
+        $this->getJson('/api/v1/clubs/'.$club->id.'/announcements/'.$announcementId)
+            ->assertJsonPath('data.read_by_me', true);
 
         Sanctum::actingAs($outsider);
         $this->getJson('/api/v1/clubs/'.$club->id.'/announcements')->assertForbidden();
+        $this->getJson('/api/v1/clubs/'.$club->id.'/announcements/'.$announcementId)->assertForbidden();
     }
 
     public function test_team_announcement_is_only_visible_to_team_members(): void
@@ -146,10 +156,13 @@ class ClubAnnouncementApiTest extends TestCase
         Sanctum::actingAs($clubMember);
         $this->getJson('/api/v1/clubs/'.$club->id.'/announcements')
             ->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/clubs/'.$club->id.'/announcements/'.$announcementId)->assertNotFound();
 
         Sanctum::actingAs($teamMember);
         $this->getJson('/api/v1/clubs/'.$club->id.'/announcements')
             ->assertOk()->assertJsonPath('data.0.id', $announcementId);
+        $this->getJson('/api/v1/clubs/'.$club->id.'/announcements/'.$announcementId)
+            ->assertOk()->assertJsonPath('data.id', $announcementId);
     }
 
     public function test_announcement_recipient_segment_snapshot_is_confidential_and_delivery_is_deduplicated(): void

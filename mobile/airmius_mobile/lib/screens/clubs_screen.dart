@@ -15,6 +15,7 @@ import 'chat_detail_screen.dart';
 import 'billing_detail_screen.dart';
 import 'club_asset_inventory_checkout_suite_screen.dart';
 import 'club_cockpit_screen.dart';
+import 'commerce_center_screen.dart';
 import 'club_membership_management_screen.dart';
 import 'club_metadata_subject_screen.dart';
 import 'club_organization_screen.dart';
@@ -3228,7 +3229,9 @@ class _ClubProfileScreenState extends State<ClubProfileScreen>
       body: PageFrame(
         title: club.name,
         subtitle: t('clubs.profileSubtitle'),
-        child: Column(
+        child: Material(
+          type: MaterialType.transparency,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             FutureBuilder<ClubSummary>(
@@ -3347,6 +3350,24 @@ class _ClubProfileScreenState extends State<ClubProfileScreen>
               builder: (context, snapshot) =>
                   _ClubStats(club: snapshot.data ?? club),
             ),
+            FutureBuilder<ClubSummary>(
+              future: _clubDetailFuture,
+              builder: (context, snapshot) {
+                final profileClub = snapshot.data ?? club;
+                if (!profileClub.canManageAdvertising) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: AirmiusButton(
+                    label: t('clubHub.advertising'),
+                    icon: Icons.campaign_outlined,
+                    secondary: true,
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => CommerceCenterScreen(advertisingClubId: profileClub.id),
+                    )),
+                  ),
+                );
+              },
+            ),
             const SizedBox(height: 14),
             FutureBuilder<ClubSummary>(
               future: _clubDetailFuture,
@@ -3396,6 +3417,7 @@ class _ClubProfileScreenState extends State<ClubProfileScreen>
               },
             ),
           ],
+        ),
         ),
       ),
     );

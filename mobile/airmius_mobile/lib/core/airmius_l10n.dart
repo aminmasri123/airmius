@@ -1392,7 +1392,7 @@ const _commerceAdvDe = {
   'commerceAdv.campaignName': 'Kampagnenname',
   'commerceAdv.headline': 'Überschrift',
   'commerceAdv.description': 'Beschreibung',
-  'commerceAdv.targetUrl': 'Link beim Klick auf die Anzeige',
+  'commerceAdv.targetUrl': 'Ziel-Link',
   'commerceAdv.targetUrlHint':
       'Diese Seite öffnet sich, wenn jemand die Anzeige antippt.',
   'commerceAdv.imageSource': 'Anzeigenbild',
@@ -1488,7 +1488,7 @@ final _commerceAdvEn = {
   'commerceAdv.campaignName': 'Campaign name',
   'commerceAdv.headline': 'Headline',
   'commerceAdv.description': 'Description',
-  'commerceAdv.targetUrl': 'Link opened when the ad is tapped',
+  'commerceAdv.targetUrl': 'Destination link',
   'commerceAdv.targetUrlHint': 'This page opens when someone taps the ad.',
   'commerceAdv.imageSource': 'Ad image',
   'commerceAdv.imageLink': 'Image link',
@@ -1583,7 +1583,7 @@ final _commerceAdvFr = {
   'commerceAdv.campaignName': 'Nom de la campagne',
   'commerceAdv.headline': 'Titre',
   'commerceAdv.description': 'Description',
-  'commerceAdv.targetUrl': 'Lien ouvert au clic sur l’annonce',
+  'commerceAdv.targetUrl': 'Lien de destination',
   'commerceAdv.targetUrlHint':
       'Cette page s’ouvre lorsque quelqu’un touche l’annonce.',
   'commerceAdv.imageSource': 'Image de l’annonce',
@@ -1680,7 +1680,7 @@ final _commerceAdvAr = {
   'commerceAdv.campaignName': 'اسم الحملة',
   'commerceAdv.headline': 'العنوان',
   'commerceAdv.description': 'الوصف',
-  'commerceAdv.targetUrl': 'الرابط الذي يفتح عند الضغط على الإعلان',
+  'commerceAdv.targetUrl': 'رابط الوجهة',
   'commerceAdv.targetUrlHint': 'تُفتح هذه الصفحة عند الضغط على الإعلان.',
   'commerceAdv.imageSource': 'صورة الإعلان',
   'commerceAdv.imageLink': 'رابط الصورة',
@@ -16195,6 +16195,7 @@ const _clubHubDe = {
   'clubHub.clubProfileBody':
       'Öffentliche Angaben und den Auftritt des Vereins bearbeiten.',
   'clubHub.documents': 'Dokumente',
+  'clubHub.advertising': 'Werbung & Kampagnen',
   'clubHub.documentsBody': 'Vereinsdateien sicher ablegen und teilen.',
   'clubHub.clubNews': 'Mitteilungen',
   'clubHub.clubNewsBody': 'An alle Mitglieder oder ein Team schreiben.',
@@ -16384,6 +16385,7 @@ final _clubHubEn = {
   'clubHub.clubProfile': 'Club profile',
   'clubHub.clubProfileBody': 'Edit public details and the club’s appearance.',
   'clubHub.documents': 'Documents',
+  'clubHub.advertising': 'Advertising & campaigns',
   'clubHub.documentsBody': 'Store and share club files securely.',
   'clubHub.clubNews': 'Announcements',
   'clubHub.clubNewsBody': 'Write to all members or one team.',
@@ -16525,6 +16527,7 @@ final _clubHubFr = {
   'clubHub.clubProfileBody':
       'Modifiez les informations publiques et l’image du club.',
   'clubHub.documents': 'Documents',
+  'clubHub.advertising': 'Publicité et campagnes',
   'clubHub.documentsBody':
       'Stockez et partagez les fichiers du club en sécurité.',
   'clubHub.clubNews': 'Annonces',
@@ -16664,6 +16667,7 @@ final _clubHubAr = {
   'clubHub.clubProfile': 'ملف النادي',
   'clubHub.clubProfileBody': 'تعديل المعلومات العامة ومظهر النادي.',
   'clubHub.documents': 'المستندات',
+  'clubHub.advertising': 'الإعلانات والحملات',
   'clubHub.documentsBody': 'حفظ ملفات النادي ومشاركتها بأمان.',
   'clubHub.clubNews': 'إعلانات النادي',
   'clubHub.clubNewsBody': 'اكتب لجميع الأعضاء أو لفريق واحد.',

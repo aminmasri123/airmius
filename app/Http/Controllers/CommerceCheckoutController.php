@@ -240,6 +240,25 @@ class CommerceCheckoutController extends Controller
         ]);
     }
 
+    public function clubAdvertising(Request $request, Club $club)
+    {
+        abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::ADVERTISING_EDIT), 403);
+
+        return response()->json(['data' => [
+            'club' => $club->only(['id', 'name']),
+            'clubs' => [['id' => $club->id, 'name' => $club->name, 'can_manage_advertising' => true]],
+            'ads_min_budget_cents' => (int) Setting::valueFor('ads_min_budget_cents', 1000),
+            'campaigns' => AdCampaign::query()->where('club_id', $club->id)->whereNull('sponsor_id')
+                ->with(['creatives', 'groups.creatives', 'stats' => fn ($query) => $query->latest('date')->limit(30)])
+                ->withExists([
+                    'commerceOrders as payment_completed' => fn ($query) => $query->where('type', 'ads_campaign')->where('status', 'completed'),
+                    'commerceOrders as payment_pending' => fn ($query) => $query->where('type', 'ads_campaign')->whereIn('status', ['pending', 'awaiting_transfer']),
+                ])
+                ->latest('id')->limit(100)->get()
+                ->map(fn (AdCampaign $campaign) => $this->campaignResourceWithPreviews($campaign)),
+        ]]);
+    }
+
     public function clubShop(Request $request, Club $club)
     {
         abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::COMMERCE_PRODUCTS_EDIT), 403);
@@ -2045,7 +2064,9 @@ class CommerceCheckoutController extends Controller
             $data['club_id'] ?? null,
             ClubPermissions::ADVERTISING_EDIT,
         );
-        $sponsor = $this->campaignSponsorForWrite($request, isset($data['sponsor_id']) ? (int) $data['sponsor_id'] : null);
+        $sponsor = ! empty($data['club_id']) && empty($data['sponsor_id'])
+            ? null
+            : $this->campaignSponsorForWrite($request, isset($data['sponsor_id']) ? (int) $data['sponsor_id'] : null);
         $startPayment = (bool) ($data['start_payment'] ?? false);
 
         if ($startPayment && ! ($data['accepted_terms'] ?? false)) {
@@ -3267,6 +3288,10 @@ class CommerceCheckoutController extends Controller
 
     private function authorizeOwnCampaign(Request $request, AdCampaign $campaign): void
     {
+        if ($campaign->club_id && ! $campaign->sponsor_id) {
+            abort_unless(ClubPermissions::allows(Club::findOrFail($campaign->club_id), $request->user(), ClubPermissions::ADVERTISING_EDIT), 403);
+            return;
+        }
         if ($campaign->sponsor_id) {
             $sponsor = $campaign->sponsor()->first();
             abort_unless($sponsor && $this->sponsorOrganizations->can($request->user(), $sponsor, 'campaigns'), 403);

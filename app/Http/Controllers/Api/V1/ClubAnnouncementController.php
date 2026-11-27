@@ -40,6 +40,26 @@ class ClubAnnouncementController extends Controller
         return response()->json(['data' => $items->map(fn (ClubAnnouncement $item) => $this->payload($item, $user))]);
     }
 
+    public function show(Request $request, Club $club, ClubAnnouncement $announcement)
+    {
+        abort_unless((int) $announcement->club_id === (int) $club->id, 404);
+        $this->authorizeAccess($request, $club);
+        $user = $request->user();
+        abort_unless($this->canManageAnnouncement($announcement, $user)
+            || ($announcement->workflow_status === 'published'
+                && $announcement->published_at
+                && $announcement->published_at->isPast()
+                && $this->visibleTo($request, $announcement)), 404);
+
+        $announcement->load([
+            'team:id,name,club_id,club_department_id',
+            'user:id,name',
+            'reads' => fn ($query) => $query->where('user_id', $user->id),
+        ])->loadCount('reads');
+
+        return response()->json(['data' => $this->payload($announcement, $user)]);
+    }
+
     public function store(Request $request, Club $club)
     {
         $data = $this->validatedData($request, $club, false);

@@ -1504,6 +1504,17 @@ void main() {
     expect(find.text('Löschen'), findsOneWidget);
   });
 
+  test('RSVP does not become a recorded attendance status', () {
+    final member = AirmiusEventAttendanceMember.fromJson({
+      'id': 4,
+      'name': 'Mira Member',
+      'status': 'yes',
+      'attendance_status': null,
+    });
+
+    expect(member.status, isNull);
+  });
+
   test(
     'nutrition client uses real day, goal, meal and water contracts',
     () async {
@@ -4999,6 +5010,53 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  for (final profile in [false, true]) {
+    for (final allowed in [false, true]) {
+      testWidgets('club advertising entry profile=$profile allowed=$allowed opens the selected club', (tester) async {
+        _setTestViewport(tester, const Size(900, 1400));
+        final club = {
+          'id': 4, 'owner_id': 1, 'name': 'Werbeverein', 'can_manage': true,
+          'can_manage_advertising': allowed,
+        };
+        final transport = _SequencedTransport([], responsesByPath: {
+          '/api/v1/work-automation-clubs': const AirmiusApiResponse(statusCode: 200, body: '{"data":[]}'),
+          '/api/v1/clubs': AirmiusApiResponse(statusCode: 200, body: jsonEncode({'data': [club]})),
+          '/api/v1/clubs/4': AirmiusApiResponse(statusCode: 200, body: jsonEncode({'data': club})),
+          '/api/v1/clubs/4/advertising': const AirmiusApiResponse(statusCode: 200,
+            body: '{"data":{"club":{"id":4,"name":"Werbeverein"},"clubs":[{"id":4,"name":"Werbeverein","can_manage_advertising":true}],"campaigns":[]}}'),
+        });
+        await _pumpAirmiusWidget(tester, _widgetTestContainer(transport: transport),
+          profile ? ClubProfileScreen(
+            club: ClubSummary.fromAirmiusClub(AirmiusClub.fromJson(club)),
+            requested: false, onRequest: (_) {}, onWithdraw: (_) {},
+          ) : const ClubCockpitScreen(initialClubId: 4));
+        await tester.pumpAndSettle();
+        if (!profile) {
+          final more = find.text('Weitere Bereiche anzeigen');
+          await tester.ensureVisible(more);
+          await tester.pumpAndSettle();
+          await tester.tap(more);
+          await tester.pumpAndSettle();
+        }
+        final advertising = find.text('Werbung & Kampagnen');
+        expect(advertising, allowed ? findsOneWidget : findsNothing);
+        if (allowed) {
+          await tester.ensureVisible(advertising);
+          await tester.pumpAndSettle();
+          await tester.tap(advertising);
+          await tester.pumpAndSettle();
+          expect(transport.requests.map((request) => request.path), contains('/api/v1/clubs/4/advertising'));
+          expect(find.text('Werbeverein'), findsOneWidget);
+          await tester.tap(find.text('Kampagne erstellen'));
+          await tester.pumpAndSettle();
+          final selection = find.byWidgetPredicate((widget) => widget is DropdownButtonFormField<int?>);
+          expect(tester.widget<DropdownButtonFormField<int?>>(selection).initialValue, 4);
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
 
   testWidgets('club website request is reachable without Commerce access', (
     WidgetTester tester,

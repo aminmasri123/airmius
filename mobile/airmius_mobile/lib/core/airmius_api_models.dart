@@ -963,6 +963,7 @@ class AirmiusClub {
     this.canViewSubscriptions = false,
     this.canEditSubscriptions = false,
     this.canEditJobs = false,
+    this.canManageAdvertising = false,
     this.canPublishJobs = false,
     this.canDeleteJobs = false,
     this.canViewRecruiting = false,
@@ -1060,6 +1061,7 @@ class AirmiusClub {
   final bool canViewSubscriptions;
   final bool canEditSubscriptions;
   final bool canEditJobs;
+  final bool canManageAdvertising;
   final bool canPublishJobs;
   final bool canDeleteJobs;
   final bool canViewRecruiting;
@@ -1215,6 +1217,7 @@ class AirmiusClub {
       canEditJobs: json.containsKey('can_edit_jobs')
           ? _bool(json['can_edit_jobs'])
           : canManage,
+      canManageAdvertising: _bool(json['can_manage_advertising']),
       canPublishJobs: json.containsKey('can_publish_jobs')
           ? _bool(json['can_publish_jobs'])
           : canManage,
@@ -3099,7 +3102,7 @@ class AirmiusEventAttendanceMember {
       AirmiusEventAttendanceMember(
         id: _int(json['id']),
         name: _string(json['name'], fallback: 'Airmius'),
-        status: _nullableString(json['attendance_status'] ?? json['status']),
+        status: _nullableString(json['attendance_status']),
         responseReason: _nullableString(json['response_reason']),
         avatarUrl: _mediaUrl(
           json['profile_photo_url'] ??
@@ -4219,6 +4222,7 @@ abstract class AirmiusClubRepository {
   Future<JsonMap> voteSurvey(int clubId, int surveyId, int optionId);
   Future<void> closeSurvey(int clubId, int surveyId);
   Future<List<AirmiusClubAnnouncement>> announcements(int clubId);
+  Future<AirmiusClubAnnouncement> announcement(int clubId, int announcementId);
   Future<AirmiusClubAnnouncement> createAnnouncement(
     int clubId,
     JsonMap payload,
