@@ -604,7 +604,7 @@ class _ClubAccessManagementScreenState
   });
 
   Widget _permissionTab() => ListView(
-    padding: const EdgeInsets.all(16),
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
     children: [
       Text(
         _tr('membership.access.permissionHint'),
@@ -613,33 +613,47 @@ class _ClubAccessManagementScreenState
       const SizedBox(height: 12),
       for (final permission in _catalog)
         Card(
-          child: ListTile(
-            title: Text('${permission['label'] ?? permission['key']}'),
-            subtitle: Text(
-              '${_tr('membership.access.effective')}: ${_effective['${permission['key']}'] == true ? _tr('membership.access.yes') : _tr('membership.access.no')}',
-            ),
-            trailing: DropdownButton<Object?>(
-              value: _overrides.containsKey('${permission['key']}')
-                  ? _overrides['${permission['key']}']
-                  : null,
-              items: [
-                DropdownMenuItem(value: null, child: Text(_tr('membership.access.inherit'))),
-                DropdownMenuItem(value: true, child: Text(_tr('membership.access.allow'))),
-                DropdownMenuItem(value: false, child: Text(_tr('membership.access.deny'))),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '${permission['label'] ?? permission['key']}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_tr('membership.access.effective')}: ${_effective['${permission['key']}'] == true ? _tr('membership.access.yes') : _tr('membership.access.no')}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 8),
+                DropdownButton<Object?>(
+                  isExpanded: true,
+                  value: _overrides.containsKey('${permission['key']}')
+                      ? _overrides['${permission['key']}']
+                      : null,
+                  items: [
+                    DropdownMenuItem(
+                      value: null,
+                      child: Text(
+                        _tr('membership.access.inherit'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    DropdownMenuItem(value: true, child: Text(_tr('membership.access.allow'))),
+                    DropdownMenuItem(value: false, child: Text(_tr('membership.access.deny'))),
+                  ],
+                  onChanged: (value) => setState(() {
+                    final key = '${permission['key']}';
+                    value == null ? _overrides.remove(key) : _overrides[key] = value;
+                  }),
+                ),
               ],
-              onChanged: (value) => setState(() {
-                final key = '${permission['key']}';
-                value == null ? _overrides.remove(key) : _overrides[key] = value;
-              }),
             ),
           ),
         ),
-      const SizedBox(height: 12),
-      FilledButton.icon(
-        onPressed: _saving ? null : _savePermissions,
-        icon: const Icon(Icons.save_outlined),
-        label: Text(_tr('membership.save')),
-      ),
     ],
   );
 
@@ -853,6 +867,34 @@ class _ClubAccessManagementScreenState
                   ),
                 ],
               ),
+        bottomNavigationBar: Builder(
+          builder: (context) {
+            final tabs = DefaultTabController.of(context);
+            return AnimatedBuilder(
+              animation: tabs,
+              builder: (context, _) => tabs.index == 0 && !_loading && _catalog.isNotEmpty
+                  ? SafeArea(
+                      top: false,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+                        ),
+                        child: FilledButton.icon(
+                          onPressed: _saving ? null : _savePermissions,
+                          icon: const Icon(Icons.save_outlined),
+                          label: Text(_tr('membership.save')),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            );
+          },
+        ),
       ),
     );
   }
