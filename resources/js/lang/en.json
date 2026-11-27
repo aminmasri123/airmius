@@ -718,6 +718,9 @@
       "disable": "Disable"
     },
     "sessions": {
+      "activity": "Login activity",
+      "successful": "Successful",
+      "failed": "Failed",
       "title": "Browser sessions",
       "description": "Manage active sessions on other browsers and devices.",
       "body": "If necessary, you can log out of all other devices. Some of your recent sessions are listed below, but the list may be incomplete. If you believe your account has been compromised, you should also change your password.",

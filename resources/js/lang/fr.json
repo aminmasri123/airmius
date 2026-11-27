@@ -718,6 +718,9 @@
       "disable": "Désactiver"
     },
     "sessions": {
+      "activity": "Activité de connexion",
+      "successful": "Réussie",
+      "failed": "Échouée",
       "title": "Sessions de navigateur",
       "description": "Gère les sessions actives sur d'autres navigateurs et appareils.",
       "body": "Si nécessaire, tu peux te déconnecter de tous les autres appareils. Certaines sessions récentes sont listées ci-dessous, mais la liste peut être incomplète. Si tu penses que ton compte a été compromis, change aussi ton mot de passe.",

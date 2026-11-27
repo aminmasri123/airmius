@@ -60,9 +60,9 @@ const closeModal = () => {
 
             <!-- Other Browser Sessions -->
             <details v-if="$page.props.loginActivity?.length" class="mb-4">
-                <summary>Anmeldeaktivitäten</summary>
+                <summary> {{ t('settings.sessions.activity') }} </summary>
                 <ul><li v-for="(entry, index) in $page.props.loginActivity" :key="index">
-                    {{ new Date(entry.at).toLocaleString() }} · {{ entry.device }} · {{ entry.success ? 'Erfolgreich' : 'Fehlgeschlagen' }}
+                    {{ new Date(entry.at).toLocaleString() }} · {{ entry.device }} · {{ entry.success ? t('settings.sessions.successful') : t('settings.sessions.failed') }}
                 </li></ul>
             </details>
             <div v-if="sessions.length > 0" class="mt-5 space-y-6">

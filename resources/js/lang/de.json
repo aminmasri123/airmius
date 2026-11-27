@@ -717,6 +717,9 @@
       "disable": "Deaktivieren"
     },
     "sessions": {
+      "activity": "Anmeldeaktivitäten",
+      "successful": "Erfolgreich",
+      "failed": "Fehlgeschlagen",
       "title": "Browser-Sitzungen",
       "description": "Verwalte aktive Sitzungen auf anderen Browsern und Geräten.",
       "body": "Falls nötig, kannst du dich auf allen anderen Geräten abmelden. Einige deiner letzten Sitzungen sind unten aufgeführt, die Liste kann jedoch unvollständig sein. Wenn du vermutest, dass dein Konto kompromittiert wurde, solltest du auch dein Passwort ändern.",
