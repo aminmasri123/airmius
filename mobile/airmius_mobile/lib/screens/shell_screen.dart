@@ -1066,14 +1066,12 @@ class _ModuleDrawer extends StatelessWidget {
       scope.copy('Support'),
       () => _openScreen(context, const SupportHelpdeskScreen()),
     );
-    if (AirmiusMvpSurface.showDeveloperSuites) {
-      add(
-        'discover',
-        Icons.public_outlined,
-        scope.t('shell.guestPage'),
-        () => _openScreen(context, const GuestPortalScreen()),
-      );
-    }
+    add(
+      'discover',
+      Icons.public_outlined,
+      scope.t('shell.guestPage'),
+      () => _openScreen(context, const GuestPortalScreen()),
+    );
     if (AirmiusMvpSurface.isOperationsHubVisible) {
       add(
         'management',

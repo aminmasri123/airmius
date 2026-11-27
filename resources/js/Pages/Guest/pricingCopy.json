@@ -1,0 +1,46 @@
+{
+  "de": {
+    "title": "Der passende Tarif für deinen Sport",
+    "intro": "Wähle deine Zielgruppe und vergleiche die verfügbaren Tarife.",
+    "audience": "Für wen suchst du einen Tarif?",
+    "plans": "Tarife",
+    "details": "Leistungen & Hinweise",
+    "allDetails": "Alle Leistungen und Einschränkungen ansehen",
+    "choosePlan": "Tarif für die Detailansicht",
+    "detailsHelp": "Hier findest du den vollständigen Leistungsumfang. Längere Hinweise zu Voraussetzungen und Einschränkungen kannst du einzeln aufklappen.",
+    "empty": "Für diese Zielgruppe ist aktuell kein Tarif hinterlegt."
+  },
+  "en": {
+    "title": "The right plan for your sport",
+    "intro": "Choose your audience and compare the available plans.",
+    "audience": "Who are you choosing a plan for?",
+    "plans": "Plans",
+    "details": "Features & notes",
+    "allDetails": "View all features and limitations",
+    "choosePlan": "Plan to view in detail",
+    "detailsHelp": "Find the full list of features here. Expand longer notes about requirements and limitations individually.",
+    "empty": "No plan is currently listed for this audience."
+  },
+  "fr": {
+    "title": "Le forfait adapté à votre sport",
+    "intro": "Choisissez votre profil et comparez les forfaits disponibles.",
+    "audience": "Pour qui cherchez-vous un forfait ?",
+    "plans": "Forfaits",
+    "details": "Fonctionnalités et précisions",
+    "allDetails": "Voir toutes les fonctionnalités et limites",
+    "choosePlan": "Forfait à consulter en détail",
+    "detailsHelp": "Retrouvez ici toutes les fonctionnalités. Dépliez les précisions sur les conditions et les limites selon vos besoins.",
+    "empty": "Aucun forfait n’est actuellement proposé pour ce profil."
+  },
+  "ar": {
+    "title": "الخطة المناسبة لرياضتك",
+    "intro": "اختر فئتك وقارن الخطط المتاحة.",
+    "audience": "لمن تبحث عن خطة؟",
+    "plans": "الخطط",
+    "details": "المزايا والملاحظات",
+    "allDetails": "عرض جميع المزايا والقيود",
+    "choosePlan": "الخطة المطلوب عرض تفاصيلها",
+    "detailsHelp": "تجد هنا جميع المزايا. يمكنك فتح الملاحظات الطويلة حول المتطلبات والقيود كلًّا على حدة.",
+    "empty": "لا توجد خطة مدرجة حاليًا لهذه الفئة."
+  }
+}

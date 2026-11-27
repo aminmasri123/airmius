@@ -14,6 +14,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/airmius_api_client.dart';
+import '../core/airmius_date_input.dart';
 import '../core/sepa_fee_labels.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
@@ -1981,6 +1982,7 @@ class _ClubMembershipManagementScreenState
     if (file == null || !mounted) return;
 
     Map<String, dynamic>? importMapping;
+    Map<String, int>? bankMapping;
     Map<String, dynamic> bankAccount = {};
     var requestInvitationForImportedMembers = false;
     final path = bank
@@ -1997,11 +1999,21 @@ class _ClubMembershipManagementScreenState
         );
         if (selectedAccount == null || !mounted) return;
         bankAccount = selectedAccount;
-        final preview = await _previewBankImport(
+        var preview = await _previewBankImport(
           club,
           file,
           accountId: bankAccount['club_money_account_id'] as int?,
         );
+        if (preview['needs_mapping'] == true) {
+          bankMapping = await _chooseBankImportMapping(preview);
+          if (bankMapping == null) return;
+          preview = await _previewBankImport(
+            club,
+            file,
+            accountId: bankAccount['club_money_account_id'] as int?,
+            mapping: bankMapping,
+          );
+        }
         if (!mounted || !await _confirmBankImport(preview)) return;
       } else {
         var preview = await _previewMembershipImport(club, file);
@@ -2047,6 +2059,9 @@ class _ClubMembershipManagementScreenState
       if (bankAccount['club_money_account_id'] != null) {
         request.fields['club_money_account_id'] =
             '${bankAccount['club_money_account_id']}';
+      }
+      if (bankMapping != null) {
+        request.fields['mapping'] = jsonEncode(bankMapping);
       }
       if (!bank) {
         request.fields['send_invitation'] = requestInvitationForImportedMembers
@@ -2132,12 +2147,16 @@ class _ClubMembershipManagementScreenState
     ClubSummary club,
     PlatformFile file, {
     int? accountId,
+    Map<String, int>? mapping,
   }) async {
     final path = '/api/v1/clubs/${club.id}/bank-transactions/preview';
     final request = http.MultipartRequest('POST', _apiUri(path))
       ..headers.addAll(_apiHeaders());
     if (accountId != null) {
       request.fields['club_money_account_id'] = '$accountId';
+    }
+    if (mapping != null) {
+      request.fields['mapping'] = jsonEncode(mapping);
     }
     if (file.bytes != null) {
       request.files.add(
@@ -2168,6 +2187,78 @@ class _ClubMembershipManagementScreenState
     final data = decoded is Map ? decoded['data'] : null;
     if (data is! Map) throw StateError(_tr('common.errorDetails'));
     return Map<String, dynamic>.from(data);
+  }
+
+  Future<Map<String, int>?> _chooseBankImportMapping(
+    Map<String, dynamic> preview,
+  ) async {
+    final columns = (preview['columns'] as List?)?.map((value) => '$value').toList() ?? [];
+    if (columns.isEmpty) {
+      _toast(_tr('membership.bankMap.noColumns'));
+      return null;
+    }
+    final selected = <String, int>{};
+    final suggested = preview['mapping'];
+    if (suggested is Map) {
+      for (final entry in suggested.entries) {
+        final index = int.tryParse('${entry.value}');
+        if (index != null && index >= 0 && index < columns.length) {
+          selected['${entry.key}'] = index;
+        }
+      }
+    }
+    const fields = ['date', 'amount', 'purpose', 'debtor_name', 'debtor_iban', 'currency'];
+    return showDialog<Map<String, int>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(_tr('membership.bankMap.title')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_tr('membership.bankMap.body')),
+                const SizedBox(height: 12),
+                for (final field in fields)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: DropdownButtonFormField<int?>(
+                      key: ValueKey('bank-map-$field'),
+                      initialValue: selected[field],
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: _tr('membership.bankMap.$field')),
+                      items: [
+                        DropdownMenuItem<int?>(value: null, child: Text(_tr('membership.bankMap.none'))),
+                        for (var index = 0; index < columns.length; index++)
+                          DropdownMenuItem<int?>(value: index, child: Text(columns[index])),
+                      ],
+                      onChanged: (index) => setDialogState(() {
+                        if (index == null) {
+                          selected.remove(field);
+                        } else {
+                          selected[field] = index;
+                        }
+                      }),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(_tr('membership.importPreviewCancel')),
+            ),
+            FilledButton(
+              onPressed: selected.containsKey('date') && selected.containsKey('amount')
+                  ? () => Navigator.pop(dialogContext, selected)
+                  : null,
+              child: Text(_tr('membership.importPreviewContinue')),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<bool> _confirmBankImport(Map<String, dynamic> preview) async {
@@ -6140,12 +6231,10 @@ class _ClubMembershipManagementScreenState
     final reference = TextEditingController();
     final notes = TextEditingController();
 
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: airmiusSurfaceColor(context),
+    final route = MaterialPageRoute<JsonMap>(
+      builder: (pageContext) => StatefulBuilder(
+        builder: (context, setPageState) {
+          return _FinanceFormPage(
             title: Text(
               _tr('membership.recordDonation'),
               style: TextStyle(
@@ -6181,7 +6270,7 @@ class _ClubMembershipManagementScreenState
                               ),
                             )
                             .toList(),
-                    onChanged: (value) => setDialogState(() {
+                    onChanged: (value) => setPageState(() {
                       donorType = value ?? donorType;
                       selectedDonor = null;
                       search.clear();
@@ -6193,7 +6282,7 @@ class _ClubMembershipManagementScreenState
                     AirmiusTextField(
                       label: _tr('membership.search'),
                       controller: search,
-                      onChanged: (_) => setDialogState(() {}),
+                      onChanged: (_) => setPageState(() {}),
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
@@ -6223,7 +6312,7 @@ class _ClubMembershipManagementScreenState
                           )
                           .toList(),
                       onChanged: (value) =>
-                          setDialogState(() => selectedDonor = value),
+                          setPageState(() => selectedDonor = value),
                     ),
                   ] else ...[
                     AirmiusTextField(
@@ -6266,13 +6355,40 @@ class _ClubMembershipManagementScreenState
                         )
                         .toList(),
                     onChanged: (value) =>
-                        setDialogState(() => method = value ?? method),
+                        setPageState(() => method = value ?? method),
                   ),
                   const SizedBox(height: 10),
                   AirmiusTextField(
                     label: _tr('membership.receivedOn'),
                     hint: _tr('membership.dateHint'),
                     controller: paidAt,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: const [
+                      AirmiusDateInputFormatter(trailingSeparator: true),
+                    ],
+                    suffixIcon: IconButton(
+                      tooltip: _tr('membership.openCalendar'),
+                      icon: const Icon(Icons.calendar_today_outlined),
+                      onPressed: () async {
+                        final today = DateTime.now();
+                        final firstDay = DateTime(1900);
+                        final entered = parseAirmiusDate(paidAt.text);
+                        final selected = await showDatePicker(
+                          context: pageContext,
+                          initialDate: entered != null &&
+                                  !entered.isBefore(firstDay) &&
+                                  !entered.isAfter(today)
+                              ? entered
+                              : today,
+                          firstDate: firstDay,
+                          lastDate: today,
+                        );
+                        if (selected != null) {
+                          paidAt.text = formatAirmiusDate(selected);
+                          setPageState(() => validationError = null);
+                        }
+                      },
+                    ),
                   ),
                   const SizedBox(height: 10),
                   AirmiusTextField(
@@ -6297,7 +6413,7 @@ class _ClubMembershipManagementScreenState
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
+                onPressed: () => Navigator.pop(pageContext),
                 child: Text(_tr('membership.cancel')),
               ),
               FilledButton.icon(
@@ -6305,9 +6421,7 @@ class _ClubMembershipManagementScreenState
                   final donorId = selectedDonor == null
                       ? null
                       : int.tryParse(selectedDonor!.split(':').last);
-                  final date = DateTime.tryParse(
-                    _dateInputForApi(paidAt.text) ?? '',
-                  );
+                  final date = parseAirmiusDate(paidAt.text);
                   final now = DateTime.now();
                   if ((donorType == 'other'
                           ? donorName.text.trim().isEmpty
@@ -6317,12 +6431,12 @@ class _ClubMembershipManagementScreenState
                           0 ||
                       date == null ||
                       date.isAfter(DateTime(now.year, now.month, now.day))) {
-                    setDialogState(
+                    setPageState(
                       () => validationError = _tr('membership.donationInvalid'),
                     );
                     return;
                   }
-                  Navigator.pop(dialogContext, {
+                  Navigator.pop(pageContext, {
                     'donor_type': donorType,
                     if (donorType == 'member') 'user_id': donorId,
                     if (donorType == 'external_member')
@@ -6341,7 +6455,7 @@ class _ClubMembershipManagementScreenState
                     },
                     'amount': _normalizePaymentAmount(amount.text),
                     'method': method,
-                    'paid_at': _dateInputForApi(paidAt.text),
+                    'paid_at': formatAirmiusApiDate(date),
                     'reference': reference.text.trim().isEmpty
                         ? null
                         : reference.text.trim(),
@@ -6358,6 +6472,8 @@ class _ClubMembershipManagementScreenState
         },
       ),
     );
+    final payload = await Navigator.of(context).push(route);
+    await route.completed;
 
     donorName.dispose();
     donorEmail.dispose();
@@ -6426,12 +6542,10 @@ class _ClubMembershipManagementScreenState
     final reference = TextEditingController();
     final notes = TextEditingController();
 
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: airmiusSurfaceColor(context),
+    final route = MaterialPageRoute<JsonMap>(
+      builder: (pageContext) => StatefulBuilder(
+        builder: (context, setPageState) {
+          return _FinanceFormPage(
             title: Text(
               _tr('membership.recordPrepayment'),
               style: TextStyle(
@@ -6444,11 +6558,11 @@ class _ClubMembershipManagementScreenState
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _memberPickerField(
-                    context: dialogContext,
+                    context: pageContext,
                     members: availableMembers,
                     selectedMemberId: selectedMemberId,
                     onChanged: (value) =>
-                        setDialogState(() => selectedMemberId = value),
+                        setPageState(() => selectedMemberId = value),
                   ),
                   const SizedBox(height: 10),
                   AirmiusTextField(
@@ -6473,7 +6587,7 @@ class _ClubMembershipManagementScreenState
                         )
                         .toList(),
                     onChanged: (value) =>
-                        setDialogState(() => method = value ?? method),
+                        setPageState(() => method = value ?? method),
                   ),
                   const SizedBox(height: 10),
                   AirmiusTextField(
@@ -6487,7 +6601,7 @@ class _ClubMembershipManagementScreenState
                     onTap: () async {
                       final now = DateTime.now();
                       final picked = await showDateRangePicker(
-                        context: dialogContext,
+                        context: pageContext,
                         firstDate: DateTime(now.year - 1),
                         lastDate: DateTime(now.year + 5),
                         initialDateRange: coverageRange,
@@ -6495,7 +6609,7 @@ class _ClubMembershipManagementScreenState
                         saveText: _tr('membership.apply'),
                       );
                       if (picked != null) {
-                        setDialogState(() => coverageRange = picked);
+                        setPageState(() => coverageRange = picked);
                       }
                     },
                     child: InputDecorator(
@@ -6534,7 +6648,7 @@ class _ClubMembershipManagementScreenState
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
+                onPressed: () => Navigator.pop(pageContext),
                 child: Text(_tr('membership.cancel')),
               ),
               FilledButton.icon(
@@ -6543,7 +6657,7 @@ class _ClubMembershipManagementScreenState
                     showFormFeedback(context, formMessage(context, 'required'));
                     return;
                   }
-                  Navigator.pop(dialogContext, {
+                  Navigator.pop(pageContext, {
                     'user_id': selectedMemberId,
                     'amount': _normalizePaymentAmount(amount.text),
                     'method': method,
@@ -6573,6 +6687,8 @@ class _ClubMembershipManagementScreenState
         },
       ),
     );
+    final payload = await Navigator.of(context).push(route);
+    await route.completed;
 
     amount.dispose();
     paidAt.dispose();
@@ -6657,12 +6773,10 @@ class _ClubMembershipManagementScreenState
     final reference = TextEditingController(text: payment.reference);
     final notes = TextEditingController(text: payment.notes);
 
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: airmiusSurfaceColor(context),
+    final route = MaterialPageRoute<JsonMap>(
+      builder: (pageContext) => StatefulBuilder(
+        builder: (context, setPageState) {
+          return _FinanceFormPage(
             title: Text(
               '${payment.title} ${_tr('membership.editAfter')}',
               style: TextStyle(
@@ -6676,11 +6790,11 @@ class _ClubMembershipManagementScreenState
                 children: [
                   if (canChangeMember) ...[
                     _memberPickerField(
-                      context: dialogContext,
+                      context: pageContext,
                       members: availableMembers,
                       selectedMemberId: selectedMemberId,
                       onChanged: (value) =>
-                          setDialogState(() => selectedMemberId = value),
+                          setPageState(() => selectedMemberId = value),
                     ),
                     const SizedBox(height: 10),
                   ] else ...[
@@ -6722,7 +6836,7 @@ class _ClubMembershipManagementScreenState
                         )
                         .toList(),
                     onChanged: (value) =>
-                        setDialogState(() => method = value ?? method),
+                        setPageState(() => method = value ?? method),
                   ),
                   const SizedBox(height: 10),
                   AirmiusTextField(
@@ -6748,7 +6862,7 @@ class _ClubMembershipManagementScreenState
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
+                onPressed: () => Navigator.pop(pageContext),
                 child: Text(_tr('membership.cancel')),
               ),
               FilledButton.icon(
@@ -6757,7 +6871,7 @@ class _ClubMembershipManagementScreenState
                     showFormFeedback(context, formMessage(context, 'required'));
                     return;
                   }
-                  Navigator.pop(dialogContext, {
+                  Navigator.pop(pageContext, {
                     if (canChangeMember) 'user_id': selectedMemberId,
                     'amount': _normalizePaymentAmount(amount.text),
                     'method': method,
@@ -6778,6 +6892,8 @@ class _ClubMembershipManagementScreenState
         },
       ),
     );
+    final payload = await Navigator.of(context).push(route);
+    await route.completed;
 
     amount.dispose();
     paidAt.dispose();
@@ -9253,6 +9369,44 @@ class _ClubMembershipManagementScreenState
   }
 }
 
+class _FinanceFormPage extends StatelessWidget {
+  const _FinanceFormPage({
+    required this.title,
+    required this.content,
+    required this.actions,
+  });
+
+  final Widget title;
+  final Widget content;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: title),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Expanded(
+                child: SizedBox(width: double.infinity, child: content),
+              ),
+              const SizedBox(height: 12),
+              OverflowBar(
+                alignment: MainAxisAlignment.end,
+                spacing: 12,
+                overflowSpacing: 8,
+                children: actions,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ManagedMembershipData {
   const _ManagedMembershipData({
     required this.clubs,
@@ -9543,9 +9697,7 @@ class _ClubAuditPanel extends StatelessWidget {
       'club.invoice.run.created' => scope.t(
         'membership.audit.invoiceRunCreated',
       ),
-      'club.invoice.cancelled' => scope.t(
-        'membership.audit.invoiceCancelled',
-      ),
+      'club.invoice.cancelled' => scope.t('membership.audit.invoiceCancelled'),
       'club.invoice.status_updated' => scope.t(
         'membership.audit.invoiceStatusUpdated',
       ),
@@ -9577,10 +9729,10 @@ class _ClubAuditPanel extends StatelessWidget {
     final kind = number.isNotEmpty || subjectType.endsWith('ClubInvoice')
         ? scope.t('membership.audit.objectInvoice')
         : entityType == 'year_period' || subjectType.endsWith('ClubYearPeriod')
-            ? scope.t('membership.audit.objectYearPeriod')
-            : subjectType.endsWith('User')
-                ? scope.t('membership.audit.objectMember')
-                : scope.t('membership.audit.objectRecord');
+        ? scope.t('membership.audit.objectYearPeriod')
+        : subjectType.endsWith('User')
+        ? scope.t('membership.audit.objectMember')
+        : scope.t('membership.audit.objectRecord');
     final identifier = number.isNotEmpty ? number : id;
     return identifier.isEmpty ? kind : '$kind $identifier';
   }
@@ -9594,12 +9746,8 @@ class _ClubAuditPanel extends StatelessWidget {
     'old_status' ||
     'new_status' ||
     'from_status' ||
-    'to_status' => scope.t(
-      'membership.audit.fieldStatus',
-    ),
-    'role' || 'from_role' || 'to_role' => scope.t(
-      'membership.audit.fieldRole',
-    ),
+    'to_status' => scope.t('membership.audit.fieldStatus'),
+    'role' || 'from_role' || 'to_role' => scope.t('membership.audit.fieldRole'),
     'amount' || 'settled_amount' => scope.t('membership.audit.fieldAmount'),
     'invoice_number' => scope.t('membership.audit.objectInvoice'),
     'member_name' => scope.t('membership.audit.objectMember'),

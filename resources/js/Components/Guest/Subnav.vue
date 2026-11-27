@@ -1,6 +1,7 @@
 ﻿<script setup>
 import { Link, usePage } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import Modal from '@/Components/Modal.vue'
 
 defineProps({
     vertical: {
@@ -22,6 +23,8 @@ const isAuthenticated = computed(() => Boolean(page.props.auth?.user))
 const isRtl = computed(() => page.props.direction === 'rtl')
 const brandName = computed(() => isRtl.value ? 'إيرميوس' : 'Airmius')
 const mobileSubnavOpen = ref(false)
+const moreOpen = ref(false)
+watch(() => page.url, () => { moreOpen.value = false })
 const items = computed(() => [
     ...(isAuthenticated.value ? [['las la-newspaper', 'guest.subnav.feed', safeRoute('auth.feed.index', '/feed')]] : []),
     ['las la-bullhorn', 'guest.subnav.top_content', safeRoute('guest.top-inhalte', '/top-inhalte')],
@@ -35,6 +38,11 @@ const items = computed(() => [
     ['las la-tags', 'guest.subnav.subscriptions', safeRoute('guest.pricing', '/abos')],
     ['las la-shopping-bag', 'guest.subnav.shop', safeRoute('guest.marketplace', '/marketplace')],
 ])
+const mobilePrimaryItems = computed(() => {
+    const labels = ['guest.subnav.clubs', 'Events', 'guest.subnav.shop']
+    return [items.value[0], ...items.value.filter(([, label]) => labels.includes(label))]
+})
+const mobileMoreItems = computed(() => items.value.filter((item) => !mobilePrimaryItems.value.includes(item)))
 </script>
 
 <template>
@@ -100,7 +108,7 @@ const items = computed(() => [
 
     <div
         v-else
-        class="fixed inset-x-0 bottom-0 z-40 mx-auto h-16 max-w-7xl border-y border-border bg-card/90 backdrop-blur transition-all duration-300 sm:px-6 md:top-16"
+        class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-7xl border-y border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur transition-all duration-300 md:bottom-auto md:top-16 md:h-16 md:px-6 md:pb-0"
         role="navigation"
         :aria-label="$t('guest.subnav.quick_navigation')"
     >
@@ -117,21 +125,44 @@ const items = computed(() => [
         </div>
 
         <div
-            class="custom-scrollbar flex w-full justify-start gap-3 overflow-x-auto bg-card/95 px-3 py-2 text-xs text-secondary md:hidden"
+            class="grid w-full grid-cols-5 gap-1 px-2 py-1 text-xs text-secondary md:hidden"
             :dir="isRtl ? 'rtl' : 'ltr'"
         >
             <Link
-                v-for="[icon, label, href, options] in items"
+                v-for="[icon, label, href] in mobilePrimaryItems"
                 :key="label"
                 :href="href || '#'"
-                :class="[
-                    'min-w-[4.5rem] shrink-0 rounded-full px-1 py-1 text-center transition hover:text-primary',
-                    options?.hideOnMobile ? 'hidden' : ''
-                ]"
+                class="flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-center text-[11px] leading-tight transition hover:bg-muted hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-buttonPrimary"
             >
-                <p><i :class="[icon, 'la-2x']"></i></p>
+                <i :class="[icon, 'text-2xl']" aria-hidden="true"></i>
                 {{ $t(label) }}
             </Link>
+            <button
+                type="button"
+                class="flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1 text-center text-[11px] leading-tight transition hover:bg-muted hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-buttonPrimary"
+                aria-haspopup="dialog"
+                :aria-expanded="moreOpen"
+                @click="moreOpen = true"
+            >
+                <i class="las la-ellipsis-h text-2xl" aria-hidden="true"></i>
+                {{ $t('guest.subnav.more') }}
+            </button>
         </div>
     </div>
+
+    <Modal :show="moreOpen" max-width="sm" :aria-label="$t('guest.subnav.quick_navigation')" @close="moreOpen = false">
+        <h2 class="mb-4 pe-12 text-lg font-bold text-primary">{{ $t('guest.subnav.quick_navigation') }}</h2>
+        <nav class="grid grid-cols-2 gap-2" :aria-label="$t('guest.subnav.more')">
+            <Link
+                v-for="[icon, label, href] in mobileMoreItems"
+                :key="label"
+                :href="href"
+                class="flex min-h-14 items-center gap-2 rounded-xl border border-border bg-card p-3 text-sm text-primary hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-buttonPrimary"
+                @click="moreOpen = false"
+            >
+                <i :class="[icon, 'text-xl text-buttonPrimary']" aria-hidden="true"></i>
+                <span>{{ $t(label) }}</span>
+            </Link>
+        </nav>
+    </Modal>
 </template>

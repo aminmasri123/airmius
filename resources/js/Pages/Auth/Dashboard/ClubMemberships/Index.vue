@@ -185,6 +185,7 @@ const bankImportForm = useForm({
     club_money_account_id: null,
 })
 const bankImportPreview = ref(null)
+const bankImportMapping = ref({})
 const bankImportPreviewLoading = ref(false)
 const bankImportSubmitting = ref(false)
 const bankImportFeedback = ref('')
@@ -2011,6 +2012,7 @@ const sendReminder = async (invoice) => {
 const resetBankImportPreview = (file = null) => {
     bankImportForm.file = file
     bankImportPreview.value = null
+    bankImportMapping.value = {}
     bankImportFeedback.value = ''
     bankImportForm.clearErrors()
 }
@@ -2020,6 +2022,7 @@ const closeBankImportModal = () => {
     showBankImportModal.value = false
     bankImportForm.reset()
     bankImportPreview.value = null
+    bankImportMapping.value = {}
     bankImportFeedback.value = ''
 }
 
@@ -2027,6 +2030,8 @@ const bankImportPayload = () => {
     const payload = new FormData()
     if (bankImportForm.file) payload.append('file', bankImportForm.file)
     if (bankImportForm.club_money_account_id) payload.append('club_money_account_id', bankImportForm.club_money_account_id)
+    const mapping = Object.fromEntries(Object.entries(bankImportMapping.value).filter(([, index]) => Number.isInteger(index)))
+    if (Object.keys(mapping).length) payload.append('mapping', JSON.stringify(mapping))
     return payload
 }
 
@@ -2041,6 +2046,7 @@ const previewBankTransactions = async () => {
             { headers: { Accept: 'application/json', 'Content-Type': 'multipart/form-data' } },
         )
         bankImportPreview.value = response.data?.data || null
+        if (bankImportPreview.value?.needs_mapping) bankImportMapping.value = { ...bankImportPreview.value.mapping }
     } catch (error) {
         bankImportForm.setError('file', invoiceErrorMessage(error, tx('club_memberships.workspace.bank_preview_failed', 'Die Bankdatei konnte nicht geprüft werden.')))
     } finally {
@@ -2062,6 +2068,7 @@ const importBankTransactions = async () => {
         bankImportFeedback.value = response.data?.message || tx('club_memberships.workspace.bank_import_complete', 'Bankabgleich wurde abgeschlossen.')
         bankImportForm.reset()
         bankImportPreview.value = null
+        bankImportMapping.value = {}
         showBankImportModal.value = false
     } catch (error) {
         bankImportForm.setError('file', invoiceErrorMessage(error, tx('club_memberships.workspace.bank_import_failed', 'Die Bankdatei konnte nicht importiert werden.')))
@@ -5368,7 +5375,7 @@ const saveExternalMember = async () => {
                     {{ tx('club_memberships.workspace.bank_import_intro', 'Lade eine CSV aus dem Online-Banking hoch. Erkannt werden typische Spalten wie Datum, Betrag, Auftraggeber, IBAN und Verwendungszweck.') }}
                 </p>
 
-                <form class="mt-5 space-y-4" @submit.prevent="bankImportPreview ? importBankTransactions() : previewBankTransactions()">
+                <form class="mt-5 space-y-4" @submit.prevent="bankImportPreview && !bankImportPreview.needs_mapping ? importBankTransactions() : previewBankTransactions()">
                     <label v-if="financeOptions.accounts.some(a => a.type === 'bank')" class="block text-sm text-secondary">Bankkonto<select v-model="bankImportForm.club_money_account_id" required class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" @change="bankImportPreview = null"><option :value="null" disabled>Auswählen</option><option v-for="a in financeOptions.accounts.filter(a => a.type === 'bank' && a.is_active !== false)" :key="a.id" :value="a.id">{{ a.name }}</option></select></label>
                     <div>
                         <label class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.csv_file', 'CSV-Datei') }}</label>
@@ -5383,7 +5390,31 @@ const saveExternalMember = async () => {
                     </div>
 
                     <p class="rounded-lg border border-border bg-bg p-3 text-xs text-secondary">
-                        {{ tx('club_memberships.workspace.bank_import_hint', 'Die Vorschau schreibt noch nichts. Sichere Treffer mit Rechnungsnummer und Betrag werden erst nach deiner Bestätigung automatisch als bezahlt markiert.') }}
+                        {{ tx('club_memberships.workspace.bank_import_hint', 'Die Vorschau schreibt noch nichts. Nach dem Import bleiben Treffer Vorschläge; eine Zahlung entsteht erst durch Bestätigung der Zuordnung.') }}
+                    </p>
+
+                    <div v-if="bankImportPreview?.needs_mapping && bankImportPreview.columns?.length" class="rounded-xl border border-border bg-bg p-4">
+                        <p class="mb-3 font-semibold text-primary">{{ tx('club_memberships.workspace.bank_map_title', 'Bankspalten zuordnen') }}</p>
+                        <p class="mb-3 text-sm text-secondary">{{ tx('club_memberships.workspace.bank_map_body', 'Wähle das Buchungsdatum und den eingegangenen Betrag. Weitere Spalten verbessern die Zuordnung.') }}</p>
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <label v-for="field in [
+                                { key: 'date', label: tx('club_memberships.workspace.bank_map_date', 'Buchungsdatum') },
+                                { key: 'amount', label: tx('club_memberships.workspace.bank_map_amount', 'Eingegangener Betrag') },
+                                { key: 'purpose', label: tx('club_memberships.workspace.bank_map_purpose', 'Verwendungszweck') },
+                                { key: 'debtor_name', label: tx('club_memberships.workspace.bank_map_debtor_name', 'Name des Zahlers') },
+                                { key: 'debtor_iban', label: tx('club_memberships.workspace.bank_map_debtor_iban', 'IBAN des Zahlers') },
+                                { key: 'currency', label: tx('club_memberships.workspace.bank_map_currency', 'Währung') },
+                            ]" :key="field.key" class="block text-sm text-secondary">
+                                {{ field.label }}
+                                <select v-model.number="bankImportMapping[field.key]" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                    <option :value="null">{{ tx('club_memberships.workspace.bank_map_none', 'Nicht zuordnen') }}</option>
+                                    <option v-for="(column, index) in bankImportPreview.columns" :key="`${field.key}-${index}`" :value="index">{{ column }}</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                    <p v-if="bankImportPreview?.needs_mapping && !bankImportPreview.columns?.length" class="text-sm text-error">
+                        {{ tx('club_memberships.workspace.bank_map_no_columns', 'Keine CSV-Spalten erkannt. Bitte eine CSV-Datei mit Spaltenüberschriften auswählen.') }}
                     </p>
 
                     <div v-if="bankImportPreview" class="rounded-xl border border-border bg-bg p-4" aria-live="polite">
@@ -5424,12 +5455,12 @@ const saveExternalMember = async () => {
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" :disabled="bankImportPreviewLoading || bankImportSubmitting" @click="closeBankImportModal">
                             {{ tx('auto.Abbrechen', 'Abbrechen') }}
                         </button>
-                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60" :disabled="bankImportPreviewLoading || bankImportSubmitting || (Boolean(bankImportPreview) && !bankImportPreview.can_import)">
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60" :disabled="bankImportPreviewLoading || bankImportSubmitting || (Boolean(bankImportPreview) && !bankImportPreview.can_import && !bankImportPreview.needs_mapping) || (bankImportPreview?.needs_mapping && (!Number.isInteger(bankImportMapping.date) || !Number.isInteger(bankImportMapping.amount)))">
                             {{ bankImportPreviewLoading
                                 ? tx('club_memberships.workspace.preview_loading', 'Datei wird geprüft …')
                                 : bankImportSubmitting
                                     ? tx('auto.Wird gespeichert …', 'Wird gespeichert …')
-                                    : bankImportPreview
+                                    : bankImportPreview && !bankImportPreview.needs_mapping
                                         ? tx('club_memberships.workspace.start_import', 'Import jetzt starten')
                                         : tx('club_memberships.workspace.preview_action', 'Vorschau prüfen') }}
                         </button>

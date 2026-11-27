@@ -223,7 +223,7 @@ class EditorialHtmlPreview extends StatelessWidget {
   );
 }
 
-class EditorialRichEditor extends StatelessWidget {
+class EditorialRichEditor extends StatefulWidget {
   const EditorialRichEditor({
     super.key,
     required this.document,
@@ -235,8 +235,23 @@ class EditorialRichEditor extends StatelessWidget {
   final VoidCallback? onInsertImage;
 
   @override
+  State<EditorialRichEditor> createState() => _EditorialRichEditorState();
+}
+
+class _EditorialRichEditorState extends State<EditorialRichEditor> {
+  final FocusNode _focusNode = FocusNode(debugLabel: 'editorial-rich-editor');
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    document.controller.readOnly = !enabled;
+    widget.document.controller.readOnly = !widget.enabled;
     return Localizations.override(
       context: context,
       locale: context
@@ -244,126 +259,133 @@ class EditorialRichEditor extends StatelessWidget {
           ?.language
           .locale,
       delegates: const [quill.FlutterQuillLocalizations.delegate],
-      child: ListenableBuilder(
-        listenable: document,
-        builder: (context, _) => Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (document.hasUnsupportedBlocks)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(editorialLabel(context, 'unsupported')),
-              ),
-            IgnorePointer(
-              ignoring: !enabled,
-              child: quill.QuillSimpleToolbar(
-                controller: document.controller,
-                config: const quill.QuillSimpleToolbarConfig(
-                  showFontFamily: false,
-                  showFontSize: false,
-                  showColorButton: false,
-                  showBackgroundColorButton: false,
-                  showSubscript: false,
-                  showSuperscript: false,
-                  showListCheck: false,
-                  showDirection: true,
-                  showSearchButton: false,
-                  buttonOptions: quill.QuillSimpleToolbarButtonOptions(
-                    selectHeaderStyleButtons:
-                        quill.QuillToolbarSelectHeaderStyleButtonsOptions(
-                          attributes: [
-                            quill.Attribute.header,
-                            quill.Attribute.h2,
-                            quill.Attribute.h3,
-                            quill.Attribute.h4,
-                          ],
-                        ),
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ListenableBuilder(
+            listenable: widget.document,
+            builder: (context, _) => widget.document.hasUnsupportedBlocks
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(editorialLabel(context, 'unsupported')),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          IgnorePointer(
+            ignoring: !widget.enabled,
+            child: quill.QuillSimpleToolbar(
+              controller: widget.document.controller,
+              config: const quill.QuillSimpleToolbarConfig(
+                showFontFamily: false,
+                showFontSize: false,
+                showColorButton: false,
+                showBackgroundColorButton: false,
+                showSubscript: false,
+                showSuperscript: false,
+                showListCheck: false,
+                showDirection: true,
+                showSearchButton: false,
+                buttonOptions: quill.QuillSimpleToolbarButtonOptions(
+                  selectHeaderStyleButtons:
+                      quill.QuillToolbarSelectHeaderStyleButtonsOptions(
+                        attributes: [
+                          quill.Attribute.header,
+                          quill.Attribute.h2,
+                          quill.Attribute.h3,
+                          quill.Attribute.h4,
+                        ],
+                      ),
                 ),
               ),
             ),
-            Wrap(
-              children: [
-                IconButton(
-                  tooltip: editorialLabel(context, 'image'),
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
-                  onPressed: enabled ? onInsertImage : null,
-                ),
-                PopupMenuButton<String>(
-                  tooltip: editorialLabel(context, 'addBlock'),
-                  icon: const Icon(Icons.add_box_outlined),
-                  enabled: enabled,
-                  itemBuilder: (_) => ['lead', 'callout', 'image']
-                      .map(
-                        (key) => PopupMenuItem(
-                          value: key,
-                          child: Text(editorialLabel(context, key)),
-                        ),
-                      )
-                      .toList(),
-                  onSelected: (style) async {
-                    final source = style == 'image'
-                        ? '<figure class="blog-image"><img src=""><figcaption></figcaption></figure>'
-                        : style == 'callout'
-                        ? '<div class="blog-callout"><p></p></div>'
-                        : '<p class="blog-lead"></p>';
-                    final result = await editEditorialFormattedBlock(
-                      context,
-                      source,
-                    );
-                    if (result != null && context.mounted) {
-                      document.insertHtmlBlock(result);
-                    }
-                  },
-                ),
-                for (final entry in editorialSemanticColors.entries)
-                  IconButton(
-                    tooltip: editorialLabel(context, entry.key),
-                    icon: Icon(
-                      Icons.circle,
-                      color: Color(
-                        int.parse('ff${entry.value.substring(1)}', radix: 16),
+          ),
+          Wrap(
+            children: [
+              IconButton(
+                tooltip: editorialLabel(context, 'image'),
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                onPressed: widget.enabled ? widget.onInsertImage : null,
+              ),
+              PopupMenuButton<String>(
+                tooltip: editorialLabel(context, 'addBlock'),
+                icon: const Icon(Icons.add_box_outlined),
+                enabled: widget.enabled,
+                itemBuilder: (_) => ['lead', 'callout', 'image']
+                    .map(
+                      (key) => PopupMenuItem(
+                        value: key,
+                        child: Text(editorialLabel(context, key)),
                       ),
-                    ),
-                    onPressed: enabled
-                        ? () => document.controller.formatSelection(
-                            quill.Attribute.clone(
-                              quill.Attribute.color,
-                              entry.value,
-                            ),
-                          )
-                        : null,
-                  ),
+                    )
+                    .toList(),
+                onSelected: (style) async {
+                  final source = style == 'image'
+                      ? '<figure class="blog-image"><img src=""><figcaption></figcaption></figure>'
+                      : style == 'callout'
+                      ? '<div class="blog-callout"><p></p></div>'
+                      : '<p class="blog-lead"></p>';
+                  final result = await editEditorialFormattedBlock(
+                    context,
+                    source,
+                  );
+                  if (result != null && context.mounted) {
+                    widget.document.insertHtmlBlock(result);
+                  }
+                },
+              ),
+              for (final entry in editorialSemanticColors.entries)
                 IconButton(
-                  tooltip: editorialLabel(context, 'mark'),
-                  icon: const Icon(Icons.highlight),
-                  onPressed: enabled
-                      ? () => document.controller.formatSelection(
+                  tooltip: editorialLabel(context, entry.key),
+                  icon: Icon(
+                    Icons.circle,
+                    color: Color(
+                      int.parse('ff${entry.value.substring(1)}', radix: 16),
+                    ),
+                  ),
+                  onPressed: widget.enabled
+                      ? () => widget.document.controller.formatSelection(
                           quill.Attribute.clone(
-                            quill.Attribute.background,
-                            '#fff2a8',
+                            quill.Attribute.color,
+                            entry.value,
                           ),
                         )
                       : null,
                 ),
-              ],
-            ),
-            Container(
-              height: 360,
-              decoration: BoxDecoration(
-                border: Border.all(color: Theme.of(context).dividerColor),
+              IconButton(
+                tooltip: editorialLabel(context, 'mark'),
+                icon: const Icon(Icons.highlight),
+                onPressed: widget.enabled
+                    ? () => widget.document.controller.formatSelection(
+                        quill.Attribute.clone(
+                          quill.Attribute.background,
+                          '#fff2a8',
+                        ),
+                      )
+                    : null,
               ),
-              child: quill.QuillEditor.basic(
-                controller: document.controller,
-                config: quill.QuillEditorConfig(
-                  padding: const EdgeInsets.all(12),
-                  embedBuilders: [_PreservedEmbedBuilder(document)],
-                  onLaunchUrl: (_) {},
-                ),
+            ],
+          ),
+          Container(
+            height: 360,
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
+            child: quill.QuillEditor.basic(
+              controller: widget.document.controller,
+              focusNode: _focusNode,
+              scrollController: _scrollController,
+              config: quill.QuillEditorConfig(
+                padding: const EdgeInsets.all(12),
+                embedBuilders: [_PreservedEmbedBuilder(widget.document)],
+                onLaunchUrl: (_) {},
+                onTapDown: (_, _) {
+                  if (widget.enabled) _focusNode.requestFocus();
+                  return false;
+                },
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -471,6 +493,7 @@ class EditorialFormattedBlock {
     required String url,
     required String alt,
     required String caption,
+    String? width,
   }) {
     final imageNode = image ?? dom.Element.tag('img');
     if (imageNode.parentNode == null && imageNode != root) {
@@ -478,6 +501,14 @@ class EditorialFormattedBlock {
     }
     imageNode.attributes['src'] = url;
     imageNode.attributes['alt'] = alt;
+    if (width != null) {
+      imageNode.attributes.remove('height');
+      if (width.isEmpty) {
+        imageNode.attributes.remove('width');
+      } else {
+        imageNode.attributes['width'] = width;
+      }
+    }
     if (root.localName == 'img') {
       root = dom.Element.tag('figure')
         ..classes.add('blog-image')
@@ -516,6 +547,7 @@ class _FormattedBlockDialogState extends State<_FormattedBlockDialog> {
   late final TextEditingController url;
   late final TextEditingController alt;
   late final TextEditingController caption;
+  late final TextEditingController width;
   late String style;
   late String direction;
   final formKey = GlobalKey<FormState>();
@@ -526,6 +558,7 @@ class _FormattedBlockDialogState extends State<_FormattedBlockDialog> {
     content = EditorialRichDocument(block.isFigure ? '' : block.root.innerHtml);
     url = TextEditingController(text: block.image?.attributes['src'] ?? '');
     alt = TextEditingController(text: block.image?.attributes['alt'] ?? '');
+    width = TextEditingController(text: block.image?.attributes['width'] ?? '');
     caption = TextEditingController(
       text: block.root.querySelector('figcaption')?.text ?? '',
     );
@@ -539,6 +572,7 @@ class _FormattedBlockDialogState extends State<_FormattedBlockDialog> {
     url.dispose();
     alt.dispose();
     caption.dispose();
+    width.dispose();
     super.dispose();
   }
 
@@ -551,6 +585,7 @@ class _FormattedBlockDialogState extends State<_FormattedBlockDialog> {
           url: url.text.trim(),
           alt: alt.text,
           caption: caption.text,
+          width: width.text.trim(),
         ),
       );
       return;
@@ -603,6 +638,26 @@ class _FormattedBlockDialogState extends State<_FormattedBlockDialog> {
                       decoration: InputDecoration(
                         labelText: editorialLabel(context, 'alt'),
                       ),
+                    ),
+                    TextFormField(
+                      controller: width,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: editorialLabel(context, 'imageWidth'),
+                        helperText: editorialLabel(context, 'imageWidthHint'),
+                        helperMaxLines: 3,
+                      ),
+                      validator: (value) {
+                        final text = value?.trim() ?? '';
+                        if (text.isEmpty) return null;
+                        final size = int.tryParse(text);
+                        return RegExp(r'^\d+$').hasMatch(text) &&
+                                size != null &&
+                                size >= 40 &&
+                                size <= 2000
+                            ? null
+                            : editorialLabel(context, 'imageWidthError');
+                      },
                     ),
                     TextFormField(
                       controller: caption,

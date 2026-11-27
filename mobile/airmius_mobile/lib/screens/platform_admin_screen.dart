@@ -15,6 +15,8 @@ import 'admin_platform_settings_screen.dart';
 import 'outfit_operations_screen.dart';
 import 'role_assignment_screen.dart';
 
+part 'platform_moderation.dart';
+
 typedef JsonMap = AirmiusJson;
 
 class PlatformAdminScreen extends StatefulWidget {
@@ -30,6 +32,8 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
   Future<JsonMap>? _future;
   String _section = 'users';
   bool _busy = false;
+  String _caseSource = 'all';
+  bool _filtersExpanded = false;
   bool _didRevealInitialSection = false;
   final GlobalKey _sectionAnchorKey = GlobalKey();
   final Map<String, String> _listFilters = {};
@@ -85,6 +89,9 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
     _section = _validSections.contains(widget.initialSection)
         ? widget.initialSection
         : 'users';
+    if (_section == 'moderation') {
+      _listFilters.addAll({'flags_status': 'open', 'reports_status': 'open'});
+    }
   }
 
   Future<JsonMap> _load() async {
@@ -176,7 +183,11 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          t('platformAdmin.title'),
+          t(
+            _section == 'moderation'
+                ? 'platformAdmin.moderation'
+                : 'platformAdmin.title',
+          ),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
@@ -229,6 +240,14 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
             );
           }
           final data = snapshot.data ?? const {};
+          if (_section == 'moderation') {
+            return SafeArea(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [_moderation(data)],
+              ),
+            );
+          }
           _revealInitialSection();
           return PageFrame(
             title: t('platformAdmin.title'),
@@ -404,7 +423,20 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 7),
                     child: Text(entry.value),
                   ),
-                  onSelected: (_) => setState(() => _section = entry.key),
+                  onSelected: (_) {
+                    if (entry.key == 'moderation') {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const PlatformAdminScreen(
+                            initialSection: 'moderation',
+                          ),
+                        ),
+                      );
+                    } else {
+                      setState(() => _section = entry.key);
+                    }
+                  },
                 ),
               ),
             )
@@ -432,6 +464,9 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
     }
     _searchErrors.remove(list);
     _listFilters['${list}_$field'] = value;
+    if (list == 'reports' && field == 'appeal' && value != 'all') {
+      _listFilters['reports_status'] = 'all';
+    }
     _listFilters['${list}_page'] = '1';
     _reload();
   }
@@ -518,7 +553,7 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
             value: value,
             child: Text(
               field == 'category' && value != 'all'
-                  ? value
+                  ? _caseReason(t, value)
                   : translated == key
                   ? value
                   : translated,
@@ -991,217 +1026,182 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
 
   Widget _moderation(JsonMap data) {
     final t = AirmiusScope.of(context).t;
-    final moderation = _platformMap(data['moderation']);
-    final flags = _platformMaps(moderation['flags']);
-    final reports = _platformMaps(moderation['reports']);
-    final warnings = _platformMaps(moderation['warnings']);
+    final mod = _platformMap(data['moderation']);
     final summary = _platformMap(data['summary']);
+    final warningsOnly = _caseSource == 'warnings';
+    final canFilter =
+        _caseSource != 'appeals' &&
+        (!warningsOnly ||
+            _platformInt(_platformMap(mod['warnings_meta'])['total']) > 0 ||
+            _listFilters.entries.any(
+              (e) =>
+                  e.key.startsWith('warnings_') &&
+                  e.key != 'warnings_page' &&
+                  e.value != 'all' &&
+                  e.value.isNotEmpty,
+            ));
+    final lists = switch (_caseSource) {
+      'all' => ['reports', 'flags'],
+      'appeals' => ['reports'],
+      _ => [_caseSource],
+    };
+    final counts = {
+      'all': 'moderation_open',
+      'reports': 'reports_open',
+      'flags': 'flags_open',
+      'appeals': 'appeals_pending',
+    };
+    final cases =
+        [
+          for (final list in lists)
+            for (final item in _platformMaps(mod[list]))
+              (list: list, item: item),
+        ]..sort(
+          (a, b) => _platformText(
+            b.item['created_at'],
+          ).compareTo(_platformText(a.item['created_at'])),
+        );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          '${t('moderationDesk.openCases')} · ${_platformInt(summary['moderation_open'])}',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 6,
           children: [
-            for (final metric in {
-              'moderation_open': t('platformAdmin.moderationOpen'),
-              'flags_open':
-                  '${t('platformAdmin.automaticFlags')} (${t('clubTasks.status.open')})',
-              'reports_open':
-                  '${t('platformAdmin.userReports')} (${t('clubTasks.status.open')})',
-              'appeals_pending':
-                  '${t('platformAdmin.appeal')} (${t('backoffice.status.pending')})',
-              'warnings_90_days':
-                  '${t('platformAdmin.accountWarnings')} (90 d)',
-              'users_with_warnings_90_days':
-                  '${t('platformAdmin.users')} / ${t('platformAdmin.accountWarnings')} (90 d)',
-              'moderation_suspended_users': t('platformAdmin.suspended'),
-            }.entries)
-              _PlatformMetric(
-                value: '${_platformInt(summary[metric.key])}',
-                label: metric.value,
+            for (final key in [
+              'all',
+              'reports',
+              'flags',
+              'appeals',
+              'warnings',
+            ])
+              ChoiceChip(
+                key: ValueKey('moderation-$key'),
+                selected: _caseSource == key,
+                label: Text(
+                  [
+                    t(key == 'all' ? 'adminNative.all' : 'moderationDesk.$key'),
+                    if (counts.containsKey(key))
+                      '${_platformInt(summary[counts[key]])}',
+                  ].join(' '),
+                ),
+                onSelected: (_) {
+                  if (_caseSource == key) return;
+                  final wasAppeals = _caseSource == 'appeals';
+                  setState(() => _caseSource = key);
+                  if (key == 'appeals') {
+                    _filterList('reports', 'appeal', 'pending');
+                  } else if (wasAppeals) {
+                    _listFilters['reports_status'] = 'open';
+                    _filterList('reports', 'appeal', 'all');
+                  }
+                },
               ),
           ],
         ),
-        const SizedBox(height: 14),
-        ...[
-          _PlatformSectionTitle(
-            icon: Icons.smart_toy_outlined,
-            title: t('platformAdmin.automaticFlags'),
-            count: _platformInt(
-              _platformMap(moderation['flags_meta'])['total'],
+        if (canFilter)
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              key: const ValueKey('moderation-filters'),
+              icon: const Icon(Icons.tune),
+              label: Text(t('events.filters')),
+              onPressed: () =>
+                  setState(() => _filtersExpanded = !_filtersExpanded),
             ),
           ),
-          const SizedBox(height: 9),
-          _listFilter('flags', 'status', t('adminNative.status'), [
-            'open',
-            'dismissed',
-            'actioned',
-          ]),
-          _listFilter('flags', 'severity', t('platformAdmin.severity'), [
-            'low',
-            'medium',
-            'high',
-          ]),
-          _listFilter(
-            'flags',
-            'category',
-            t('platformAdmin.category'),
-            _platformStrings(moderation['flag_categories']),
+        if (canFilter && _filtersExpanded)
+          for (final list in lists) ...[
+            if (lists.length > 1) Text(t('moderationDesk.$list')),
+            if (list == 'warnings') _searchField('warnings'),
+            if (list != 'warnings' && _caseSource != 'appeals')
+              _listFilter(list, 'status', t('adminNative.status'), [
+                'open',
+                'dismissed',
+                'actioned',
+              ]),
+            if (list == 'reports' && _caseSource != 'appeals')
+              _listFilter(list, 'appeal', t('platformAdmin.appeal'), [
+                'pending',
+                'accepted',
+                'rejected',
+              ]),
+            if (list != 'reports') ...[
+              _listFilter(list, 'severity', t('platformAdmin.severity'), [
+                'low',
+                'medium',
+                'high',
+              ]),
+              _listFilter(
+                list,
+                'category',
+                t('platformAdmin.category'),
+                _platformStrings(
+                  mod[list == 'flags'
+                      ? 'flag_categories'
+                      : 'warning_categories'],
+                ),
+              ),
+            ],
+          ],
+        if (!warningsOnly && lists.length == 1)
+          Text(
+            '${t('moderationDesk.matches')} · ${_platformInt(_platformMap(mod['${lists.first}_meta'])['total'])}',
           ),
-          _pager('flags', moderation),
-          if (flags.isEmpty)
-            _PlatformEmpty(
-              icon: Icons.flag_outlined,
-              text: t('platformAdmin.noModerationCases'),
+        if (cases.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(
+              t(
+                warningsOnly
+                    ? 'moderationDesk.emptyWarnings'
+                    : 'platformAdmin.noModerationCases',
+              ),
             ),
-          ...flags.map(
-            (flag) => Padding(
-              padding: const EdgeInsets.only(bottom: 11),
-              child: _PlatformCard(
-                icon: Icons.flag_outlined,
-                title: _platformText(
-                  _platformMap(flag['content'])['text'],
-                  fallback: t('platformAdmin.moderationCase'),
-                ),
-                subtitle: _platformText(
-                  _platformMap(flag['content'])['author'],
-                  fallback: _platformText(_platformMap(flag['user'])['name']),
-                ),
-                status: _platformText(flag['status'], fallback: 'open'),
-                details: [
-                  '${t('platformAdmin.severity')}: ${_platformText(flag['severity'])}',
-                  '${t('platformAdmin.source')}: ${_platformText(flag['source'])}',
-                  if (_platformStrings(flag['categories']).isNotEmpty)
-                    _platformStrings(flag['categories']).join(', '),
-                ],
-                actions: [
-                  FilledButton.tonalIcon(
-                    onPressed: _busy
-                        ? null
-                        : () => _decideModeration(item: flag, kind: 'flag'),
-                    icon: const Icon(Icons.fact_check_outlined),
-                    label: Text(t('platformAdmin.review')),
+          ),
+        for (final entry in cases)
+          if (entry.list == 'warnings')
+            ListTile(
+              leading: const Icon(Icons.warning_amber_outlined),
+              title: Text(
+                _platformText(_platformMap(entry.item['user'])['name']),
+              ),
+              subtitle: Text(
+                [
+                  _platformText(entry.item['reason']),
+                  _caseLabel(t, entry.item['severity']),
+                  '${t('platformAdmin.points')}: ${_platformInt(entry.item['points'])}',
+                  _platformText(_platformMap(entry.item['user'])['email']),
+                  ..._platformStrings(
+                    _platformMap(entry.item['flag'])['categories'],
+                  ).map((c) => _caseReason(t, c)),
+                ].where((v) => v.isNotEmpty).join(' · '),
+              ),
+            )
+          else
+            _ModerationCaseRow(
+              item: entry.item,
+              list: entry.list,
+              onTap: () async {
+                final changed = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        _ModerationCasePage(item: entry.item, list: entry.list),
                   ),
-                ],
-              ),
+                );
+                if (changed == true && mounted) _reload();
+              },
             ),
-          ),
-          const SizedBox(height: 5),
-        ],
-        ...[
-          _PlatformSectionTitle(
-            icon: Icons.report_outlined,
-            title: t('platformAdmin.userReports'),
-            count: _platformInt(
-              _platformMap(moderation['reports_meta'])['total'],
-            ),
-          ),
-          const SizedBox(height: 9),
-          _listFilter('reports', 'status', t('adminNative.status'), [
-            'open',
-            'dismissed',
-            'actioned',
-          ]),
-          _listFilter('reports', 'appeal', t('platformAdmin.appeal'), [
-            'pending',
-            'accepted',
-            'rejected',
-          ]),
-          _pager('reports', moderation),
-          if (reports.isEmpty)
-            _PlatformEmpty(
-              icon: Icons.report_outlined,
-              text: t('platformAdmin.noModerationCases'),
-            ),
-          ...reports.map(
-            (report) => Padding(
-              padding: const EdgeInsets.only(bottom: 11),
-              child: _PlatformCard(
-                icon: Icons.report_outlined,
-                title: _platformText(
-                  _platformMap(report['content'])['text'],
-                  fallback: _platformText(report['reason']),
-                ),
-                subtitle: _platformText(report['details']),
-                status: _platformText(report['status'], fallback: 'open'),
-                details: [
-                  '${t('platformAdmin.reason')}: ${_platformText(report['reason'])}',
-                  if (_platformMap(report['reporter']).isNotEmpty)
-                    '${t('platformAdmin.reporter')}: ${_platformText(_platformMap(report['reporter'])['name'])}',
-                  if (_platformText(report['appeal_status']).isNotEmpty)
-                    '${t('platformAdmin.appeal')}: ${_platformText(report['appeal_status'])}',
-                ],
-                actions: [
-                  FilledButton.tonalIcon(
-                    onPressed: _busy
-                        ? null
-                        : () => _decideModeration(item: report, kind: 'report'),
-                    icon: const Icon(Icons.fact_check_outlined),
-                    label: Text(t('platformAdmin.review')),
-                  ),
-                  if (_platformText(report['appeal_status']) == 'pending')
-                    OutlinedButton.icon(
-                      onPressed: _busy ? null : () => _decideAppeal(report),
-                      icon: const Icon(Icons.balance_outlined),
-                      label: Text(t('platformAdmin.decideAppeal')),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 5),
-        ],
-        ...[
-          _PlatformSectionTitle(
-            icon: Icons.warning_amber_outlined,
-            title: t('platformAdmin.accountWarnings'),
-            count: _platformInt(
-              _platformMap(moderation['warnings_meta'])['total'],
-            ),
-          ),
-          const SizedBox(height: 9),
-          _searchField('warnings'),
-          _listFilter('warnings', 'severity', t('platformAdmin.severity'), [
-            'low',
-            'medium',
-            'high',
-          ]),
-          _listFilter(
-            'warnings',
-            'category',
-            t('platformAdmin.category'),
-            _platformStrings(moderation['warning_categories']),
-          ),
-          _pager('warnings', moderation),
-          if (warnings.isEmpty)
-            _PlatformEmpty(
-              icon: Icons.warning_amber_outlined,
-              text: t('platformAdmin.noModerationCases'),
-            ),
-          ...warnings.map(
-            (warning) => Padding(
-              padding: const EdgeInsets.only(bottom: 11),
-              child: _PlatformCard(
-                icon: Icons.warning_amber_outlined,
-                title: _platformText(
-                  _platformMap(warning['user'])['name'],
-                  fallback: t('platformAdmin.user'),
-                ),
-                subtitle: _platformText(warning['reason']),
-                status: _platformText(warning['severity']),
-                details: [
-                  '${t('platformAdmin.points')}: ${_platformInt(warning['points'])}',
-                  _platformText(_platformMap(warning['user'])['email']),
-                  _platformStrings(
-                    _platformMap(warning['flag'])['categories'],
-                  ).join(', '),
-                ].where((value) => value.isNotEmpty).toList(),
-                actions: const [],
-              ),
-            ),
-          ),
-        ],
+        for (final list in lists)
+          if (_platformInt(_platformMap(mod['${list}_meta'])['last_page']) >
+              1) ...[
+            Text(t('moderationDesk.$list'), textAlign: TextAlign.center),
+            _pager(list, mod),
+          ],
       ],
     );
   }
@@ -1475,43 +1475,6 @@ class _PlatformAdminScreenState extends State<PlatformAdminScreen> {
     );
   }
 
-  Future<void> _decideModeration({
-    required JsonMap item,
-    required String kind,
-  }) async {
-    final t = AirmiusScope.of(context).t;
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (_) => _ModerationDecisionDialog(item: item),
-    );
-    if (payload == null) return;
-    await _run(
-      () => kind == 'flag'
-          ? _client.adminUpdateModerationFlag(_platformInt(item['id']), payload)
-          : _client.adminUpdateModerationReport(
-              _platformInt(item['id']),
-              payload,
-            ),
-      success: t('platformAdmin.moderationSaved'),
-    );
-  }
-
-  Future<void> _decideAppeal(JsonMap report) async {
-    final t = AirmiusScope.of(context).t;
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (_) => const _AppealDecisionDialog(),
-    );
-    if (payload == null) return;
-    await _run(
-      () => _client.adminDecideModerationAppeal(
-        _platformInt(report['id']),
-        payload,
-      ),
-      success: t('platformAdmin.appealSaved'),
-    );
-  }
-
   Future<void> _editRule(JsonMap rule) async {
     final t = AirmiusScope.of(context).t;
     final payload = await showDialog<JsonMap>(
@@ -1676,7 +1639,10 @@ class _RoleAdminDialogState extends State<_RoleAdminDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (widget.role == null && _name.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
+            if (widget.role == null && _name.text.trim().isEmpty) {
+              showFormFeedback(context, formMessage(context, 'required'));
+              return;
+            }
             Navigator.pop(context, {
               if (widget.role == null) 'name': _name.text.trim(),
               'description': _description.text.trim(),
@@ -1744,7 +1710,10 @@ class _PermissionAdminDialogState extends State<_PermissionAdminDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_name.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
+            if (_name.text.trim().isEmpty) {
+              showFormFeedback(context, formMessage(context, 'required'));
+              return;
+            }
             Navigator.pop(context, {
               'name': _name.text.trim(),
               'description': _description.text.trim(),
@@ -1772,7 +1741,6 @@ class _ModerationDecisionDialogState extends State<_ModerationDecisionDialog> {
   late final _reason = TextEditingController(
     text: _platformText(widget.item['decision_reason']),
   );
-  bool _removeContent = false;
 
   @override
   void dispose() {
@@ -1795,34 +1763,45 @@ class _ModerationDecisionDialogState extends State<_ModerationDecisionDialog> {
               decoration: InputDecoration(
                 labelText: t('platformAdmin.decision'),
               ),
-              items: const ['open', 'dismissed', 'actioned']
-                  .map(
-                    (status) => DropdownMenuItem(
-                      value: status,
-                      child: Text(t('platformAdmin.status.$status')),
-                    ),
-                  )
-                  .toList(),
+              items:
+                  [
+                        'open',
+                        'dismissed',
+                        'actioned',
+                        if (_platformMap(widget.item['content']).isNotEmpty)
+                          'remove',
+                      ]
+                      .map(
+                        (status) => DropdownMenuItem(
+                          value: status,
+                          child: Text(
+                            t(
+                              status == 'remove'
+                                  ? 'platformAdmin.removeContent'
+                                  : 'platformAdmin.status.$status',
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
               onChanged: (value) => setState(() => _status = value ?? _status),
             ),
             const SizedBox(height: 10),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _removeContent,
-              onChanged: (value) => setState(() => _removeContent = value),
-              title: Text(t('platformAdmin.removeContent')),
-              subtitle: Text(t('platformAdmin.removeContentBody')),
-            ),
+            if (_status == 'remove') Text(t('platformAdmin.removeContentBody')),
             const SizedBox(height: 10),
             PopupMenuButton<String>(
               tooltip: t('platformAdmin.templates'),
               onSelected: (value) {
-                _reason.text = [_reason.text.trim(), value]
-                    .where((part) => part.isNotEmpty).join(' ');
+                _reason.text = [
+                  _reason.text.trim(),
+                  value,
+                ].where((part) => part.isNotEmpty).join(' ');
               },
               itemBuilder: (_) => ['context', 'rules']
                   .map((key) => t('platformAdmin.template.$key'))
-                  .map((value) => PopupMenuItem(value: value, child: Text(value)))
+                  .map(
+                    (value) => PopupMenuItem(value: value, child: Text(value)),
+                  )
                   .toList(),
               child: Text(t('platformAdmin.templates')),
             ),
@@ -1844,11 +1823,17 @@ class _ModerationDecisionDialogState extends State<_ModerationDecisionDialog> {
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, {
-            'status': _status,
-            'remove_content': _removeContent,
+            'status': _status == 'remove' ? 'actioned' : _status,
+            'remove_content': _status == 'remove',
             'decision_reason': _reason.text.trim(),
           }),
-          child: Text(t('common.save')),
+          child: Text(
+            t(
+              _status == 'remove'
+                  ? 'platformAdmin.removeContent'
+                  : 'common.save',
+            ),
+          ),
         ),
       ],
     );
@@ -1901,12 +1886,16 @@ class _AppealDecisionDialogState extends State<_AppealDecisionDialog> {
             PopupMenuButton<String>(
               tooltip: t('platformAdmin.templates'),
               onSelected: (value) {
-                _decision.text = [_decision.text.trim(), value]
-                    .where((part) => part.isNotEmpty).join(' ');
+                _decision.text = [
+                  _decision.text.trim(),
+                  value,
+                ].where((part) => part.isNotEmpty).join(' ');
               },
               itemBuilder: (_) => ['review', 'newInfo']
                   .map((key) => t('platformAdmin.template.$key'))
-                  .map((value) => PopupMenuItem(value: value, child: Text(value)))
+                  .map(
+                    (value) => PopupMenuItem(value: value, child: Text(value)),
+                  )
                   .toList(),
               child: Text(t('platformAdmin.templates')),
             ),
@@ -2041,7 +2030,10 @@ class _GamificationRuleDialogState extends State<_GamificationRuleDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_label.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
+            if (_label.text.trim().isEmpty) {
+              showFormFeedback(context, formMessage(context, 'required'));
+              return;
+            }
             Navigator.pop(context, {
               'label': _label.text.trim(),
               'description': _description.text.trim(),
@@ -2224,7 +2216,10 @@ class _SportAdminDialogState extends State<_SportAdminDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_name.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
+            if (_name.text.trim().isEmpty) {
+              showFormFeedback(context, formMessage(context, 'required'));
+              return;
+            }
             Navigator.pop(context, {
               'name': _name.text.trim(),
               'slug': _slug.text.trim(),
@@ -2371,7 +2366,10 @@ class _BadgeAdminDialogState extends State<_BadgeAdminDialog> {
         ),
         FilledButton(
           onPressed: () {
-            if (_key.text.trim().isEmpty || _name.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
+            if (_key.text.trim().isEmpty || _name.text.trim().isEmpty) {
+              showFormFeedback(context, formMessage(context, 'required'));
+              return;
+            }
             Navigator.pop(context, {
               'key': _key.text.trim(),
               'name': _name.text.trim(),
@@ -2387,38 +2385,6 @@ class _BadgeAdminDialogState extends State<_BadgeAdminDialog> {
       ],
     );
   }
-}
-
-class _PlatformSectionTitle extends StatelessWidget {
-  const _PlatformSectionTitle({
-    required this.icon,
-    required this.title,
-    required this.count,
-  });
-
-  final IconData icon;
-  final String title;
-  final int count;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Icon(icon, color: Theme.of(context).colorScheme.primary),
-      const SizedBox(width: 9),
-      Expanded(
-        child: Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-        ),
-      ),
-      Semantics(
-        label: '$title: $count',
-        child: Badge(label: Text('$count')),
-      ),
-    ],
-  );
 }
 
 class _PlatformCard extends StatelessWidget {

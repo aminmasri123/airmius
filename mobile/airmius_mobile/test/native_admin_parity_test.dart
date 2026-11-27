@@ -79,6 +79,15 @@ void main() {
         ),
         isTrue,
       );
+      if (section == 'moderation') {
+        expect(
+          find.byKey(const ValueKey('moderation-reports')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('moderation-flags')), findsOneWidget);
+        expect(find.widgetWithText(AppBar, 'Moderation'), findsOneWidget);
+        return;
+      }
       expect(find.byType(ChoiceChip), findsOneWidget);
       expect(
         find.widgetWithText(

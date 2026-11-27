@@ -14,26 +14,7 @@ class ClubMembershipBankReconciliationService
 {
     public function readRows(string $path): array
     {
-        $handle = fopen($path, 'r');
-
-        if (! $handle) {
-            return [];
-        }
-
-        $firstLine = fgets($handle) ?: '';
-        rewind($handle);
-        $delimiter = str_contains($firstLine, ';') ? ';' : (str_contains($firstLine, "\t") ? "\t" : ',');
-        $tableRows = [];
-
-        while (($values = fgetcsv($handle, 0, $delimiter)) !== false) {
-            if ($values !== [null] && $values !== false) {
-                $tableRows[] = $values;
-            }
-        }
-
-        fclose($handle);
-
-        return $this->normalizeTableRows($tableRows);
+        return app(BankCsvMapper::class)->inspect($path)['rows'];
     }
 
     public function transactionFromRow(array $row): ?array
@@ -63,7 +44,7 @@ class ClubMembershipBankReconciliationService
         ));
         $debtorIban = ClubMembershipInput::normalizeIban($row['iban'] ?? $row['debtor_iban'] ?? $row['konto'] ?? null);
         $bookingDate = ClubMembershipInput::normalizeDate($row['datum'] ?? $row['date'] ?? $row['buchungstag'] ?? $row['booking_date'] ?? null);
-        $currency = strtoupper(trim((string) ($row['Währung'] ?? $row['currency'] ?? 'EUR'))) ?: 'EUR';
+        $currency = strtoupper(trim((string) ($row['waehrung'] ?? $row['currency'] ?? 'EUR'))) ?: 'EUR';
 
         $hashPayload = implode('|', [
             $bookingDate,
@@ -396,43 +377,6 @@ class ClubMembershipBankReconciliationService
                 'conflicts' => $preview['conflicts'],
             ],
         ];
-    }
-
-    private function normalizeTableRows(array $tableRows): array
-    {
-        $headerIndex = null;
-        $headers = [];
-
-        foreach ($tableRows as $index => $values) {
-            $candidate = array_map(fn ($value) => ClubMembershipInput::normalizeKey($value), $values);
-
-            if (in_array('betrag', $candidate, true) || in_array('amount', $candidate, true)) {
-                $headerIndex = $index;
-                $headers = $candidate;
-                break;
-            }
-        }
-
-        if ($headerIndex === null) {
-            return [];
-        }
-
-        $rows = [];
-
-        foreach (array_slice($tableRows, $headerIndex + 1) as $values) {
-            $row = [];
-            foreach ($headers as $index => $header) {
-                if ($header !== '') {
-                    $row[$header] = $values[$index] ?? null;
-                }
-            }
-
-            if (array_filter($row, fn ($value) => filled($value))) {
-                $rows[] = $row;
-            }
-        }
-
-        return $rows;
     }
 
     private function nameLooksSimilar(?string $expected, ?string $actual): bool

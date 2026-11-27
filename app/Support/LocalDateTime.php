@@ -26,6 +26,19 @@ class LocalDateTime
             ->format($format);
     }
 
+    public static function todayFor(?User $user = null, ?Request $request = null): string
+    {
+        // Native clients can report their current offset without an IANA zone.
+        // Apply it to UTC, not to the server's configured timezone.
+        $offset = $request?->header('X-Airmius-Utc-Offset-Minutes');
+        if (is_string($offset) && preg_match('/^-?\d{1,3}$/D', $offset)
+            && (int) $offset >= -720 && (int) $offset <= 840) {
+            return now('UTC')->addMinutes((int) $offset)->toDateString();
+        }
+
+        return now(self::timezoneFor($user, $request))->toDateString();
+    }
+
     public static function isValidTimezone(mixed $timezone): bool
     {
         return is_string($timezone)

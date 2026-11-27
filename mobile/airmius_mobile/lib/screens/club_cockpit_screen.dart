@@ -236,22 +236,6 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
                   const SizedBox(height: 12),
                 ],
                 _clubPicker(data),
-                if (club.management?.permissions['effective'] is JsonMap &&
-                    (club.management!.permissions['effective']
-                            as JsonMap)['website_request.create'] ==
-                        true) ...[
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.language_outlined),
-                    label: Text(t('commerceAdv.requestWebsite')),
-                    onPressed: () => _open(
-                      CommerceCenterScreen(
-                        initialSection: 'websites',
-                        preferredWebsiteClubId: club.id,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
                 if (club.deletionScheduledAt != null) ...[
                   const SizedBox(height: 12),
                   Text(
@@ -670,24 +654,6 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
               ),
             ],
           ),
-          if (subscription['can_open_shop'] == true)
-            OutlinedButton.icon(
-              icon: const Icon(Icons.storefront_outlined),
-              label: Text(t('seller.title')),
-              onPressed: () => _open(
-                CommerceCenterScreen(
-                  clubId: club.id,
-                  initialSection: 'products',
-                ),
-              ),
-            ),
-          if (subscription['can_book_shop'] == true)
-            OutlinedButton.icon(
-              icon: const Icon(Icons.shopping_bag_outlined),
-              label: const Text('Verein Komplett · 39 € / Monat'),
-              onPressed: () =>
-                  _open(SubscriptionCenterScreen(initialClubId: club.id)),
-            ),
           ExpansionTile(
             dense: true,
             tilePadding: EdgeInsets.zero,
@@ -1446,8 +1412,55 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
             child: Eyebrow(group.$1),
           ),
           _areaGrid(group.$2),
+          if (identical(group.$2, organizationAreas)) _commerceArea(club),
         ],
       ],
+    );
+  }
+
+  Widget _commerceArea(ClubSummary club) {
+    final t = AirmiusScope.of(context).t;
+    final subscription = club.management?.subscription;
+    final permissions = club.management?.permissions['effective'];
+    final website =
+        permissions is JsonMap && permissions['website_request.create'] == true;
+    final shop = subscription?['can_open_shop'] == true;
+    final booking = subscription?['can_book_shop'] == true;
+    if (!website && !shop && !booking) return const SizedBox.shrink();
+    return Card(
+      child: ExpansionTile(
+        key: ValueKey('club-commerce-${club.id}'),
+        leading: const Icon(Icons.storefront_outlined),
+        title: const Text('Commerce'),
+        children: [
+          if (shop)
+            ListTile(
+              title: Text(t('seller.title')),
+              onTap: () => _open(
+                CommerceCenterScreen(
+                  clubId: club.id,
+                  initialSection: 'products',
+                ),
+              ),
+            ),
+          if (booking)
+            ListTile(
+              title: const Text('Verein Komplett · 39 € / Monat'),
+              onTap: () =>
+                  _open(SubscriptionCenterScreen(initialClubId: club.id)),
+            ),
+          if (website)
+            ListTile(
+              title: Text(t('commerceAdv.requestWebsite')),
+              onTap: () => _open(
+                CommerceCenterScreen(
+                  initialSection: 'websites',
+                  preferredWebsiteClubId: club.id,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 

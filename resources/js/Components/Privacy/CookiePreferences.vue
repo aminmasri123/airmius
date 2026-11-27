@@ -139,7 +139,7 @@ onBeforeUnmount(() => {
     <button
         v-if="hasDecision && !isOpen"
         type="button"
-        class="fixed bottom-4 start-4 z-[90] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-xl text-primary shadow-lg transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary focus:ring-offset-2 focus:ring-offset-bg"
+        class="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] start-4 z-[90] flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-xl text-primary shadow-lg transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary focus:ring-offset-2 focus:ring-offset-bg md:bottom-4"
         :aria-label="t('cookie_consent.open')"
         :title="t('cookie_consent.open')"
         @click="openPreferences"

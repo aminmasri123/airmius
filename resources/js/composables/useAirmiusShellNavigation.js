@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { usePermissions } from '@/composables/usePermissions'
+import { matchesNavigation } from '@/support/navigationMatch'
 
 const PLATFORM_ROLES = ['super_admin', 'admin', 'system_admin', 'platform_engineer', 'security_admin']
 const CLUB_ROLES = ['club_owner', 'club_admin', 'club_manager', 'academy_manager', 'financial_controller', 'media_manager']
@@ -16,7 +17,6 @@ export const useAirmiusShellNavigation = () => {
     const page = usePage()
     const { can, hasAny, hasAnyRole } = usePermissions()
 
-    const path = computed(() => String(page.url || '/').split('?')[0])
     const enabledModules = computed(() => page.props.auth?.user?.navigation_modules?.enabled || [])
     const moduleEnabled = (module) => enabledModules.value.includes(module)
     const isPlatform = computed(() => hasAnyRole(PLATFORM_ROLES))
@@ -28,15 +28,15 @@ export const useAirmiusShellNavigation = () => {
     const workspaceCount = computed(() => [isCoach.value, isClub.value, isSponsor.value].filter(Boolean).length)
     const canOperate = computed(() => hasAny(OPERATION_PERMISSIONS))
 
-    const matches = (paths = []) => paths.some((candidate) => path.value === candidate || path.value.startsWith(`${candidate}/`))
-    const item = (key, labelKey, icon, href, activePaths = [], badge = null) => ({
+    const item = (key, labelKey, icon, href, activePaths = [], badge = null, activeQuery = {}) => ({
         key,
         label: labelKey,
         icon,
         href,
         activePaths,
+        activeQuery,
         badge,
-        active: matches(activePaths),
+        active: matchesNavigation(page.url, activePaths, activeQuery),
     })
 
     const roleHome = computed(() => {
@@ -112,7 +112,7 @@ export const useAirmiusShellNavigation = () => {
                 label: 'shell.spaces.today',
                 icon: 'las la-sun',
                 items: [
-                    item('home', 'shell.items.home', 'las la-home', roleHome.value, ['/dashboard', '/workspaces', '/club-cockpit', '/trainer-cockpit', '/sponsor-cockpit']),
+                    item('home', 'shell.items.home', 'las la-home', roleHome.value, ['/dashboard', '/workspaces', '/club-cockpit', '/trainer-cockpit', '/sponsor-cockpit'], null, { panel: null }),
                     isSponsor.value ? item('sponsor-cockpit', 'Sponsor-Cockpit', 'las la-handshake', route('auth.sponsor-workspace.index'), ['/sponsor-cockpit']) : null,
                     can('notifications.view') ? item('notifications', 'shell.items.notifications', 'las la-bell', route('auth.notifications.index'), ['/notifications'], unreadNotifications.value || null) : null,
                     can('chat.view') ? item('messages', 'shell.items.messages', 'las la-comments', route('auth.conversations.index'), ['/conversations'], unreadChats.value || null) : null,
@@ -152,9 +152,9 @@ export const useAirmiusShellNavigation = () => {
                 label: 'shell.spaces.organization',
                 icon: 'las la-sitemap',
                 items: [
-                    isClub.value && can('club-cockpit.view') ? item('club-cockpit', 'shell.items.club_cockpit', 'las la-tachometer-alt', route('auth.club-cockpit.index'), ['/club-cockpit']) : null,
-                    (isClub.value || hasClubMembership.value) ? item('club-todos', 'shell.items.club_todos', 'las la-tasks', `${route('auth.club-cockpit.index')}?panel=tasks&task_scope=all`, ['/club-cockpit']) : null,
-                    isClub.value && can('club-cockpit.view') ? item('club-calendar', 'shell.items.club_calendar', 'las la-calendar-alt', `${route('auth.club-cockpit.index')}?panel=calendar`, ['/club-cockpit']) : null,
+                    isClub.value && can('club-cockpit.view') ? item('club-cockpit', 'shell.items.club_cockpit', 'las la-tachometer-alt', route('auth.club-cockpit.index'), ['/club-cockpit'], null, { panel: null }) : null,
+                    (isClub.value || hasClubMembership.value) ? item('club-todos', 'shell.items.club_todos', 'las la-tasks', `${route('auth.club-cockpit.index')}?panel=tasks&task_scope=all`, ['/club-cockpit'], null, { panel: 'tasks' }) : null,
+                    isClub.value && can('club-cockpit.view') ? item('club-calendar', 'shell.items.club_calendar', 'las la-calendar-alt', `${route('auth.club-cockpit.index')}?panel=calendar`, ['/club-cockpit'], null, { panel: 'calendar' }) : null,
                     (isCoach.value || isClub.value) && can('team.index') ? item('teams', 'shell.items.teams', 'las la-users', route('auth.teams.index'), ['/teams', '/clubs']) : null,
                     isClub.value && can('club-memberships.view') ? item('members', 'shell.items.members', 'las la-id-card', route('auth.club-memberships.index'), ['/club-memberships']) : null,
                     page.props.workAutomationAvailable ? item('work-automation', 'Arbeitsautomation', 'las la-cogs', route('auth.work-automation.index'), ['/club-work-automation']) : null,

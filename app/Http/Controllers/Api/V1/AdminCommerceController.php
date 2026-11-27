@@ -125,6 +125,7 @@ class AdminCommerceController extends Controller
                 ...array_map(fn ($page) => $page->items(), $pages),
                 'pagination' => array_map(fn ($page) => $this->pageMeta($page), $pages),
                 'commerce_settings' => $this->dashboardPayload->commerceSettings(),
+                'product_clubs' => \App\Models\Club::query()->orderBy('name')->get(['id', 'name']),
                 'marketplace_visuals' => $this->marketplaceVisuals(),
                 'marketplace_commissions' => $this->marketplaceCommissions(),
             ],

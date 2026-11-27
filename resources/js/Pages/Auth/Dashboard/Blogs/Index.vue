@@ -5,10 +5,14 @@ import { computed, nextTick, ref } from 'vue'
 import { confirmDialog, promptDialog } from '@/services/dialogService'
 import { useI18n } from 'vue-i18n'
 import blogLocalizationCopy from '@/Pages/Blog/blogLocalizationCopy.json'
+import editorialCopy from '@/i18n/blogEditorLocalization.json'
 
 defineOptions({ layout: AppLayout })
 
-const { t, locale } = useI18n({ useScope: 'global' })
+const { t, locale, mergeLocaleMessage } = useI18n({ useScope: 'global' })
+Object.entries(editorialCopy).forEach(([language, messages]) => {
+    mergeLocaleMessage(language, { blogs_editor: messages })
+})
 const localeCode = computed(() => String(locale.value || 'de').replace('_', '-'))
 const uiLocale = computed(() => ['de', 'en', 'fr', 'ar'].includes(localeCode.value.slice(0, 2)) ? localeCode.value.slice(0, 2) : 'de')
 const lx = (key, params = {}) => {

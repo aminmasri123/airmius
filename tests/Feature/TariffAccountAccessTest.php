@@ -2936,10 +2936,33 @@ class TariffAccountAccessTest extends TestCase
                 $checks = collect($response->json('plan.quality_check.checks'))->keyBy('key');
                 $this->assertSame('warning', $checks['profile']['status']);
             } else {
-                $response->assertUnprocessable()->assertJsonPath('code', 'training_ai_unavailable');
+                $response->assertUnprocessable()->assertJsonPath('code', 'training_ai_subscription_required');
                 \Illuminate\Support\Facades\Http::assertSentCount($before);
             }
         }
+    }
+
+    public function test_ai_preview_names_eligible_subscriptions_before_queueing(): void
+    {
+        $user = $this->accountForPlan('trainer-free');
+        $user->assignRole(\Spatie\Permission\Models\Role::findOrCreate('coach', 'web'));
+        $this->actingAs($user->fresh());
+
+        $response = $this->postJson('/api/v1/training/ai/plans/preview', [
+            'async' => true,
+            'goal' => '5 km unter 20 Minuten',
+            'sport_type' => 'Laufen',
+            'level' => 'intermediate',
+            'phase' => 'build',
+            'weeks' => 4,
+            'sessions_per_week' => 3,
+        ]);
+
+        $response->assertUnprocessable()->assertJsonPath('code', 'training_ai_subscription_required');
+        foreach (['Trainer Pro', 'Club', 'Pro', 'Elite', 'Verein Komplett'] as $plan) {
+            $this->assertStringContainsString($plan, $response->json('message'));
+        }
+        $this->assertDatabaseCount('training_ai_generations', 0);
     }
 
     #[DataProvider('plans')]

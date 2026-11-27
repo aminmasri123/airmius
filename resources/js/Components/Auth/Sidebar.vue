@@ -61,6 +61,12 @@ const formatStorage = (bytes) => {
                     :active-paths="space.activePaths"
                     @navigate="emit('close')"
                 />
+                <NavItem
+                    :href="route('welcome')"
+                    :label="$t('Gastseite')"
+                    icon="las la-globe"
+                    @navigate="emit('close')"
+                />
             </div>
 
             <div class="my-4 border-t border-border"></div>
@@ -84,6 +90,7 @@ const formatStorage = (bytes) => {
                         :icon="item.icon"
                         :badge="item.badge"
                         :active-paths="item.activePaths"
+                        :active-query="item.activeQuery"
                         @navigate="emit('close')"
                     />
                 </NavGroup>

@@ -2342,6 +2342,7 @@
       }
     },
     "subnav": {
+      "more": "Plus",
       "feed": "Fil",
       "top_content": "Meilleurs contenus",
       "jobs": "Emplois",
@@ -5356,7 +5357,17 @@
       "bank_import_title": "Importer des opérations bancaires",
       "bank_import_intro": "Importez un CSV de votre banque en ligne. La date, le montant, le payeur, l'IBAN et le motif sont détectés.",
       "csv_file": "Fichier CSV",
-      "bank_import_hint": "Les correspondances sûres avec numéro de facture et montant sont marquées comme payées. Confirmez ensuite les suggestions.",
+      "bank_import_hint": "La prévisualisation n’enregistre rien. Après l’import, les correspondances restent des suggestions ; le paiement est enregistré après confirmation de l’attribution.",
+      "bank_map_title": "Associer les colonnes bancaires",
+      "bank_map_body": "Choisissez la date de comptabilisation et le montant reçu. Les autres colonnes améliorent le rapprochement.",
+      "bank_map_no_columns": "Aucune colonne CSV trouvée. Sélectionnez un fichier CSV avec des en-têtes.",
+      "bank_map_date": "Date de comptabilisation",
+      "bank_map_amount": "Montant reçu",
+      "bank_map_purpose": "Référence du paiement",
+      "bank_map_debtor_name": "Nom du payeur",
+      "bank_map_debtor_iban": "IBAN du payeur",
+      "bank_map_currency": "Devise",
+      "bank_map_none": "Ne pas associer",
       "visible_transactions": "{visible} opérations sur {total} visibles.",
       "datev_period_hint": "Les paiements réglés sur la période sont exportés. Le format CSV bêta reste volontairement simple et vérifiable."
     },
@@ -5755,115 +5766,6 @@
       "new_eyebrow": "Nouvelle catégorie",
       "create_title": "Créer une catégorie",
       "slug_placeholder": "généré si vide"
-    }
-  },
-  "blogs_editor": {
-    "page_title": "Blogs",
-    "eyebrow": "CMS du site",
-    "title": "Studio de blog",
-    "intro": "Rédigez des articles avec titres, listes, mises en évidence, liens, citations et une présentation publique claire.",
-    "categories": "Catégories",
-    "search": "Rechercher...",
-    "filter": "Filtrer",
-    "revisions": "révisions",
-    "latest_revision": "Dernière sauvegarde : {date}, SEO {score}%",
-    "empty": "Aucun article pour le moment.",
-    "form": {
-      "edit_eyebrow": "Modifier l’article",
-      "new_eyebrow": "Nouvel article",
-      "write_title": "Rédiger",
-      "new_button": "Nouveau"
-    },
-    "fields": {
-      "title": "Titre",
-      "slug": "Slug",
-      "slug_placeholder": "généré si vide",
-      "category": "Catégorie",
-      "category_placeholder": "Choisir une catégorie",
-      "status": "Statut",
-      "publish_at": "Publier le",
-      "excerpt": "Résumé",
-      "content": "Contenu",
-      "cover": "Image de couverture",
-      "cover_placeholder": "https://…",
-      "cover_help": "Recommandé : 1600 × 900 px en paysage. Collez un lien ou téléversez une image ; le téléversement est prioritaire.",
-      "tags": "Tags",
-      "tags_placeholder": "Entraînement, club, numérique"
-    },
-    "toolbar": {
-      "bold": "Gras",
-      "italic": "Italique",
-      "underline": "Souligné",
-      "strike": "Barré",
-      "list": "Liste",
-      "numbered_list": "Liste numérotée",
-      "quote": "Citation",
-      "left": "Aligner à gauche",
-      "center": "Centré",
-      "right": "Aligner à droite",
-      "ltr": "Gauche à droite",
-      "rtl": "Droite à gauche",
-      "link": "Lien",
-      "insert_image": "Insérer une image dans le contenu",
-      "remove_format": "Supprimer le formatage"
-    },
-    "styles": {
-      "choose": "Choisir le style",
-      "paragraph": "Paragraphe",
-      "article_title": "Titre de l’article",
-      "lead": "Sous-titre / introduction",
-      "section": "Section",
-      "subheading": "Intertitre",
-      "quote": "Citation",
-      "callout": "Encadré",
-      "code": "Code / note"
-    },
-    "inline": {
-      "choose": "Couleur / surlignage",
-      "primary": "Texte standard",
-      "secondary": "Information secondaire",
-      "accent": "Accent",
-      "success": "Positif",
-      "warning": "Important",
-      "danger": "Avertissement",
-      "mark": "Surlignage"
-    },
-    "editor": {
-      "text_placeholder": "Saisir du texte...",
-      "callout_label": "Note"
-    },
-    "prompts": {
-      "link_title": "Insérer un lien",
-      "link_message": "Saisissez l’URL complète à lier dans l’article.",
-      "url": "URL",
-      "insert": "Insérer",
-      "image_title": "Description de l’image",
-      "image_message": "Le texte alternatif améliore l’accessibilité et le SEO.",
-      "alt_text": "Texte alternatif",
-      "upload_image": "Télécharger l’image"
-    },
-    "seo": {
-      "title": "SEO",
-      "title_label": "Titre optimisé pour la recherche",
-      "title_hint": "35–65 caractères",
-      "meta_label": "Méta-description convaincante",
-      "meta_hint": "110–160 caractères",
-      "excerpt_label": "Résumé présent",
-      "excerpt_hint": "Au moins 80 caractères",
-      "depth_label": "Article suffisamment détaillé",
-      "words_hint": "{count} mots",
-      "category_label": "Catégorie définie",
-      "category_hint": "Pour les archives, fils d’Ariane et articles associés",
-      "cover_label": "Couverture définie",
-      "cover_hint": "1600 × 900 px recommandé",
-      "meta_title_placeholder": "Méta-titre",
-      "meta_description_placeholder": "Méta-description",
-      "publish_blocked": "La publication exige au moins 85 % de qualité SEO."
-    },
-    "delete_title": "Supprimer l’article",
-    "delete_message": "Supprimer l’article « {title} » ?",
-    "filters": {
-      "all": "Tous les statuts"
     }
   },
   "recruiting_pipeline": {

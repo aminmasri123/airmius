@@ -100,6 +100,7 @@ class PublicContentController extends Controller
             'data' => [
                 ...$this->postCard($blogPost),
                 'content_text' => $this->plainContent($blogPost->content),
+                'content_html' => app(\App\Support\BlogContentSanitizer::class)->sanitize((string) $blogPost->content),
                 'translations' => $this->translations->variants($blogPost, true)->all(),
             ],
             'related' => $related->map(fn (BlogPost $post) => $this->postCard($post))->values(),

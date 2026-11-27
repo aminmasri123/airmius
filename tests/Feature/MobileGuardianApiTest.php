@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Club;
 use App\Models\Event;
 use App\Models\EventParticipant;
 use App\Models\Notification as AppNotification;
+use App\Models\Team;
 use App\Models\TrainingLog;
 use App\Models\User;
 use App\Notifications\GuardianConsentRequested;
@@ -241,6 +243,20 @@ class MobileGuardianApiTest extends TestCase
             'guardian_email' => $foreignGuardian->email,
         ]);
 
+        $directClub = Club::factory()->create(['name' => 'Direkter Verein']);
+        $teamClub = Club::factory()->create(['name' => 'Teamverein']);
+        $pausedClub = Club::factory()->create(['name' => 'Pausierter Verein']);
+        $team = Team::factory()->create(['club_id' => $teamClub->id, 'name' => 'U14']);
+        $directClub->users()->attach($approved->id, [
+            'role' => 'member',
+            'membership_status' => 'active',
+        ]);
+        $pausedClub->users()->attach($approved->id, [
+            'role' => 'member',
+            'membership_status' => 'paused',
+        ]);
+        $team->users()->attach($approved->id, ['role' => 'Player']);
+
         $event = Event::query()->create([
             'user_id' => $guardian->id,
             'title' => 'Geschütztes Training',
@@ -290,6 +306,13 @@ class MobileGuardianApiTest extends TestCase
             ->assertJsonPath('data.access.scope', 'safe_aggregates')
             ->assertJsonPath('data.access.private_details_hidden', true)
             ->assertJsonPath('data.access.notes_visible', false)
+            ->assertJsonPath('data.memberships.0.club.id', $directClub->id)
+            ->assertJsonPath('data.memberships.0.club.name', 'Direkter Verein')
+            ->assertJsonPath('data.memberships.0.teams', [])
+            ->assertJsonPath('data.memberships.1.club.id', $teamClub->id)
+            ->assertJsonPath('data.memberships.1.teams.0.id', $team->id)
+            ->assertJsonPath('data.memberships.1.teams.0.name', 'U14')
+            ->assertJsonMissing(['name' => 'Pausierter Verein'])
             ->assertJsonPath('data.upcoming_events.0.title', 'Geschütztes Training')
             ->assertJsonPath('data.upcoming_events.0.location_name', 'Sporthalle')
             ->assertJsonPath('data.upcoming_events.0.participation_status', 'yes')
@@ -307,6 +330,7 @@ class MobileGuardianApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.access.approved', false)
             ->assertJsonPath('data.access.scope', 'consent_only')
+            ->assertJsonPath('data.memberships', [])
             ->assertJsonPath('data.upcoming_events', [])
             ->assertJsonPath('data.training.sessions', 0)
             ->assertJsonPath('data.training.private_notes_hidden', true);

@@ -1479,6 +1479,12 @@ class _AdminCommerceOperationsScreenState
   }
 
   Future<void> _editProduct([Map<String, dynamic>? product]) async {
+    final bundle = await _future;
+    if (!mounted) return;
+    final clubs = (bundle?.catalog['product_clubs'] as List? ?? const [])
+        .whereType<Map>()
+        .map((club) => Map<String, dynamic>.from(club))
+        .toList();
     final creating = product == null;
     final category = _text(product?['category'], fallback: 'product');
     final values = await _form(
@@ -1523,7 +1529,23 @@ class _AdminCommerceOperationsScreenState
           'product_type',
           t('commerceOps.productType'),
           initial: _text(product?['product_type'], fallback: 'single'),
-          choices: const ['single', 'variable', 'digital'],
+          choices: const ['single', 'variable', 'digital', 'teamwear'],
+          choiceLabels: const {'teamwear': 'Teamwear'},
+        ),
+        _Field.choice(
+          'club_id',
+          'Verein (für Teamwear erforderlich)',
+          initial: product?['club_id']?.toString() ?? '',
+          choices: ['', ...clubs.map((club) => '${club['id']}')],
+          choiceLabels: {
+            '': 'Kein Verein',
+            for (final club in clubs) '${club['id']}': _text(club['name']),
+          },
+        ),
+        _Field.text(
+          'teamwear_supplier',
+          'Lieferant (Teamwear)',
+          initial: _text(product?['teamwear_supplier']),
         ),
         _Field.text('sku', 'SKU', initial: _text(product?['sku'])),
         _Field.number(
@@ -1629,6 +1651,8 @@ class _AdminCommerceOperationsScreenState
       'catalog_subcategory': values['catalog_subcategory'],
       'sports': values['sports'],
       'product_type': values['product_type'],
+      'club_id': int.tryParse('${values['club_id']}'),
+      'teamwear_supplier': _nullable(values['teamwear_supplier']),
       'sku': _nullable(values['sku']),
       'is_shippable': values['is_shippable'],
       'manages_stock': values['manages_stock'],

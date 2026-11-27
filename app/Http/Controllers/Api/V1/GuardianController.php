@@ -97,6 +97,7 @@ class GuardianController extends Controller
                         'scope' => 'consent_only',
                         'private_details_hidden' => true,
                     ],
+                    'memberships' => [],
                     'upcoming_events' => [],
                     'training' => $this->emptyTrainingSummary(),
                 ],
@@ -152,6 +153,7 @@ class GuardianController extends Controller
                     'private_details_hidden' => true,
                     'notes_visible' => false,
                 ],
+                'memberships' => $this->membershipSummary($managedChild),
                 'upcoming_events' => $events,
                 'training' => [
                     'period_days' => 28,
@@ -563,6 +565,60 @@ class GuardianController extends Controller
             'last_performed_at' => null,
             'private_notes_hidden' => true,
         ];
+    }
+
+    private function membershipSummary(User $child): array
+    {
+        $memberships = collect();
+
+        $child->clubs()
+            ->where(function (Builder $query): void {
+                $query->whereNull('club_user.membership_status')
+                    ->orWhereRaw("LOWER(TRIM(club_user.membership_status)) = 'active'");
+            })
+            ->orderBy('clubs.name')
+            ->get(['clubs.id', 'clubs.name'])
+            ->each(function ($club) use ($memberships): void {
+                $memberships->put((int) $club->id, [
+                    'club' => ['id' => (int) $club->id, 'name' => $club->name],
+                    'teams' => collect(),
+                ]);
+            });
+
+        $child->teams()
+            ->with('club:id,name')
+            ->orderBy('teams.name')
+            ->get(['teams.id', 'teams.name', 'teams.club_id'])
+            ->each(function ($team) use ($memberships): void {
+                if (! $team->club) {
+                    return;
+                }
+
+                $clubId = (int) $team->club_id;
+                $membership = $memberships->get($clubId, [
+                    'club' => ['id' => $clubId, 'name' => $team->club->name],
+                    'teams' => collect(),
+                ]);
+                $membership['teams']->push([
+                    'id' => (int) $team->id,
+                    'name' => $team->name,
+                ]);
+                $memberships->put($clubId, $membership);
+            });
+
+        return $memberships
+            ->sortBy(fn (array $membership) => mb_strtolower((string) $membership['club']['name']))
+            ->map(function (array $membership): array {
+                $membership['teams'] = $membership['teams']
+                    ->unique('id')
+                    ->sortBy(fn (array $team) => mb_strtolower((string) $team['name']))
+                    ->values()
+                    ->all();
+
+                return $membership;
+            })
+            ->values()
+            ->all();
     }
 
     private function consentStatusFor(User $user): string

@@ -9,6 +9,7 @@ import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
+import '../core/editorial_quality.dart';
 import '../core/editorial_image_upload.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/editorial_rich_editor.dart';
@@ -582,6 +583,20 @@ class _EditorialPostSheetState extends State<_EditorialPostSheet> {
 
   String t(String key) => AirmiusScope.of(context).t(key);
 
+  void _refreshQuality() {
+    if (mounted) setState(() {});
+  }
+
+  EditorialQualityResult get _quality => evaluateEditorialQuality(
+    title: _title.text,
+    metaTitle: _metaTitle.text,
+    excerpt: _excerpt.text,
+    metaDescription: _metaDescription.text,
+    contentHtml: _content.toHtml(),
+    hasCategory: _categoryId != null,
+    hasCover: _cover.text.trim().isNotEmpty,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -609,10 +624,30 @@ class _EditorialPostSheetState extends State<_EditorialPostSheet> {
         widget.translationLocale ??
         _editorText(post['content_locale'], fallback: widget.client.locale);
     _categoryId = _editorNullableInt(post['blog_category_id']);
+    for (final controller in [
+      _title,
+      _excerpt,
+      _cover,
+      _metaTitle,
+      _metaDescription,
+    ]) {
+      controller.addListener(_refreshQuality);
+    }
+    _content.addListener(_refreshQuality);
   }
 
   @override
   void dispose() {
+    for (final controller in [
+      _title,
+      _excerpt,
+      _cover,
+      _metaTitle,
+      _metaDescription,
+    ]) {
+      controller.removeListener(_refreshQuality);
+    }
+    _content.removeListener(_refreshQuality);
     for (final controller in [
       _title,
       _excerpt,
@@ -897,6 +932,10 @@ class _EditorialPostSheetState extends State<_EditorialPostSheet> {
                   label: t('editorial.coverUrl'),
                   keyboardType: TextInputType.url,
                 ),
+                Text(
+                  editorialLabel(context, 'coverFormat'),
+                  style: TextStyle(color: airmiusMutedColor(context)),
+                ),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
@@ -923,6 +962,8 @@ class _EditorialPostSheetState extends State<_EditorialPostSheet> {
                   maxLines: 3,
                   maxLength: 500,
                 ),
+                const SizedBox(height: 12),
+                _EditorialQualityPanel(result: _quality),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: statuses.contains(_status) ? _status : 'draft',
@@ -975,6 +1016,128 @@ class _EditorialPostSheetState extends State<_EditorialPostSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _EditorialQualityPanel extends StatelessWidget {
+  const _EditorialQualityPanel({required this.result});
+
+  final EditorialQualityResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    final passedColor = AirmiusColors.green;
+    final failedColor = Theme.of(context).colorScheme.error;
+    final summary = editorialLabel(context, 'qualitySummary')
+        .replaceFirst('{score}', '${result.score}')
+        .replaceFirst('{passed}', '${result.passed}');
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: airmiusSurfaceSoftColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: airmiusBorderColor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            editorialLabel(context, 'qualityTitle'),
+            style: TextStyle(
+              color: airmiusTextColor(context),
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            summary,
+            style: TextStyle(
+              color: result.publishable ? passedColor : failedColor,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final check in result.checks) ...[
+            _EditorialQualityRow(check: check),
+            if (check != result.checks.last) const SizedBox(height: 9),
+          ],
+          const SizedBox(height: 12),
+          Text(
+            editorialLabel(context, 'qualityAllRequired'),
+            style: TextStyle(
+              color: airmiusMutedColor(context),
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EditorialQualityRow extends StatelessWidget {
+  const _EditorialQualityRow({required this.check});
+
+  final EditorialQualityCheck check;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = check.passed
+        ? AirmiusColors.green
+        : Theme.of(context).colorScheme.error;
+    final labelKey = switch (check.criterion) {
+      EditorialQualityCriterion.title => 'qualityTitleCheck',
+      EditorialQualityCriterion.description => 'qualityDescriptionCheck',
+      EditorialQualityCriterion.excerpt => 'qualityExcerptCheck',
+      EditorialQualityCriterion.content => 'qualityContentCheck',
+      EditorialQualityCriterion.category => 'qualityCategoryCheck',
+      EditorialQualityCriterion.cover => 'qualityCoverCheck',
+    };
+    final label = editorialLabel(
+      context,
+      labelKey,
+    ).replaceFirst('{current}', '${check.current}');
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          check.passed ? Icons.check_circle : Icons.error_outline,
+          color: color,
+          size: 20,
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: airmiusTextColor(context),
+                  fontWeight: FontWeight.w700,
+                  height: 1.3,
+                ),
+              ),
+              Text(
+                editorialLabel(
+                  context,
+                  check.passed ? 'qualityPassed' : 'qualityFailed',
+                ),
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1047,7 +1210,10 @@ class _CategoryManagerState extends State<_CategoryManager> {
           ),
           FilledButton(
             onPressed: () {
-              if (name.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
+              if (name.text.trim().isEmpty) {
+                showFormFeedback(context, formMessage(context, 'required'));
+                return;
+              }
               Navigator.pop(context, {
                 'name': name.text.trim(),
                 'slug': category == null ? null : _editorText(category['slug']),

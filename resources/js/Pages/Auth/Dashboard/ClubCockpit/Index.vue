@@ -1,6 +1,6 @@
 ﻿<script setup>
 import { computed, ref, watch } from 'vue'
-import { Head, Link, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { usePermissions } from '@/composables/usePermissions'
@@ -61,7 +61,21 @@ const showAllClubTasks = ref(queryParams.get('task_scope') === 'all')
 const clubTaskDraft = ref({ title: '', description: '', priority: 'normal', status: 'open', visibility: 'club', assignment_mode: 'single', participant_ids: [], team_id: '', due_at: '', checklist_text: '', attachment_links_text: '' })
 const clubTaskDraftFiles = ref([])
 const clubTaskComments = ref({})
-const activeWorkPanel = ref(String(page.url || '').includes('panel=calendar') ? 'calendar' : 'tasks')
+const activeWorkPanel = computed(() => new URLSearchParams(String(page.url || '').split('?')[1] || '').get('panel') === 'calendar' ? 'calendar' : 'tasks')
+watch(() => page.url, (url) => {
+    const params = new URLSearchParams(String(url || '').split('?')[1] || '')
+    const clubId = Number(params.get('club_id') || 0)
+    selectedClubId.value = props.clubs.find((club) => Number(club.id) === clubId)?.id || props.clubs[0]?.id || null
+    showAllClubTasks.value = params.get('task_scope') === 'all'
+})
+const selectWorkPanel = (panel) => {
+    const url = new URL(page.url, window.location.origin)
+    url.searchParams.set('panel', panel)
+    if (selectedClubId.value) url.searchParams.set('club_id', selectedClubId.value)
+    if (showAllClubTasks.value) url.searchParams.set('task_scope', 'all')
+    else url.searchParams.delete('task_scope')
+    router.push({ url: `${url.pathname}${url.search}${url.hash}`, preserveState: true, preserveScroll: true })
+}
 const clubCalendarView = ref('week')
 const clubCalendarCursor = ref(new Date())
 
@@ -757,10 +771,10 @@ async function uploadClubTaskAttachments(task, event) {
                             {{ t('Alle meine Vereine') }}
                         </label>
                         <div class="inline-flex rounded-lg border border-border bg-inputBg p-1">
-                            <button type="button" :class="['rounded-md px-3 py-2 text-sm font-bold', activeWorkPanel === 'tasks' ? 'bg-card text-primary shadow-sm' : 'text-secondary']" @click="activeWorkPanel = 'tasks'">
+                            <button type="button" :aria-pressed="activeWorkPanel === 'tasks'" :class="['rounded-md px-3 py-2 text-sm font-bold', activeWorkPanel === 'tasks' ? 'bg-card text-primary shadow-sm' : 'text-secondary']" @click="selectWorkPanel('tasks')">
                                 <i class="las la-tasks mr-1"></i>{{ t('To-dos') }}
                             </button>
-                            <button type="button" :class="['rounded-md px-3 py-2 text-sm font-bold', activeWorkPanel === 'calendar' ? 'bg-card text-primary shadow-sm' : 'text-secondary']" @click="activeWorkPanel = 'calendar'">
+                            <button type="button" :aria-pressed="activeWorkPanel === 'calendar'" :class="['rounded-md px-3 py-2 text-sm font-bold', activeWorkPanel === 'calendar' ? 'bg-card text-primary shadow-sm' : 'text-secondary']" @click="selectWorkPanel('calendar')">
                                 <i class="las la-calendar-alt mr-1"></i>{{ t('Kalender') }}
                             </button>
                         </div>

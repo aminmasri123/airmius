@@ -5097,8 +5097,17 @@ void main() {
       const ClubCockpitScreen(initialClubId: 4),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Website anfragen'));
-    await tester.pumpAndSettle();
+    expect(find.text('Website anfragen'), findsNothing);
+    for (final label in [
+      'Weitere Bereiche anzeigen',
+      'Commerce',
+      'Website anfragen',
+    ]) {
+      await tester.ensureVisible(find.text(label));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
     expect(
       transport.requests.map((request) => request.path),
       contains('/api/v1/commerce/seller'),
@@ -11206,6 +11215,14 @@ void main() {
           'private_details_hidden': true,
           'notes_visible': false,
         },
+        'memberships': [
+          {
+            'club': {'id': 3, 'name': 'SV Beispiel'},
+            'teams': [
+              {'id': 2, 'name': 'U16'},
+            ],
+          },
+        ],
         'upcoming_events': [
           {
             'id': 7,
@@ -11233,6 +11250,8 @@ void main() {
 
     expect(overview.approved, isTrue);
     expect(overview.scope, 'safe_aggregates');
+    expect(overview.memberships.single.club.name, 'SV Beispiel');
+    expect(overview.memberships.single.teams.single.name, 'U16');
     expect(overview.events.single.title, 'Training');
     expect(overview.training.sessions, 2);
     expect(overview.training.distanceMeters, 12000);
@@ -11458,7 +11477,7 @@ void main() {
       const AirmiusApiResponse(
         statusCode: 200,
         body:
-            '{"data":{"child":{"id":12,"name":"Junior Example","email":"junior@example.test","age":13,"status":"approved","privacy":{"profile_visibility":"private"}},"access":{"approved":true,"scope":"safe_aggregates","private_details_hidden":true,"notes_visible":false},"upcoming_events":[{"id":7,"title":"Training","type":"training","start_time":"2026-07-27T18:00:00Z","location_name":"Sporthalle","location_city":"Berlin","team":{"id":2,"name":"U16"},"participation_status":"yes"}],"training":{"period_days":28,"sessions":2,"duration_minutes":90,"distance_meters":12000,"calories":600,"last_performed_at":"2026-07-25T12:00:00Z","private_notes_hidden":true}}}',
+            '{"data":{"child":{"id":12,"name":"Junior Example","email":"junior@example.test","age":13,"status":"approved","privacy":{"profile_visibility":"private"}},"access":{"approved":true,"scope":"safe_aggregates","private_details_hidden":true,"notes_visible":false},"memberships":[{"club":{"id":3,"name":"SV Beispiel"},"teams":[{"id":2,"name":"U16"}]}],"upcoming_events":[{"id":7,"title":"Training","type":"training","start_time":"2026-07-27T18:00:00Z","location_name":"Sporthalle","location_city":"Berlin","team":{"id":2,"name":"U16"},"participation_status":"yes"}],"training":{"period_days":28,"sessions":2,"duration_minutes":90,"distance_meters":12000,"calories":600,"last_performed_at":"2026-07-25T12:00:00Z","private_notes_hidden":true}}}',
       ),
     );
 
@@ -11471,11 +11490,57 @@ void main() {
 
     expect(find.text('Sicherer Kinderüberblick'), findsOneWidget);
     expect(find.text('Geschützter Datenumfang'), findsOneWidget);
+    expect(find.text('Vereine & Teams'), findsOneWidget);
+    expect(find.text('SV Beispiel'), findsOneWidget);
+    expect(find.text('U16'), findsWidgets);
     expect(find.text('Training'), findsOneWidget);
     expect(find.text('12.000 km'), findsNothing);
     expect(find.text('90'), findsOneWidget);
     expect(find.text('Private Gesundheitsnotiz'), findsNothing);
     expect(transport.requests.single.path, '/api/v1/guardian/children/12');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('guardian opens the club profile from a child membership', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1300));
+    final transport = _SequencedTransport(
+      const [],
+      responsesByPath: {
+        '/api/v1/guardian/children/12': const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"child":{"id":12,"name":"Junior Example","email":"junior@example.test","age":13,"status":"approved"},"access":{"approved":true,"scope":"safe_aggregates","private_details_hidden":true},"memberships":[{"club":{"id":3,"name":"SV Beispiel"},"teams":[]}],"upcoming_events":[],"training":{"period_days":28,"sessions":0,"duration_minutes":0,"distance_meters":0,"calories":0,"private_notes_hidden":true}}}',
+        ),
+        '/api/v1/clubs/3': const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"id":3,"name":"SV Beispiel","city":"Berlin","members_count":15,"teams_count":1,"posts_count":0,"accepts_membership_applications":true,"is_member":false,"verified":true}}',
+        ),
+        '/api/v1/clubs/3/newsletter/status': const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":{"status":"not_subscribed"}}',
+        ),
+      },
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const GuardianChildOverviewScreen(childId: 12),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('guardian-club-3')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ClubProfileScreen), findsOneWidget);
+    expect(find.text('SV Beispiel'), findsWidgets);
+    expect(
+      transport.requests.map((request) => request.path),
+      contains('/api/v1/clubs/3'),
+    );
     expect(tester.takeException(), isNull);
   });
 

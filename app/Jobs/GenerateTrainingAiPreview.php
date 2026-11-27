@@ -34,6 +34,10 @@ class GenerateTrainingAiPreview implements ShouldQueue
             return;
         }
         $generation = TrainingAiGeneration::findOrFail($this->generationId);
+        Log::info('AI training preview started.', [
+            'generation_id' => $generation->id,
+            'queue_wait_ms' => max(0, $generation->updated_at->getTimestampMs() - $generation->created_at->getTimestampMs()),
+        ]);
         $started = microtime(true);
         try {
             $user = User::findOrFail($generation->user_id);
@@ -58,6 +62,9 @@ class GenerateTrainingAiPreview implements ShouldQueue
     {
         Log::warning('AI training preview job failed.', ['generation_id' => $this->generationId, 'exception' => $error?->getMessage()]);
         $message = 'Die Vorschau konnte nicht vollständig erstellt werden. Bitte versuche es später erneut.';
+        if (str_contains($error?->getMessage() ?? '', 'Für KI-Trainingspläne brauchst du Trainer Pro')) {
+            $message = $error->getMessage();
+        }
         if (preg_match('/in (\d+) Sekunden/u', $error?->getMessage() ?? '', $match)) {
             $message = 'Das KI-Limit wurde erreicht. Bitte warte '.(int) ceil(((int) $match[1]) / 60).' Minuten, bevor du eine neue Vorschau anforderst.';
         }

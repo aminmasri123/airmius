@@ -1117,3 +1117,22 @@ Pruefskript: `artifacts/t40_verify_public.py`. Die breitere lokale Vorpruefung h
 - [ ] Neue APK auf dem Testgeraet installieren; T39-04/T39-07 sowie Push-Zustellung mit den Testkonten manuell abnehmen.
 
 Details und bestehende, am unveraenderten Ausgangsstand reproduzierte Regressionstestfehler: `docs/PHASE_39_SUPPORT_HELP_2026-10-15.md`.
+
+## 27.11.2026 – UX-Einstieg und Navigation, erstes Verbesserungspaket
+
+- [x] Zielgruppen-Links der Startseite als Inertia-Links registrieren und Zielgruppen-Tabs semantisch auszeichnen.
+- [x] Mobile Gastnavigation auf vier sichtbare Ziele plus lokalisiertes „Mehr“-Menü reduzieren; alle weiteren Ziele im gemeinsamen Dialog erreichbar halten.
+- [x] Cookie-Schaltfläche oberhalb der mobilen Navigationsleiste positionieren und unteren Geräte-Sicherheitsabstand berücksichtigen.
+- [x] Vereinsübersicht, Aufgaben und Kalender anhand des `panel`-Parameters getrennt markieren; Bereichswechsel mit URL, Verlauf, Filtern und erhaltenem Formularzustand verbinden.
+- [x] Elf gezielte Frontend-Regressionstests einschließlich Vereins-/Bereichswechsel im Browserverlauf sowie Web-Produktionsbuild erfolgreich.
+- [x] Lokale Browserprüfung der echten Vue-Komponenten bei 320/390 Pixel Breite: Menü sichtbar, Escape/Fokusrückgabe, Zielgruppen-Pfeiltasten und echte Sponsor-/Vereinslinks geprüft. Vorschau verwendet lokale Routendaten ohne Backend-Anmeldung.
+- [ ] Weitere Analyseempfehlungen umsetzen: kompaktere Vereinsübersicht, aufgabenbezogene Startbereiche, kürzere Registrierung und gruppierte Einstellungen.
+
+## 27.11.2026 – Aboseite verkürzen
+
+- [x] `/abos` in „Tarife“ und „Leistungen & Hinweise“ gliedern; Zielgruppe über ein beschriftetes Auswahlfeld wählen.
+- [x] Preise und Grenzen direkt zeigen; Tarifkarten auf drei kurze Leistungen begrenzen. Vollständige Katalogangaben einschließlich Einschränkungen im Detailtab erhalten und lange Hinweise einzeln aufklappbar machen.
+- [x] Doppelte Produktlogik und internen Ausbauplan aus der öffentlichen Tarifansicht entfernen; Rabattcode in den Bestelldialog verschieben.
+- [x] Centbeträge vollständig formatieren und Länderplatzhalter auch ohne Übersetzung ersetzen.
+- [x] Sechs Frontendtests erfolgreich: kompakte Übersicht, vollständige Details, Tarif-/Zielgruppenwechsel, Fokus, Deep Links, Preise, Übersetzungen und Vue-Kompilierung.
+- [x] Lokale Browserprüfung mit Testdaten: Tabs per Pfeiltaste, Hinweis per Enter, Werbeagentur-Sonderfall und Bestelldialog ohne Zahlung geprüft. Kein horizontaler Überlauf bei 320/390/1280 Pixeln. Bei 390 Pixeln mit identischen Sportler-Testtarifen Seitenhöhe von 41.337 auf 2.837 Pixel reduziert; keine Messung produktiver Tarife.

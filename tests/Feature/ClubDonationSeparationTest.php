@@ -19,6 +19,50 @@ class ClubDonationSeparationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_local_today_handles_offsets_and_ignores_invalid_device_values(): void
+    {
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-27 00:18:00', 'UTC'));
+        $user = new User;
+        $user->timezone = 'Europe/Paris';
+        foreach (['-300' => '2026-11-26', '330' => '2026-11-27', '999' => '2026-11-27', 'invalid' => '2026-11-27'] as $offset => $expected) {
+            $request = \Illuminate\Http\Request::create('/');
+            $request->headers->set('X-Airmius-Utc-Offset-Minutes', (string) $offset);
+            $this->assertSame($expected, \App\Support\LocalDateTime::todayFor($user, $request));
+        }
+    }
+
+    public function test_donation_accepts_local_today_after_utc_midnight_boundary_and_rejects_tomorrow(): void
+    {
+        Notification::fake();
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-26 23:18:00', 'UTC'));
+        [$club, $owner, $member] = $this->clubWithFinanceMember();
+        Sanctum::actingAs($owner);
+        $this->withHeaders(['X-Airmius-Utc-Offset-Minutes' => '60', 'X-Airmius-Locale' => 'de']);
+
+        $payload = ['user_id' => $member->id, 'amount' => 15, 'paid_at' => '2026-11-27'];
+        $this->postJson("/api/v1/clubs/{$club->id}/donations", $payload)->assertOk();
+        $this->assertSame('2026-11-27', Payment::query()->firstOrFail()->paid_at->toDateString());
+
+        $payload['paid_at'] = '2026-11-28';
+        $this->postJson("/api/v1/clubs/{$club->id}/donations", $payload)
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.paid_at.0', 'Das Zahlungsdatum darf nicht in der Zukunft liegen.');
+        $this->assertSame(1, Payment::query()->count());
+    }
+
+    public function test_donation_uses_user_timezone_without_device_offset(): void
+    {
+        Notification::fake();
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-26 23:18:00', 'UTC'));
+        [$club, $owner, $member] = $this->clubWithFinanceMember();
+        $owner->forceFill(['timezone' => 'Europe/Paris'])->save();
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/v1/clubs/{$club->id}/donations", [
+            'user_id' => $member->id, 'amount' => 15, 'paid_at' => '2026-11-27',
+        ])->assertOk();
+    }
+
     public function test_money_donation_records_restriction_campaign_and_audit_without_invoice_context(): void
     {
         Notification::fake();
