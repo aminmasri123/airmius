@@ -16,6 +16,8 @@ class LearningCertificateVerificationTest extends TestCase
 
     private function fixture(): array
     {
+        // Keep completion evidence within the fixture's completion cutoff across second boundaries.
+        $this->freezeTime();
         $owner = User::factory()->create(['name' => 'Kursleitung Beispiel']);
         $student = User::factory()->create(['name' => 'Alex Beispiel']);
         $course = LearningCourse::create(['user_id' => $owner->id, 'title' => 'TEST: Einführung in die Kursprüfung', 'subtitle' => 'Musterzertifikat für lokale Tests', 'language' => 'de', 'category' => 'training', 'level' => 'beginner', 'status' => 'published', 'is_public' => true]);

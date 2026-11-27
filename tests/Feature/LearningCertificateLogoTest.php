@@ -20,6 +20,7 @@ class LearningCertificateLogoTest extends TestCase
 
     public function test_mobile_upload_before_course_creation_is_saved_and_embedded_in_certificate(): void
     {
+        $this->freezeTime();
         Storage::fake(UploadStorage::disk());
         $creator = User::factory()->create();
         Sanctum::actingAs($creator);
