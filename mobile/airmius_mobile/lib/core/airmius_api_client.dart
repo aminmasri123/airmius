@@ -3842,8 +3842,13 @@ class AirmiusApiClient {
   Future<AirmiusJson> publicSponsors() =>
       _json('GET', '/api/v1/public/sponsors');
 
-  Future<AirmiusJson> publicActiveAd({String placement = 'feed'}) =>
-      _json('GET', '/ads/active', query: {'placement': placement});
+  Future<AirmiusJson> publicActiveAd({String placement = 'feed', String? device}) =>
+      _json(
+        'GET',
+        token == null ? '/api/v1/public/ads/active' : '/api/v1/ads/active',
+        query: {'placement': placement},
+        headers: {if (device != null) 'X-Airmius-Ad-Device': device},
+      );
 
   Future<AirmiusJson> publicRecruitingJobs({
     String? query,

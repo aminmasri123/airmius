@@ -15,6 +15,7 @@ import '../widgets/marketplace_filters_sheet.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/airmius_ad_slot.dart';
 import 'team_bulk_orders_screen.dart';
 
 class MarketplaceScreen extends StatefulWidget {
@@ -53,6 +54,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   Future<_MarketplaceBundle>? _bundleFuture;
   _MarketplaceBundle? _bundle;
   bool _busy = false;
+  int _adRevision = 0;
   bool _initialProductScheduled = false;
   late final TextEditingController _searchController;
   AirmiusApiClient? _guestClient;
@@ -347,6 +349,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   void _reload() {
+    _adRevision++;
     setState(() {
       _bundleFuture = _load();
     });
@@ -561,6 +564,11 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         ],
         if (_catalogError != null && !_appendRequest) _catalogFailure(),
         const SizedBox(height: 14),
+        AirmiusAdSlot(
+          placement: 'marketplace_card',
+          revision: _adRevision,
+          guest: widget.guest,
+        ),
         if ((!_refreshingProducts && _catalogError == null) ||
             _appendRequest) ...[
           if (products.isEmpty)

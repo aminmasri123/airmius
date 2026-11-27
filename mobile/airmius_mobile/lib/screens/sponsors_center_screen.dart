@@ -7,6 +7,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/airmius_ad_slot.dart';
 import 'sponsor_management_screen.dart';
 import 'sponsor_application_screen.dart';
 import 'sponsor_discovery_detail_screen.dart';
@@ -22,6 +23,7 @@ class SponsorsCenterScreen extends StatefulWidget {
 
 class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
   Future<JsonMap>? _future;
+  int _adRevision = 0;
   String _scope = 'all';
   String _query = '';
   String _country = 'all';
@@ -79,6 +81,7 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
 
   void _reload() {
     setState(() {
+      _adRevision++;
       _future = _load();
     });
   }
@@ -212,6 +215,10 @@ class _SponsorsCenterScreenState extends State<SponsorsCenterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                AirmiusAdSlot(
+                  placement: 'sponsor_section',
+                  revision: _adRevision,
+                ),
                 TextField(
                   decoration: InputDecoration(
                     labelText: _tx('Sponsor suchen', 'Search sponsors'),

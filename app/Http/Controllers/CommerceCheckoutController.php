@@ -2703,7 +2703,7 @@ class CommerceCheckoutController extends Controller
                 $query->whereNull('starts_at')->orWhere('starts_at', '<=', now());
             })
             ->where(function ($query) {
-                $query->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+                $query->whereNull('ends_at')->orWhere('ends_at', '>', now());
             })
             ->when($placement, fn ($query) => $query->where('placement', $placement))
             ->when($objective, fn ($query) => $query->where('objective', $objective))
@@ -2726,7 +2726,7 @@ class CommerceCheckoutController extends Controller
         $campaign = $this->chooseCampaignForDelivery($campaigns, $request);
 
         if (! $campaign) {
-            return response()->json(null);
+            return response()->json(null)->header('Cache-Control', 'private, no-store');
         }
 
         $this->loadCreativeDeliverySignals($campaign);
@@ -2745,16 +2745,20 @@ class CommerceCheckoutController extends Controller
             'objective' => $campaign->objective,
             'placement' => $campaign->placement,
             'creative_format' => $creative?->creative_format ?: $campaign->creative_format,
+            'ends_at' => $campaign->ends_at?->toIso8601String(),
             'image_url' => $this->creativeImageUrl($creative) ?: (UploadStorage::url($campaign->creative_image_path) ?: $campaign->creative_image_url),
             'click_url' => route('ads.click', array_filter(['campaign' => $campaign->id, 'c' => $creative?->id])),
-        ]);
+        ])->header('Cache-Control', 'private, no-store');
     }
 
     public function clickAd(Request $request, AdCampaign $campaign)
     {
         $creative = $this->creativeFromRequest($request, $campaign);
 
-        if ($campaign->status === 'active' && $this->campaignHasBudgetFor($campaign, 'click')) {
+        if ($campaign->status === 'active'
+            && (! $campaign->starts_at || $campaign->starts_at->lte(now()))
+            && (! $campaign->ends_at || $campaign->ends_at->gt(now()))
+            && $this->campaignHasBudgetFor($campaign, 'click')) {
             $this->recordAdEvent($request, $campaign, 'click', 0, [], $creative);
             $this->rememberAdClick($request, $campaign, $creative);
         }
@@ -2868,7 +2872,7 @@ class CommerceCheckoutController extends Controller
             $campaign = AdCampaign::query()->lockForUpdate()->find($campaign->id);
             if (! $campaign || $campaign->status !== 'active'
                 || ($campaign->starts_at && $campaign->starts_at->isFuture())
-                || ($campaign->ends_at && $campaign->ends_at->isPast())) {
+                || ($campaign->ends_at && $campaign->ends_at->lte(now()))) {
                 return null;
             }
 
@@ -2892,7 +2896,7 @@ class CommerceCheckoutController extends Controller
             'cost_cents' => $costCents,
             'value_cents' => $valueCents,
             'currency' => 'EUR',
-            'session_hash' => $this->adHash($request->session()->getId()),
+            'session_hash' => $this->adViewerSessionHash($request),
             'ip_hash' => $this->adHash($request->ip()),
             'user_agent_hash' => $this->adHash((string) $request->userAgent()),
             'metadata' => $metadata,
@@ -2942,7 +2946,7 @@ class CommerceCheckoutController extends Controller
             return false;
         }
 
-        $sessionHash = $this->adHash($request->session()->getId());
+        $sessionHash = $this->adViewerSessionHash($request);
         $ipHash = $this->adHash($request->ip());
         $userAgentHash = $this->adHash((string) $request->userAgent());
         $limit = $eventType === 'click' ? 5 : 20;
@@ -3031,7 +3035,7 @@ class CommerceCheckoutController extends Controller
             return (int) $campaign->getAttribute('viewer_impressions_today') < $cap;
         }
 
-        $sessionHash = $this->adHash($request->session()->getId());
+        $sessionHash = $this->adViewerSessionHash($request);
         $ipHash = $this->adHash($request->ip());
         $userAgentHash = $this->adHash((string) $request->userAgent());
 
@@ -3077,7 +3081,7 @@ class CommerceCheckoutController extends Controller
         }
 
         $todaySpent = (int) ($this->todayAdStat($campaign)?->spent_cents ?? 0);
-        $minutesElapsed = max(1, now()->diffInMinutes(today()));
+        $minutesElapsed = max(1, today()->diffInMinutes(now()));
         $dayProgress = min(1, $minutesElapsed / 1440);
         $dailyBudget = (int) $campaign->daily_budget_cents;
         $buffer = max(100, (int) round($dailyBudget * 0.12));
@@ -3232,6 +3236,11 @@ class CommerceCheckoutController extends Controller
 
     private function requestDevice(Request $request): string
     {
+        $nativeDevice = $request->header('X-Airmius-Ad-Device');
+        if ($request->is('api/v1/*') && in_array($nativeDevice, ['mobile', 'tablet', 'desktop'], true)) {
+            return $nativeDevice;
+        }
+
         $agent = Str::lower((string) $request->userAgent());
 
         if (str_contains($agent, 'ipad') || str_contains($agent, 'tablet')) {
@@ -3247,7 +3256,13 @@ class CommerceCheckoutController extends Controller
 
     private function requestLanguages(Request $request)
     {
-        return collect(explode(',', (string) $request->header('Accept-Language')))
+        $languages = $request->header('X-Locale')
+            ?: $request->header('X-App-Locale')
+            ?: $request->header('X-Airmius-Locale')
+            ?: $request->header('Accept-Language')
+            ?: app()->getLocale();
+
+        return collect(explode(',', (string) $languages))
             ->map(fn (string $language) => Str::lower(trim(explode(';', $language)[0] ?? '')))
             ->filter()
             ->flatMap(fn (string $language) => [$language, Str::before($language, '-')])
@@ -3488,7 +3503,7 @@ class CommerceCheckoutController extends Controller
         }
 
         $todaySpent = (int) ($this->todayAdStat($campaign)?->spent_cents ?? 0);
-        $minutesElapsed = max(1, now()->diffInMinutes(today()));
+        $minutesElapsed = max(1, today()->diffInMinutes(now()));
         $expectedSpend = max(1, (int) round((int) $campaign->daily_budget_cents * min(1, $minutesElapsed / 1440)));
 
         if ($todaySpent < $expectedSpend * 0.55) {
@@ -3527,7 +3542,7 @@ class CommerceCheckoutController extends Controller
 
     private function campaignRetargetingWeight(Request $request, AdCampaign $campaign): float
     {
-        if (! $this->allowsAdPersonalization($request)) {
+        if (! $request->hasSession() || ! $this->allowsAdPersonalization($request)) {
             return 1.0;
         }
 
@@ -3683,7 +3698,7 @@ class CommerceCheckoutController extends Controller
             ->groupBy('ad_campaign_id')
             ->map(fn ($rows) => $rows->pluck('total', 'event_type')->map(fn ($value) => (int) $value)->all());
 
-        $sessionHash = $this->adHash($request->session()->getId());
+        $sessionHash = $this->adViewerSessionHash($request);
         $ipHash = $this->adHash($request->ip());
         $userAgentHash = $this->adHash((string) $request->userAgent());
         $viewerImpressions = AdEvent::query()
@@ -3863,7 +3878,7 @@ class CommerceCheckoutController extends Controller
             ->where('event_type', $eventType)
             ->when($metadata['conversion_type'] ?? null, fn ($query, $conversionType) => $query->where('metadata->conversion_type', $conversionType))
             ->when($metadata['order_id'] ?? null, fn ($query, $orderId) => $query->where('metadata->order_id', $orderId))
-            ->where('session_hash', $this->adHash($request->session()->getId()))
+            ->where('session_hash', $this->adViewerSessionHash($request))
             ->where('occurred_at', '>=', now()->subMinutes($windowMinutes))
             ->exists();
     }
@@ -3891,6 +3906,14 @@ class CommerceCheckoutController extends Controller
         return in_array($scheme, ['http', 'https'], true)
             ? $targetUrl
             : route('guest.pricing');
+    }
+
+    private function adViewerSessionHash(Request $request): ?string
+    {
+        // Native bearer requests do not have a browser session.
+        return $this->adHash($request->hasSession()
+            ? $request->session()->getId()
+            : ($request->user() ? 'user:'.$request->user()->id : null));
     }
 
     private function adHash(?string $value): ?string

@@ -181,6 +181,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->name('newsletter.unsubscribe');
 
     Route::middleware(EnsureApiProcessingPurpose::class)->group(function () {
+        Route::get('/public/ads/active', [MobileCommerceCheckoutController::class, 'activeAd'])
+            ->middleware('throttle:public-content')->name('public.ads.active');
         Route::get('/public/blog', [PublicContentController::class, 'blog'])
             ->middleware('throttle:public-content')
             ->name('public.blog.index');
@@ -310,6 +312,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->name('clubs.members.invite.token');
 
     Route::middleware(['auth:sanctum', EnsureGuardianConsentResolved::class, EnsureIdempotentApiRequest::class, EnsureApiProcessingPurpose::class])->group(function () {
+        Route::get('/ads/active', [MobileCommerceCheckoutController::class, 'activeAd'])
+            ->middleware('throttle:public-content')->name('ads.active');
         Route::get('/clubs/{club}/newsletter/status', [ClubNewsletterController::class, 'status'])
             ->name('clubs.newsletter.status');
         Route::delete('/clubs/{club}/newsletter/subscription', [ClubNewsletterController::class, 'unsubscribeMine'])

@@ -9,6 +9,7 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_story_upload_service.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_inline_video.dart';
+import '../widgets/airmius_ad_slot.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/content_report_dialog.dart';
 import 'feed_post_detail_screen.dart';
@@ -46,6 +47,7 @@ class _FeedCommunitySocialSuiteScreenState
   bool _advanced = false;
   bool _sending = false;
   bool _loaded = false;
+  int _adRevision = 0;
 
   @override
   void initState() {
@@ -102,6 +104,7 @@ class _FeedCommunitySocialSuiteScreenState
 
   void _reload() {
     setState(() {
+      _adRevision++;
       _postOverrides.clear();
       _localPosts.clear();
       _removedPostIds.clear();
@@ -345,29 +348,45 @@ class _FeedCommunitySocialSuiteScreenState
           return _FeedListScaffold(
             dailyFlow: _DailyFlowTeaser(future: _dailyFlowFuture),
             composer: _ComposerTrigger(onTap: _openComposer),
-            child: posts.isEmpty
-                ? _FeedEmpty(onCreate: _openComposer)
-                : Column(
-                    children: [
-                      _StoriesRail(
-                        storiesFuture: _storiesFuture,
-                        onChanged: _reloadStories,
-                      ),
-                      const SizedBox(height: 14),
-                      for (final post in posts) ...[
-                        _PostCard(
-                          post: post,
-                          onChanged: _reload,
-                          onDeleted: _removePostLocally,
-                          onDeleteFailed: _restorePostLocally,
-                          onPostChanged: (nextPost) => setState(
-                            () => _postOverrides[nextPost.id] = nextPost,
+            child: Column(
+              children: [
+                AirmiusAdSlot(placement: 'feed', revision: _adRevision),
+                posts.isEmpty
+                    ? _FeedEmpty(onCreate: _openComposer)
+                    : Column(
+                        children: [
+                          _StoriesRail(
+                            storiesFuture: _storiesFuture,
+                            onChanged: _reloadStories,
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                    ],
-                  ),
+                          const SizedBox(height: 14),
+                          for (
+                            var index = 0;
+                            index < posts.length;
+                            index++
+                          ) ...[
+                            _PostCard(
+                              post: posts[index],
+                              onChanged: _reload,
+                              onDeleted: _removePostLocally,
+                              onDeleteFailed: _restorePostLocally,
+                              onPostChanged: (nextPost) => setState(
+                                () => _postOverrides[nextPost.id] = nextPost,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            if (index == 1)
+                              AirmiusAdSlot(
+                                placement: 'sidebar',
+                                revision: _adRevision,
+                              ),
+                          ],
+                        ],
+                      ),
+                if (posts.length < 2)
+                  AirmiusAdSlot(placement: 'sidebar', revision: _adRevision),
+              ],
+            ),
           );
         },
       ),

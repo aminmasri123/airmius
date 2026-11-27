@@ -10,7 +10,7 @@ defineProps({
 
 <template>
     <aside class="min-w-0 hidden space-y-4 md:block xl:sticky xl:top-24 xl:self-start">
-        <AdSlot placement="feed" variant="card" :fallback="false" />
+        <AdSlot placement="sidebar" variant="sidebar" :fallback="false" />
 
         <div class="surface-card p-4">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">

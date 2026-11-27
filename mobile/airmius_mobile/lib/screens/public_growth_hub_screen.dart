@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../core/airmius_api_client.dart';
-import '../core/airmius_external_url.dart';
 import '../core/airmius_l10n.dart';
-import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/airmius_ad_slot.dart';
 import 'guest_ad_agency_screen.dart';
 import 'public_interest_screen.dart';
 import 'public_location_submission_screen.dart';
@@ -23,14 +20,8 @@ class PublicGrowthHubScreen extends StatefulWidget {
 
 class _PublicGrowthHubScreenState extends State<PublicGrowthHubScreen> {
   _GrowthFilter _filter = _GrowthFilter.all;
-  Future<AirmiusJson>? _activeAd;
 
   String t(String key) => AirmiusScope.of(context).t(key);
-
-  AirmiusApiClient get _client {
-    final services = AirmiusServicesScope.of(context);
-    return services.clientForSession(services.authState.session);
-  }
 
   List<_GrowthItem> get _items => [
     _GrowthItem(
@@ -97,48 +88,15 @@ class _PublicGrowthHubScreenState extends State<PublicGrowthHubScreen> {
   void _selectFilter(_GrowthFilter value) {
     setState(() {
       _filter = value;
-      if (_showsAds) _activeAd ??= _client.publicActiveAd();
     });
-  }
-
-  void _reloadAd() {
-    setState(() => _activeAd = _client.publicActiveAd());
   }
 
   void _open(Widget screen) {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => screen));
   }
 
-  Future<void> _openAd(String value) async {
-    final supplied = Uri.tryParse(value);
-    final apiBase = Uri.tryParse(_client.baseUrl);
-    final reachable = supplied != null && apiBase != null && supplied.hasScheme
-        ? supplied.replace(
-            scheme: apiBase.scheme,
-            host: apiBase.host,
-            port: apiBase.hasPort ? apiBase.port : null,
-          )
-        : supplied;
-    final uri = safeExternalHttpUrl(
-      reachable?.toString() ?? '',
-      httpsOnly: false,
-    );
-    if (uri == null ||
-        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (mounted) _toast(t('publicGrowth.adOpenFailed'));
-    }
-  }
-
-  void _toast(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
   @override
   Widget build(BuildContext context) {
-    _activeAd ??= _client.publicActiveAd();
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -217,16 +175,7 @@ class _PublicGrowthHubScreenState extends State<PublicGrowthHubScreen> {
                   if (_showsAds)
                     SizedBox(
                       width: width,
-                      child: _ActiveAdCard(
-                        future: _activeAd!,
-                        area: t(_GrowthFilter.ads.labelKey),
-                        loading: t('publicGrowth.adLoading'),
-                        empty: t('publicGrowth.adEmpty'),
-                        retry: t('publicGrowth.retry'),
-                        sponsored: t('publicGrowth.sponsored'),
-                        onRetry: _reloadAd,
-                        onOpen: _openAd,
-                      ),
+                      child: const AirmiusAdSlot(placement: 'feed'),
                     ),
                 ];
                 return Wrap(spacing: 12, runSpacing: 12, children: cards);
@@ -300,100 +249,6 @@ class _GrowthCard extends StatelessWidget {
           ),
         ),
       ],
-    ),
-  );
-}
-
-class _ActiveAdCard extends StatelessWidget {
-  const _ActiveAdCard({
-    required this.future,
-    required this.area,
-    required this.loading,
-    required this.empty,
-    required this.retry,
-    required this.sponsored,
-    required this.onRetry,
-    required this.onOpen,
-  });
-
-  final Future<AirmiusJson> future;
-  final String area;
-  final String loading;
-  final String empty;
-  final String retry;
-  final String sponsored;
-  final VoidCallback onRetry;
-  final ValueChanged<String> onOpen;
-
-  @override
-  Widget build(BuildContext context) => AirmiusPanel(
-    child: FutureBuilder<AirmiusJson>(
-      future: future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Semantics(
-            label: loading,
-            child: const Center(child: CircularProgressIndicator()),
-          );
-        }
-        if (snapshot.hasError) {
-          return Column(
-            children: [
-              Text(empty),
-              const SizedBox(height: 10),
-              AirmiusButton(
-                label: retry,
-                icon: Icons.refresh_outlined,
-                secondary: true,
-                onPressed: onRetry,
-              ),
-            ],
-          );
-        }
-        final ad = snapshot.data ?? const <String, dynamic>{};
-        if (ad['id'] == null) return Text(empty);
-        final headline = '${ad['headline'] ?? ad['name'] ?? sponsored}';
-        final body = '${ad['primary_text'] ?? ad['description'] ?? ''}'.trim();
-        final clickUrl = '${ad['click_url'] ?? ''}'.trim();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.ads_click,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    sponsored,
-                    style: const TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                ),
-                Chip(label: Text(area), visualDensity: VisualDensity.compact),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              headline,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            if (body.isNotEmpty) ...[const SizedBox(height: 6), Text(body)],
-            if (clickUrl.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              AirmiusButton(
-                key: const ValueKey('public-growth-open-ad'),
-                label: '${ad['cta_label'] ?? sponsored}',
-                icon: Icons.open_in_new,
-                onPressed: () => onOpen(clickUrl),
-              ),
-            ],
-          ],
-        );
-      },
     ),
   );
 }

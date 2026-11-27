@@ -4152,7 +4152,7 @@ void main() {
       find.byKey(const ValueKey('public-growth-sponsors')),
       findsOneWidget,
     );
-    expect(transport.paths, contains('/ads/active'));
+    expect(transport.paths, contains('/api/v1/public/ads/active'));
     expect(tester.takeException(), isNull);
   });
 
@@ -4183,7 +4183,7 @@ void main() {
     expect(find.text('Gemeinsam mehr Sport'), findsOneWidget);
     expect(find.text('Mehr erfahren'), findsOneWidget);
     final adRequest = transport.requests.singleWhere(
-      (request) => request.path == '/ads/active',
+      (request) => request.path == '/api/v1/public/ads/active',
     );
     expect(adRequest.query, {'placement': 'feed'});
 
