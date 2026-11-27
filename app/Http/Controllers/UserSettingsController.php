@@ -376,7 +376,9 @@ class UserSettingsController extends Controller
             'direct_message_privacy' => $data['direct_message_privacy'] ?? $request->user()->direct_message_privacy ?? 'everyone',
             'friend_request_privacy' => $data['friend_request_privacy'] ?? $request->user()->friend_request_privacy ?? 'everyone',
             'ads_personalization_consent' => (bool) ($data['ads_personalization_consent'] ?? false),
-            'ads_measurement_consent' => (bool) ($data['ads_measurement_consent'] ?? false),
+            'ads_measurement_consent' => array_key_exists('ads_measurement_consent', $data)
+                ? (bool) $data['ads_measurement_consent']
+                : (bool) $request->user()->ads_measurement_consent,
             ...$analyticsConsentUpdates,
         ]);
         $analyticsConsent->auditIfChanged($request->user()->refresh(), $previousAnalyticsConsent);

@@ -43,6 +43,23 @@ class CookieTrackingConsentTest extends TestCase
             );
     }
 
+    public function test_ad_measurement_is_disabled_for_new_adult_accounts_and_can_stay_disabled(): void
+    {
+        $user = User::factory()->create();
+
+        $this->assertFalse($user->fresh()->ads_measurement_consent);
+
+        $this->actingAs($user)
+            ->put(route('auth.settings.update'), [
+                'country' => 'DE',
+                'ads_measurement_consent' => false,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse($user->fresh()->ads_measurement_consent);
+    }
+
     public function test_app_shell_does_not_embed_external_marketing_or_analytics_tags(): void
     {
         $body = $this->get(route('welcome'))
