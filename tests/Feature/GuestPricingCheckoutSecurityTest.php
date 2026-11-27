@@ -228,6 +228,25 @@ class GuestPricingCheckoutSecurityTest extends TestCase
         }
     }
 
+    public function test_pricing_separates_included_features_from_cross_plan_requirements_without_losing_notes(): void
+    {
+        $plan = SubscriptionPlan::query()->where('slug', 'sportler-pro')->firstOrFail();
+        $plan->update(['features' => ['Portfolio und Medien', 'Profilstatistiken vorbereitet']]);
+        $catalog = $plan->catalogFeatures();
+
+        $this->get(route('guest.pricing'))->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->component('Guest/Pricing')
+            ->where('planGroups.sportler', function ($plans) use ($plan, $catalog) {
+                $rendered = collect($plans)->firstWhere('id', $plan->id);
+                $this->assertSame(2, $rendered['included_feature_count']);
+                $this->assertSame(['Sportlerportfolio mit Medien (geplant)', 'Profilstatistiken (geplant)'], array_slice($rendered['features'], 0, $rendered['included_feature_count']));
+                $this->assertNotEmpty(array_slice($rendered['features'], $rendered['included_feature_count']));
+                $this->assertSame($catalog, $rendered['features']);
+
+                return true;
+            }));
+    }
+
     private function paidPlan(array $attributes = []): SubscriptionPlan
     {
         return SubscriptionPlan::query()->create(array_merge([

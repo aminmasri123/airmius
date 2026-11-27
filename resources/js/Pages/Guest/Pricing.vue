@@ -8,6 +8,8 @@ import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import { useI18n } from 'vue-i18n'
 import pricingCopy from './pricingCopy.json'
+import Modal from '@/Components/Modal.vue'
+import { splitPlanDetails, groupUsageNotes } from '@/support/pricingDetails.js'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -133,7 +135,20 @@ const selectedPlanId = ref(null)
 const detailPlan = computed(() => visiblePlans.value.find(plan => String(plan.id) === String(selectedPlanId.value)) || visiblePlans.value[0])
 const planTab = ref(null)
 const detailTab = ref(null)
-const summaryFeatures = plan => (plan.features || []).filter(feature => String(feature).length <= 180).slice(0, 3)
+const summaryFeatures = plan => splitPlanDetails(plan).included.filter(feature => String(feature).length <= 180).slice(0, 3)
+const detailSearch = ref('')
+const matchesSearch = text => tx(text).toLocaleLowerCase().includes(detailSearch.value.trim().toLocaleLowerCase())
+const filteredFeatures = computed(() => splitPlanDetails(detailPlan.value).included.filter(matchesSearch))
+const noteGroups = computed(() => groupUsageNotes(splitPlanDetails(detailPlan.value).notes.filter(matchesSearch)))
+const selectDetailPlan = id => {
+    selectedPlanId.value = id
+    detailSearch.value = ''
+}
+const selectAudience = key => {
+    selectedAudience.value = key
+    selectedPlanId.value = null
+    detailSearch.value = ''
+}
 
 const selectView = async (view, focus = false) => {
     activeView.value = view
@@ -145,7 +160,7 @@ const selectView = async (view, focus = false) => {
 }
 
 const showDetails = async plan => {
-    selectedPlanId.value = plan.id
+    selectDetailPlan(plan.id)
     await selectView('details', true)
 }
 
@@ -351,211 +366,124 @@ const startCheckout = async () => {
         :description="tx('Faire Airmius Pläne für Sportler, Trainer, Vereine, Eltern, Sponsoren, Anbieter, Verbände und Website-Services für Vereine.')"
     />
 
-    <div class="min-h-screen bg-bg text-primary">
+    <div class="pricing-page min-h-screen text-primary">
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main id="main-content" class="px-4 mb-8 pt-36 md:pt-44" tabindex="-1">
-            <header class="mx-auto max-w-7xl">
-                <h1 class="font-heading text-3xl font-900 sm:text-4xl">{{ ui.title }}</h1>
-                <p class="mt-2 text-secondary">{{ ui.intro }}</p>
-            </header>
+        <main id="main-content" class="pricing-main" tabindex="-1">
+            <div class="pricing-container">
+                <header class="pricing-heading">
+                    <p class="pricing-eyebrow">{{ ui.eyebrow }}</p>
+                    <h1>{{ ui.title }}</h1>
+                    <p>{{ ui.intro }}</p>
+                </header>
 
-            <section class="mx-auto mt-6 max-w-7xl">
-                <label for="pricing-audience" class="mb-2 block text-sm font-semibold">{{ ui.audience }}</label>
-                <select id="pricing-audience" v-model="selectedAudience" class="min-h-11 w-full rounded-lg border-border bg-inputBg text-primary sm:max-w-sm">
-                    <option v-for="audience in audiences" :key="audience.key" :value="audience.key">{{ tx(audience.label) }}</option>
-                </select>
-                <div role="tablist" :aria-label="ui.title" class="mt-5 flex gap-2 border-b border-border">
-                    <button id="pricing-plans-tab" ref="planTab" type="button" role="tab" aria-controls="pricing-plans"
-                        :aria-selected="activeView === 'plans'" :tabindex="activeView === 'plans' ? 0 : -1"
-                        class="min-h-11 border-b-2 px-3 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-air-blue"
-                        :class="activeView === 'plans' ? 'border-air-blue text-primary' : 'border-transparent text-secondary'"
-                        @click="selectView('plans')" @keydown.right.prevent="selectView('details', true)" @keydown.left.prevent="selectView('details', true)"
-                        @keydown.home.prevent="selectView('plans', true)" @keydown.end.prevent="selectView('details', true)">
-                        {{ ui.plans }}
-                    </button>
-                    <button id="pricing-details-tab" ref="detailTab" type="button" role="tab" aria-controls="pricing-details"
-                        :aria-selected="activeView === 'details'" :tabindex="activeView === 'details' ? 0 : -1"
-                        class="min-h-11 border-b-2 px-3 py-2 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-air-blue"
-                        :class="activeView === 'details' ? 'border-air-blue text-primary' : 'border-transparent text-secondary'"
-                        @click="selectView('details')" @keydown.right.prevent="selectView('plans', true)" @keydown.left.prevent="selectView('plans', true)"
-                        @keydown.home.prevent="selectView('plans', true)" @keydown.end.prevent="selectView('details', true)">
-                        {{ ui.details }}
+                <div class="audience-picker" role="group" :aria-label="ui.audience">
+                    <button v-for="audience in audiences" :key="audience.key" type="button"
+                        :aria-pressed="selectedAudience === audience.key" @click="selectAudience(audience.key)">
+                        {{ tx(audience.label) }}
                     </button>
                 </div>
-            </section>
 
-            <section id="pricing-plans" v-show="activeView === 'plans'" role="tabpanel" aria-labelledby="pricing-plans-tab" tabindex="0" class="mx-auto mt-6 max-w-7xl">
-                <h2 class="sr-only">{{ tx(currentAudience.label) }} – {{ ui.plans }}</h2>
-                    <div class="mx-auto grid items-start gap-5" :class="visiblePlans.length === 1 ? 'max-w-xl' : visiblePlans.length === 2 ? 'max-w-4xl md:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-3'">
-                        <article
-                            v-if="selectedAudience === 'werbeagentur' && !visiblePlans.length"
-                            class="surface-card flex flex-col p-5 md:col-span-2 xl:col-span-3"
-                        >
-                            <div class="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
-                                <div>
-                                    <h3 class="text-xl font-bold text-primary">{{ tx('Individuelles Angebot') }}</h3>
-                                    <p class="mt-3 text-sm leading-relaxed text-secondary">
-                                        {{ tx('Websites und Kampagnen hängen stark von Umfang, Inhalten, Domain, Seitenanzahl und gewünschter Betreuung ab. Deshalb arbeitet Airmius hier mit Anfrage und Angebot.') }}
-                                    </p>
-                                    <Link
-                                        :href="route('guest.werbeagentur')"
-                                        class="mt-5 inline-flex rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
-                                    >
-                                        {{ tx('Zur Werbeagentur-Seite') }}
-                                    </Link>
-                                </div>
-                                <ul class="grid gap-3 text-sm text-secondary sm:grid-cols-2">
-                                    <li class="rounded-lg bg-bg p-4">
-                                        <p class="font-semibold text-primary">{{ tx('Website') }}</p>
-                                        <p class="mt-1">{{ tx('Vereinsseite, Landingpage oder Kampagnenseite.') }}</p>
-                                    </li>
-                                    <li class="rounded-lg bg-bg p-4">
-                                        <p class="font-semibold text-primary">{{ tx('Sichtbarkeit') }}</p>
-                                        <p class="mt-1">{{ tx('SEO-Grundlage, Texte, Struktur und lokale Auffindbarkeit.') }}</p>
-                                    </li>
-                                    <li class="rounded-lg bg-bg p-4">
-                                        <p class="font-semibold text-primary">{{ tx('Sponsoren') }}</p>
-                                        <p class="mt-1">{{ tx('Sponsorenbereiche, Angebotsseiten und digitale Pakete.') }}</p>
-                                    </li>
-                                    <li class="rounded-lg bg-bg p-4">
-                                        <p class="font-semibold text-primary">{{ tx('Prozess') }}</p>
-                                        <p class="mt-1">{{ tx('Anfrage, klares Angebot, Annahme, Umsetzung.') }}</p>
-                                    </li>
-                                </ul>
+                <div class="pricing-toolbar">
+                    <h2>{{ tx(currentAudience.label) }}</h2>
+                    <div role="tablist" :aria-label="ui.title" class="pricing-view-switch">
+                        <button id="pricing-plans-tab" ref="planTab" type="button" role="tab" aria-controls="pricing-plans"
+                            :aria-selected="activeView === 'plans'" :tabindex="activeView === 'plans' ? 0 : -1"
+                            @click="selectView('plans')" @keydown.right.prevent="selectView('details', true)" @keydown.left.prevent="selectView('details', true)"
+                            @keydown.home.prevent="selectView('plans', true)" @keydown.end.prevent="selectView('details', true)">
+                            {{ ui.plans }}
+                        </button>
+                        <button id="pricing-details-tab" ref="detailTab" type="button" role="tab" aria-controls="pricing-details"
+                            :aria-selected="activeView === 'details'" :tabindex="activeView === 'details' ? 0 : -1"
+                            @click="selectView('details')" @keydown.right.prevent="selectView('plans', true)" @keydown.left.prevent="selectView('plans', true)"
+                            @keydown.home.prevent="selectView('plans', true)" @keydown.end.prevent="selectView('details', true)">
+                            {{ ui.details }}
+                        </button>
+                    </div>
+                </div>
+
+                <section id="pricing-plans" v-show="activeView === 'plans'" role="tabpanel" aria-labelledby="pricing-plans-tab" tabindex="0">
+                    <div class="plan-grid" :class="{ 'plan-grid-pair': visiblePlans.length === 2, 'plan-grid-single': visiblePlans.length === 1 }">
+                        <article v-for="plan in visiblePlans" :key="plan.id" class="plan-card">
+                            <div class="plan-card-heading">
+                                <h3>{{ tx(plan.name) }}</h3>
+                                <span v-if="ownsPlan(plan)" class="plan-badge">{{ tx('Aktiv') }}</span>
+                                <span v-else-if="plan.badge" class="plan-badge">{{ tx(plan.badge) }}</span>
                             </div>
-                        </article>
-
-                        <article
-                            v-for="plan in visiblePlans"
-                            :key="plan.id"
-                            class="surface-card flex flex-col p-5"
-                            :class="['club', 'trainer-pro', 'sportler-free'].includes(plan.slug) ? 'border-air-blue/60 shadow-lg shadow-air-blue/10' : ''"
-                        >
-                            <div>
-                                <div class="flex items-start justify-between gap-3">
-                                    <h3 class="text-xl font-bold text-primary">{{ tx(plan.name) }}</h3>
-                                    <span
-                                        v-if="ownsPlan(plan)"
-                                        class="rounded-full bg-air-green/15 px-2 py-1 text-xs font-semibold text-air-green"
-                                    >
-                                        {{ tx('Aktiv') }}
-                                    </span>
-                                    <span v-else-if="plan.badge" class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">{{ tx(plan.badge) }}</span>
-                                </div>
-                                <p class="mt-3 min-h-16 text-sm leading-relaxed text-secondary">{{ tx(plan.description) }}</p>
+                            <p class="plan-description">{{ tx(plan.description) }}</p>
+                            <div class="plan-price">
+                                <strong>{{ plan.slug === 'enterprise-verband' ? tx('individuell') : formatPrice(plan.monthly_price_cents, plan.currency) }}</strong>
+                                <span v-if="plan.slug !== 'enterprise-verband'">{{ tx(priceCaption(plan)) }}</span>
                             </div>
+                            <p v-if="plan.yearly_price_cents" class="plan-price-note">{{ formatPrice(plan.yearly_price_cents, plan.currency) }} {{ tx('pro Jahr') }}</p>
+                            <p v-if="plan.localized_price" class="plan-price-note">{{ tx('Lokaler Preis für {country}', { country: plan.pricing_country }) }}</p>
 
-                            <div class="mt-5">
-                                <p class="text-3xl font-900 text-primary">{{ formatPrice(plan.monthly_price_cents, plan.currency) }}</p>
-                                <p class="text-sm text-secondary">{{ tx(priceCaption(plan)) }}</p>
-                                <p v-if="plan.yearly_price_cents" class="mt-1 text-xs text-secondary">
-                                    {{ formatPrice(plan.yearly_price_cents, plan.currency) }} {{ tx('pro Jahr') }}
-                                </p>
-                                <p v-if="plan.localized_price" class="mt-1 text-xs text-air-blue">
-                                    {{ tx('Lokaler Preis für {country}', { country: plan.pricing_country }) }}
-                                </p>
-                            </div>
-
-                            <dl class="mt-5 grid gap-2 text-sm">
-                                <div v-if="plan.member_limit" class="flex justify-between gap-3 border-b border-border pb-2">
-                                    <dt class="text-secondary">{{ tx('Mitglieder') }}</dt>
-                                    <dd class="font-semibold text-primary">{{ plan.member_limit }}</dd>
-                                </div>
-                                <div v-if="plan.team_limit" class="flex justify-between gap-3 border-b border-border pb-2">
-                                    <dt class="text-secondary">{{ tx('Teams') }}</dt>
-                                    <dd class="font-semibold text-primary">{{ plan.team_limit }}</dd>
-                                </div>
-                                <div class="flex justify-between gap-3 border-b border-border pb-2">
-                                    <dt class="text-secondary">{{ tx('Speicher') }}</dt>
-                                    <dd class="font-semibold text-primary">{{ plan.storage_gb }} {{ tx('GB') }}</dd>
-                                </div>
+                            <dl class="plan-limits">
+                                <div v-if="plan.member_limit"><dt>{{ tx('Mitglieder') }}</dt><dd>{{ plan.member_limit }}</dd></div>
+                                <div v-if="plan.team_limit"><dt>{{ tx('Teams') }}</dt><dd>{{ plan.team_limit }}</dd></div>
+                                <div><dt>{{ tx('Speicher') }}</dt><dd>{{ plan.storage_gb }} {{ tx('GB') }}</dd></div>
                             </dl>
-
-                            <ul class="mt-5 space-y-2 text-sm text-secondary">
-                                <li v-for="feature in summaryFeatures(plan)" :key="feature" class="flex gap-2">
-                                    <i class="las la-check mt-0.5 text-air-green"></i>
-                                    <span>{{ tx(feature) }}</span>
-                                </li>
+                            <ul class="plan-highlights">
+                                <li v-for="feature in summaryFeatures(plan)" :key="feature"><i class="las la-check" aria-hidden="true"></i><span>{{ tx(feature) }}</span></li>
                             </ul>
-
-                            <button type="button" class="mt-3 min-h-11 text-start text-sm font-semibold text-air-blue underline underline-offset-2" :aria-label="ui.details + ': ' + tx(plan.name)" @click="showDetails(plan)">
-                                {{ ui.allDetails }}
-                            </button>
-
-                            <div class="mt-4 grid gap-2">
-                                <div
-                                    v-if="ownsPlan(plan)"
-                                    class="rounded-lg border border-air-green/40 bg-air-green/10 px-4 py-3 text-center text-sm font-semibold text-air-green"
-                                >
-                                    {{ tx('Du besitzt diesen Plan') }}
-                                </div>
-
-                                <Link
-                                    v-else-if="!plan.monthly_price_cents"
-                                    :href="canRegister ? route('register') : route('login')"
-                                    class="rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary"
-                                >
-                                    {{ tx(ctaLabel(plan)) }}
-                                </Link>
-
-                                <template v-else>
-                                    <button
-                                        type="button"
-                                        class="rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary"
-                                        @click="requestCheckout(plan, 'stripe')"
-                                    >
-                                        {{ tx('Mit Stripe zahlen') }}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted"
-                                        @click="requestCheckout(plan, 'paypal')"
-                                    >
-                                        {{ tx('Mit PayPal zahlen') }}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted"
-                                        @click="requestCheckout(plan, 'bank_transfer')"
-                                    >
-                                        {{ tx('Per Überweisung zahlen') }}
-                                    </button>
-                                </template>
+                            <div class="plan-actions">
+                                <p v-if="ownsPlan(plan)" class="plan-owned">{{ tx('Du besitzt diesen Plan') }}</p>
+                                <Link v-else-if="!plan.monthly_price_cents" :href="canRegister ? route('register') : route('login')" class="pricing-primary-action">{{ tx(ctaLabel(plan)) }}</Link>
+                                <button v-else type="button" class="pricing-primary-action" @click="requestCheckout(plan, 'stripe')">{{ ui.choose }}</button>
+                                <button type="button" class="pricing-detail-action" :aria-label="ui.details + ': ' + tx(plan.name)" @click="showDetails(plan)">
+                                    {{ ui.allDetails }} <span aria-hidden="true">→</span>
+                                </button>
                             </div>
                         </article>
                     </div>
-                <p v-if="!visiblePlans.length && selectedAudience !== 'werbeagentur'" class="rounded-lg border border-border bg-card p-5 text-secondary">{{ ui.empty }}</p>
-            </section>
-
-            <section id="pricing-details" v-show="activeView === 'details'" role="tabpanel" aria-labelledby="pricing-details-tab" tabindex="0" class="mx-auto mt-6 max-w-7xl">
-                <template v-if="detailPlan">
-                    <label for="pricing-detail-plan" class="mb-2 block text-sm font-semibold">{{ ui.choosePlan }}</label>
-                    <select id="pricing-detail-plan" :value="detailPlan.id" @change="selectedPlanId = $event.target.value" class="min-h-11 w-full rounded-lg border-border bg-inputBg text-primary sm:max-w-sm">
-                        <option v-for="plan in visiblePlans" :key="plan.id" :value="plan.id">{{ tx(plan.name) }} – {{ formatPrice(plan.monthly_price_cents, plan.currency) }} {{ tx(priceCaption(plan)) }}</option>
-                    </select>
-                    <article :key="detailPlan.id" class="mt-4 rounded-lg border border-border bg-card p-5">
-                        <h2 class="text-xl font-bold">{{ tx(detailPlan.name) }}</h2>
-                        <p class="mt-2 text-sm text-secondary">{{ ui.detailsHelp }}</p>
-                        <ul class="mt-4 divide-y divide-border text-sm">
-                            <li v-for="(feature, index) in detailPlan.features" :key="index" class="py-3 leading-6">
-                                <details v-if="String(feature).length > 180">
-                                    <summary class="cursor-pointer font-semibold text-primary">{{ tx(feature).slice(0, 120) }}…</summary>
-                                    <p class="mt-2 whitespace-pre-line text-secondary">{{ tx(feature) }}</p>
-                                </details>
-                                <span v-else>{{ tx(feature) }}</span>
-                            </li>
-                        </ul>
+                    <article v-if="selectedAudience === 'werbeagentur' && !visiblePlans.length" class="pricing-service-card">
+                        <span class="pricing-service-icon" aria-hidden="true"><i class="las la-laptop-code"></i></span>
+                        <div><h3>{{ tx('Individuelles Angebot') }}</h3><p>{{ tx('Websites und Kampagnen hängen stark von Umfang, Inhalten, Domain, Seitenanzahl und gewünschter Betreuung ab. Deshalb arbeitet Airmius hier mit Anfrage und Angebot.') }}</p></div>
+                        <Link :href="route('guest.werbeagentur')" class="pricing-primary-action">{{ tx('Zur Werbeagentur-Seite') }}</Link>
                     </article>
-                </template>
-                <p v-else class="rounded-lg border border-border bg-card p-5 text-secondary">{{ ui.empty }}</p>
-            </section>
+                    <p v-else-if="!visiblePlans.length" class="pricing-empty">{{ ui.empty }}</p>
+                </section>
+
+                <section id="pricing-details" v-show="activeView === 'details'" role="tabpanel" aria-labelledby="pricing-details-tab" tabindex="0">
+                    <div v-if="detailPlan" class="pricing-detail-layout" :class="{ 'pricing-detail-single': visiblePlans.length === 1 }">
+                        <aside v-if="visiblePlans.length > 1" class="detail-plan-picker" :aria-label="ui.choosePlan">
+                            <p>{{ ui.choosePlan }}</p>
+                            <div role="group" :aria-label="ui.choosePlan">
+                                <button v-for="plan in visiblePlans" :key="plan.id" type="button" :aria-pressed="detailPlan.id === plan.id" @click="selectDetailPlan(plan.id)">
+                                    <span><strong>{{ tx(plan.name) }}</strong><span>{{ formatPrice(plan.monthly_price_cents, plan.currency) }} · {{ tx(priceCaption(plan)) }}</span></span>
+                                    <i class="las la-angle-right" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </aside>
+                        <article :key="detailPlan.id" class="plan-detail-card">
+                            <header class="plan-detail-header">
+                                <div><p class="pricing-eyebrow">{{ ui.detailEyebrow }}</p><h3>{{ tx(detailPlan.name) }}</h3><p>{{ tx(detailPlan.description) }}</p></div>
+                                <div class="detail-price"><strong>{{ detailPlan.slug === 'enterprise-verband' ? tx('individuell') : formatPrice(detailPlan.monthly_price_cents, detailPlan.currency) }}</strong><span v-if="detailPlan.slug !== 'enterprise-verband'">{{ tx(priceCaption(detailPlan)) }}</span></div>
+                            </header>
+                            <label class="detail-search"><i class="las la-search" aria-hidden="true"></i><span class="sr-only">{{ ui.search }}</span><input v-model="detailSearch" type="search" :placeholder="ui.search"></label>
+                            <section v-if="filteredFeatures.length" class="detail-features">
+                                <h4>{{ ui.included }}</h4>
+                                <ul><li v-for="(feature, index) in filteredFeatures" :key="index"><i class="las la-check" aria-hidden="true"></i><span>{{ tx(feature) }}</span></li></ul>
+                            </section>
+                            <section v-if="noteGroups.length" class="detail-notes">
+                                <h4>{{ ui.notes }}</h4>
+                                <p>{{ ui.detailsHelp }}</p>
+                                <details v-for="group in noteGroups" :key="`${detailPlan.id}-${group.key}-${detailSearch}`" class="note-group" :open="Boolean(detailSearch.trim())">
+                                    <summary><span>{{ ui.topics[group.key] }}</span><span class="note-count">{{ group.items.length }}</span><i class="las la-plus" aria-hidden="true"></i></summary>
+                                    <ul><li v-for="(note, index) in group.items" :key="index">{{ tx(note) }}</li></ul>
+                                </details>
+                            </section>
+                            <div v-if="!filteredFeatures.length && !noteGroups.length" class="pricing-empty"><p>{{ detailSearch ? ui.noResults : ui.emptyDetails }}</p><button v-if="detailSearch" type="button" class="pricing-detail-action" @click="detailSearch = ''">{{ ui.clearSearch }}</button></div>
+                        </article>
+                    </div>
+                    <p v-else class="pricing-empty">{{ ui.empty }}</p>
+                </section>
+            </div>
         </main>
 
-        <Teleport to="body">
-            <div v-if="checkoutModal.open && checkoutModal.plan" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
-                <div class="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-2xl">
+        <Modal :show="checkoutModal.open" :closeable="!checkoutModal.processing" max-width="lg" :aria-label="tx('Abo kostenpflichtig bestellen')" @close="closeCheckoutModal">
+                <div v-if="checkoutModal.plan" class="p-2 sm:p-3">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ tx('Abo kostenpflichtig bestellen') }}</p>
@@ -564,9 +492,7 @@ const startCheckout = async () => {
                                 {{ tx('Bitte prüfe dein Abo, bevor du zur Zahlung weitergeleitet wirst.') }}
                             </p>
                         </div>
-                        <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeCheckoutModal">
-                            <i class="las la-times text-xl"></i>
-                        </button>
+
                     </div>
 
                     <div class="mt-5 grid gap-3 rounded-lg border border-border bg-bg p-4 text-sm">
@@ -578,10 +504,15 @@ const startCheckout = async () => {
                             <span class="text-secondary">{{ tx('Preis') }}</span>
                             <span class="font-semibold text-primary">{{ formatPrice(checkoutModal.plan.monthly_price_cents, checkoutModal.plan.currency) }} {{ tx('pro Monat') }}</span>
                         </div>
-                        <div class="flex items-center justify-between gap-4">
-                            <span class="text-secondary">{{ tx('Zahlungsart') }}</span>
-                            <span class="font-semibold text-primary">{{ tx(providerLabel(checkoutModal.provider)) }}</span>
-                        </div>
+                        <fieldset :disabled="checkoutModal.processing">
+                            <legend class="text-secondary">{{ tx('Zahlungsart') }}</legend>
+                            <div class="payment-options">
+                                <label v-for="provider in ['stripe', 'paypal', 'bank_transfer']" :key="provider">
+                                    <input v-model="checkoutModal.provider" type="radio" name="pricing-payment-provider" :value="provider" class="border-border">
+                                    <span>{{ tx(providerLabel(provider)) }}</span>
+                                </label>
+                            </div>
+                        </fieldset>
                         <label v-if="checkoutNeedsClub" class="grid gap-2 border-t border-border pt-3">
                             <span class="text-secondary">{{ checkoutText('club') }}</span>
                             <select
@@ -617,7 +548,7 @@ const startCheckout = async () => {
                     </p>
 
                     <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeCheckoutModal">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" :disabled="checkoutModal.processing" @click="closeCheckoutModal">
                             {{ tx('Abbrechen') }}
                         </button>
                         <button
@@ -630,9 +561,116 @@ const startCheckout = async () => {
                         </button>
                     </div>
                 </div>
-            </div>
-        </Teleport>
+        </Modal>
 
         <Footer />
     </div>
 </template>
+
+<style scoped>
+.pricing-page { background: color-mix(in srgb, var(--bg) 96%, var(--primary)); }
+.pricing-main { padding: 160px 24px 64px; color: var(--primary); }
+.pricing-container { max-width: 1080px; margin-inline: auto; }
+.pricing-heading { text-align: center; margin: 0 auto 24px; max-width: 640px; }
+.pricing-eyebrow { font-size: 11px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; color: var(--secondary); }
+.pricing-heading h1 { margin: 8px 0 10px; font-size: clamp(27px, 3vw, 38px); font-weight: 750; line-height: 1.15; letter-spacing: -.035em; }
+.pricing-heading > p:last-child { color: var(--secondary); font-size: 15px; line-height: 1.55; }
+.audience-picker { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0 auto 26px; }
+.audience-picker button { min-height: 42px; padding: 9px 17px; border: 1px solid var(--border); border-radius: 24px; color: var(--secondary); background: var(--card); font-size: 13px; font-weight: 650; }
+.audience-picker button:hover { border-color: var(--secondary); color: var(--primary); }
+.audience-picker button[aria-pressed="true"] { color: var(--card); background: var(--primary); border-color: var(--primary); }
+.pricing-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; }
+.pricing-toolbar h2 { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.pricing-view-switch { display: inline-flex; gap: 3px; padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+.pricing-view-switch button { min-height: 36px; padding: 7px 14px; font-size: 13px; font-weight: 650; color: var(--secondary); border-radius: 7px; }
+.pricing-view-switch button[aria-selected="true"] { background: var(--card); color: var(--primary); box-shadow: 0 1px 4px #10203316; }
+.plan-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.plan-grid-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 840px; margin-inline: auto; }
+.plan-grid-single { grid-template-columns: minmax(0, 1fr); max-width: 440px; margin-inline: auto; }
+.plan-card, .plan-detail-card, .pricing-service-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 3px 12px #10203304; }
+.plan-card { padding: 26px; display: flex; flex-direction: column; min-width: 0; }
+.plan-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.plan-card-heading h3 { font-size: 20px; font-weight: 750; letter-spacing: -.025em; }
+.plan-badge { background: var(--muted); color: var(--primary); padding: 4px 8px; font-size: 11px; border-radius: 5px; }
+.plan-description { margin-top: 10px; font-size: 14px; line-height: 1.6; color: var(--secondary); }
+.plan-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px; margin: 22px 0 2px; }
+.plan-price strong { font-size: 36px; font-weight: 750; letter-spacing: -.045em; line-height: 1.2; }
+.plan-price > span, .plan-price-note { font-size: 12px; line-height: 1.7; color: var(--secondary); }
+.plan-limits { display: flex; flex-wrap: wrap; gap: 16px; padding: 17px 0; margin: 16px 0 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.plan-limits div { display: flex; flex-direction: column-reverse; gap: 2px; }
+.plan-limits dd { font-size: 15px; font-weight: 700; }.plan-limits dt { font-size: 11px; color: var(--secondary); }
+.plan-highlights { margin: 18px 0 20px; display: grid; gap: 10px; font-size: 14px; line-height: 1.5; }
+.plan-highlights li, .detail-features li { display: flex; align-items: baseline; gap: 9px; }
+.plan-highlights i, .detail-features i { flex: 0 0 auto; color: var(--secondary); font-weight: 700; }
+.plan-actions { margin-top: auto; display: grid; gap: 5px; }
+.pricing-primary-action { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 11px 16px; border-radius: 8px; font-size: 14px; font-weight: 700; text-align: center; color: var(--card); background: var(--primary); }
+.pricing-primary-action:hover { opacity: .85; }
+.pricing-detail-action { display: inline-flex; gap: 8px; align-items: center; justify-content: center; min-height: 42px; font-size: 12px; font-weight: 650; color: var(--secondary); }
+.pricing-detail-action:hover { color: var(--primary); text-decoration: underline; text-underline-offset: 4px; }
+.plan-owned { font-size: 13px; padding: 11px; text-align: center; background: var(--muted); border-radius: 8px; }
+.pricing-detail-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; gap: 24px; }
+.pricing-detail-single { grid-template-columns: minmax(0, 1fr); max-width: 800px; margin-inline: auto; }
+.detail-plan-picker { min-width: 0; }
+.detail-plan-picker > p { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--secondary); margin: 2px 0 10px; }
+.detail-plan-picker > div { display: grid; gap: 8px; }
+.detail-plan-picker button { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: start; padding: 14px; border: 1px solid transparent; border-radius: 10px; color: var(--secondary); }
+.detail-plan-picker button:hover { background: var(--card); }
+.detail-plan-picker button[aria-pressed="true"] { border-color: var(--border); background: var(--card); color: var(--primary); box-shadow: inset 3px 0 var(--primary); }
+.detail-plan-picker:dir(rtl) button[aria-pressed="true"] { box-shadow: inset -3px 0 var(--primary); }
+.detail-plan-picker:dir(rtl) button > i, .pricing-detail-action:dir(rtl) > span { transform: rotate(180deg); }
+.detail-plan-picker strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.detail-plan-picker button span span { display: block; font-size: 12px; color: var(--secondary); }
+.plan-detail-card { padding: 26px; min-width: 0; }
+.plan-detail-header { display: flex; justify-content: space-between; align-items: start; gap: 24px; }
+.plan-detail-header h3 { font-size: 24px; font-weight: 750; line-height: 1.25; letter-spacing: -.025em; margin: 5px 0 8px; }
+.plan-detail-header > div > p:last-child:not(.pricing-eyebrow) { max-width: 48ch; font-size: 13px; line-height: 1.6; color: var(--secondary); }
+.detail-price { text-align: end; flex-shrink: 0; }
+.detail-price strong { display: block; font-size: 26px; font-weight: 750; letter-spacing: -.035em; }
+.detail-price span { display: block; font-size: 12px; color: var(--secondary); }
+.detail-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); background: var(--bg); border-radius: 8px; padding: 0 12px; margin-top: 22px; color: var(--secondary); }
+.detail-search input { min-height: 42px; width: 100%; padding: 8px 0; border: 0; background: transparent; font-size: 13px; color: var(--primary); box-shadow: none; }
+.detail-search:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.detail-search input:focus-visible { outline: none; }
+.detail-features { margin-top: 24px; }
+.detail-features h4, .detail-notes h4 { font-size: 14px; font-weight: 700; }
+.detail-features ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin-top: 14px; font-size: 14px; line-height: 1.6; }
+.detail-notes { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--border); }
+.detail-notes > p { font-size: 12px; line-height: 1.6; color: var(--secondary); margin: 6px 0 14px; max-width: 62ch; }
+.note-group { border-top: 1px solid var(--border); }
+.note-group:last-child { border-bottom: 1px solid var(--border); }
+.note-group summary { display: flex; align-items: center; gap: 10px; min-height: 50px; font-size: 13px; font-weight: 650; cursor: pointer; list-style: none; }
+.note-group summary::-webkit-details-marker { display: none; }
+.note-group summary > span:first-child { flex: 1; }
+.note-count { font-size: 11px; font-weight: 500; color: var(--secondary); background: var(--bg); border-radius: 5px; padding: 2px 6px; }
+.note-group summary > i { color: var(--secondary); }.note-group[open] summary > i { transform: rotate(45deg); }
+.note-group ul { display: grid; gap: 16px; padding: 0 0 18px; }
+.note-group li { max-width: 68ch; overflow-wrap: anywhere; color: var(--secondary); font-size: 14px; line-height: 1.8; padding-inline-start: 14px; border-inline-start: 2px solid var(--border); }
+.pricing-empty { padding: 30px; text-align: center; font-size: 14px; color: var(--secondary); }
+.pricing-service-card { padding: 30px; display: flex; gap: 22px; align-items: center; }
+.pricing-service-card h3 { font-size: 22px; font-weight: 700; }.pricing-service-card p { color: var(--secondary); font-size: 14px; line-height: 1.7; margin-top: 8px; max-width: 55ch; }
+.pricing-service-card .pricing-primary-action { flex-shrink: 0; }
+.pricing-service-icon { font-size: 36px; color: var(--secondary); }
+.payment-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.payment-options label { display: flex; gap: 7px; align-items: center; min-height: 46px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; cursor: pointer; }
+.payment-options label:has(input:checked) { border-color: var(--primary); background: var(--bg); }
+@media (max-width: 900px) {
+    .plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.plan-grid-single { grid-template-columns: minmax(0, 1fr); }
+    .pricing-detail-layout { grid-template-columns: 180px minmax(0, 1fr); gap: 16px; }.pricing-detail-single { grid-template-columns: minmax(0, 1fr); }
+    .plan-detail-card { padding: 22px; }.detail-features ul { grid-template-columns: minmax(0, 1fr); }
+    .pricing-service-card { flex-wrap: wrap; }
+}
+@media (max-width: 767px) {
+    .pricing-main { padding: 90px 16px 36px; }.pricing-heading { text-align: start; margin-bottom: 20px; }.pricing-heading h1 { font-size: 29px; }.pricing-heading > p:last-child { font-size: 14px; }
+    .audience-picker { justify-content: start; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-bottom: 20px; padding: 3px 3px 10px; }.audience-picker button { flex-shrink: 0; min-height: 44px; padding: 9px 14px; }
+    .audience-picker::-webkit-scrollbar, .detail-plan-picker > div::-webkit-scrollbar { display: none; }
+    .pricing-toolbar { gap: 10px; }.pricing-toolbar h2 { font-size: 17px; }.pricing-view-switch button { padding: 8px 10px; font-size: 12px; }
+    .plan-grid { grid-template-columns: minmax(0, 1fr); max-width: 440px; margin-inline: auto; gap: 16px; }.plan-card { padding: 22px; }
+    .pricing-detail-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .detail-plan-picker > p { display: none; }.detail-plan-picker > div { display: flex; overflow-x: auto; scrollbar-width: none; padding: 3px 3px 9px; }.detail-plan-picker button { flex: 0 0 auto; min-width: 155px; padding: 11px 13px; }
+    .plan-detail-card { padding: 20px; }.plan-detail-header { gap: 12px; }.plan-detail-header h3 { font-size: 21px; }.detail-price strong { font-size: 22px; }
+    .detail-search { margin-top: 18px; }.detail-features, .detail-notes { margin-top: 20px; }
+    .payment-options { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 380px) { .pricing-toolbar { align-items: start; flex-direction: column; }.plan-detail-header { flex-direction: column; }.detail-price { text-align: start; } }
+@media (prefers-reduced-motion: no-preference) { .audience-picker button, .pricing-primary-action { transition: background-color .15s, color .15s, opacity .15s; } }
+</style>
