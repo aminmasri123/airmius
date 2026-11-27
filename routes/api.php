@@ -771,6 +771,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::put('/clubs/{club}/funding-programs/{fundingProgram}/status', [ClubFundingProgramController::class, 'transition'])->name('clubs.funding-programs.status.update');
         Route::get('/clubs/{club}/members', [ClubController::class, 'members'])->name('clubs.members.index');
         Route::get('/clubs/{club}/announcements', [ClubAnnouncementController::class, 'index'])->name('clubs.announcements.index');
+        Route::get('/clubs/{club}/announcements/{announcement}', [ClubAnnouncementController::class, 'show'])->name('clubs.announcements.show');
         Route::post('/clubs/{club}/announcements', [ClubAnnouncementController::class, 'store'])->name('clubs.announcements.store');
         Route::put('/clubs/{club}/announcements/{announcement}', [ClubAnnouncementController::class, 'update'])->name('clubs.announcements.update');
         Route::post('/clubs/{club}/announcements/{announcement}/publish', [ClubAnnouncementController::class, 'publish'])->name('clubs.announcements.publish');

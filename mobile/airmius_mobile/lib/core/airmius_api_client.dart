@@ -899,6 +899,9 @@ class AirmiusApiClient {
   Future<AirmiusJson> clubAnnouncements(int clubId) =>
       _json('GET', '/api/v1/clubs/$clubId/announcements');
 
+  Future<AirmiusJson> clubAnnouncement(int clubId, int announcementId) =>
+      _json('GET', '/api/v1/clubs/$clubId/announcements/$announcementId');
+
   Future<AirmiusJson> createClubAnnouncement(int clubId, AirmiusJson body) =>
       _json('POST', '/api/v1/clubs/$clubId/announcements', body: body);
 

@@ -434,11 +434,39 @@ class ClubAnnouncementDeepLinkScreen extends StatefulWidget {
 class _ClubAnnouncementDeepLinkScreenState
     extends State<ClubAnnouncementDeepLinkScreen> {
   Future<ClubSummary>? _club;
+  Future<AirmiusClubAnnouncement>? _announcement;
+  bool _readAcknowledged = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _club ??= _loadClub();
+    if (widget.announcementId == null) {
+      _club ??= _loadClub();
+    } else {
+      _announcement ??= _loadAnnouncement();
+    }
+  }
+
+  Future<AirmiusClubAnnouncement> _loadAnnouncement() async {
+    final item = await AirmiusServicesScope.of(context).repositories.clubs
+        .announcement(widget.clubId, widget.announcementId!);
+    if (!item.readByMe && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _acknowledge(item);
+      });
+    }
+    return item;
+  }
+
+  Future<void> _acknowledge(AirmiusClubAnnouncement item) async {
+    if (_readAcknowledged) return;
+    try {
+      await AirmiusServicesScope.of(context).repositories.clubs
+          .acknowledgeAnnouncement(widget.clubId, item.id);
+      if (mounted) setState(() => _readAcknowledged = true);
+    } catch (_) {
+      // The announcement stays readable; acknowledgment can be retried.
+    }
   }
 
   Future<ClubSummary> _loadClub() async {
@@ -449,7 +477,32 @@ class _ClubAnnouncementDeepLinkScreenState
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<ClubSummary>(
+  Widget build(BuildContext context) => widget.announcementId != null
+      ? FutureBuilder<AirmiusClubAnnouncement>(
+          future: _announcement,
+          builder: (context, snapshot) {
+            final scope = AirmiusScope.of(context);
+            return Scaffold(
+              appBar: AppBar(title: Text(scope.t('clubs.memberHome.news'))),
+              body: snapshot.connectionState == ConnectionState.waiting
+                  ? const Center(child: CircularProgressIndicator())
+                  : snapshot.hasError || snapshot.data == null
+                  ? Center(child: Text(scope.t('clubs.announcements.loadError')))
+                  : SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: _AnnouncementCard(
+                          item: snapshot.data!,
+                          readByMe: _readAcknowledged || snapshot.data!.readByMe,
+                          reading: false,
+                          onRead: () => _acknowledge(snapshot.data!),
+                        ),
+                      ),
+                    ),
+            );
+          },
+        )
+      : FutureBuilder<ClubSummary>(
     future: _club,
     builder: (context, snapshot) {
       final scope = AirmiusScope.of(context);
@@ -485,6 +538,7 @@ class _AnnouncementCard extends StatelessWidget {
     required this.item,
     required this.reading,
     required this.onRead,
+    this.readByMe,
     this.onEdit,
     this.onPublish,
     this.onDelete,
@@ -492,6 +546,7 @@ class _AnnouncementCard extends StatelessWidget {
   final AirmiusClubAnnouncement item;
   final bool reading;
   final VoidCallback onRead;
+  final bool? readByMe;
   final VoidCallback? onEdit;
   final VoidCallback? onPublish;
   final VoidCallback? onDelete;
@@ -499,11 +554,12 @@ class _AnnouncementCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final isRead = readByMe ?? item.readByMe;
     final audience = item.audienceType == 'team'
         ? '${scope.t('clubs.announcements.team')}: ${item.teamName ?? '-'}'
         : scope.t('clubs.announcements.allMembers');
     return AirmiusPanel(
-      borderColor: item.readByMe
+      borderColor: isRead
           ? airmiusBorderColor(context)
           : airmiusAccentColor(context).withValues(alpha: .55),
       child: Column(
@@ -528,7 +584,7 @@ class _AnnouncementCard extends StatelessWidget {
                         : scope.t('clubs.announcements.scheduled'),
                   ),
                 )
-              else if (!item.readByMe)
+              else if (!isRead)
                 Chip(label: Text(scope.t('clubs.announcements.unread'))),
             ],
           ),
@@ -577,7 +633,7 @@ class _AnnouncementCard extends StatelessWidget {
               onPressed: onDelete,
             ),
           ],
-          if (item.publicationStatus == 'published' && !item.readByMe) ...[
+          if (item.publicationStatus == 'published' && !isRead) ...[
             const SizedBox(height: 10),
             AirmiusButton(
               label: reading

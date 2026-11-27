@@ -4195,6 +4195,7 @@ abstract class AirmiusClubRepository {
   Future<JsonMap> voteSurvey(int clubId, int surveyId, int optionId);
   Future<void> closeSurvey(int clubId, int surveyId);
   Future<List<AirmiusClubAnnouncement>> announcements(int clubId);
+  Future<AirmiusClubAnnouncement> announcement(int clubId, int announcementId);
   Future<AirmiusClubAnnouncement> createAnnouncement(
     int clubId,
     JsonMap payload,
