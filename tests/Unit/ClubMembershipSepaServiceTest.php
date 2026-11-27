@@ -7,7 +7,7 @@ use App\Models\Invoice;
 use App\Models\User;
 use App\Services\ClubMembershipSepaService;
 use Illuminate\Support\Collection;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class ClubMembershipSepaServiceTest extends TestCase
 {
