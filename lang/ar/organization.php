@@ -184,6 +184,8 @@ return [
         'club_member_limit_reached' => 'تم بلوغ حد الأعضاء في باقة النادي الحالية.',
     ],
     'notifications' => [
+        'club_role_assignments_title' => 'تم تغيير أدوارك في النادي',
+        'club_role_assignments_body' => 'تم تغيير الأدوار المسندة إليك في :club. افتح النادي للاطلاع على صلاحياتك.',
         'club_role_title' => 'تم تغيير الدور في النادي',
         'club_role_body' => 'تم تغيير دورك في :club من :previous إلى :next.',
         'member_linked_title' => 'تم ربطك بـ :club',

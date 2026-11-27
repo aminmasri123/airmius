@@ -7,6 +7,7 @@ use App\Models\Club;
 use App\Models\ClubRoleAssignment;
 use App\Models\ClubRoleDefinition;
 use App\Models\User;
+use App\Support\AppNotification;
 use App\Support\ClubAuditLog;
 use App\Support\ClubPermissions;
 use App\Support\ClubRoleTemplates;
@@ -153,6 +154,19 @@ class ClubRoleDefinitionController extends Controller
                     'scope_id' => $assignment['scope_id'],
                 ])->values()->all(),
             ]);
+            AppNotification::sendLocalized(
+                $user,
+                'club.member.role_assignments_updated',
+                'organization.notifications.club_role_assignments_title',
+                'organization.notifications.club_role_assignments_body',
+                ['club' => $club->name],
+                [
+                    'club_id' => $club->id,
+                    'role_names' => $definitions->pluck('name')->values()->all(),
+                    'url' => '/notifications',
+                    'mobile_url' => 'airmius://clubs/'.$club->id,
+                ],
+            );
         }
 
         return response()->json(['data' => $this->assignmentPayload($club, $user)]);

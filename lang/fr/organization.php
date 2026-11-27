@@ -184,6 +184,8 @@ return [
         'club_member_limit_reached' => 'La limite de membres de l’offre actuelle du club est atteinte.',
     ],
     'notifications' => [
+        'club_role_assignments_title' => 'Rôles du club modifiés',
+        'club_role_assignments_body' => 'Vos rôles dans :club ont changé. Ouvrez le club pour voir vos accès.',
         'club_role_title' => 'Rôle dans le club modifié',
         'club_role_body' => 'Votre rôle dans :club est passé de :previous à :next.',
         'member_linked_title' => 'Vous avez été lié à :club',
