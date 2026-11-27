@@ -6828,7 +6828,10 @@ void main() {
         statusCode: 200,
         body: '{"data":{"is_wishlisted":false,"wishlist_count":0}}',
       ),
-    ]);
+    ], responsesByPath: {
+      '/api/v1/public/ads/active': const AirmiusApiResponse(statusCode: 200, body: '{}'),
+      '/api/v1/ads/active': const AirmiusApiResponse(statusCode: 200, body: '{}'),
+    });
     await _pumpAirmiusWidget(
       tester,
       _widgetTestContainer(transport: transport),
