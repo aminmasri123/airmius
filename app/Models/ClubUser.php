@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedIban;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class ClubUser extends Pivot
@@ -11,6 +12,7 @@ class ClubUser extends Pivot
     protected $guarded = [];
 
     protected $casts = [
+        'sepa_iban' => EncryptedIban::class,
         'roles' => 'array',
         'permission_overrides' => 'array',
         'member_card_design' => 'array',

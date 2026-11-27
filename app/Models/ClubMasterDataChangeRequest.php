@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedJson;
 use Illuminate\Database\Eloquent\Model;
 
 class ClubMasterDataChangeRequest extends Model
@@ -23,9 +24,9 @@ class ClubMasterDataChangeRequest extends Model
     {
         return [
             'fields' => 'array',
-            'proposed_values' => 'array',
-            'base_values' => 'array',
-            'conflicts' => 'array',
+            'proposed_values' => EncryptedJson::class,
+            'base_values' => EncryptedJson::class,
+            'conflicts' => EncryptedJson::class,
             'reviewed_at' => 'datetime',
         ];
     }

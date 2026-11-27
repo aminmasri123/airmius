@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedIban;
 use Illuminate\Database\Eloquent\Model;
 
 class ClubMoneyAccount extends Model
@@ -10,7 +11,7 @@ class ClubMoneyAccount extends Model
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['iban' => EncryptedIban::class, 'is_active' => 'boolean'];
     }
 
     public function entries()

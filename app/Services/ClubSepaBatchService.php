@@ -9,6 +9,7 @@ use App\Models\Invoice;
 use App\Models\User;
 use App\Support\ClubAuditLog;
 use App\Support\ClubMembershipInput;
+use App\Support\EncryptedIbanValue;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -167,7 +168,7 @@ final class ClubSepaBatchService
 
         return [
             'name' => $invoice->user?->name, 'number' => $invoice->number, 'title' => $invoice->title,
-            'sepa_iban' => ClubMembershipInput::normalizeIban($member->sepa_iban),
+            'sepa_iban' => ClubMembershipInput::normalizeIban(EncryptedIbanValue::decrypt($member->sepa_iban)),
             'sepa_bic' => ClubMembershipInput::normalizeBic($member->sepa_bic),
             'sepa_mandate_reference' => $member->sepa_mandate_reference,
             'sepa_mandate_signed_on' => Carbon::parse($member->sepa_mandate_signed_on)->toDateString(),

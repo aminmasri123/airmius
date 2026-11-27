@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedJson;
+use App\Casts\EncryptedIban;
 use App\Services\ClubYearPeriodResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,10 +34,11 @@ class BankTransaction extends Model
     protected function casts(): array
     {
         return [
+            'debtor_iban' => EncryptedIban::class,
             'booking_date' => 'date',
             'amount' => 'decimal:2',
             'match_confidence' => 'integer',
-            'raw_data' => 'array',
+            'raw_data' => EncryptedJson::class,
         ];
     }
 

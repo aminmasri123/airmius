@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedJson;
 use Illuminate\Database\Eloquent\Model;
 
 class ClubMembershipRequest extends Model
@@ -59,7 +60,7 @@ class ClubMembershipRequest extends Model
             'requested_termination_on' => 'date',
             'effective_on' => 'date',
             'applied_at' => 'datetime',
-            'application_data' => 'array',
+            'application_data' => EncryptedJson::class,
             'accepted_documents' => 'array',
             'consent_at' => 'datetime',
             'preview_amount' => 'decimal:2',

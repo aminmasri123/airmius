@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedIban;
 use App\Models\Concerns\CleansClubMetadata;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -66,6 +67,7 @@ class ClubExternalMember extends Model
     protected function casts(): array
     {
         return [
+            'sepa_iban' => EncryptedIban::class,
             'contribution_amount' => 'decimal:2',
             'athlete_license_valid_until' => 'date',
             'contribution_next_invoice_on' => 'date',

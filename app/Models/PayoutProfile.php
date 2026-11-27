@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedIban;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,6 +33,7 @@ class PayoutProfile extends Model
     protected function casts(): array
     {
         return [
+            'iban' => EncryptedIban::class,
             'beneficial_owner_confirmed' => 'boolean',
             'terms_accepted_at' => 'datetime',
             'verified_at' => 'datetime',

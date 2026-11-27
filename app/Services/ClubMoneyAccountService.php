@@ -30,8 +30,9 @@ final class ClubMoneyAccountService
         if (! $iban || ! Schema::hasColumn('club_money_accounts', 'iban')) {
             return null;
         }
+        $normalized = strtoupper(preg_replace('/\s+/', '', $iban));
         $accounts = ClubMoneyAccount::where('club_id', $clubId)->where('type', 'bank')->where('is_active', true)
-            ->where('iban', strtoupper(preg_replace('/\s+/', '', $iban)))->get();
+            ->get()->filter(fn (ClubMoneyAccount $account) => $account->iban === $normalized);
 
         return $accounts->count() === 1 ? $accounts->first()->id : null;
     }
