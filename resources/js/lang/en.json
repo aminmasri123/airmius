@@ -1,4 +1,5 @@
 {
+  "post_boost": { "sponsored": "Sponsored", "open_original": "Open original post", "action": "Boost post" },
   "marketplace.bulk.selectPage": "Select all on this page",
   "marketplace.bulk.selected": "{count} selected",
   "marketplace.bulk.action": "Bulk action",

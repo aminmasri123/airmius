@@ -1,4 +1,5 @@
 {
+  "post_boost": { "sponsored": "إعلان ممول", "open_original": "فتح المنشور الأصلي", "action": "ترويج المنشور" },
   "marketplace.bulk.selectPage": "تحديد الكل في هذه الصفحة",
   "marketplace.bulk.selected": "تم تحديد {count}",
   "marketplace.bulk.action": "إجراء جماعي",

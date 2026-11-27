@@ -19,12 +19,12 @@ onMounted(load)
 </script>
 <template>
     <article v-if="post" class="surface-card p-4">
-        <p class="text-xs text-secondary">Gesponsert</p>
+        <p class="text-xs text-secondary">{{ $t('post_boost.sponsored') }}</p>
         <p class="mt-2 font-semibold">{{ post.user?.name }}</p>
         <p class="my-3 whitespace-pre-wrap">{{ post.content }}</p>
         <img v-if="post.image" :src="post.image" alt="" class="max-h-96 w-full object-contain" />
         <button :disabled="busy" class="my-3 rounded border border-border p-2" @click="like">{{ post.liked_by_me ? 'Gefällt mir nicht mehr' : 'Gefällt mir' }} · {{ post.likes_count }}</button>
         <FeedComments :post="post" :user="user" />
-        <a :href="route('auth.posts.index', { post: post.id })" class="text-primary underline">Originalbeitrag öffnen</a>
+        <a :href="route('auth.posts.index', { post: post.id })" class="text-primary underline">{{ $t('post_boost.open_original') }}</a>
     </article>
 </template>

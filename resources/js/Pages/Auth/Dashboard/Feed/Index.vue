@@ -405,7 +405,7 @@ const visitPage = (url) => url && router.visit(url, {
                     </div>
 
                     <div class="flex justify-end gap-1">
-                        <Link v-if="post.user_id === user?.id && post.visibility === 'public' && post.moderation_status === 'approved'" :href="route('auth.commerce.index', { tab: 'ads', boost_post: post.id })" class="rounded p-2 text-primary">Beitrag bewerben</Link>
+                        <Link v-if="post.user_id === user?.id && post.visibility === 'public' && post.moderation_status === 'approved'" :href="route('auth.commerce.index', { tab: 'ads', boost_post: post.id })" class="rounded p-2 text-primary">{{ $t('post_boost.action') }}</Link>
                         <button
                             v-if="post.user_id !== user?.id"
                             class="rounded p-2 text-secondary hover:bg-muted hover:text-primary"
