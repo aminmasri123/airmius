@@ -12690,7 +12690,7 @@ void main() {
     expect(legacyManager.canDeleteJobs, isTrue);
   });
 
-  testWidgets('club news opens a scoped member announcement composer', (
+  testWidgets('club news opens a full-page announcement editor with spaced fields', (
     WidgetTester tester,
   ) async {
     _setTestViewport(tester, const Size(390, 1000));
@@ -12713,9 +12713,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.byKey(const ValueKey('club-announcement-editor-page')), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    final title = find.byKey(const ValueKey('club-announcement-title'));
+    final body = find.byKey(const ValueKey('club-announcement-body'));
+    expect(tester.getTopLeft(body).dy - tester.getBottomLeft(title).dy, greaterThanOrEqualTo(16));
     expect(find.text('Alle aktiven Mitglieder'), findsOneWidget);
-    expect(find.text('Vorschau'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('club-announcement-publication')),
+      260,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Jetzt veröffentlichen'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

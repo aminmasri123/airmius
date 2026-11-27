@@ -197,12 +197,13 @@ class _ClubAnnouncementScreenState extends State<ClubAnnouncementScreen> {
 
   Future<void> _create([AirmiusClubAnnouncement? existing]) async {
     if (!widget.club.canEditAnnouncements) return;
-    final payload = await showDialog<JsonMap>(
-      context: context,
-      builder: (_) => _CreateAnnouncementDialog(
-        teams: widget.club.teamList,
-        existing: existing,
-        canPublish: widget.club.canPublishAnnouncements,
+    final payload = await Navigator.of(context).push<JsonMap>(
+      MaterialPageRoute(
+        builder: (_) => _AnnouncementEditorPage(
+          teams: widget.club.teamList,
+          existing: existing,
+          canPublish: widget.club.canPublishAnnouncements,
+        ),
       ),
     );
     if (payload == null || !mounted) return;
@@ -581,8 +582,8 @@ class _AnnouncementCard extends StatelessWidget {
   }
 }
 
-class _CreateAnnouncementDialog extends StatefulWidget {
-  const _CreateAnnouncementDialog({
+class _AnnouncementEditorPage extends StatefulWidget {
+  const _AnnouncementEditorPage({
     required this.teams,
     required this.canPublish,
     this.existing,
@@ -591,11 +592,11 @@ class _CreateAnnouncementDialog extends StatefulWidget {
   final bool canPublish;
   final AirmiusClubAnnouncement? existing;
   @override
-  State<_CreateAnnouncementDialog> createState() =>
-      _CreateAnnouncementDialogState();
+  State<_AnnouncementEditorPage> createState() =>
+      _AnnouncementEditorPageState();
 }
 
-class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
+class _AnnouncementEditorPageState extends State<_AnnouncementEditorPage> {
   final _formKey = GlobalKey<FormState>();
   final _title = TextEditingController();
   final _body = TextEditingController();
@@ -652,11 +653,7 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
                     labelText: scope.t('clubs.announcements.aiTone'),
                   ),
                   items: [
-                    for (final value in const [
-                      'friendly',
-                      'formal',
-                      'concise',
-                    ])
+                    for (final value in const ['friendly', 'formal', 'concise'])
                       DropdownMenuItem(
                         value: value,
                         child: Text(
@@ -795,240 +792,289 @@ class _CreateAnnouncementDialogState extends State<_CreateAnnouncementDialog> {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
-    return AlertDialog(
-      title: Text(scope.t('clubs.announcements.createTitle')),
-      content: SingleChildScrollView(
-        child: AirmiusForm(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _title,
-                maxLength: 160,
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? scope.t('clubs.announcements.required')
-                    : null,
-                decoration: InputDecoration(
-                  labelText: scope.t('clubs.announcements.title'),
-                ),
-              ),
-              TextFormField(
-                controller: _body,
-                minLines: 4,
-                maxLines: 8,
-                maxLength: 10000,
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? scope.t('clubs.announcements.required')
-                    : null,
-                decoration: InputDecoration(
-                  labelText: scope.t('clubs.announcements.body'),
-                ),
-              ),
-              DropdownButtonFormField<String>(
-                isExpanded: true,
-                initialValue: _audience,
-                decoration: InputDecoration(
-                  labelText: scope.t('clubs.announcements.audience'),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: 'all_members',
-                    child: Text(
-                      scope.t('clubs.announcements.allMembers'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+    return Scaffold(
+      key: const ValueKey('club-announcement-editor-page'),
+      appBar: AppBar(title: Text(scope.t('clubs.announcements.createTitle'))),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: AirmiusForm(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+                children: [
+                  TextFormField(
+                    key: const ValueKey('club-announcement-title'),
+                    controller: _title,
+                    maxLength: 160,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? scope.t('clubs.announcements.required')
+                        : null,
+                    decoration: InputDecoration(
+                      labelText: scope.t('clubs.announcements.title'),
                     ),
                   ),
-                  if (widget.teams.isNotEmpty)
-                    DropdownMenuItem(
-                      value: 'team',
-                      child: Text(scope.t('clubs.announcements.teamOnly')),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    key: const ValueKey('club-announcement-body'),
+                    controller: _body,
+                    minLines: 4,
+                    maxLines: 8,
+                    maxLength: 10000,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? scope.t('clubs.announcements.required')
+                        : null,
+                    decoration: InputDecoration(
+                      labelText: scope.t('clubs.announcements.body'),
                     ),
-                ],
-                onChanged: (value) => setState(() {
-                  _audience = value ?? 'all_members';
-                  if (_audience != 'team') _teamId = null;
-                }),
-              ),
-              if (_audience == 'team')
-                DropdownButtonFormField<int>(
-                  isExpanded: true,
-                  initialValue: _teamId,
-                  decoration: InputDecoration(
-                    labelText: scope.t('clubs.announcements.team'),
                   ),
-                  items: [
-                    for (final team in widget.teams)
+                  const SizedBox(height: 20),
+                  DropdownButtonFormField<String>(
+                    key: const ValueKey('club-announcement-audience'),
+                    isExpanded: true,
+                    initialValue: _audience,
+                    decoration: InputDecoration(
+                      labelText: scope.t('clubs.announcements.audience'),
+                    ),
+                    items: [
                       DropdownMenuItem(
-                        value: team.id,
-                        child: Text(team.name, overflow: TextOverflow.ellipsis),
-                      ),
-                  ],
-                  validator: (value) => value == null
-                      ? scope.t('clubs.announcements.required')
-                      : null,
-                  onChanged: (value) => setState(() => _teamId = value),
-                ),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: OutlinedButton.icon(
-                  onPressed: _generatingAiDraft ? null : _generateAiDraft,
-                  icon: _generatingAiDraft
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.auto_awesome),
-                  label: Text(
-                    _generatingAiDraft
-                        ? scope.t('clubs.announcements.aiGenerating')
-                        : scope.t('clubs.announcements.aiAction'),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                isExpanded: true,
-                initialValue: _mode,
-                decoration: InputDecoration(
-                  labelText: scope.t('clubs.announcements.publication'),
-                ),
-                items: [
-                  if (widget.canPublish)
-                    DropdownMenuItem(
-                      value: 'now',
-                      child: Text(
-                        scope.t('clubs.announcements.publishNow'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  DropdownMenuItem(
-                    value: 'draft',
-                    child: Text(
-                      scope.t('clubs.announcements.saveDraft'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (widget.canPublish)
-                    DropdownMenuItem(
-                      value: 'schedule',
-                      child: Text(
-                        scope.t('clubs.announcements.schedule'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: (value) => setState(() => _mode = value ?? 'now'),
-              ),
-              if (_mode == 'schedule')
-                TextButton.icon(
-                  onPressed: _chooseSchedule,
-                  icon: const Icon(Icons.schedule),
-                  label: Text(
-                    _publishAt == null
-                        ? scope.t('clubs.announcements.chooseTime')
-                        : '${_publishAt!.day}.${_publishAt!.month}.${_publishAt!.year} · ${TimeOfDay.fromDateTime(_publishAt!).format(context)}',
-                  ),
-                ),
-              Text(
-                scope.t('clubs.announcements.deliveryHint'),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () {
-                    if (!(_formKey.currentState?.validate() ?? false)) return;
-                    showDialog<void>(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: Text(_title.text.trim()),
-                        content: SingleChildScrollView(
-                          child: Text(_body.text.trim()),
+                        value: 'all_members',
+                        child: Text(
+                          scope.t('clubs.announcements.allMembers'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text(scope.t('clubs.announcements.back')),
-                          ),
-                        ],
                       ),
-                    );
+                      if (widget.teams.isNotEmpty)
+                        DropdownMenuItem(
+                          value: 'team',
+                          child: Text(scope.t('clubs.announcements.teamOnly')),
+                        ),
+                    ],
+                    onChanged: (value) => setState(() {
+                      _audience = value ?? 'all_members';
+                      if (_audience != 'team') _teamId = null;
+                    }),
+                  ),
+                  if (_audience == 'team') ...[
+                    const SizedBox(height: 20),
+                    DropdownButtonFormField<int>(
+                      isExpanded: true,
+                      initialValue: _teamId,
+                      decoration: InputDecoration(
+                        labelText: scope.t('clubs.announcements.team'),
+                      ),
+                      items: [
+                        for (final team in widget.teams)
+                          DropdownMenuItem(
+                            value: team.id,
+                            child: Text(
+                              team.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      validator: (value) => value == null
+                          ? scope.t('clubs.announcements.required')
+                          : null,
+                      onChanged: (value) => setState(() => _teamId = value),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: OutlinedButton.icon(
+                      onPressed: _generatingAiDraft ? null : _generateAiDraft,
+                      icon: _generatingAiDraft
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.auto_awesome),
+                      label: Text(
+                        _generatingAiDraft
+                            ? scope.t('clubs.announcements.aiGenerating')
+                            : scope.t('clubs.announcements.aiAction'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  DropdownButtonFormField<String>(
+                    key: const ValueKey('club-announcement-publication'),
+                    isExpanded: true,
+                    initialValue: _mode,
+                    decoration: InputDecoration(
+                      labelText: scope.t('clubs.announcements.publication'),
+                    ),
+                    items: [
+                      if (widget.canPublish)
+                        DropdownMenuItem(
+                          value: 'now',
+                          child: Text(
+                            scope.t('clubs.announcements.publishNow'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      DropdownMenuItem(
+                        value: 'draft',
+                        child: Text(
+                          scope.t('clubs.announcements.saveDraft'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (widget.canPublish)
+                        DropdownMenuItem(
+                          value: 'schedule',
+                          child: Text(
+                            scope.t('clubs.announcements.schedule'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _mode = value ?? 'now'),
+                  ),
+                  const SizedBox(height: 16),
+                  if (_mode == 'schedule')
+                    TextButton.icon(
+                      onPressed: _chooseSchedule,
+                      icon: const Icon(Icons.schedule),
+                      label: Text(
+                        _publishAt == null
+                            ? scope.t('clubs.announcements.chooseTime')
+                            : '${_publishAt!.day}.${_publishAt!.month}.${_publishAt!.year} · ${TimeOfDay.fromDateTime(_publishAt!).format(context)}',
+                      ),
+                    ),
+                  Text(
+                    scope.t('clubs.announcements.deliveryHint'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        if (!(_formKey.currentState?.validate() ?? false)) {
+                          return;
+                        }
+                        showDialog<void>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: Text(_title.text.trim()),
+                            content: SingleChildScrollView(
+                              child: Text(_body.text.trim()),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text(
+                                  scope.t('clubs.announcements.back'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.visibility_outlined),
+                      label: Text(scope.t('clubs.announcements.preview')),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: Row(
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(scope.t('clubs.announcements.cancel')),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () async {
+                    if (!(_formKey.currentState?.validate() ?? false)) return;
+                    if (_mode == 'schedule' &&
+                        (_publishAt == null ||
+                            !_publishAt!.isAfter(DateTime.now()))) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            scope.t('clubs.announcements.invalidTime'),
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    if (_mode == 'now') {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          title: Text(
+                            scope.t('clubs.announcements.confirmPublishTitle'),
+                          ),
+                          content: Text(
+                            _audience == 'team'
+                                ? scope.t(
+                                    'clubs.announcements.confirmTeamPublish',
+                                  )
+                                : scope.t(
+                                    'clubs.announcements.confirmAllPublish',
+                                  ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.pop(dialogContext, false),
+                              child: Text(
+                                scope.t('clubs.announcements.cancel'),
+                              ),
+                            ),
+                            FilledButton(
+                              onPressed: () =>
+                                  Navigator.pop(dialogContext, true),
+                              child: Text(
+                                scope.t('clubs.announcements.publish'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed != true || !context.mounted) return;
+                    }
+                    Navigator.pop(context, {
+                      'title': _title.text.trim(),
+                      'body': _body.text.trim(),
+                      'audience_type': _audience,
+                      if (_teamId != null) 'team_id': _teamId,
+                      'publication_mode': _mode,
+                      if (_mode == 'schedule')
+                        'publish_at': _publishAt!.toUtc().toIso8601String(),
+                    });
                   },
-                  icon: const Icon(Icons.visibility_outlined),
-                  label: Text(scope.t('clubs.announcements.preview')),
+                  child: Text(
+                    _mode == 'draft'
+                        ? scope.t('clubs.announcements.saveDraft')
+                        : _mode == 'schedule'
+                        ? scope.t('clubs.announcements.schedule')
+                        : scope.t('clubs.announcements.publish'),
+                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(scope.t('clubs.announcements.cancel')),
-        ),
-        FilledButton(
-          onPressed: () async {
-            if (!(_formKey.currentState?.validate() ?? false)) return;
-            if (_mode == 'schedule' &&
-                (_publishAt == null || !_publishAt!.isAfter(DateTime.now()))) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(scope.t('clubs.announcements.invalidTime')),
-                ),
-              );
-              return;
-            }
-            if (_mode == 'now') {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (dialogContext) => AlertDialog(
-                  title: Text(
-                    scope.t('clubs.announcements.confirmPublishTitle'),
-                  ),
-                  content: Text(
-                    _audience == 'team'
-                        ? scope.t('clubs.announcements.confirmTeamPublish')
-                        : scope.t('clubs.announcements.confirmAllPublish'),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(dialogContext, false),
-                      child: Text(scope.t('clubs.announcements.cancel')),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(dialogContext, true),
-                      child: Text(scope.t('clubs.announcements.publish')),
-                    ),
-                  ],
-                ),
-              );
-              if (confirmed != true || !context.mounted) return;
-            }
-            Navigator.pop(context, {
-              'title': _title.text.trim(),
-              'body': _body.text.trim(),
-              'audience_type': _audience,
-              if (_teamId != null) 'team_id': _teamId,
-              'publication_mode': _mode,
-              if (_mode == 'schedule')
-                'publish_at': _publishAt!.toUtc().toIso8601String(),
-            });
-          },
-          child: Text(
-            _mode == 'draft'
-                ? scope.t('clubs.announcements.saveDraft')
-                : _mode == 'schedule'
-                ? scope.t('clubs.announcements.schedule')
-                : scope.t('clubs.announcements.publish'),
-          ),
-        ),
-      ],
     );
   }
 }
