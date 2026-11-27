@@ -90,6 +90,7 @@ const formatStorage = (bytes) => {
                         :icon="item.icon"
                         :badge="item.badge"
                         :active-paths="item.activePaths"
+                        :active-query="item.activeQuery"
                         @navigate="emit('close')"
                     />
                 </NavGroup>

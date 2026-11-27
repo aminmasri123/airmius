@@ -2,6 +2,7 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
+import { matchesNavigation } from '@/support/navigationMatch'
 
 const props = defineProps({
     href: String,
@@ -18,7 +19,11 @@ const props = defineProps({
     activePaths: {
         type: Array,
         default: () => []
-    }
+    },
+    activeQuery: {
+        type: Object,
+        default: () => ({}),
+    },
 })
 
 const emit = defineEmits(['navigate'])
@@ -26,38 +31,11 @@ const page = usePage()
 const isOpen = ref(false)
 
 const hasSubitems = computed(() => props.subitems.length > 0)
-const normalizePath = (url) => {
-    if (!url) return ''
-
-    try {
-        const baseUrl = typeof window === 'undefined' ? 'http://localhost' : window.location.origin
-
-        return new URL(url, baseUrl).pathname
-    } catch (error) {
-        return String(url).split('?')[0]
-    }
-}
-const currentPath = computed(() => normalizePath(page.url))
-const isSameSection = (href) => {
-    const path = normalizePath(href)
-
-    return path && (currentPath.value === path || currentPath.value.startsWith(`${path}/`))
-}
-const isSubitemActive = (item) => {
-    const paths = [
-        item.href,
-        ...(item.activePaths || []),
-    ]
-
-    return paths.some((path) => isSameSection(path))
-}
-const isActive = computed(() => {
-    if ([props.href, ...props.activePaths].some((path) => isSameSection(path))) {
-        return true
-    }
-
-    return props.subitems.some(isSubitemActive)
-})
+const isSubitemActive = (item) => matchesNavigation(page.url, [item.href, ...(item.activePaths || [])], item.activeQuery)
+const isActive = computed(() =>
+    matchesNavigation(page.url, [props.href, ...props.activePaths], props.activeQuery)
+    || props.subitems.some(isSubitemActive),
+)
 
 watch(isActive, (active) => {
     if (active && hasSubitems.value) {

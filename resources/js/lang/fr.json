@@ -2342,6 +2342,7 @@
       }
     },
     "subnav": {
+      "more": "Plus",
       "feed": "Fil",
       "top_content": "Meilleurs contenus",
       "jobs": "Emplois",

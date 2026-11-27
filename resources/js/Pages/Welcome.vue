@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { useForm, usePage } from '@inertiajs/vue3'
+import { Link, useForm, usePage } from '@inertiajs/vue3'
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Nav from '@/Components/Guest/Nav.vue'
@@ -684,7 +684,7 @@ const onBannerSecondaryCtaClick = () => {
                 <div class="mb-8 sm:mb-10 flex justify-center px-4">
                     <div class="inline-flex bg-white/5 rounded-full p-1 gap-1 flex-wrap justify-center" role="tablist"
                         :aria-label="t('guest.welcome.benefits.audience_label')">
-                        <button v-for="tab in tabs" :key="tab.key" type="button" :id="`tab-${tab.key}`"
+                        <button v-for="tab in tabs" :key="tab.key" type="button" role="tab" :id="`tab-${tab.key}`"
                             :aria-controls="`tabpanel-${tab.key}`" :aria-selected="activeTab === tab.key"
                             :tabindex="activeTab === tab.key ? 0 : -1" @click="switchTab(tab.key)"
                             @keydown="onTabKeydown" :class="[
