@@ -10,10 +10,49 @@ import 'package:airmius/core/airmius_services_scope.dart';
 import 'package:airmius/screens/admin_backoffice_screen.dart';
 import 'package:airmius/screens/editorial_management_screen.dart';
 import 'package:airmius/screens/platform_admin_screen.dart';
+import 'package:airmius/screens/trainer_cockpit_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'trainer periods reload metrics and preserve current empty warning',
+    (tester) async {
+      final transport = _ParityTransport();
+      await _pump(tester, transport, const TrainerCockpitScreen());
+      expect(find.text('Noch keine Trainingsdaten'), findsOneWidget);
+      expect(find.text('Kein Vergleich verfügbar'), findsOneWidget);
+      expect(find.text('Aktuell keine Warnsignale'), findsNothing);
+      expect(find.text('Keine Belastungseinschätzung möglich'), findsOneWidget);
+      for (final period in ['month', 'year']) {
+        final choice = find.widgetWithText(
+          ChoiceChip,
+          period == 'month' ? 'Monat' : 'Jahr',
+        );
+        await tester.ensureVisible(choice);
+        await tester.pumpAndSettle();
+        await tester.tap(choice);
+        await tester.pumpAndSettle();
+        expect(transport.requests.last.query['period'], period);
+        expect(find.text(period == 'month' ? '90' : '600'), findsOneWidget);
+        expect(find.text('100%'), findsOneWidget);
+        expect(find.text('Noch keine Trainingsdaten'), findsNothing);
+        expect(
+          find.text('Keine Belastungseinschätzung möglich'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      }
+      final week = find.widgetWithText(ChoiceChip, 'Woche');
+      await tester.ensureVisible(week);
+      await tester.pumpAndSettle();
+      await tester.tap(week);
+      await tester.pumpAndSettle();
+      expect(transport.requests.last.query['period'], 'week');
+      expect(find.text('Kein Vergleich verfügbar'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'commerce invoice receipt requires actual method and confirmation',
     (tester) async {
@@ -246,7 +285,35 @@ class _ParityTransport implements AirmiusApiTransport {
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     requests.add(request);
     final Object body;
-    if (request.path == '/api/v1/me') {
+    if (request.path == '/api/v1/trainer-cockpit') {
+      final period = request.query['period'] ?? 'week';
+      body = {
+        'data': {
+          'teams': [
+            {'id': 1, 'name': 'Testteam'},
+          ],
+          'coachWeekly': {
+            'current_week': {'session_count': 0},
+            'risk_level': 'empty',
+          },
+          'coachPeriod': {
+            'period': period,
+            'from': '2026-01-01',
+            'to': '2026-11-27',
+            'previous_from': '2025-01-01',
+            'previous_to': '2025-12-31',
+            'current': {
+              'session_count': period == 'week' ? 0 : 2,
+              'duration_minutes': period == 'week'
+                  ? 0
+                  : (period == 'month' ? 90 : 600),
+              'average_rpe': period == 'week' ? null : 6,
+            },
+            'sessions_percent': period == 'week' ? null : 100,
+          },
+        },
+      };
+    } else if (request.path == '/api/v1/me') {
       body = {
         'data': {
           'id': 1,

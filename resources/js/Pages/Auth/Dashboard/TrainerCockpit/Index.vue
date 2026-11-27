@@ -105,6 +105,7 @@ const actionTone = (tone) => ({
     info: 'border-sky-400/40 bg-sky-500/10',
 }[tone] || 'border-border bg-inputBg')
 const formatTrend = (value) => {
+    if (value === null || value === undefined) return '–'
     const number = Number(value || 0)
     const sign = number > 0 ? '+' : ''
 

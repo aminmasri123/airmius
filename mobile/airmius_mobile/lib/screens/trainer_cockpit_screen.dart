@@ -1,6 +1,7 @@
 import 'trainer_resignation_screen.dart';
 import 'training_plan_evaluation_screen.dart';
 import '../core/training_evaluation_copy.dart';
+import '../core/coach_period_copy.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -22,6 +23,7 @@ class TrainerCockpitScreen extends StatefulWidget {
 class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
   Future<Map<String, dynamic>>? _future;
   String _tab = 'overview';
+  String _period = 'week';
   bool _busy = false;
 
   AirmiusApiClient get _client {
@@ -36,7 +38,7 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
   }
 
   Future<Map<String, dynamic>> _load() async =>
-      _coachMap((await _client.trainerCockpit())['data']);
+      _coachMap((await _client.trainerCockpit(period: _period))['data']);
 
   void _reload() {
     setState(() {
@@ -330,8 +332,15 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
   Widget _overview(Map<String, dynamic> data) {
     final t = AirmiusScope.of(context).t;
     final weekly = _coachMap(data['coachWeekly']);
-    final current = _coachMap(weekly['current_week']);
+    final period = _coachMap(data['coachPeriod']);
+    final current = _coachMap(period['current'] ?? weekly['current_week']);
     final trend = _coachMap(weekly['trend']);
+    final comparison = period.isEmpty
+        ? trend['sessions_percent']
+        : period['sessions_percent'];
+    final weeklyEmpty =
+        _coachInt(_coachMap(weekly['current_week'])['session_count']) == 0;
+    String copy(String key) => coachPeriodText(context, key);
     final risks = _coachMaps(weekly['risk_athletes']);
     final actions = _coachMaps(weekly['actions']);
     return Column(
@@ -339,16 +348,42 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
       children: [
         _sectionHeader(
           icon: Icons.monitor_heart_outlined,
-          title: t('coach.weeklyControl'),
-          body: t('coach.weeklyControlBody'),
+          title: copy('title'),
+          body: copy('${_period}Body'),
         ),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final value in ['week', 'month', 'year'])
+              ChoiceChip(
+                label: Text(copy(value)),
+                selected: _period == value,
+                onSelected: (_) => setState(() {
+                  _period = value;
+                  _future = _load();
+                }),
+              ),
+          ],
+        ),
+        if (period['from'] != null) ...[
+          Text('${period['from']} – ${period['to']}'),
+          Text(
+            '${copy('comparison')}: ${period['previous_from']} – ${period['previous_to']}',
+          ),
+        ],
+        if (_coachInt(current['session_count']) == 0)
+          _CoachEmpty(
+            icon: Icons.info_outline,
+            title: copy('empty'),
+            body: copy('emptyBody'),
+          ),
         const SizedBox(height: 10),
         _MetricGrid(
           children: [
             _CoachMetric(
               icon: Icons.fitness_center_outlined,
               value: '${_coachInt(current['session_count'])}',
-              label: t('coach.sessions'),
+              label: copy('sessions'),
             ),
             _CoachMetric(
               icon: Icons.timer_outlined,
@@ -357,13 +392,13 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
             ),
             _CoachMetric(
               icon: Icons.trending_up_outlined,
-              value: '${_coachNumber(trend['sessions_percent'])}%',
-              label: t('coach.trend'),
+              value: comparison == null ? '–' : '${_coachNumber(comparison)}%',
+              label: comparison == null ? copy('noComparison') : copy('trend'),
             ),
             _CoachMetric(
               icon: Icons.speed_outlined,
               value: _coachText(current['average_rpe'], fallback: '–'),
-              label: t('coach.averageRpe'),
+              label: copy('rpe'),
             ),
           ],
         ),
@@ -373,14 +408,16 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
         _sectionHeader(
           icon: Icons.health_and_safety_outlined,
           title: t('coach.riskAthletes'),
-          body: t('coach.riskBody'),
+          body: copy('riskBody'),
         ),
         const SizedBox(height: 10),
         if (risks.isEmpty)
           _CoachEmpty(
-            icon: Icons.verified_user_outlined,
-            title: t('coach.noRisks'),
-            body: t('coach.noRisksBody'),
+            icon: weeklyEmpty
+                ? Icons.info_outline
+                : Icons.verified_user_outlined,
+            title: weeklyEmpty ? copy('riskEmpty') : t('coach.noRisks'),
+            body: weeklyEmpty ? copy('riskEmptyBody') : t('coach.noRisksBody'),
           )
         else
           ...risks.map(
