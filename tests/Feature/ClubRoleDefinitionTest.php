@@ -167,6 +167,26 @@ class ClubRoleDefinitionTest extends TestCase
         $this->assertTrue(ClubPermissions::allows($club, $member, ClubPermissions::FINANCE_VIEW));
     }
 
+    public function test_membership_office_role_exposes_management_access_to_assigned_member(): void
+    {
+        [$club, $owner, $member] = $this->clubWithOwner(true);
+        Sanctum::actingAs($owner);
+        $this->getJson("/api/v1/clubs/{$club->id}/role-definitions")->assertOk();
+        $role = $club->roleDefinitions()->where('key', 'standard_membership_office')->firstOrFail();
+        $this->putJson("/api/v1/clubs/{$club->id}/members/{$member->id}/role-definitions", [
+            'role_definition_ids' => [$role->id],
+        ])->assertOk();
+
+        Sanctum::actingAs($member);
+        $this->getJson("/api/v1/clubs?mine=1")
+            ->assertOk()
+            ->assertJsonFragment(['id' => $club->id, 'can_manage_members' => true]);
+        $this->getJson("/api/v1/clubs/{$club->id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_manage_members', true)
+            ->assertJsonPath('data.management.can_manage', true);
+    }
+
     public function test_standard_role_backfill_keeps_existing_club_changes(): void
     {
         [$club, $owner] = $this->clubWithOwner();
