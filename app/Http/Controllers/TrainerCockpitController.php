@@ -376,7 +376,18 @@ class TrainerCockpitController extends Controller
         $previousStart = $start->copy()->subDays($days);
         $previousEnd = $start->copy()->subDay()->endOfDay();
         $logs = $this->visibleTrainingLogs($user)
-            ->whereIn('team_id', $teamIds)->where('status', 'completed')
+            ->where(function ($query) use ($teamIds, $user) {
+                if ($teamIds->isNotEmpty()) {
+                    $query->whereIn('team_id', $teamIds);
+                }
+
+                $query->orWhere(function ($individual) use ($user) {
+                    $individual
+                        ->whereNull('team_id')
+                        ->where('user_id', '!=', $user->id);
+                });
+            })
+            ->where('status', 'completed')
             ->whereBetween('performed_at', [$previousStart, $end])->get();
         $current = $this->trainingWindowStats($logs->filter(fn ($log) => $log->performed_at->gte($start)));
         $previous = $this->trainingWindowStats($logs->filter(fn ($log) => $log->performed_at->lt($start)));

@@ -83,6 +83,56 @@ class MobileTrainerCockpitApiTest extends TestCase
             ->assertJsonPath('data.coachPeriod.sessions_percent', -100);
     }
 
+    public function test_period_includes_visible_individual_plan_logs_without_counting_the_trainers_own_session(): void
+    {
+        [$coach, $athlete] = $this->coachTeam();
+        $plan = TrainingPlan::query()->create([
+            'created_by' => $coach->id,
+            'team_id' => null,
+            'title' => 'Individual race week',
+            'status' => 'published',
+        ]);
+        $plan->assignments()->create([
+            'user_id' => $athlete->id,
+            'permission' => 'read',
+        ]);
+        $item = TrainingPlanItem::query()->create([
+            'training_plan_id' => $plan->id,
+            'title' => 'Individual intervals',
+            'scheduled_at' => now()->subDay(),
+        ]);
+        TrainingLog::query()->create([
+            'user_id' => $athlete->id,
+            'created_by' => $athlete->id,
+            'team_id' => null,
+            'training_plan_id' => $plan->id,
+            'training_plan_item_id' => $item->id,
+            'title' => 'Completed individual intervals',
+            'status' => 'completed',
+            'performed_at' => now()->subDay(),
+            'duration_minutes' => 45,
+            'metrics' => ['privacy_scope' => 'trainer', 'wellness' => ['rpe' => 7]],
+        ]);
+        TrainingLog::query()->create([
+            'user_id' => $coach->id,
+            'created_by' => $coach->id,
+            'team_id' => null,
+            'title' => 'Coach private workout',
+            'status' => 'completed',
+            'performed_at' => now()->subDay(),
+            'duration_minutes' => 90,
+            'metrics' => ['privacy_scope' => 'trainer', 'wellness' => ['rpe' => 10]],
+        ]);
+
+        Sanctum::actingAs($coach);
+
+        $this->getJson('/api/v1/trainer-cockpit?period=week')
+            ->assertOk()
+            ->assertJsonPath('data.coachPeriod.current.session_count', 1)
+            ->assertJsonPath('data.coachPeriod.current.duration_minutes', 45)
+            ->assertJsonPath('data.coachPeriod.current.average_rpe', 7);
+    }
+
     public function test_coach_receives_only_managed_team_control_data(): void
     {
         [$coach, $athlete, $team] = $this->coachTeam();
