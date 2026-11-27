@@ -171,6 +171,10 @@ class InvoiceController extends Controller
                 'id' => 'commerce-'.$order->id,
                 'raw_id' => $order->id,
                 'type' => 'commerce',
+                'payment_method' => data_get($order->payload, 'manual_payment.method', $order->provider),
+                'received_payment_method' => data_get($order->payload, 'manual_payment.method'),
+                'can_confirm_payment' => in_array($order->status, ['pending', 'awaiting_transfer'], true)
+                    && in_array($order->provider, ['bank_transfer', 'cash', 'manual'], true),
                 'type_label' => $this->commerceTypeLabel($order),
                 'number' => $order->invoice_number ?: 'Bestellung #'.$order->id,
                 'title' => $this->commerceTitle($order),

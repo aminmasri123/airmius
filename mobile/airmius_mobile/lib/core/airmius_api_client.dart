@@ -5171,8 +5171,14 @@ class AirmiusApiClient {
         body: body,
       );
 
-  Future<AirmiusJson> adminMarkCommerceOrderPaid(int orderId) =>
-      _json('POST', '/api/v1/admin/commerce/orders/$orderId/mark-paid');
+  Future<AirmiusJson> adminMarkCommerceOrderPaid(
+    int orderId, {
+    AirmiusJson? body,
+  }) => _json(
+    'POST',
+    '/api/v1/admin/commerce/orders/$orderId/mark-paid',
+    body: body,
+  );
 
   Future<AirmiusJson> adminUpdateCommerceShipping(
     int orderId,

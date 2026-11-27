@@ -14,6 +14,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'commerce invoice receipt requires actual method and confirmation',
+    (tester) async {
+      final transport = _ParityTransport(paymentTest: true);
+      await _pump(
+        tester,
+        transport,
+        const AdminBackofficeScreen(initialSection: 'billing'),
+      );
+      final action = find.text('Zahlungseingang bestätigen');
+      await tester.ensureVisible(action);
+      await tester.pumpAndSettle();
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      final button = find
+          .widgetWithText(FilledButton, 'Zahlungseingang bestätigen')
+          .last;
+      expect(tester.widget<FilledButton>(button).onPressed, isNull);
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Barzahlung').last);
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(button).onPressed, isNull);
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      final request = transport.requests.singleWhere(
+        (r) => r.path.endsWith('/10/mark-paid'),
+      );
+      expect(request.body, containsPair('payment_method', 'cash'));
+      expect(request.body, containsPair('confirmed', true));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('editorial search and status reset pagination', (tester) async {
     final transport = _ParityTransport();
     await _pump(tester, transport, const EditorialManagementScreen());
@@ -198,8 +234,12 @@ Future<void> _pump(
 }
 
 class _ParityTransport implements AirmiusApiTransport {
-  _ParityTransport({this.permission = 'finance.view'});
+  _ParityTransport({
+    this.permission = 'finance.view',
+    this.paymentTest = false,
+  });
   final String permission;
+  final bool paymentTest;
   final requests = <AirmiusApiRequest>[];
 
   @override
@@ -229,7 +269,23 @@ class _ParityTransport implements AirmiusApiTransport {
     } else if (request.path == '/api/v1/admin/backoffice') {
       body = {
         'data': {
-          'abilities': {'finance_view': true, 'finance_edit': false},
+          'abilities': {
+            'finance_view': true,
+            'finance_edit': false,
+            'billing_manage': paymentTest,
+          },
+          'invoices': paymentTest
+              ? [
+                  {
+                    'raw_id': 10,
+                    'type': 'commerce',
+                    'number': 'Bestellung #10',
+                    'amount_display': '20,00 EUR',
+                    'status': 'awaiting_transfer',
+                    'can_confirm_payment': true,
+                  },
+                ]
+              : [],
           'contracts': [],
           'contracts_meta': {
             'current_page': int.parse(request.query['contracts_page'] ?? '1'),

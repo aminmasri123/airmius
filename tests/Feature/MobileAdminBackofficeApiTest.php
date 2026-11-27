@@ -324,6 +324,49 @@ class MobileAdminBackofficeApiTest extends TestCase
             ->assertJsonPath('code', AdminTwoFactor::ERROR_CODE);
     }
 
+    public function test_campaign_receipt_can_record_actual_cash_and_is_idempotent(): void
+    {
+        Mail::fake();
+        Notification::fake();
+        $admin = $this->admin(['billing.manage', 'subscriptions.manage']);
+        Sanctum::actingAs($admin, ['*', AdminTwoFactor::STEP_UP_TOKEN_ABILITY]);
+        $buyer = User::factory()->create();
+        $campaign = \App\Models\AdCampaign::create(['user_id' => $buyer->id, 'name' => 'Receipt test', 'status' => 'pending_payment', 'budget_cents' => 2000]);
+        $order = \App\Models\CommerceOrder::create([
+            'user_id' => $buyer->id, 'orderable_type' => $campaign::class, 'orderable_id' => $campaign->id,
+            'type' => 'ads_campaign', 'provider' => 'bank_transfer', 'status' => 'awaiting_transfer',
+            'amount_cents' => 2000, 'currency' => 'EUR',
+        ]);
+        $invoices = $this->getJson('/api/v1/admin/backoffice')->assertOk()->json('data.invoices');
+        $entry = collect($invoices)->firstWhere('raw_id', $order->id);
+        $this->assertTrue($entry['can_confirm_payment']);
+        $url = "/api/v1/admin/commerce/orders/{$order->id}/mark-paid";
+        $this->postJson($url, ['payment_method' => 'cash'])->assertUnprocessable();
+        $this->postJson($url, ['payment_method' => 'cash', 'confirmed' => true])->assertOk();
+        $this->assertSame('completed', $order->fresh()->status);
+        $this->assertSame('bank_transfer', $order->fresh()->provider);
+        $this->assertSame('cash', data_get($order->fresh()->payload, 'manual_payment.method'));
+        $this->assertSame('pending_review', $campaign->fresh()->status);
+        $this->postJson($url, ['payment_method' => 'bank_transfer', 'confirmed' => true])->assertOk();
+        $this->assertSame('cash', data_get($order->fresh()->payload, 'manual_payment.method'));
+        $this->assertSame(1, \App\Models\CommerceAuditLog::where('action', 'order.payment_confirmed')->count());
+        $cashOrder = $order->replicate(['invoice_number', 'completed_at']);
+        $cashOrder->fill(['provider' => 'cash', 'status' => 'pending', 'payload' => []])->save();
+        $this->postJson("/api/v1/admin/commerce/orders/{$cashOrder->id}/mark-paid", [
+            'payment_method' => 'bank_transfer', 'confirmed' => true,
+        ])->assertOk();
+        $this->assertSame('bank_transfer', data_get($cashOrder->fresh()->payload, 'manual_payment.method'));
+        $this->assertSame('cash', $cashOrder->fresh()->provider);
+        $cashOrder->refresh()->update(['provider' => 'stripe', 'status' => 'pending']);
+        $this->postJson("/api/v1/admin/commerce/orders/{$cashOrder->id}/mark-paid", [
+            'payment_method' => 'cash', 'confirmed' => true,
+        ])->assertUnprocessable();
+        $order->update(['status' => 'cancelled']);
+        $this->postJson($url, ['payment_method' => 'cash', 'confirmed' => true])->assertUnprocessable();
+        Sanctum::actingAs($buyer);
+        $this->postJson($url, ['payment_method' => 'cash', 'confirmed' => true])->assertForbidden();
+    }
+
     private function admin(array $permissions, bool $twoFactor = true): User
     {
         $permissionModels = collect($permissions)

@@ -9,6 +9,7 @@ import '../core/airmius_api_client.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../widgets/airmius_widgets.dart';
+import '../widgets/commerce_payment_confirmation.dart';
 
 typedef _Json = Map<String, dynamic>;
 
@@ -252,7 +253,9 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
   void _clearFilters() {
     _pages.clear();
     _appliedSearch.clear();
-    for (final controller in _subscriptionSearch.values) { controller.clear(); }
+    for (final controller in _subscriptionSearch.values) {
+      controller.clear();
+    }
     _contractsPage = 1;
     _contractsStatus = 'all';
     _contractsCategory = 'all';
@@ -319,7 +322,8 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done &&
-              !snapshot.hasData && _lastData == null) {
+              !snapshot.hasData &&
+              _lastData == null) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError && _lastData == null) {
@@ -329,11 +333,20 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
               title: error is AirmiusApiException
                   ? error.userMessage
                   : t('backoffice.loadFailed'),
-              action: Wrap(children: [FilledButton.icon(
-                onPressed: _reload,
-                icon: const Icon(Icons.refresh_outlined),
-                label: Text(t('common.retry')),
-              ), IconButton(tooltip: t('events.resetFilters'), onPressed: _clearFilters, icon: const Icon(Icons.filter_alt_off_outlined))]),
+              action: Wrap(
+                children: [
+                  FilledButton.icon(
+                    onPressed: _reload,
+                    icon: const Icon(Icons.refresh_outlined),
+                    label: Text(t('common.retry')),
+                  ),
+                  IconButton(
+                    tooltip: t('events.resetFilters'),
+                    onPressed: _clearFilters,
+                    icon: const Icon(Icons.filter_alt_off_outlined),
+                  ),
+                ],
+              ),
             );
           }
           final data = snapshot.data ?? _lastData ?? const <String, dynamic>{};
@@ -347,11 +360,24 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (snapshot.hasError) Wrap(spacing: 8, children: [
-                  Text(t('common.errorDetails')),
-                  IconButton(tooltip: t('common.retry'), onPressed: _reload, icon: const Icon(Icons.refresh)),
-                  IconButton(key: const ValueKey('backoffice-clear-filters'), tooltip: t('events.resetFilters'), onPressed: _clearFilters, icon: const Icon(Icons.filter_alt_off_outlined)),
-                ]),
+                if (snapshot.hasError)
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      Text(t('common.errorDetails')),
+                      IconButton(
+                        tooltip: t('common.retry'),
+                        onPressed: _reload,
+                        icon: const Icon(Icons.refresh),
+                      ),
+                      IconButton(
+                        key: const ValueKey('backoffice-clear-filters'),
+                        tooltip: t('events.resetFilters'),
+                        onPressed: _clearFilters,
+                        icon: const Icon(Icons.filter_alt_off_outlined),
+                      ),
+                    ],
+                  ),
                 _hero(data),
                 const SizedBox(height: 14),
                 _sectionPicker(sections),
@@ -959,6 +985,11 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
                   details: [
                     _text(invoice['title']),
                     _text(invoice['type_label']),
+                    if (invoice['received_payment_method'] != null)
+                      commerceReceivedMethodLabel(
+                        context,
+                        _text(invoice['received_payment_method']),
+                      ),
                     '${t('backoffice.paidAmount')}: ${_text(invoice['paid_amount_display'], fallback: _decimalMoney(invoice['paid_amount']))}',
                     '${t('backoffice.due')}: ${_date(invoice['due_date'])}',
                   ],
@@ -975,6 +1006,14 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
                             : () => _chooseInvoiceStatus(invoice),
                         icon: const Icon(Icons.sync_outlined),
                         label: Text(t('backoffice.changeStatus')),
+                      ),
+                    if (invoice['can_confirm_payment'] == true)
+                      FilledButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => _confirmCommerceInvoice(invoice),
+                        icon: const Icon(Icons.done_all_outlined),
+                        label: Text(commercePaymentLabel(context)),
                       ),
                     if (invoice['can_delete'] == true)
                       IconButton.filledTonal(
@@ -1578,7 +1617,10 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
                 onPressed: () {
                   if (ownerId == null ||
                       title.text.trim().isEmpty ||
-                      _decimal(amount.text) <= 0) { showFormFeedback(context, formMessage(context, 'required')); return; }
+                      _decimal(amount.text) <= 0) {
+                    showFormFeedback(context, formMessage(context, 'required'));
+                    return;
+                  }
                   Navigator.pop(dialogContext, {
                     'source': source,
                     'club_id': actor == 'club' ? ownerId : null,
@@ -1615,6 +1657,22 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
     await _run(
       () => _client.adminCreateInvoice(result),
       success: t('backoffice.invoiceSaved'),
+    );
+  }
+
+  Future<void> _confirmCommerceInvoice(_Json invoice) async {
+    final body = await confirmCommercePayment(
+      context,
+      orderLabel: _text(invoice['number']),
+      amountLabel: _text(invoice['amount_display']),
+    );
+    if (body == null || !mounted) return;
+    await _run(
+      () => _client.adminMarkCommerceOrderPaid(
+        _integer(invoice['raw_id']),
+        body: body,
+      ),
+      success: AirmiusScope.of(context).t('backoffice.paymentSaved'),
     );
   }
 
@@ -2016,7 +2074,10 @@ class _AdminBackofficeScreenState extends State<AdminBackofficeScreen> {
             ),
             FilledButton(
               onPressed: () {
-                if (name.text.trim().isEmpty || _decimal(amount.text) < 0) { showFormFeedback(context, formMessage(context, 'required')); return; }
+                if (name.text.trim().isEmpty || _decimal(amount.text) < 0) {
+                  showFormFeedback(context, formMessage(context, 'required'));
+                  return;
+                }
                 Navigator.pop(dialogContext, {
                   'owner_user_id': contract?['owner'] is Map
                       ? _map(contract!['owner'])['id']
