@@ -1,9 +1,24 @@
 import 'dart:convert';
-
+import 'dart:math';
+import 'airmius_preferences_store.dart';
 import 'airmius_club_member_invite_form_stub.dart'
     if (dart.library.html) 'airmius_club_member_invite_form_web.dart';
 import 'airmius_team_create_form_stub.dart'
     if (dart.library.html) 'airmius_team_create_form_web.dart';
+
+final _installationId = _loadInstallationId();
+
+Future<String> _loadInstallationId() async {
+  final store = createAirmiusPreferencesStore();
+  const key = 'security_installation_id';
+  final saved = await store.readString(key);
+  if (saved != null && RegExp(r'^[a-f0-9]{64}$').hasMatch(saved)) return saved;
+  final random = Random.secure();
+  final id = List.generate(32, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+  await store.writeString(key, id);
+  return id;
+}
+
 
 typedef AirmiusHeaders = Map<String, String>;
 typedef AirmiusJson = Map<String, dynamic>;
@@ -166,11 +181,11 @@ class AirmiusApiClient {
     required String email,
     required String password,
     String deviceName = 'Airmius Mobile App',
-  }) {
+  }) async {
     return _json(
       'POST',
       '/api/v1/auth/login',
-      body: {'email': email, 'password': password, 'device_name': deviceName},
+      body: {'email': email, 'password': password, 'device_name': deviceName, 'installation_id': await _installationId},
     );
   }
 
@@ -179,12 +194,13 @@ class AirmiusApiClient {
     String? code,
     String? recoveryCode,
     String? emailCode,
-  }) {
+  }) async {
     return _json(
       'POST',
       '/api/v1/auth/two-factor-challenge',
       body: {
         'challenge_token': challengeToken,
+        'installation_id': await _installationId,
         'code': ?code,
         'recovery_code': ?recoveryCode,
         'email_code': ?emailCode,

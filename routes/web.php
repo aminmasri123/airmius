@@ -29,6 +29,19 @@ Route::get('/session-status', fn () => response()->noContent()
     ->middleware(['auth', config('jetstream.auth_session', \Laravel\Jetstream\Http\Middleware\AuthenticateSession::class)])
     ->name('session.status');
 
+Route::get('/account/confirm-email-change/{token}', function (Request $request, string $token) {
+    $user = $request->user();
+    $key = 'email-change:'.$user->id;
+    $change = \Illuminate\Support\Facades\Cache::get($key);
+    abort_unless($change && hash_equals($change['token_hash'], hash('sha256', $token)), 410);
+    abort_if(\App\Models\User::where('email', $change['next'])->whereKeyNot($user->id)->exists(), 409);
+    $updated = \App\Models\User::whereKey($user->id)->where('email', $change['previous'])
+        ->update(['email' => $change['next'], 'email_verified_at' => now()]);
+    abort_unless($updated, 410);
+    \Illuminate\Support\Facades\Cache::forget($key);
+    return redirect()->route('profile.show');
+})->middleware(['auth', 'signed', 'throttle:10,1'])->name('account.email-change.confirm');
+
 Route::get('/country-catalog', [CountryCatalogController::class, 'index'])->name('country-catalog.index');
 Route::post('/country-catalog', [CountryCatalogController::class, 'store'])->middleware(['auth', 'throttle:20,1'])->name('country-catalog.store');
 

@@ -59,6 +59,12 @@ const closeModal = () => {
             </div>
 
             <!-- Other Browser Sessions -->
+            <details v-if="$page.props.loginActivity?.length" class="mb-4">
+                <summary>Anmeldeaktivitäten</summary>
+                <ul><li v-for="(entry, index) in $page.props.loginActivity" :key="index">
+                    {{ new Date(entry.at).toLocaleString() }} · {{ entry.device }} · {{ entry.success ? 'Erfolgreich' : 'Fehlgeschlagen' }}
+                </li></ul>
+            </details>
             <div v-if="sessions.length > 0" class="mt-5 space-y-6">
                 <div v-for="(session, i) in sessions" :key="i" class="flex items-center">
                     <div>

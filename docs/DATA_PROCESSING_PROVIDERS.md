@@ -10,7 +10,7 @@ Diese Datei ist die interne Nachweis- und VVT-Hilfe für Auftragsverarbeiter und
 | --- | --- | --- | --- |
 | Hosting | Hostinger | Server-/Datenbankbetrieb ausserhalb des Codes, Rechtstexte nennen Hostinger | Aktiv vorgesehen, DPA-Nachweis liegt als PDF vor |
 | Storage/CDN/Backups | Cloudflare R2/CDN | `FILESYSTEM_DISK=r2`, `UPLOAD_DISK=r2`, `BACKUP_DISK=r2` | Aktiv vorgesehen, Customer DPA liegt als PDF vor |
-| Mail | SMTP/Log, konkrete Produktiv-SMTP-Anbieter noch einzutragen | `MAIL_MAILER`, `MAIL_*_MAILER`, optionale Laravel-Mailer `ses`, `postmark`, `resend` | Vor Livegang konkreten Anbieter, DPA und Region eintragen |
+| Mail | Amazon SES, Stockholm. Hostinger für Airmius-Postfächer | `MAIL_MAILER=ses`, `AWS_SES_REGION=eu-north-1` | Domain und Testzustellung bestätigt. Produktionszugang und Umstellung gesondert prüfen. |
 | Payments | Stripe, PayPal, Bankueberweisung ohne externen Payment-Provider | `STRIPE_*`, `PAYPAL_*`, Checkout/Webhook-Code | Stripe/PayPal nur produktiv aktivieren, wenn DPA/Datenschutznotiz geprueft ist |
 | Analytics/Tracking | Keine externen Analytics-, Marketing-, Retargeting- oder Pixel-Skripte aktiv eingebunden | `docs/COOKIE_TRACKING_CONSENT.md`, `resources/js/services/privacyConsent.js` | Keine Analytics-Subprozessoren im MVP; neue Tags erst nach Opt-in und Dokumentation |
 | Push | FCM und APNS vorbereitet, Dispatch aktuell projektintern simuliert | `MOBILE_PUSH_PROVIDER=fcm`, `FCM_*`, `APNS_*`, `MobilePushDeliveryService` | Vor echter Auslieferung Google Firebase/Apple APNS als Empfaenger dokumentieren |
@@ -65,13 +65,14 @@ Wichtig: PDFs hier nicht blind versionieren, wenn sie sensible Vertragsdaten ent
 
 ## Mail
 
-- Anbieter: noch nicht final festgelegt; Code unterstuetzt SMTP, SES, Postmark, Resend, Log und Array.
+- Versand über Amazon Simple Email Service in Stockholm (Schweden). Postfächer und eingehende Antworten bei Hostinger. Bei der Zustellung verarbeitet auch der vom Empfänger gewählte Mailanbieter die Nachricht.
 - Rolle: je nach Anbieter in der Regel Auftragsverarbeiter.
 - Zweck: Transaktionsmails, Registrierung, Passwort, Guardian-Consent, Rechnungen, Support, Security, Marketplace und Legal-Kommunikation.
 - Betroffene: Nutzer, Eltern, Vereinsverantwortliche, Kaeufer, Anbieter, Admins, Supportkontakte.
 - Datenarten: E-Mail-Adresse, Name, Mailinhalt, technische Versanddaten, Zustellstatus.
 - Projektkonfiguration: `MAIL_MAILER`, `MAIL_SYSTEM_MAILER`, `MAIL_BILLING_MAILER`, `MAIL_SUPPORT_MAILER`, `MAIL_MARKETPLACE_MAILER`, `MAIL_ACADEMY_MAILER`, `MAIL_SECURITY_MAILER`, `MAIL_PARTNERS_MAILER`, `MAIL_LEGAL_MAILER`.
-- MVP-Regel: Produktiv-SMTP erst aktivieren, wenn Anbietername, DPA/AVV, Datenregion, Bounce-/Log-Aufbewahrung und Supportkontakt dokumentiert sind.
+- SES sperrt Adressen nach dauerhaften Zustellfehlern und Beschwerden. Beim Testversand war Virtual Deliverability Manager deaktiviert. Der [AWS-Datenschutzvertrag](https://aws.amazon.com/legal/aws-gdpr/) und die [AWS-Unterauftragsverarbeiter](https://aws.amazon.com/compliance/sub-processors/) gehören zur Prüfung der Verarbeitung und etwaiger Drittlandübermittlungen. Zustellprotokolle und Sperrlisten haben unterschiedliche Zwecke. Löschfristen und den für Airmius geltenden Vertragsstand vor dem Produktivstart dokumentieren.
+- Nach der SES-Freigabe in Stockholm den Anwendungsmailer auf `ses` stellen, die Konfiguration neu laden und Queue-Worker neu starten. Die Kategorie bestimmt weiter die Absenderadresse. Für den Versand die Berechtigung auf die verifizierte Airmius-Identität begrenzen. Ein Postfach-Test über die Anwendung bestätigt die Serverkonfiguration.
 
 ## Payments
 

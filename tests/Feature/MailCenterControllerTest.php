@@ -17,6 +17,23 @@ class MailCenterControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_ses_routes_each_category_with_its_sender_even_when_smtp_settings_exist(): void
+    {
+        config(['mail.default' => 'ses']);
+        MailSenderSetting::create([
+            'category' => 'support', 'mailer' => 'smtp_support', 'from_address' => 'help@airmius.com',
+            'from_name' => 'Airmius Support', 'active' => true,
+        ]);
+        $this->app->instance('env', 'production');
+        $mail = app(\App\Support\TransactionalMail::class);
+        foreach (config('airmius_mail.senders') as $category => $sender) {
+            $actual = $mail->transportFor($category);
+            $this->assertSame('ses', $actual['mailer']);
+            $this->assertSame($category === 'support' ? 'help@airmius.com' : $sender['address'], $actual['address']);
+        }
+        $this->assertSame('ses', config('mail.mailers.ses.transport'));
+    }
+
     public function test_system_manager_can_view_filtered_mail_center_deliveries(): void
     {
         $admin = User::factory()->create();

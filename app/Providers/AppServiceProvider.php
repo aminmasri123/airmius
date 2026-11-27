@@ -22,7 +22,7 @@ use App\Models\TrainingLog;
 use App\Models\User;
 use App\Models\UserSubscription;
 use App\Notifications\LoginLockoutNotification;
-use App\Notifications\LoginSuccessfulNotification;
+use App\Support\LoginActivity;
 use App\Observers\CommerceOrderObserver;
 use App\Observers\LearningEnrollmentObserver;
 use App\Observers\TrainingLogObserver;
@@ -92,6 +92,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        EventFacade::listen(\Illuminate\Mail\Events\MessageSending::class, [\App\Support\DailyMailQuota::class, 'reserve']);
+
         EventFacade::listen(ConnectionEstablished::class, static function (ConnectionEstablished $event): void {
             if ($event->connection->getDriverName() !== 'sqlite') {
                 return;
@@ -296,20 +298,8 @@ class AppServiceProvider extends ServiceProvider
             ])->save();
 
             $request = request();
-            $ipAddress = $request->ip();
-            $userAgent = substr((string) $request->userAgent(), 0, 500);
-            $notificationKey = $this->successfulLoginNotificationKey($event->user, $ipAddress, $userAgent);
-
-            if (Cache::add($notificationKey, true, now()->addDay())) {
-                try {
-                    $event->user->notify(new LoginSuccessfulNotification(
-                        $ipAddress,
-                        $userAgent,
-                        now()->format('d.m.Y H:i')
-                    ));
-                } catch (Throwable $exception) {
-                    report($exception);
-                }
+            if (! $request->is('api/*')) {
+                LoginActivity::record($event->user, $request, true);
             }
 
         });
@@ -326,9 +316,14 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $lockout = app(ProgressiveLoginLockout::class);
-            if ($lockout->recordFailure($email) && $event->user instanceof User) {
+            $account = $event->user ?? User::where('email', $email)->first();
+            if ($account instanceof User) {
+                LoginActivity::record($account, $request, false);
+            }
+            if ($lockout->recordFailure($email) && $account instanceof User
+                && Cache::add('login-failure-alert:'.$account->id, true, now()->addHour())) {
                 try {
-                    $event->user->notify(new LoginLockoutNotification(
+                    $account->notify(new LoginLockoutNotification(
                         $request->ip(),
                         substr((string) $request->userAgent(), 0, 500),
                         now()->format('d.m.Y H:i')
@@ -343,15 +338,26 @@ class AppServiceProvider extends ServiceProvider
         EventFacade::listen(PasswordReset::class, function ($event): void {
             app(ProgressiveLoginLockout::class)->reset($event->user->email);
         });
+        EventFacade::listen(\Laravel\Fortify\Events\TwoFactorAuthenticationFailed::class, function ($event): void {
+            if ($event->user instanceof User) {
+                LoginActivity::record($event->user, request(), false);
+            }
+        });
+
+        foreach ([
+            PasswordReset::class => 'Dein Konto wurde über die Passwortwiederherstellung wiederhergestellt.',
+            \Laravel\Fortify\Events\TwoFactorAuthenticationConfirmed::class => 'Deine Zwei-Faktor-Authentifizierung wurde bestätigt.',
+            \Laravel\Fortify\Events\TwoFactorAuthenticationDisabled::class => 'Deine Zwei-Faktor-Authentifizierung wurde deaktiviert.',
+            \Laravel\Fortify\Events\RecoveryCodesGenerated::class => 'Für dein Konto wurden neue Wiederherstellungscodes erstellt.',
+        ] as $eventClass => $message) {
+            EventFacade::listen($eventClass, fn ($event) => $event->user->notify(new \App\Notifications\AccountSecurityNotice($message)));
+        }
 
         Inertia::share([
             'theme' => fn () => auth()->user()?->theme ?? 'air',
+            'loginActivity' => fn () => request()->routeIs('profile.show') && auth()->check() ? LoginActivity::recent(auth()->user()) : [],
 
         ]);
     }
 
-    private function successfulLoginNotificationKey(User $user, ?string $ipAddress, ?string $userAgent): string
-    {
-        return 'login-success-notification:'.sha1($user->id.'|'.($ipAddress ?: 'unknown').'|'.($userAgent ?: 'unknown'));
-    }
 }

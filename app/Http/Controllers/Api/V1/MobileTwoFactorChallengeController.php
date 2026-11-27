@@ -74,7 +74,7 @@ class MobileTwoFactorChallengeController extends Controller
         event(new ValidTwoFactorAuthenticationCodeProvided($user));
         $challenges->forget($data['challenge_token']);
 
-        return response()->json([
+        $response = response()->json([
             'data' => [
                 'token' => $user->createToken(
                     $challenge['device_name'],
@@ -86,5 +86,7 @@ class MobileTwoFactorChallengeController extends Controller
                 'user' => new UserResource($user->loadMissing(['roles', 'permissions'])),
             ],
         ]);
+        \App\Support\LoginActivity::record($user, $request, true);
+        return $response;
     }
 }

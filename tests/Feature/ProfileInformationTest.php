@@ -12,6 +12,7 @@ class ProfileInformationTest extends TestCase
 
     public function test_profile_information_can_be_updated(): void
     {
+        \Illuminate\Support\Facades\Notification::fake();
         $this->actingAs($user = User::factory()->create());
 
         $this->put('/user/profile-information', [
@@ -25,7 +26,19 @@ class ProfileInformationTest extends TestCase
         ]);
 
         $this->assertEquals('Test Name', $user->fresh()->name);
+        \Illuminate\Support\Facades\Notification::assertSentOnDemand(\App\Notifications\AccountSecurityNotice::class,
+            fn ($notice, $channels, $recipient) => $recipient->routeNotificationFor('mail') === $user->email);
+        $this->assertEquals($user->email, $user->fresh()->email);
+        $this->assertNotEquals('test@example.com', $user->fresh()->email);
+        $url = null;
+        \Illuminate\Support\Facades\Notification::assertSentOnDemand(\App\Notifications\AccountSecurityNotice::class,
+            function ($notice, $channels, $recipient) use (&$url) {
+                $url = $notice->verificationUrl;
+                return $recipient->routeNotificationFor('mail') === 'test@example.com' && $url;
+            });
+        $this->get($url)->assertRedirect();
         $this->assertEquals('test@example.com', $user->fresh()->email);
+        $this->get($url)->assertGone();
         $this->assertEquals('Updated bio', $user->fresh()->bio);
         $this->assertSame('PROFILE-LIC-1', $user->fresh()->athlete_license_number);
         $this->assertSame('2027-06-30', $user->fresh()->athlete_license_valid_until?->toDateString());

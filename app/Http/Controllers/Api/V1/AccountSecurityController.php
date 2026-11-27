@@ -37,6 +37,8 @@ class AccountSecurityController extends Controller
             ->when($currentTokenId, fn ($query) => $query->whereKeyNot($currentTokenId))
             ->delete();
 
+        $user->notify(new \App\Notifications\AccountSecurityNotice('Dein Passwort wurde geändert.'));
+
         return response()->json([
             'data' => [
                 'message' => __('account_security.responses.password_updated'),
@@ -83,6 +85,7 @@ class AccountSecurityController extends Controller
                     'created_at' => $token->created_at?->toIso8601String(),
                 ])
                 ->values(),
+            'login_activity' => \App\Support\LoginActivity::recent($request->user()),
         ]);
     }
 

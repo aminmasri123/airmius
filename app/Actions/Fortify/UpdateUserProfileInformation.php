@@ -96,12 +96,10 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             'name' => trim($firstName.' '.$lastName),
             'first_name' => $firstName,
             'last_name' => $lastName,
-            'email' => $input['email'],
             'athlete_license_number' => $input['athlete_license_number'] ?? null,
             'athlete_license_valid_until' => $input['athlete_license_valid_until'] ?? null,
             'profile_visibility' => $input['profile_visibility'],
             'bio' => $input['bio'] ?? null,
-            'email_verified_at' => null,
         ];
 
         if (MinorSafety::isUnderConsentAge($user)) {
@@ -110,6 +108,15 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
 
         $user->forceFill($updates)->save();
 
-        $user->sendEmailVerificationNotification();
+        $token = bin2hex(random_bytes(32));
+        $expires = now()->addMinutes(30);
+        \Illuminate\Support\Facades\Cache::put('email-change:'.$user->id, [
+            'token_hash' => hash('sha256', $token), 'previous' => $user->email, 'next' => $input['email'],
+        ], $expires);
+        $url = \Illuminate\Support\Facades\URL::temporarySignedRoute('account.email-change.confirm', $expires, ['token' => $token]);
+        \Illuminate\Support\Facades\Notification::route('mail', $user->email)
+            ->notify(new \App\Notifications\AccountSecurityNotice('Eine Änderung deiner E-Mail-Adresse wurde angefordert.'));
+        \Illuminate\Support\Facades\Notification::route('mail', $input['email'])
+            ->notify(new \App\Notifications\AccountSecurityNotice('Bestätige die neue Adresse für dein Airmius-Konto innerhalb von 30 Minuten.', $url));
     }
 }

@@ -30,6 +30,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   final _deletionCode = TextEditingController();
 
   List<_AccountSession> _sessions = const [];
+  List<Map> _activity = const [];
   bool _loadingSessions = true;
   bool _busy = false;
   bool _deletionCodeSent = false;
@@ -260,6 +261,15 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                 ),
                 const SizedBox(height: 14),
                 AirmiusPanel(
+                  title: 'Anmeldeaktivitäten',
+                  child: Column(children: [
+                    for (final row in _activity)
+                      ListTile(title: Text(row['success'] == true ? 'Erfolgreiche Anmeldung' : 'Fehlgeschlagene Anmeldung'),
+                        subtitle: Text("${row['device']} · ${DateTime.tryParse(row['at'].toString())?.toLocal() ?? ''}")),
+                  ]),
+                ),
+                const SizedBox(height: 14),
+                AirmiusPanel(
                   title: t('account.activeSessions'),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -402,7 +412,10 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                 )
                 .toList()
           : <_AccountSession>[];
-      if (mounted) setState(() => _sessions = sessions);
+      if (mounted) setState(() {
+        _sessions = sessions;
+        _activity = (response['login_activity'] as List? ?? []).whereType<Map>().toList();
+      });
     } catch (error) {
       _showError(error);
     } finally {

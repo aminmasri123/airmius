@@ -51,6 +51,20 @@ class AuthenticationTest extends TestCase
         Notification::assertNothingSent();
     }
 
+    public function test_app_remembers_an_installation_across_networks_but_warns_for_another_device(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $credentials = ['email' => $user->email, 'password' => 'password'];
+        $id = bin2hex(random_bytes(32));
+        foreach ([['192.0.2.1', $id], ['198.51.100.1', $id], ['198.51.100.1', bin2hex(random_bytes(32))]] as [$ip, $device]) {
+            $this->withServerVariables(['REMOTE_ADDR' => $ip])->postJson('/api/v1/auth/login',
+                $credentials + ['installation_id' => $device])->assertOk();
+        }
+        Notification::assertSentToTimes($user, LoginSuccessfulNotification::class, 2);
+        $this->assertCount(3, \App\Support\LoginActivity::recent($user));
+    }
+
     public function test_user_is_notified_after_login_lockout(): void
     {
         Notification::fake();
@@ -105,6 +119,6 @@ class AuthenticationTest extends TestCase
         $this->assertSame(0, $lockout->state($user->email)['attempts']);
         $this->postJson('/api/v1/auth/login', ['email' => $user->email, 'password' => 'New-password-123!'])
             ->assertOk();
-        Notification::assertSentToTimes($user, LoginLockoutNotification::class, 3);
+        Notification::assertSentToTimes($user, LoginLockoutNotification::class, 1);
     }
 }

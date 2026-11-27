@@ -103,13 +103,13 @@ class AuthController extends Controller
             ], 202);
         }
 
-        return response()->json([
-            'data' => [
-                'token' => $user->createToken($tokenName)->plainTextToken,
-                'token_type' => 'Bearer',
-                'user' => new UserResource($user->loadMissing(['roles', 'permissions'])),
-            ],
-        ]);
+        $token = $user->createToken($tokenName)->plainTextToken;
+        \App\Support\LoginActivity::record($user, $request, true);
+        return response()->json(['data' => [
+            'token' => $token,
+            'token_type' => 'Bearer',
+            'user' => new UserResource($user->loadMissing(['roles', 'permissions'])),
+        ]]);
     }
 
     public function logout(Request $request)

@@ -31,5 +31,6 @@ class UpdateUserPassword implements UpdatesUserPasswords
         $user->forceFill([
             'password' => Hash::make($input['password']),
         ])->save();
+        $user->notify(new \App\Notifications\AccountSecurityNotice('Dein Passwort wurde geändert.'));
     }
 }

@@ -78,6 +78,12 @@ class TransactionalMail
             'name' => $sender['name'] ?? config('mail.from.name'),
         ];
 
+        if (config('mail.default') === 'ses') {
+            $transport['mailer'] = 'ses';
+
+            return $transport;
+        }
+
         if ($stored) {
             $this->applyStoredMailerConfig($stored);
         }
