@@ -103,7 +103,7 @@ write_manual_notes() {
 
 Contract: cross-device-experience.v1
 Release: 2026-08-09
-Mobile build: 1.0.76+162
+Mobile build: 1.0.309+401
 Platform: ios
 Environment alias: staging
 Evidence reference:

@@ -83,7 +83,9 @@ class AdDeliveryPlacementTest extends TestCase
         $campaign = $this->campaign();
         $headers = ['Authorization' => 'Bearer '.$user->createToken('ads-test')->plainTextToken];
         $this->getJson('/api/v1/ads/active?placement=feed', $headers)
-            ->assertOk()->assertJsonPath('id', $campaign->id);
+            ->assertOk()->assertJsonPath('id', $campaign->id)
+            ->assertHeader('X-Airmius-Module', 'ads')
+            ->assertHeader('X-Airmius-Data-Purpose', 'marketing');
         $this->assertDatabaseHas('ad_events', [
             'ad_campaign_id' => $campaign->id, 'user_id' => $user->id, 'event_type' => 'impression',
         ]);
