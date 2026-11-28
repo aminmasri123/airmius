@@ -638,6 +638,10 @@ class DashboardDailyFlowTest extends TestCase
 
     public function test_daily_flow_respects_arabic_locale_and_does_not_leak_private_notes(): void
     {
+        // Keep the localization/privacy scenario within one day and week,
+        // including locales whose week starts on Saturday.
+        $this->travelTo(now()->setDate(2026, 6, 3)->setTime(10, 0));
+
         $user = User::factory()->create();
         TrainingLog::query()->create([
             'user_id' => $user->id,
