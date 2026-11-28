@@ -1676,8 +1676,7 @@ const saveMember = async (member) => {
         membershipActionFeedback.value = response.data?.message
             || tx('club_memberships.workspace.member_saved', 'Mitgliedsdaten wurden gespeichert.')
     } catch (error) {
-        membershipActionError.value = error.response?.data?.message
-            || tx('club_memberships.workspace.member_save_failed', 'Die Mitgliedsdaten konnten nicht gespeichert werden.')
+        membershipActionError.value = invoiceErrorMessage(error, tx('club_memberships.workspace.member_save_failed', 'Die Mitgliedsdaten konnten nicht gespeichert werden.'))
     } finally {
         savingMemberIds.value.delete(member.id)
     }
@@ -2720,6 +2719,8 @@ const saveExternalMember = async () => {
                         <h2 class="text-lg font-semibold text-primary">{{ tx('club_memberships.workspace.sepa_debit', 'SEPA-Lastschrift') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
                             {{ tx('club_memberships.workspace.sepa_intro', 'Hinterlege die Vereinsdaten und exportiere offene Rechnungen mit aktivem Mandat als SEPA-XML.') }}
+                        </p>
+                        <p class="mt-2 text-sm text-secondary">{{ tx('club_memberships.workspace.sepa_validation_hint', 'Für den Einzug sind eine gültige Gläubiger-ID und Vereins-IBAN erforderlich. BIC ist optional (8 oder 11 Zeichen). Ohne Kontoinhaber wird der Vereinsname verwendet. Unvollständige Entwürfe sind nicht einziehbar.') }}
                         </p>
                     </div>
 
@@ -3877,6 +3878,7 @@ const saveExternalMember = async () => {
                             </div>
 
                             <template v-if="formFor(member).payment_method === 'sepa_debit'">
+                            <p class="text-sm text-secondary md:col-span-2">{{ tx('club_memberships.workspace.sepa_payer_hint', 'Nur mit unterschriebenem Mandat aktivieren. Referenz: maximal 35 SEPA-Zeichen, je Zahlungspflichtigem eindeutig. Das Mandatsdatum darf nicht in der Zukunft liegen. Bei abweichendem Beitragszahler werden dessen Name und Mandat für seine Rechnung verwendet.') }}</p>
                             <div>
                                 <label :for="`club-member-${member.id}-sepa-iban`" class="text-xs font-semibold uppercase text-secondary">{{ tx('club_memberships.workspace.sepa_iban', 'SEPA IBAN') }}</label>
                                 <input :id="`club-member-${member.id}-sepa-iban`" v-model="formFor(member).sepa_iban" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="DE...">

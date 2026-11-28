@@ -1,6 +1,13 @@
 <?php
 
 return [
+    'invalid_iban' => 'Invalid IBAN. Check country code, length and checksum.',
+    'invalid_bic' => 'BIC must contain 8 or 11 valid characters, or remain empty.',
+    'invalid_creditor_id' => 'Invalid creditor ID. Check the identifier and checksum.',
+    'invalid_reference' => 'Mandate reference must contain 1 to 35 SEPA characters (letters, digits and permitted punctuation).',
+    'payer_required' => 'The invoice needs one named payer who belongs to this club.',
+    'payer_payment_method' => 'The payer has a different payment method. Review it before collection.',
+    'ambiguous_mandate' => 'This active mandate reference belongs to multiple members. Use a unique reference for each payer.',
     'self_approval_confirm' => "I have checked the recipients, amounts and collection date and approve this batch.",
     'recharge_void_bank' => 'This invoice has payment or bank activity. Review the bank status and the separate refund workflow first.',
     'recharge_title' => 'Returned-debit fee recharge',

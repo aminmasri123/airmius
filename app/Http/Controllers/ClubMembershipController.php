@@ -591,11 +591,7 @@ class ClubMembershipController extends Controller
             'contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
             'payment_method' => ['nullable', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
             'contribution_next_invoice_on' => ['nullable', 'date'],
-            'sepa_iban' => ['nullable', 'string', 'max:40'],
-            'sepa_bic' => ['nullable', 'string', 'max:20'],
-            'sepa_mandate_reference' => ['nullable', 'string', 'max:255'],
-            'sepa_mandate_signed_on' => ['nullable', 'date'],
-            'sepa_mandate_active' => ['boolean'],
+            ...\App\Support\SepaData::mandateRules(''),
             'joined_on' => ['nullable', 'date'],
             'membership_ends_on' => ['nullable', 'date'],
             'membership_notes' => ['nullable', 'string', 'max:2000'],
@@ -1295,11 +1291,7 @@ class ClubMembershipController extends Controller
                 'members.*.contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
                 'members.*.payment_method' => ['nullable', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
                 'members.*.contribution_next_invoice_on' => ['nullable', 'date'],
-                'members.*.sepa_iban' => ['nullable', 'string', 'max:40'],
-                'members.*.sepa_bic' => ['nullable', 'string', 'max:20'],
-                'members.*.sepa_mandate_reference' => ['nullable', 'string', 'max:255'],
-                'members.*.sepa_mandate_signed_on' => ['nullable', 'date'],
-                'members.*.sepa_mandate_active' => ['boolean'],
+                ...\App\Support\SepaData::mandateRules('members.*.'),
                 'members.*.membership_ends_on' => ['nullable', 'date'],
             ]);
 
@@ -1350,11 +1342,7 @@ class ClubMembershipController extends Controller
             'contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
             'payment_method' => ['nullable', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
             'contribution_next_invoice_on' => ['nullable', 'date'],
-            'sepa_iban' => ['nullable', 'string', 'max:40'],
-            'sepa_bic' => ['nullable', 'string', 'max:20'],
-            'sepa_mandate_reference' => ['nullable', 'string', 'max:255'],
-            'sepa_mandate_signed_on' => ['nullable', 'date'],
-            'sepa_mandate_active' => ['boolean'],
+            ...\App\Support\SepaData::mandateRules(''),
             'membership_ends_on' => ['nullable', 'date'],
         ]);
 
@@ -1447,6 +1435,10 @@ class ClubMembershipController extends Controller
                 'membership_notes' => trim((string) ($row['notiz'] ?? $row['membership_notes'] ?? '')) ?: null,
             ];
         }
+
+        \Illuminate\Support\Facades\Validator::make(
+            ['members' => $members], \App\Support\SepaData::mandateRules('members.*.'),
+        )->validate();
 
         if ($sendInvitation) {
             $this->planFeatures->ensureCanSendMemberInvitations($club, count($members));
@@ -1619,14 +1611,14 @@ class ClubMembershipController extends Controller
         $this->planFeatures->ensureAllows($club, 'sepa_export');
 
         $data = $request->validate([
-            'sepa_creditor_id' => ['nullable', 'string', 'max:80'],
+            'sepa_creditor_id' => ['nullable', 'string', \App\Support\SepaData::rule('creditor_id')],
             'sepa_account_holder' => ['nullable', 'string', 'max:120'],
-            'sepa_iban' => ['nullable', 'string', 'max:40'],
-            'sepa_bic' => ['nullable', 'string', 'max:20'],
+            'sepa_iban' => ['nullable', 'string', \App\Support\SepaData::rule('iban')],
+            'sepa_bic' => ['nullable', 'string', \App\Support\SepaData::rule('bic')],
         ]);
 
         $club->update([
-            'sepa_creditor_id' => $data['sepa_creditor_id'] ?? null,
+            'sepa_creditor_id' => ClubMembershipInput::normalizeIban($data['sepa_creditor_id'] ?? null),
             'sepa_account_holder' => $data['sepa_account_holder'] ?? null,
             'sepa_iban' => $this->normalizeIban($data['sepa_iban'] ?? null),
             'sepa_bic' => $this->normalizeBic($data['sepa_bic'] ?? null),
@@ -1683,7 +1675,10 @@ class ClubMembershipController extends Controller
 
         abort_if($exportable->isEmpty(), 422, __('organization.club.sepa_no_open_invoices'));
 
-        $xml = $this->buildSepaDebitXml($club, $exportable, $memberships);
+        foreach ($exportable as $invoice) {
+            app(\App\Services\ClubSepaMandateService::class)->debtor($club, $invoice);
+        }
+        $xml = app(\App\Services\ClubMembershipSepaService::class)->buildDebitXml($club, $exportable, $memberships);
         $fileName = 'airmius-sepa-'.$club->id.'-'.now()->format('Ymd-His').'.xml';
 
         return response($xml, 200, [
@@ -3604,135 +3599,6 @@ XML);
     private function normalizeBoolean(mixed $value): bool
     {
         return ClubMembershipInput::normalizeBoolean($value);
-    }
-
-    private function buildSepaDebitXml(Club $club, $invoices, $memberships): string
-    {
-        $messageId = 'AIRMIUS-'.$club->id.'-'.now()->format('YmdHis');
-        $paymentId = $messageId.'-PMT';
-        $controlSum = $invoices->sum(fn (Invoice $invoice) => ($invoice->outstandingCents() / 100));
-        $collectionDate = now()->addDays(3)->toDateString();
-        $creditorName = $club->sepa_account_holder ?: $club->name;
-
-        $xml = new \XMLWriter;
-        $xml->openMemory();
-        $xml->startDocument('1.0', 'UTF-8');
-        $xml->startElement('Document');
-        $xml->writeAttribute('xmlns', 'urn:iso:std:iso:20022:tech:xsd:pain.008.001.02');
-        $xml->writeAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance');
-        $xml->startElement('CstmrDrctDbtInitn');
-
-        $xml->startElement('GrpHdr');
-        $xml->writeElement('MsgId', $messageId);
-        $xml->writeElement('CreDtTm', now()->toIso8601String());
-        $xml->writeElement('NbOfTxs', (string) $invoices->count());
-        $xml->writeElement('CtrlSum', number_format($controlSum, 2, '.', ''));
-        $xml->startElement('InitgPty');
-        $xml->writeElement('Nm', $creditorName);
-        $xml->endElement();
-        $xml->endElement();
-
-        $xml->startElement('PmtInf');
-        $xml->writeElement('PmtInfId', $paymentId);
-        $xml->writeElement('PmtMtd', 'DD');
-        $xml->writeElement('BtchBookg', 'true');
-        $xml->writeElement('NbOfTxs', (string) $invoices->count());
-        $xml->writeElement('CtrlSum', number_format($controlSum, 2, '.', ''));
-        $xml->startElement('PmtTpInf');
-        $xml->startElement('SvcLvl');
-        $xml->writeElement('Cd', 'SEPA');
-        $xml->endElement();
-        $xml->startElement('LclInstrm');
-        $xml->writeElement('Cd', 'CORE');
-        $xml->endElement();
-        $xml->writeElement('SeqTp', 'RCUR');
-        $xml->endElement();
-        $xml->writeElement('ReqdColltnDt', $collectionDate);
-        $xml->startElement('Cdtr');
-        $xml->writeElement('Nm', $creditorName);
-        $xml->endElement();
-        $xml->startElement('CdtrAcct');
-        $xml->startElement('Id');
-        $xml->writeElement('IBAN', $this->normalizeIban($club->sepa_iban));
-        $xml->endElement();
-        $xml->endElement();
-        $xml->startElement('CdtrAgt');
-        $xml->startElement('FinInstnId');
-        $this->writeSepaFinancialInstitution($xml, $club->sepa_bic);
-        $xml->endElement();
-        $xml->endElement();
-        $xml->writeElement('ChrgBr', 'SLEV');
-        $xml->startElement('CdtrSchmeId');
-        $xml->startElement('Id');
-        $xml->startElement('PrvtId');
-        $xml->startElement('Othr');
-        $xml->writeElement('Id', $club->sepa_creditor_id);
-        $xml->startElement('SchmeNm');
-        $xml->writeElement('Prtry', 'SEPA');
-        $xml->endElement();
-        $xml->endElement();
-        $xml->endElement();
-        $xml->endElement();
-        $xml->endElement();
-
-        foreach ($invoices as $invoice) {
-            $membership = $memberships->get($invoice->user_id);
-            $debtorName = $invoice->user?->name ?: $invoice->user?->email ?: 'Mitglied '.$invoice->user_id;
-
-            $xml->startElement('DrctDbtTxInf');
-            $xml->startElement('PmtId');
-            $xml->writeElement('EndToEndId', $invoice->number);
-            $xml->endElement();
-            $xml->startElement('InstdAmt');
-            $xml->writeAttribute('Ccy', 'EUR');
-            $xml->text(number_format(($invoice->outstandingCents() / 100), 2, '.', ''));
-            $xml->endElement();
-            $xml->startElement('DrctDbtTx');
-            $xml->startElement('MndtRltdInf');
-            $xml->writeElement('MndtId', $membership->sepa_mandate_reference);
-            $xml->writeElement('DtOfSgntr', $membership->sepa_mandate_signed_on);
-            $xml->endElement();
-            $xml->endElement();
-            $xml->startElement('DbtrAgt');
-            $xml->startElement('FinInstnId');
-            $this->writeSepaFinancialInstitution($xml, $membership->sepa_bic);
-            $xml->endElement();
-            $xml->endElement();
-            $xml->startElement('Dbtr');
-            $xml->writeElement('Nm', $debtorName);
-            $xml->endElement();
-            $xml->startElement('DbtrAcct');
-            $xml->startElement('Id');
-            $xml->writeElement('IBAN', $this->normalizeIban($membership->sepa_iban));
-            $xml->endElement();
-            $xml->endElement();
-            $xml->startElement('RmtInf');
-            $xml->writeElement('Ustrd', trim($invoice->number.' '.$invoice->title));
-            $xml->endElement();
-            $xml->endElement();
-        }
-
-        $xml->endElement();
-        $xml->endElement();
-        $xml->endElement();
-        $xml->endDocument();
-
-        return $xml->outputMemory();
-    }
-
-    private function writeSepaFinancialInstitution(\XMLWriter $xml, mixed $bic): void
-    {
-        $bic = $this->normalizeBic($bic);
-
-        if ($bic) {
-            $xml->writeElement('BIC', $bic);
-
-            return;
-        }
-
-        $xml->startElement('Othr');
-        $xml->writeElement('Id', 'NOTPROVIDED');
-        $xml->endElement();
     }
 
     private function excelColumnIndex(string $column): int

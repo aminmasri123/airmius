@@ -1,6 +1,13 @@
 <?php
 
 return [
+    'invalid_iban' => 'Die IBAN ist ungültig. Bitte Ländercode, Länge und Prüfziffer prüfen.',
+    'invalid_bic' => 'Der BIC muss aus 8 oder 11 gültigen Zeichen bestehen; alternativ leer lassen.',
+    'invalid_creditor_id' => 'Die Gläubiger-ID ist ungültig. Bitte Kennung und Prüfziffer prüfen.',
+    'invalid_reference' => 'Die Mandatsreferenz muss 1 bis 35 SEPA-Zeichen enthalten (Buchstaben, Ziffern und zulässige Satzzeichen).',
+    'payer_required' => 'Der Rechnung muss ein eindeutiger Zahlungspflichtiger mit Namen und Vereinsmitgliedschaft zugeordnet sein.',
+    'payer_payment_method' => 'Beim Zahlungspflichtigen ist eine andere Zahlungsart hinterlegt. Bitte vor dem Einzug prüfen.',
+    'ambiguous_mandate' => 'Die aktive Mandatsreferenz ist mehreren Mitgliedern zugeordnet. Bitte eine eindeutige Referenz je Zahlungspflichtigem verwenden.',
     'self_approval_confirm' => "Ich habe Empfänger, Beträge und Einzugsdatum dieses Laufs geprüft und gebe ihn frei.",
     'recharge_void_bank' => 'Die Rechnung besitzt Zahlungs- oder Bankvorgänge. Bitte zuerst den Bankstatus und den gesonderten Erstattungsablauf prüfen.',
     'recharge_title' => 'Gebührenweiterbelastung',

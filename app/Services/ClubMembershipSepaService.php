@@ -10,6 +10,18 @@ class ClubMembershipSepaService
 {
     public function buildDebitXml(Club $club, $invoices, $memberships, ?string $collectionDate = null, ?string $messageId = null): string
     {
+        \App\Support\SepaData::assertCreditor([
+            'sepa_creditor_id' => $club->sepa_creditor_id,
+            'sepa_iban' => $club->sepa_iban, 'sepa_bic' => $club->sepa_bic,
+            'sepa_account_holder' => $club->sepa_account_holder ?: $club->name,
+        ]);
+        foreach ($invoices as $invoice) {
+            $mandate = (array) $memberships->get($invoice->user_id);
+            // Batch snapshots are checked for active status before export.
+            $mandate['sepa_mandate_active'] ??= true;
+            abort_unless(\App\Support\SepaData::mandateReady($mandate) && filled($invoice->user?->name), 422, __('sepa.mandate'));
+        }
+
         $messageId ??= 'AIRMIUS-'.$club->id.'-'.now()->format('YmdHis');
         $paymentId = $messageId.'-PMT';
         $controlSum = $invoices->sum(fn (Invoice $invoice) => ($invoice->outstandingCents() / 100));
@@ -68,7 +80,7 @@ class ClubMembershipSepaService
         $xml->startElement('Id');
         $xml->startElement('PrvtId');
         $xml->startElement('Othr');
-        $xml->writeElement('Id', $club->sepa_creditor_id);
+        $xml->writeElement('Id', ClubMembershipInput::normalizeIban($club->sepa_creditor_id));
         $xml->startElement('SchmeNm');
         $xml->writeElement('Prtry', 'SEPA');
         $xml->endElement();

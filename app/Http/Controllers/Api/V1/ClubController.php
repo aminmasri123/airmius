@@ -1465,11 +1465,7 @@ class ClubController extends Controller
             'contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
             'payment_method' => ['nullable', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
             'contribution_next_invoice_on' => ['nullable', 'date'],
-            'sepa_iban' => ['nullable', 'string', 'max:40'],
-            'sepa_bic' => ['nullable', 'string', 'max:20'],
-            'sepa_mandate_reference' => ['nullable', 'string', 'max:255'],
-            'sepa_mandate_signed_on' => ['nullable', 'date'],
-            'sepa_mandate_active' => ['boolean'],
+            ...\App\Support\SepaData::mandateRules(''),
             'joined_on' => ['nullable', 'date'],
             'membership_ends_on' => ['nullable', 'date'],
             'membership_notes' => ['nullable', 'string', 'max:2000'],
@@ -2457,8 +2453,10 @@ class ClubController extends Controller
                 'next_event_title' => $nextEvent?->title,
                 'next_event_starts_at' => $nextEvent?->start_time?->toJSON(),
                 'unread_announcements_count' => $unreadAnnouncementsCount,
-                'sepa_ready_members_count' => $club->users->filter(fn (User $member) => (bool) ($member->pivot?->sepa_mandate_active ?? false))->count()
-                    + $club->externalMembers->where('sepa_mandate_active', true)->count(),
+                'sepa_ready_members_count' => $club->users->filter(fn (User $member) => \App\Support\SepaData::mandateReady($member->pivot?->toArray() ?? []))->count()
+                    + $club->externalMembers->filter(fn (ClubExternalMember $member) => \App\Support\SepaData::mandateReady([
+                        ...$member->toArray(), 'sepa_mandate_signed_on' => $member->sepa_mandate_signed_on?->toDateString(),
+                    ]))->count(),
                 'recurring_contribution_total' => (float) $club->users->sum(fn (User $member) => (float) ($member->pivot?->contribution_amount ?? 0))
                     + (float) $club->externalMembers->sum(fn (ClubExternalMember $member) => (float) ($member->contribution_amount ?? 0)),
                 ...$financeSummary,

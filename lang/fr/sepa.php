@@ -1,6 +1,13 @@
 <?php
 
 return [
+    'invalid_iban' => 'IBAN invalide. Vérifiez le pays, la longueur et la clé de contrôle.',
+    'invalid_bic' => 'Le BIC doit contenir 8 ou 11 caractères valides, ou rester vide.',
+    'invalid_creditor_id' => 'Identifiant créancier invalide. Vérifiez la référence et la clé de contrôle.',
+    'invalid_reference' => 'La référence du mandat doit contenir de 1 à 35 caractères SEPA.',
+    'payer_required' => 'La facture doit avoir un payeur nommé appartenant au club.',
+    'payer_payment_method' => 'Un autre moyen de paiement est enregistré pour le payeur. Vérifiez avant le prélèvement.',
+    'ambiguous_mandate' => 'Cette référence de mandat actif appartient à plusieurs membres. Utilisez une référence unique par payeur.',
     'self_approval_confirm' => "J’ai vérifié les destinataires, montants et date de prélèvement et je valide ce lot.",
     'recharge_void_bank' => 'Cette facture comporte des paiements ou des opérations bancaires. Vérifiez leur état et le processus distinct de remboursement.',
     'recharge_title' => 'Refacturation des frais de rejet',

@@ -16,6 +16,7 @@ import 'package:image_picker/image_picker.dart';
 import '../core/airmius_api_client.dart';
 import '../core/airmius_date_input.dart';
 import '../core/sepa_fee_labels.dart';
+import '../core/sepa_master_data.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
@@ -500,11 +501,7 @@ class _ClubMembershipManagementScreenState
                   member.membership['open_balance'] ??
                   0,
             ),
-            sepa: _boolFromAny(
-              member.membership['sepa_mandate_active'] ??
-                  member.membership['sepa_ready'] ??
-                  member.membership['has_sepa_mandate'],
-            ),
+            sepa: _sepaMandateReady(member.membership),
             teams: teamsByMemberId[member.id] ?? const [],
           ),
         )
@@ -572,7 +569,7 @@ class _ClubMembershipManagementScreenState
             balance: _moneyFromValue(
               member['balance'] ?? member['open_balance'] ?? 0,
             ),
-            sepa: _boolFromAny(member['sepa_mandate_active']),
+            sepa: _sepaMandateReady(membership),
             teams: _teamEntriesFromJson(
               member['teams'] ??
                   member['team_memberships'] ??
@@ -4376,6 +4373,11 @@ class _ClubMembershipManagementScreenState
     var interval = _stringFromJson(member.membership, [
       'contribution_interval',
     ], fallback: 'none');
+    final sepaLabels =
+        sepaMasterDataLabels[AirmiusScope.of(
+          context,
+        ).language.locale.languageCode] ??
+        sepaMasterDataLabels['en']!;
     var sepaActive = _boolFromAny(member.membership['sepa_mandate_active']);
     var paymentMethod = _stringFromJson(member.membership, [
       'payment_method',
@@ -4908,10 +4910,14 @@ class _ClubMembershipManagementScreenState
                                           .toList(),
                                   onChanged: (value) => setDialogState(() {
                                     paymentMethod = value ?? 'bank_transfer';
-                                    sepaActive = paymentMethod == 'sepa_debit';
+                                    if (paymentMethod != 'sepa_debit') {
+                                      sepaActive = false;
+                                    }
                                   }),
                                 ),
                                 if (paymentMethod == 'sepa_debit') ...[
+                                  fieldGap(),
+                                  Text(sepaLabels['mandateHint']!),
                                   fieldGap(),
                                   SwitchListTile(
                                     contentPadding: EdgeInsets.zero,
@@ -4935,6 +4941,7 @@ class _ClubMembershipManagementScreenState
                                     controller: bic,
                                     decoration: InputDecoration(
                                       labelText: _tr('membership.bic'),
+                                      helperText: sepaLabels['bicHint'],
                                     ),
                                   ),
                                   fieldGap(),
@@ -5052,6 +5059,25 @@ class _ClubMembershipManagementScreenState
                         onPressed: savingMetadata
                             ? null
                             : () async {
+                                final sepaError = SepaMasterData.mandateError(
+                                  iban: iban.text,
+                                  bic: bic.text,
+                                  reference: mandate.text.trim(),
+                                  signedOn: _membershipDateApi(
+                                    mandateDate.text,
+                                  ),
+                                  active: sepaActive,
+                                );
+                                if (sepaError != null) {
+                                  ScaffoldMessenger.of(
+                                    pageContext,
+                                  ).showSnackBar(
+                                    SnackBar(
+                                      content: Text(sepaLabels[sepaError]!),
+                                    ),
+                                  );
+                                  return;
+                                }
                                 setDialogState(() => savingMetadata = true);
                                 final saved =
                                     await (metadataKey.currentState
@@ -5224,42 +5250,105 @@ class _ClubMembershipManagementScreenState
             _tr('membership.revenueAccount'),
             _tr('membership.bankAccount'),
           ];
+    final sepaLabels =
+        sepaMasterDataLabels[AirmiusScope.of(
+          context,
+        ).language.locale.languageCode] ??
+        sepaMasterDataLabels['en']!;
+    String? sepaError;
+    var saving = false;
     final dialog = DialogRoute<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          sepa
-              ? _tr('membership.configureSepa')
-              : _tr('membership.configureDatev'),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            sepa
+                ? _tr('membership.configureSepa')
+                : _tr('membership.configureDatev'),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (sepa) ...[
+                  Text(sepaLabels['settingsHint']!),
+                  const SizedBox(height: 12),
+                  if (sepaError != null)
+                    Text(
+                      sepaError!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                ],
+                for (final pair in [
+                  (first, labels[0]),
+                  (second, labels[1]),
+                  (third, labels[2]),
+                  (fourth, labels[3]),
+                  if (!sepa) (feeAccount, feeLabels['exportAccount']!),
+                ])
+                  TextField(
+                    controller: pair.$1,
+                    decoration: InputDecoration(labelText: pair.$2),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(context, false),
+              child: Text(_tr('membership.cancel')),
+            ),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (!sepa) {
+                        Navigator.pop(context, true);
+                        return;
+                      }
+                      final error = SepaMasterData.bankError(
+                        iban: third.text,
+                        bic: fourth.text,
+                        creditorId: first.text,
+                      );
+                      if (error != null) {
+                        setDialogState(() => sepaError = sepaLabels[error]);
+                        return;
+                      }
+                      setDialogState(() {
+                        saving = true;
+                        sepaError = null;
+                      });
+                      try {
+                        final management =
+                            await AirmiusServicesScope.of(this.context)
+                                .repositories
+                                .clubs
+                                .updateClubSepaSettings(club.id, {
+                                  'sepa_creditor_id': first.text.trim(),
+                                  'sepa_account_holder': second.text.trim(),
+                                  'sepa_iban': third.text.trim(),
+                                  'sepa_bic': fourth.text.trim(),
+                                });
+                        if (!mounted || !context.mounted) return;
+                        _applyManagement(management);
+                        _toast('SEPA ${_tr('membership.settingsSavedAfter')}');
+                        Navigator.pop(context, false);
+                      } catch (error) {
+                        if (context.mounted) {
+                          setDialogState(() {
+                            saving = false;
+                            sepaError = _errorText(error);
+                          });
+                        }
+                      }
+                    },
+              child: Text(_tr('membership.save')),
+            ),
+          ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final pair in [
-                (first, labels[0]),
-                (second, labels[1]),
-                (third, labels[2]),
-                (fourth, labels[3]),
-                if (!sepa) (feeAccount, feeLabels['exportAccount']!),
-              ])
-                TextField(
-                  controller: pair.$1,
-                  decoration: InputDecoration(labelText: pair.$2),
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(_tr('membership.cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(_tr('membership.save')),
-          ),
-        ],
       ),
     );
     final confirmed = await Navigator.of(
@@ -9267,7 +9356,7 @@ class _ClubMembershipManagementScreenState
                           icon: Icons.account_balance_wallet_outlined,
                           title: t('membership.sepaBatch'),
                           subtitle: t('membership.sepaBatchBody'),
-                          status: t('membership.ready'),
+                          status: t('membership.configurable'),
                         ),
                         _ExportTile(
                           icon: Icons.fact_check_outlined,
@@ -10104,6 +10193,20 @@ String _membershipDateDisplay(Object? value) {
   final day = parsed.day.toString().padLeft(2, '0');
   final month = parsed.month.toString().padLeft(2, '0');
   return '$day.$month.${parsed.year}';
+}
+
+bool _sepaMandateReady(JsonMap data) {
+  return const {true, 1, '1', 'true'}.contains(data['sepa_mandate_active']) &&
+      SepaMasterData.mandateError(
+            iban: data['sepa_iban']?.toString() ?? '',
+            bic: data['sepa_bic']?.toString() ?? '',
+            reference: data['sepa_mandate_reference']?.toString() ?? '',
+            signedOn: _membershipDateApi(
+              _membershipDateDisplay(data['sepa_mandate_signed_on']),
+            ),
+            active: true,
+          ) ==
+          null;
 }
 
 String _membershipDateApi(String value) {

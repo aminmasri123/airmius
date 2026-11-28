@@ -9,7 +9,6 @@ use App\Models\Invoice;
 use App\Models\User;
 use App\Support\ClubAuditLog;
 use App\Support\ClubMembershipInput;
-use App\Support\EncryptedIbanValue;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -158,28 +157,20 @@ final class ClubSepaBatchService
 
     private function creditor(Club $club): array
     {
-        return [
+        $creditor = [
             'name' => $club->name, 'sepa_account_holder' => $club->sepa_account_holder ?: $club->name,
-            'sepa_creditor_id' => $club->sepa_creditor_id,
+            'sepa_creditor_id' => ClubMembershipInput::normalizeIban($club->sepa_creditor_id),
             'sepa_iban' => ClubMembershipInput::normalizeIban($club->sepa_iban),
             'sepa_bic' => ClubMembershipInput::normalizeBic($club->sepa_bic),
         ];
+        \App\Support\SepaData::assertCreditor($creditor);
+
+        return $creditor;
     }
 
     private function debtor(Club $club, Invoice $invoice): array
     {
-        $member = DB::table('club_user')->where('club_id', $club->id)->where('user_id', $invoice->user_id)->lockForUpdate()->first();
-        abort_unless($member && $member->sepa_mandate_active && filled($member->sepa_iban)
-            && filled($member->sepa_mandate_reference) && filled($member->sepa_mandate_signed_on)
-            && Carbon::parse($member->sepa_mandate_signed_on)->lte(today()), 422, __('sepa.mandate'));
-
-        return [
-            'name' => $invoice->user?->name, 'number' => $invoice->number, 'title' => $invoice->title,
-            'sepa_iban' => ClubMembershipInput::normalizeIban(EncryptedIbanValue::decrypt($member->sepa_iban)),
-            'sepa_bic' => ClubMembershipInput::normalizeBic($member->sepa_bic),
-            'sepa_mandate_reference' => $member->sepa_mandate_reference,
-            'sepa_mandate_signed_on' => Carbon::parse($member->sepa_mandate_signed_on)->toDateString(),
-        ];
+        return app(ClubSepaMandateService::class)->debtor($club, $invoice);
     }
 
     private function checkLeadTime($date, int $days, $sent): void

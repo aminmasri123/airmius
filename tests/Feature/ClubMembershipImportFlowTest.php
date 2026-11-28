@@ -31,11 +31,11 @@ class ClubMembershipImportFlowTest extends TestCase
         );
 
         $csv = implode("\n", [
-            'Name;E-Mail;Mitgliedschaft;Beitrag;Intervall;Naechste_Rechnung;SEPA_Aktiv',
-            'Mira Muster;mira@example.org;Prüfung;1.234,56;halbjährlich;2026-06-01;ja',
+            'Name;E-Mail;Mitgliedschaft;Beitrag;Intervall;Naechste_Rechnung;SEPA_Aktiv;IBAN;Mandatsreferenz;Mandatsdatum',
+            'Mira Muster;mira@example.org;Prüfung;1.234,56;halbjährlich;2026-06-01;ja;DE89370400440532013000;IMPORT-MIRA;2025-01-01',
             'Mira Duplicate;mira@example.org;aktiv;99,99;monthly;2026-07-01;nein',
             'Ohne Mail;ungueltig;aktiv;12,50;monthly;;',
-            'Pause Person;pause@example.org;pausiert;12,50;monatlich;2026-08-01;yes',
+            'Pause Person;pause@example.org;pausiert;12,50;monatlich;2026-08-01;yes;DE12500105170648489890;IMPORT-PAUSE;2025-01-01',
         ]);
         $file = UploadedFile::fake()->createWithContent('members.csv', $csv);
 
