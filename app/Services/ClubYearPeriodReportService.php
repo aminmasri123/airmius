@@ -22,10 +22,14 @@ class ClubYearPeriodReportService
 
     public function report(Club $club, string $type, ?ClubYearPeriod $period): array
     {
+        if ($period) {
+            $period = $club->yearPeriods()->whereKey($period->id)->where('type', $type)->firstOrFail();
+        }
         if ($type === 'business' && $period?->finance_closed_at && $period->finance_closing_snapshot) {
             return $period->finance_closing_snapshot['report'] + ['closed_at' => $period->finance_closed_at->toJSON()];
         }
         $generatedAt = now();
+        $summary = $this->summary($club, $type, $period?->id);
 
         return [
             'type' => $type,
@@ -33,13 +37,47 @@ class ClubYearPeriodReportService
             'period' => $period ? $this->periodPayload($period) : null,
             'generated_at' => $generatedAt->toJSON(),
             'catalog' => $this->catalog($type),
-            'summary' => $this->summary($club, $type, $period?->id),
+            'summary' => $summary,
+            'comparison' => $type === 'business' && $period ? $this->comparison($club, $period, $summary['finance_entries']) : null,
+            'reconciliation' => $type === 'business' && $period ? $this->reconciliation($club, $period) : null,
             'unassigned' => $this->summary($club, $type, null),
             'membership_development' => $period
                 ? $this->membershipDevelopment($club, $period)
                 : $this->suppressedMembershipDevelopment(),
             'standard_reports' => $this->standardReports($club, $type, $period, $generatedAt),
         ];
+    }
+
+    private function comparison(Club $club, ClubYearPeriod $period, array $current): ?array
+    {
+        $previous = $club->yearPeriods()->where('type', 'business')
+            ->where('ends_on', '<', $period->starts_on)->orderByDesc('ends_on')->orderByDesc('id')->first();
+        if (! $previous) {
+            return null;
+        }
+        $summary = $previous->finance_closing_snapshot['report']['summary'] ?? $this->businessSummary($club, $previous->id);
+
+        return [
+            'period' => $this->periodPayload($previous),
+            'closed_at' => $previous->finance_closed_at?->toJSON(),
+            'summary' => $summary,
+            'net_change_cents' => (int) round($current['net_amount'] * 100)
+                - (int) round($summary['finance_entries']['net_amount'] * 100),
+        ];
+    }
+
+    private function reconciliation(Club $club, ClubYearPeriod $period): array
+    {
+        $start = $period->starts_on->toDateString();
+        $end = $period->ends_on->toDateString();
+        // Compare the frozen assignment used by reports with the dates used for balances.
+        $entries = ClubFinanceEntry::where('club_id', $club->id);
+        $outside = (clone $entries)->where('business_year_period_id', $period->id)
+            ->where(fn ($q) => $q->whereDate('booked_on', '<', $start)->orWhereDate('booked_on', '>', $end))->count();
+        $missing = (clone $entries)->whereBetween('booked_on', [$start, $end])
+            ->where(fn ($q) => $q->whereNull('business_year_period_id')->orWhere('business_year_period_id', '!=', $period->id))->count();
+
+        return ['mismatched_entry_count' => $outside + $missing];
     }
 
     private function catalog(string $type): array
@@ -135,24 +173,24 @@ class ClubYearPeriodReportService
             $periodId,
         )->get(['id', 'type', 'amount']);
 
-        $credits = (float) $transactions->where('amount', '>=', 0)->sum(fn (BankTransaction $item) => (float) $item->amount);
-        $debits = (float) abs($transactions->where('amount', '<', 0)->sum(fn (BankTransaction $item) => (float) $item->amount));
-        $income = (float) $entries->where('type', 'income')->sum(fn (ClubFinanceEntry $item) => (float) $item->amount);
-        $expenses = (float) $entries->where('type', 'expense')->sum(fn (ClubFinanceEntry $item) => (float) $item->amount);
+        $credits = $transactions->where('amount', '>=', 0)->sum(fn (BankTransaction $item) => (int) round((float) $item->amount * 100));
+        $debits = abs($transactions->where('amount', '<', 0)->sum(fn (BankTransaction $item) => (int) round((float) $item->amount * 100)));
+        $income = $entries->where('type', 'income')->sum(fn (ClubFinanceEntry $item) => (int) round((float) $item->amount * 100));
+        $expenses = $entries->where('type', 'expense')->sum(fn (ClubFinanceEntry $item) => (int) round((float) $item->amount * 100));
 
         return [
             'invoices' => BillingOverview::clubInvoiceSummary($invoices),
             'bank_transactions' => [
                 'total_count' => $transactions->count(),
-                'credit_amount' => $credits,
-                'debit_amount' => $debits,
-                'net_amount' => $credits - $debits,
+                'credit_amount' => $credits / 100,
+                'debit_amount' => $debits / 100,
+                'net_amount' => ($credits - $debits) / 100,
             ],
             'finance_entries' => [
                 'total_count' => $entries->count(),
-                'income_amount' => $income,
-                'expense_amount' => $expenses,
-                'net_amount' => $income - $expenses,
+                'income_amount' => $income / 100,
+                'expense_amount' => $expenses / 100,
+                'net_amount' => ($income - $expenses) / 100,
             ],
         ];
     }

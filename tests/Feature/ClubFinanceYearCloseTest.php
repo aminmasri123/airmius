@@ -82,4 +82,39 @@ class ClubFinanceYearCloseTest extends TestCase
         $this->postJson($url, ['next_period_id' => $next->id, 'confirmed' => true])->assertForbidden();
         $this->assertNull($old->fresh()->finance_closed_at);
     }
+
+    public function test_report_compares_exact_cents_and_keeps_previous_closed_snapshot(): void
+    {
+        [$club, $old, $next, $owner] = $this->context();
+        foreach ([['2025-01-01', 'income', 0.10], ['2025-12-31', 'income', 0.20], ['2025-12-31', 'expense', 0.10], ['2026-01-01', 'income', 0.50]] as [$date, $type, $amount]) {
+            ClubFinanceEntry::create(['club_id' => $club->id, 'user_id' => $owner->id, 'type' => $type, 'account' => 'bank', 'title' => 'Cent boundary', 'amount' => $amount, 'booked_on' => $date]);
+        }
+        $reportUrl = "/api/v1/clubs/{$club->id}/year-periods/report?type=business&period_id={$next->id}";
+        $this->getJson($reportUrl)->assertOk()
+            ->assertJsonPath('data.summary.finance_entries.total_count', 1)
+            ->assertJsonPath('data.comparison.period.id', $old->id)
+            ->assertJsonPath('data.comparison.summary.finance_entries.income_amount', 0.3)
+            ->assertJsonPath('data.comparison.summary.finance_entries.net_amount', 0.2)
+            ->assertJsonPath('data.comparison.net_change_cents', 30)
+            ->assertJsonPath('data.reconciliation.mismatched_entry_count', 0);
+        $this->postJson("/api/v1/clubs/{$club->id}/year-periods/{$old->id}/finance-close", ['next_period_id' => $next->id, 'confirmed' => true])->assertOk();
+        // Even a caller holding a stale model must receive the frozen report.
+        $this->assertArrayHasKey('closed_at', app(ClubYearPeriodReportService::class)->report($club, 'business', $old));
+        $this->getJson($reportUrl)->assertOk()->assertJsonPath('data.comparison.net_change_cents', 30)
+            ->assertJsonPath('data.comparison.closed_at', $old->fresh()->finance_closed_at->toJSON());
+    }
+
+    public function test_mismatched_assignment_is_reported_and_blocks_close_without_side_effects(): void
+    {
+        [$club, $old, $next, $owner] = $this->context();
+        $entry = ClubFinanceEntry::create(['club_id' => $club->id, 'user_id' => $owner->id, 'type' => 'income', 'account' => 'bank', 'title' => 'Moved date', 'amount' => 10, 'booked_on' => '2025-12-31']);
+        $entry->update(['booked_on' => '2026-01-01']);
+        $this->getJson("/api/v1/clubs/{$club->id}/year-periods/report?type=business&period_id={$old->id}")
+            ->assertOk()->assertJsonPath('data.reconciliation.mismatched_entry_count', 1);
+        $this->postJson("/api/v1/clubs/{$club->id}/year-periods/{$old->id}/finance-close", ['next_period_id' => $next->id, 'confirmed' => true])
+            ->assertUnprocessable()->assertJsonValidationErrors('finance_year');
+        $this->assertNull($old->fresh()->finance_closed_at);
+        $this->assertNull($old->fresh()->finance_closing_snapshot);
+        $this->assertSame(1, ClubFinanceEntry::count());
+    }
 }

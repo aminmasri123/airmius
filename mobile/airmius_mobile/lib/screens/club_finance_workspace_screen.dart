@@ -904,6 +904,9 @@ class _ClubFinanceWorkspaceScreenState
   }
 
   Future<void> _close(Map<String, dynamic> period) async {
+    final end = DateTime.parse('${period['ends_on']}');
+    final nextStart = DateTime.utc(end.year, end.month, end.day + 1)
+        .toIso8601String().substring(0, 10);
     final value = await form('Jahresabschluss', [
       select(
         'next_period_id',
@@ -913,7 +916,7 @@ class _ClubFinanceWorkspaceScreenState
               .where(
                 (p) =>
                     p['finance_closed_at'] == null &&
-                    '${p['starts_on']}'.compareTo('${period['ends_on']}') > 0,
+                    '${p['starts_on']}'.substring(0, 10) == nextStart,
               )
               .toList(),
         ),

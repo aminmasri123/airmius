@@ -57,6 +57,9 @@ class ClubFinanceYearCloseService
             abort_if(ClubYearPeriod::where('club_id', $club->id)->where('type', 'business')
                 ->where('ends_on', '<', $period->starts_on)->whereNull('finance_closed_at')->exists(), 422, 'Bitte zuerst frühere Geschäftsjahre abschließen.');
             $report = app(ClubYearPeriodReportService::class)->report($club, 'business', $period);
+            if ($report['reconciliation']['mismatched_entry_count'] > 0) {
+                throw ValidationException::withMessages(['finance_year' => 'Buchungsdatum und Geschäftsjahr stimmen nicht überein. Bitte vor dem Abschluss abstimmen.']);
+            }
             $entries = ClubFinanceEntry::where('club_id', $club->id)->whereDate('booked_on', '<=', $period->ends_on)->get();
             $payments = Payment::where('club_id', $club->id)->whereIn('status', ['paid', 'returned'])
                 ->whereRaw('DATE(COALESCE(paid_at, created_at)) <= ?', [$period->ends_on->toDateString()])->get();

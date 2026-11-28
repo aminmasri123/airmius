@@ -6,6 +6,7 @@ import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
+import '../widgets/club_year_report_review.dart';
 
 class ClubYearPeriodsScreen extends StatefulWidget {
   const ClubYearPeriodsScreen({super.key, required this.club});
@@ -360,6 +361,8 @@ class _YearPeriodReportDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (report['type'] == 'business' && period is Map<String, dynamic>)
+              ClubYearReportReview(report: report),
             if (period is! Map<String, dynamic>)
               Text(t('clubYearPeriods.unassignedHint')),
             if (invoices.isNotEmpty) ...[
@@ -452,7 +455,11 @@ class _YearPeriodReportDialog extends StatelessWidget {
     padding: const EdgeInsets.only(top: 8),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [Text(label), const SizedBox(width: 20), Text('${value ?? 0}')],
+      children: [
+        Expanded(child: Text(label)),
+        const SizedBox(width: 12),
+        Flexible(child: Text('${value ?? 0}', textAlign: TextAlign.end)),
+      ],
     ),
   );
 
