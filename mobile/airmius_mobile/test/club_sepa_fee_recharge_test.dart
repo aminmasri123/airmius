@@ -10,10 +10,19 @@ import 'package:flutter_test/flutter_test.dart';
 class _Transport implements AirmiusApiTransport {
   final requests = <AirmiusApiRequest>[];
   bool failNext = false;
+  int? rejectNext;
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     requests.add(request);
+    if (rejectNext != null) {
+      final status = rejectNext!;
+      rejectNext = null;
+      return AirmiusApiResponse(
+        statusCode: status,
+        body: '{"message":"Angaben prüfen"}',
+      );
+    }
     if (failNext) {
       failNext = false;
       throw Exception('Connection lost after request');
@@ -126,6 +135,68 @@ Future<void> _confirmAndSubmit(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets(
+    'validation rejection unlocks approval and requires both confirmations again',
+    (tester) async {
+      final transport = _Transport()..rejectNext = 422;
+      await _screen(
+        tester,
+        transport,
+        result: _result(proposals: [_proposal()]),
+      );
+      await tester.tap(find.byKey(const ValueKey('recharge-approve-31-0')));
+      await tester.pump();
+      final account = find.byKey(const ValueKey('recharge-account'));
+      final basis = find.byKey(const ValueKey('recharge-basis-confirm'));
+      await tester.enterText(account, '1200');
+      await tester.tap(basis);
+      await tester.pump();
+      await _confirmAndSubmit(tester);
+      expect(tester.widget<TextField>(account).enabled, true);
+      expect(tester.widget<CheckboxListTile>(basis).value, false);
+      expect(
+        find.text(sepaFeeRechargeLabels['de']!['uncertain']!),
+        findsNothing,
+      );
+      await tester.ensureVisible(account);
+      await tester.enterText(account, '4990');
+      await _confirmAndSubmit(tester);
+      expect(transport.requests, hasLength(1));
+      await tester.ensureVisible(basis);
+      await tester.tap(basis);
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const ValueKey('recharge-submit')));
+      await tester.tap(find.byKey(const ValueKey('recharge-submit')));
+      await tester.pumpAndSettle();
+      expect(transport.requests, hasLength(2));
+      expect(transport.requests.last.body?['revenue_account'], '4990');
+    },
+  );
+
+  testWidgets(
+    'cancelled proposal shows its reason and permits a new proposal',
+    (tester) async {
+      await _screen(
+        tester,
+        _Transport(),
+        result: _result(
+          proposals: [
+            {
+              ..._proposal(status: 'cancelled'),
+              'cancellation_reason': 'Gebühr nicht weitergeben',
+            },
+          ],
+        ),
+      );
+      expect(find.textContaining('Gebühr nicht weitergeben'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('recharge-propose-0-0')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('recharge-approve-31-0')), findsNothing);
+    },
+  );
+
   testWidgets('proposal validates, confirms and sends a revision snapshot', (
     tester,
   ) async {
@@ -139,7 +210,7 @@ void main() {
     );
     await tester.enterText(
       find.byKey(const ValueKey('recharge-date')),
-      '2026-10-20',
+      '20.10.2026',
     );
     await tester.enterText(
       find.byKey(const ValueKey('recharge-basis')),
@@ -171,7 +242,7 @@ void main() {
     await tester.pump();
     await tester.enterText(
       find.byKey(const ValueKey('recharge-date')),
-      '2026-10-20',
+      '20.10.2026',
     );
     await tester.enterText(
       find.byKey(const ValueKey('recharge-basis')),
@@ -187,6 +258,11 @@ void main() {
       find.text(sepaFeeRechargeLabels['de']!['uncertain']!),
       findsOneWidget,
     );
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('recharge-amount')),
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
       tester
           .widget<TextField>(find.byKey(const ValueKey('recharge-amount')))
@@ -194,10 +270,25 @@ void main() {
       false,
     );
     final firstBody = jsonEncode(transport.requests.single.body);
+    transport.rejectNext = 422;
     await _confirmAndSubmit(tester);
     expect(transport.requests, hasLength(2));
     expect(transport.requests[1].path, transport.requests[0].path);
     expect(jsonEncode(transport.requests[1].body), firstBody);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('recharge-amount')),
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('recharge-amount')))
+          .enabled,
+      false,
+    );
+    await _confirmAndSubmit(tester);
+    expect(transport.requests, hasLength(3));
+    expect(jsonEncode(transport.requests.last.body), firstBody);
   });
 
   testWidgets('approval is second-person only and records basis confirmation', (
@@ -377,7 +468,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('recharge-refund-date')),
-      '2026-10-22',
+      '22.10.2026',
     );
     await tester.enterText(
       find.byKey(const ValueKey('recharge-refund-reference')),

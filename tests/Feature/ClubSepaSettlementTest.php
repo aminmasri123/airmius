@@ -1284,6 +1284,26 @@ XML);
         $this->assertSame(0, Invoice::where('source', 'sepa_fee_recharge')->count());
     }
 
+    public function test_fee_recharge_cancelled_proposal_cannot_be_approved_and_replacement_creates_only_one_claim(): void
+    {
+        $id = $this->prepareRecharge();
+        $cancel = ['confirmed' => true, 'reason' => 'Prüfgrundlage korrigieren'];
+        $this->postJson($this->path("fee-recharges/{$id}/cancel"), $cancel)->assertOk();
+        Sanctum::actingAs($this->owner);
+        $this->postJson($this->path("fee-recharges/{$id}/approve"), $this->approvalData())->assertUnprocessable();
+        $this->assertSame(0, Invoice::where('source', 'sepa_fee_recharge')->count());
+        Sanctum::actingAs($this->reviewer);
+        $replacement = $this->postJson($this->path('fee-recharges'), $this->rechargeData())->assertOk()->json('data.id');
+        Sanctum::actingAs($this->owner);
+        $path = $this->path("fee-recharges/{$replacement}/approve");
+        $this->postJson($path, array_replace($this->approvalData(), ['revenue_account' => '1200']))->assertUnprocessable();
+        $this->assertSame(0, Invoice::where('source', 'sepa_fee_recharge')->count());
+        $invoiceId = $this->postJson($path, $this->approvalData())->assertOk()->json('data.invoice_id');
+        $this->postJson($path, $this->approvalData())->assertOk()->assertJsonPath('data.invoice_id', $invoiceId);
+        $this->assertSame(1, Invoice::where('source', 'sepa_fee_recharge')->count());
+        $this->assertDatabaseHas('club_sepa_fee_recharges', ['id' => $id, 'status' => 'cancelled', 'invoice_id' => null]);
+    }
+
     public function test_approved_recharge_invoice_preserves_terms_accepts_partial_payments_and_exports_its_frozen_account(): void
     {
         $id = $this->prepareRecharge();

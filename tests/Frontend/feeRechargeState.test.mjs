@@ -9,6 +9,35 @@ function setup(post) {
     return { ...flow, saves: () => saves }
 }
 
+test('definitive validation rejection permits correction and requires fresh confirmations', async () => {
+    const calls = []
+    const f = setup(async (path, body) => {
+        calls.push({ path, body })
+        if (calls.length === 1) throw { response: { status: 422, data: { message: 'Invalid account' } } }
+    })
+    f.select('approve', 5); f.state.form.account = '1200'
+    f.state.basisConfirmed = true; f.state.confirmed = true
+    assert.equal(await f.submit(), false)
+    assert.equal(f.state.request, null); assert.equal(f.state.phase, 'ready')
+    assert.equal(f.state.error, 'Invalid account'); assert.equal(f.state.basisConfirmed, false)
+    f.state.form.account = '4990'; f.state.confirmed = true
+    await f.submit(); assert.equal(calls.length, 1)
+    f.state.basisConfirmed = true; await f.submit()
+    assert.equal(calls[1].body.revenue_account, '4990'); assert.equal(f.saves(), 1)
+})
+
+test('a validation rejection after an uncertain result retains the original request', async () => {
+    let attempt = 0
+    const f = setup(async () => {
+        if (++attempt === 1) throw Error('Response lost')
+        throw { response: { status: 422 } }
+    })
+    f.select('cancel', 5); f.state.form.reason = 'Withdraw'; f.state.confirmed = true
+    await f.submit(); const original = f.state.request
+    f.state.confirmed = true; await f.submit()
+    assert.equal(f.state.request, original); assert.equal(f.state.phase, 'uncertain')
+})
+
 test('proposal freezes UUID, revision and amount across ambiguous retries', async () => {
     const calls = []; let fail = true
     const f = setup(async (path, body) => { calls.push({ path, body }); if (fail) throw Error('lost response') })

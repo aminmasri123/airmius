@@ -74,7 +74,13 @@ export function createFeeRechargeState({ current, post, uuid, errorText, onSaved
             await post(state.request.path, state.request.body)
             state.phase = 'saved'; onSaved(); return true
         } catch (e) {
-            state.phase = 'uncertain'; state.error = e.response?.data?.message || errorText(); return false
+            // Only a first, definitive validation rejection releases the payload.
+            // A rejection after a lost response cannot disprove an earlier commit.
+            if (e.response?.status === 422 && state.phase !== 'uncertain'
+                && ['propose', 'approve', 'cancel'].includes(state.action.kind)) {
+                state.request = null; state.phase = 'ready'; state.basisConfirmed = false
+            } else state.phase = 'uncertain'
+            state.error = e.response?.data?.message || errorText(); return false
         } finally { state.busy = false; state.confirmed = false }
     }
     return { state, select, submit, reset }

@@ -54,6 +54,16 @@ class SepaFeeRechargeSummary extends StatelessWidget {
                   ),
                   Text('${labels['basis']}: ${proposal['basis']}'),
                   Text('${labels['reason']}: ${proposal['reason']}'),
+                  if (proposal['cancellation_reason'] != null)
+                    Text(
+                      '${labels['cancel']}: ${proposal['cancellation_reason']}',
+                    ),
+                  if (proposal['status'] == 'draft' &&
+                      proposal['fee_revision'] !=
+                          (feeCorrections(result).isEmpty
+                              ? 0
+                              : feeCorrections(result).last['revision']))
+                    Text(labels['review']!),
                   if (proposal['revenue_account'] != null)
                     Text(
                       '${labels['account']}: ${proposal['revenue_account']}',
@@ -147,6 +157,7 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
   bool _confirmed = false, _basisConfirmed = false, _busy = false;
   String? _error;
   AirmiusJson? _frozenBody;
+  bool _outcomeUncertain = false;
   String? _frozenAction;
   int? _frozenProposalId, _frozenVoidRequestId, _frozenCreditRequestId;
 
@@ -215,9 +226,9 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
           (double.parse(value) * 100).round() <= 0 ||
           (double.parse(value) * 100).round() >
               currentFeeCents(widget.result) ||
-          DateFormat('yyyy-MM-dd').format(
-                DateFormat('yyyy-MM-dd').parseStrict(date ?? ''),
-              ) !=
+          DateFormat(
+                'yyyy-MM-dd',
+              ).format(DateFormat('yyyy-MM-dd').parseStrict(date ?? '')) !=
               date ||
           _basis.text.trim().isEmpty ||
           _reason.text.trim().isEmpty) {
@@ -255,9 +266,9 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
       final date = formatAirmiusApiDate(parseAirmiusDate(_date.text));
       final reference = _reference.text.trim();
       final financeEntry = _financeEntryId.text.trim();
-      if (DateFormat('yyyy-MM-dd').format(
-                DateFormat('yyyy-MM-dd').parseStrict(date ?? ''),
-              ) !=
+      if (DateFormat(
+                'yyyy-MM-dd',
+              ).format(DateFormat('yyyy-MM-dd').parseStrict(date ?? '')) !=
               date ||
           reference.isEmpty ||
           reference.length > 180 ||
@@ -314,6 +325,19 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
     } catch (error) {
       if (mounted) {
         setState(() {
+          // Never unlock a retry whose earlier result may already be committed.
+          if (error is AirmiusApiException &&
+              error.statusCode == 422 &&
+              !_outcomeUncertain &&
+              const {'propose', 'approve', 'cancel'}.contains(_frozenAction)) {
+            _frozenBody = null;
+            _frozenAction = null;
+            _frozenProposalId = null;
+            _frozenVoidRequestId = null;
+            _frozenCreditRequestId = null;
+          } else {
+            _outcomeUncertain = true;
+          }
           _error = error is AirmiusApiException
               ? error.userMessage
               : c('error');
