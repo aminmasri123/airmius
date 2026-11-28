@@ -1832,9 +1832,10 @@ class _ClubMembershipManagementScreenState
       AirmiusServicesScope.of(context).environment.apiBaseUrl,
     );
     final prefix = base.path.endsWith('/') ? base.path : '${base.path}/';
+    final resource = Uri.parse(path);
     return base.replace(
-      path: '$prefix${path.startsWith('/') ? path.substring(1) : path}',
-      query: null,
+      path: '$prefix${resource.path.startsWith('/') ? resource.path.substring(1) : resource.path}',
+      query: resource.hasQuery ? resource.query : null,
       fragment: null,
     );
   }
@@ -1848,6 +1849,27 @@ class _ClubMembershipManagementScreenState
       if (services.authState.session?.token.isNotEmpty == true)
         'Authorization': 'Bearer ${services.authState.session!.token}',
     };
+  }
+
+  Future<void> _exportDatev(int clubId) async {
+    final today = DateTime.now();
+    final period = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(today.year + 1, 12, 31),
+      initialDateRange: DateTimeRange(
+        start: DateTime(today.year, today.month),
+        end: today,
+      ),
+    );
+    if (period == null || !mounted) return;
+    final from = _dateOnly(period.start);
+    final to = _dateOnly(period.end);
+    await _downloadApiFile(
+      path: '/api/v1/clubs/$clubId/membership/datev-export?from=$from&to=$to',
+      fileName: 'airmius-datev-$clubId-$from-$to.csv',
+      extensions: const ['csv'],
+    );
   }
 
   Future<void> _downloadApiFile({
@@ -9430,13 +9452,7 @@ class _ClubMembershipManagementScreenState
                             AirmiusButton(
                               label: t('membership.exportDatev'),
                               icon: Icons.ios_share_outlined,
-                              onPressed: () => _downloadApiFile(
-                                path:
-                                    '/api/v1/clubs/${club.id}/membership/datev-export',
-                                fileName:
-                                    'airmius-datev-${club.id}-${_dateOnly(DateTime.now())}.csv',
-                                extensions: const ['csv'],
-                              ),
+                              onPressed: () => _exportDatev(club.id),
                             ),
                             AirmiusButton(
                               label: t('membership.reloadRules'),

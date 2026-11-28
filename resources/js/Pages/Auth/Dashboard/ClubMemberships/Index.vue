@@ -1285,6 +1285,12 @@ const datevExportUrl = computed(() => {
     return `${route('auth.club-memberships.datev-export', selectedClub.value.id)}?${params}`
 })
 
+const datevPeriodInvalid = computed(() => {
+    if (!selectedClub.value) return true
+    const { from, to } = datevExportFor(selectedClub.value)
+    return !from || !to || from > to
+})
+
 const invoiceForm = useForm({
     title: 'Mitgliedsbeitrag',
     description: '',
@@ -4525,9 +4531,10 @@ const saveExternalMember = async () => {
                     </div>
 
                     <a
-                        :href="datevExportUrl"
+                        :href="datevPeriodInvalid ? undefined : datevExportUrl"
+                        :aria-disabled="datevPeriodInvalid || capabilities.datev_export === false"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
-                        :class="{ 'pointer-events-none opacity-50': capabilities.datev_export === false }"
+                        :class="{ 'pointer-events-none opacity-50': capabilities.datev_export === false || datevPeriodInvalid }"
                         :title="capabilities.datev_export === false ? tx('club_memberships.workspace.datev_unavailable', 'DATEV-Export ist ab Pro verfügbar') : ''"
                     >
                         {{ tx('club_memberships.workspace.datev_export', 'DATEV-CSV exportieren') }}
@@ -4576,7 +4583,7 @@ const saveExternalMember = async () => {
                         </div>
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">{{ tx('auto.Bis', 'Bis') }}</label>
-                            <input v-model="datevExportFor(selectedClub).to" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <input v-model="datevExportFor(selectedClub).to" type="date" :min="datevExportFor(selectedClub).from" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                         </div>
                         <p class="text-xs text-secondary md:col-span-2">
                             {{ tx('club_memberships.workspace.datev_period_hint', 'Exportiert werden bezahlte Zahlungen im Zeitraum. Der CSV-Aufbau ist für die Beta bewusst schlicht und prüfbar gehalten.') }}

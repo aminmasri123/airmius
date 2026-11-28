@@ -24,9 +24,20 @@ class ClubMembershipSepaService
 
         $messageId ??= 'AIRMIUS-'.$club->id.'-'.now()->format('YmdHis');
         $paymentId = $messageId.'-PMT';
-        $controlSum = $invoices->sum(fn (Invoice $invoice) => ($invoice->outstandingCents() / 100));
+        $controlSum = $invoices->sum(fn (Invoice $invoice) => $invoice->outstandingCents()) / 100;
         $collectionDate ??= now()->addDays(3)->toDateString();
         $creditorName = $club->sepa_account_holder ?: $club->name;
+        abort_if($invoices->isEmpty(), 422, __('organization.club.sepa_no_open_invoices'));
+        foreach ($invoices as $invoice) {
+            abort_if(($invoice->club_id !== null && (int) $invoice->club_id !== (int) $club->id)
+                || $invoice->outstandingCents() <= 0 || ! $memberships->has($invoice->user_id),
+                422, __('sepa.invoices'));
+            $membership = $memberships->get($invoice->user_id);
+            abort_unless($this->validIban($membership->sepa_iban ?? null)
+                && filled($membership->sepa_mandate_reference ?? null)
+                && filled($membership->sepa_mandate_signed_on ?? null), 422, __('sepa.mandate'));
+        }
+        abort_unless($this->validIban($club->sepa_iban) && filled($club->sepa_creditor_id), 422, __('sepa.credentials'));
 
         $xml = new \XMLWriter;
         $xml->openMemory();
@@ -132,6 +143,23 @@ class ClubMembershipSepaService
         $xml->endDocument();
 
         return $xml->outputMemory();
+    }
+
+    private function validIban(mixed $value): bool
+    {
+        $iban = ClubMembershipInput::normalizeIban($value) ?? '';
+        if (! preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/D', $iban)) {
+            return false;
+        }
+        $remainder = 0;
+        foreach (str_split(substr($iban, 4).substr($iban, 0, 4)) as $character) {
+            $digits = ctype_alpha($character) ? (string) (ord($character) - 55) : $character;
+            foreach (str_split($digits) as $digit) {
+                $remainder = ($remainder * 10 + (int) $digit) % 97;
+            }
+        }
+
+        return $remainder === 1;
     }
 
     private function writeFinancialInstitution(\XMLWriter $xml, mixed $bic): void

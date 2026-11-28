@@ -31,7 +31,7 @@ class ClubMembershipSepaServiceTest extends TestCase
             'amount' => 19.5,
         ]);
         $invoice->setRelation('user', new User([
-            'name' => 'Mira Muster',
+            'name' => 'Mira Müller & Söhne',
             'email' => 'mira@example.org',
         ]));
 
@@ -53,7 +53,32 @@ class ClubMembershipSepaServiceTest extends TestCase
         $this->assertStringContainsString('<Id>DE98ZZZ09999999999</Id>', $xml);
         $this->assertStringContainsString('<EndToEndId>AIR-42-0001</EndToEndId>', $xml);
         $this->assertStringContainsString('<MndtId>MANDAT-7</MndtId>', $xml);
-        $this->assertStringContainsString('<Nm>Mira Muster</Nm>', $xml);
+        $this->assertStringContainsString('<Nm>Mira Müller &amp; Söhne</Nm>', $xml);
         $this->assertStringContainsString('<IBAN>DE89370400440532013000</IBAN>', $xml);
+        $document = simplexml_load_string($xml);
+        $this->assertNotFalse($document);
+        $this->assertSame('19.50', (string) $document->CstmrDrctDbtInitn->PmtInf->DrctDbtTxInf->InstdAmt);
+
+        $memberships->get(7)->sepa_iban = 'DE00370400440532013000';
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        (new ClubMembershipSepaService())->buildDebitXml($club, collect([$invoice]), $memberships);
+    }
+
+    public function test_foreign_club_invoice_is_rejected(): void
+    {
+        $club = new Club(['name' => 'Own club']);
+        $club->id = 42;
+        $invoice = new Invoice(['club_id' => 43, 'user_id' => 7, 'amount' => 10]);
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        (new ClubMembershipSepaService())->buildDebitXml($club, collect([$invoice]), collect([7 => (object) []]));
+    }
+
+    public function test_nonpositive_debit_is_rejected(): void
+    {
+        $club = new Club(['name' => 'Own club']);
+        $club->id = 42;
+        $invoice = new Invoice(['club_id' => 42, 'user_id' => 7, 'amount' => 0]);
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        (new ClubMembershipSepaService())->buildDebitXml($club, collect([$invoice]), collect([7 => (object) []]));
     }
 }

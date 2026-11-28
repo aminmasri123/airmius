@@ -2541,13 +2541,19 @@ class ClubMembershipController extends Controller
         $this->planFeatures->ensureAllows($club, 'datev_export');
 
         $data = $request->validate([
-            'datev_consultant_number' => ['nullable', 'string', 'max:20'],
-            'datev_client_number' => ['nullable', 'string', 'max:20'],
-            'datev_revenue_account' => ['nullable', 'string', 'max:20'],
-            'datev_bank_account' => ['nullable', 'string', 'max:20'],
+            'datev_consultant_number' => ['nullable', 'string', 'regex:/^[0-9]{1,20}$/D'],
+            'datev_client_number' => ['nullable', 'string', 'regex:/^[0-9]{1,20}$/D'],
+            'datev_revenue_account' => ['nullable', 'string', 'regex:/^[0-9]{1,20}$/D'],
+            'datev_bank_account' => ['nullable', 'string', 'regex:/^[0-9]{1,20}$/D'],
             'datev_fee_account' => ['sometimes', 'nullable', 'string', 'regex:/^[0-9]{1,20}$/D'],
         ]);
 
+        $this->validateDatevAccounts($data['datev_revenue_account'] ?? '2110', $data['datev_bank_account'] ?? '1200');
+        if (filled($data['datev_fee_account'] ?? null)
+            && (ltrim($data['datev_fee_account'], '0') === ''
+                || ltrim($data['datev_fee_account'], '0') === ltrim($data['datev_bank_account'] ?? '1200', '0'))) {
+            throw ValidationException::withMessages(['datev_fee_account' => __('sepa.fee_export_account_required')]);
+        }
         $feeSettings = [];
         if (array_key_exists('datev_fee_account', $data)) {
             if (Schema::hasColumn('clubs', 'datev_fee_account')) {
@@ -2567,31 +2573,47 @@ class ClubMembershipController extends Controller
         return back()->with('success', __('organization.club.datev_settings_saved'));
     }
 
+    private function validateDatevAccounts(string $revenue, string $bank): void
+    {
+        foreach (['datev_revenue_account' => $revenue, 'datev_bank_account' => $bank] as $field => $value) {
+            if (! preg_match('/^[0-9]{1,20}$/D', $value) || ltrim($value, '0') === '') {
+                throw ValidationException::withMessages([$field => 'Bitte eine gültige numerische Kontonummer angeben.']);
+            }
+        }
+        if (ltrim($revenue, '0') === ltrim($bank, '0')) {
+            throw ValidationException::withMessages(['datev_revenue_account' => 'Erlöskonto und Bankkonto müssen verschieden sein.']);
+        }
+    }
+
     public function exportDatev(Request $request, Club $club)
     {
         abort_unless(ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_EXPORT), 403);
         $this->planFeatures->ensureAllows($club, 'datev_export');
 
         $data = $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d'],
         ]);
 
         $from = \Carbon\Carbon::parse($data['from'] ?? now()->startOfMonth())->startOfDay();
         $to = \Carbon\Carbon::parse($data['to'] ?? now())->endOfDay();
+        if ($to->lt($from)) {
+            throw ValidationException::withMessages(['to' => 'Das Ende des Exportzeitraums muss am oder nach dem Beginn liegen.']);
+        }
         $revenueAccount = $club->datev_revenue_account ?: '2110';
         $bankAccount = $club->datev_bank_account ?: '1200';
+        $this->validateDatevAccounts($revenueAccount, $bankAccount);
 
         $payments = Payment::query()
             ->where('club_id', $club->id)
             ->whereIn('status', ['paid', 'returned'])
             ->whereBetween('paid_at', [$from, $to])
             ->with([
-                'invoice:id,number,title,description,source,billing_period_start,billing_period_end,business_year_period_id,contribution_year_period_id',
+                'invoice:id,club_id,number,title,description,source,billing_period_start,billing_period_end,business_year_period_id,contribution_year_period_id',
                 'invoice.businessYearPeriod:id,name',
                 'invoice.contributionYearPeriod:id,name',
                 'user:id,name,email',
-                'externalMember:id,name,email',
+                'externalMember:id,club_id,name,email',
             ])
             ->orderBy('paid_at')
             ->get();
@@ -2600,14 +2622,22 @@ class ClubMembershipController extends Controller
             $returns = ClubSepaSettlement::where('club_id', $club->id)->where('status', 'returned')->whereNotNull('payment_id')
                 ->whereBetween('returned_on', [$from->toDateString(), $to->toDateString()])->with(['payment.invoice', 'payment.user', 'payment.externalMember'])->get();
             foreach ($returns as $returned) {
+                abort_unless($returned->payment && (int) $returned->payment->club_id === (int) $club->id, 422, 'Die Rücklastschrift enthält eine ungültige Vereinszuordnung.');
                 $entry = clone $returned->payment;
                 $entry->paid_at = $returned->returned_on;
                 $entry->sepa_return_reference = $returned->return_reference;
+                $entry->datev_is_return = true;
                 $payments->push($entry);
             }
             $payments = $payments->sortBy('paid_at')->values();
         }
         $payments->each(fn (Payment $payment) => $payment->invoice?->loadMissing(['businessYearPeriod:id,name', 'contributionYearPeriod:id,name']));
+        foreach ($payments as $payment) {
+            abort_if(($payment->invoice && (int) $payment->invoice->club_id !== (int) $club->id)
+                || ($payment->externalMember && (int) $payment->externalMember->club_id !== (int) $club->id),
+                422, 'Eine Zahlung enthält eine ungültige Vereinszuordnung.');
+            abort_if((float) $payment->amount <= 0, 422, 'Exportierte Zahlungen müssen einen positiven Betrag haben.');
+        }
 
         $fees = collect();
         if (Schema::hasColumn('club_sepa_settlements', 'fee_finance_entry_id')) {
@@ -2624,6 +2654,7 @@ class ClubMembershipController extends Controller
         }
         $feeAccount = $club->datev_fee_account;
         abort_if($fees->isNotEmpty() && (! preg_match('/^[0-9]{1,20}$/D', (string) $feeAccount)
+            || ltrim((string) $feeAccount, '0') === ''
             || ltrim($feeAccount, '0') === ltrim(trim($bankAccount), '0')), 422, __('sepa.fee_export_account_required'));
         $refunds = Schema::hasTable('club_sepa_fee_recharge_credits')
             ? ClubSepaFeeRechargeCredit::where('club_id', $club->id)->where('status', 'refunded')
@@ -2656,8 +2687,16 @@ class ClubMembershipController extends Controller
         return response()->streamDownload(function () use ($club, $payments, $fees, $refunds, $revenueAccount, $bankAccount, $feeAccount, $rechargeAccounts) {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF");
+            $writeRow = static function (array $row) use ($handle): void {
+                $row = array_map(static function ($value) {
+                    $value = (string) $value;
 
-            fputcsv($handle, [
+                    return preg_match('/^[\s]*[=+@-]/u', $value) ? "'".$value : $value;
+                }, $row);
+                fputcsv($handle, $row, ';', '"', '', "\r\n");
+            };
+
+            $writeRow([
                 'Umsatz (ohne Soll/Haben-Kz)',
                 'Soll/Haben-Kennzeichen',
                 'WKZ Umsatz',
@@ -2672,11 +2711,11 @@ class ClubMembershipController extends Controller
                 'KOST2',
                 'Mandant',
                 'Berater',
-            ], ';');
+            ]);
 
             foreach ($payments as $payment) {
                 $invoice = $payment->invoice;
-                $isReturn = $payment->sepa_return_reference !== null;
+                $isReturn = (bool) $payment->datev_is_return;
                 $businessYear = 'GJ '.($invoice?->businessYearPeriod?->name ?: 'unzugeordnet');
                 $contributionYear = in_array($invoice?->source, ['recurring_contribution', 'membership_contribution'], true)
                     ? 'BJ '.($invoice?->contributionYearPeriod?->name ?: 'unzugeordnet')
@@ -2690,7 +2729,7 @@ class ClubMembershipController extends Controller
                     $payment->user?->name ?: $payment->externalMember?->name,
                 ])));
 
-                fputcsv($handle, [
+                $writeRow([
                     number_format((float) $payment->amount, 2, ',', ''),
                     $isReturn ? 'H' : 'S',
                     'EUR',
@@ -2705,17 +2744,17 @@ class ClubMembershipController extends Controller
                     '',
                     $club->datev_client_number ?? '',
                     $club->datev_consultant_number ?? '',
-                ], ';');
+                ]);
             }
 
             foreach ($fees as $fee) {
                 $bookingText = 'GJ '.($fee->businessYearPeriod?->name ?: 'unzugeordnet').' Rücklastschriftgebühr';
-                fputcsv($handle, [
+                $writeRow([
                     number_format(abs((float) $fee->amount), 2, ',', ''), (float) $fee->amount < 0 ? 'S' : 'H', 'EUR',
                     $bankAccount, $feeAccount, '', $fee->booked_on->format('dm'),
                     $fee->reference, $fee->booked_on->format('Y'), mb_substr($bookingText, 0, 60),
                     '', '', $club->datev_client_number ?? '', $club->datev_consultant_number ?? '',
-                ], ';');
+                ]);
             }
             foreach ($refunds as $refund) {
                 fputcsv($handle, [

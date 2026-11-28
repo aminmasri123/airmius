@@ -152,7 +152,7 @@ final class ClubSepaBatchService
         abort_unless($this->creditor($batch->club) === $batch->creditor_snapshot, 422, __('sepa.changed'));
         $batch->load(['items' => fn ($query) => $query->when($itemId !== null, fn ($query) => $query->whereKey($itemId))]);
         abort_if($itemId !== null && $batch->items->count() !== 1, 422, __('sepa.changed'));
-        $invoices = Invoice::whereIn('id', $batch->items->pluck('invoice_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+        $invoices = Invoice::where('club_id', $batch->club_id)->whereIn('id', $batch->items->pluck('invoice_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
         foreach ($batch->items as $item) {
             $invoice = $invoices->get($item->invoice_id);
             abort_unless($invoice && (int) $invoice->club_id === (int) $batch->club_id

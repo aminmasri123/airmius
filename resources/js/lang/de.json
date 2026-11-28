@@ -5382,7 +5382,7 @@
       "bank_map_currency": "Währung",
       "bank_map_none": "Nicht zuordnen",
       "visible_transactions": "{visible} von {total} Umsätzen sichtbar.",
-      "datev_period_hint": "Exportiert werden bezahlte Zahlungen im Zeitraum. Der CSV-Aufbau ist für die Beta bewusst schlicht und prüfbar gehalten."
+      "datev_period_hint": "Von und Bis sind einschließlich. Exportiert werden Zahlungen sowie Rücklastschriften und zugehörige Gebühren im Zeitraum. CSV: UTF-8 mit BOM, Semikolon, Dezimalkomma; vereinfachtes Importformat ohne EXTF-Kopf. Konten vor dem Export speichern und den Import mit der Steuerberatung abstimmen."
     },
     "finance": {
       "type": {
