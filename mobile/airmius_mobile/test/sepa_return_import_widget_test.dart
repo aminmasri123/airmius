@@ -101,8 +101,13 @@ void registerXmlSelectionTest() {
     await tester.pumpAndSettle();
     expect(find.text('Erkanntes Format: pain.002'), findsOneWidget);
     expect(find.byType(DropdownButtonFormField<int>), findsNothing);
+    expect(
+      find.text('Import nicht möglich. Bitte die Vorschau erneut prüfen.'),
+      findsNothing,
+    );
     await tester.tap(find.text('Vorschau prüfen'));
     await tester.pumpAndSettle();
+    expect(find.text('Keine Zeilen vorhanden.'), findsOneWidget);
     expect(requests, hasLength(2));
     expect(
       requests.every(
@@ -183,6 +188,8 @@ void main() {
                       'reason': 'MS03',
                       'status': 'ready',
                       'has_linked_receipt': false,
+                      'outstanding_cents': 8000,
+                      'outstanding_after_return_cents': 8000,
                       'errors': [],
                     },
                   ],
@@ -245,6 +252,14 @@ void main() {
           final apply = find.widgetWithText(
             FilledButton,
             'Rückgaben importieren',
+          );
+          expect(
+            find.textContaining('Restbetrag aktuell: 80,00'),
+            findsOneWidget,
+          );
+          expect(
+            find.textContaining('Restbetrag nach Rückgabe: 80,00'),
+            findsOneWidget,
           );
           expect(tester.widget<FilledButton>(apply).onPressed, isNull);
           final checkboxes = find.byWidgetPredicate(

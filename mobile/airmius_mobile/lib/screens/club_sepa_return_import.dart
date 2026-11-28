@@ -48,6 +48,7 @@ class _ClubSepaReturnImportState extends State<ClubSepaReturnImport> {
   bool get _mappingReady =>
       _columns == null ||
       (_fields.take(6).every(_mapping.containsKey) &&
+          _mapping.values.toSet().length == _mapping.length &&
           (_ignored.isEmpty || _ignoreConfirmed));
   late final _upload = SepaReturnImportClient(
     widget.client,
@@ -123,7 +124,7 @@ class _ClubSepaReturnImportState extends State<ClubSepaReturnImport> {
         _mapping.clear();
         _ignoreConfirmed = false;
         for (final field in _fields) {
-          final index = _columns!.indexOf(field);
+          final index = _columns?.indexOf(field) ?? -1;
           if (index >= 0) _mapping[field] = index;
         }
       });
@@ -275,6 +276,7 @@ class _ClubSepaReturnImportState extends State<ClubSepaReturnImport> {
             child: Text(c('preview')),
           ),
           if (_report != null) ...[
+            if ((_report!['rows'] as List).isEmpty) Text(c('empty')),
             if ((_report!['ignored_columns'] as List? ?? []).isNotEmpty)
               Text(
                 '${c('ignoredColumns')}: ${(_report!['ignored_columns'] as List).join(', ')}',
@@ -296,6 +298,14 @@ class _ClubSepaReturnImportState extends State<ClubSepaReturnImport> {
                       Text(
                         '${c(row['status'] as String)} · ${c(row['has_linked_receipt'] == true ? 'linked' : 'unlinked')}',
                       ),
+                      if (row['outstanding_cents'] != null)
+                        Text(
+                          '${c('outstandingBefore')}: ${NumberFormat.currency(locale: language, symbol: 'EUR').format((row['outstanding_cents'] as num) / 100)}',
+                        ),
+                      if (row['outstanding_after_return_cents'] != null)
+                        Text(
+                          '${c('outstandingAfter')}: ${NumberFormat.currency(locale: language, symbol: 'EUR').format((row['outstanding_after_return_cents'] as num) / 100)}',
+                        ),
                       for (final error in row['errors'] as List)
                         Text(
                           c(error as String),

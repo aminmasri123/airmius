@@ -570,6 +570,12 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
 
   Widget _bankResults(AirmiusJson batch, AirmiusJson item) {
     final result = item['settlement'] as AirmiusJson?;
+    final invoice = item['invoice'] as AirmiusJson?;
+    final returnLabels =
+        sepaReturnLabels[AirmiusScope.of(
+          context,
+        ).language.locale.languageCode] ??
+        sepaReturnLabels['en']!;
     final fee = result?['fee_entry'] as AirmiusJson?;
     final labels =
         sepaFeeLabels[AirmiusScope.of(context).language.locale.languageCode] ??
@@ -580,6 +586,12 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (invoice?['outstanding_amount'] != null)
+            Text(
+              '${returnLabels['outstandingBefore']}: ${money((num.parse('${invoice!['outstanding_amount']}') * 100).round())}',
+            ),
+          if (result?['payment_id'] != null)
+            Text('${returnLabels['linked']} #${result!['payment_id']}'),
           if (result != null)
             Text(
               '${c('result_${result['status']}')} · ${result['settlement_reference'] ?? ''} · ${result['settled_on'] ?? ''}',
@@ -1104,17 +1116,17 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                         onPressed: _busy
                             ? null
                             : () async {
-                                final imported = await Navigator.of(context)
-                                    .push<bool>(
-                                      MaterialPageRoute(
-                                        builder: (_) => ClubSepaReturnImport(
-                                          client: _client,
-                                          clubId: widget.clubId,
-                                          batchId: batch['id'] as int,
-                                        ),
-                                      ),
-                                    );
-                                if (imported == true && mounted) {
+                                await Navigator.of(context).push<bool>(
+                                  MaterialPageRoute(
+                                    builder: (_) => ClubSepaReturnImport(
+                                      client: _client,
+                                      clubId: widget.clubId,
+                                      batchId: batch['id'] as int,
+                                    ),
+                                  ),
+                                );
+                                // A lost response may still have committed the import.
+                                if (mounted) {
                                   await _run(() async {});
                                 }
                               },

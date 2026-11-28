@@ -7,6 +7,7 @@ use App\Models\Activity;
 use App\Models\BankTransaction;
 use App\Models\Club;
 use App\Models\ClubFinanceEntry;
+use App\Models\ClubMoneyAccount;
 use App\Models\ClubSepaBatch;
 use App\Models\ClubSepaBatchItem;
 use App\Models\ClubSepaFeeCorrection;
@@ -82,7 +83,7 @@ class ClubSepaSettlementTest extends TestCase
 
     public function test_settlement_is_assigned_to_the_bank_account_matching_the_batch_iban(): void
     {
-        $bank = \App\Models\ClubMoneyAccount::create(['club_id' => $this->club->id, 'name' => 'SEPA bank', 'type' => 'bank',
+        $bank = ClubMoneyAccount::create(['club_id' => $this->club->id, 'name' => 'SEPA bank', 'type' => 'bank',
             'iban' => $this->batch->creditor_snapshot['sepa_iban'], 'is_active' => true]);
         $result = app(ClubSepaSettlementService::class)->settle($this->item, $this->reviewer, $this->receipt());
         $this->assertEquals($bank->id, Payment::findOrFail($result->payment_id)->club_money_account_id);
@@ -340,7 +341,11 @@ class ClubSepaSettlementTest extends TestCase
         $this->postJson($this->path('settle'), $this->receipt())->assertOk();
         $csv = $this->returnCsv();
         $preview = $this->previewReturns($csv)->assertOk()->assertJsonPath('data.can_import', true)
-            ->assertJsonPath('data.rows.0.amount_cents', -8000)->assertJsonPath('data.rows.0.has_linked_receipt', true);
+            ->assertJsonPath('data.rows.0.amount_cents', -8000)->assertJsonPath('data.rows.0.has_linked_receipt', true)
+            ->assertJsonPath('data.rows.0.invoice_status', 'paid')
+            ->assertJsonPath('data.rows.0.received_cents', 10000)
+            ->assertJsonPath('data.rows.0.outstanding_cents', 0)
+            ->assertJsonPath('data.rows.0.outstanding_after_return_cents', 8000);
         $this->assertSame('paid', $this->invoice->fresh()->status);
         $this->assertSame('settled', $this->item->settlement()->first()->status);
         $token = $preview->json('data.preview_token');
@@ -350,6 +355,57 @@ class ClubSepaSettlementTest extends TestCase
         $this->assertDatabaseCount('payments', 2);
         $this->importReturns($csv, $token)->assertOk()->assertJsonPath('data.imported', 0)->assertJsonPath('data.already_returned', 1);
         $this->assertDatabaseCount('club_sepa_settlements', 1);
+    }
+
+    public function test_return_preview_requires_review_after_an_unrelated_payment_changes_the_balance(): void
+    {
+        $this->postJson($this->path('settle'), $this->receipt())->assertOk();
+        $csv = $this->returnCsv();
+        $token = $this->previewReturns($csv)->assertOk()->json('data.preview_token');
+        app(ClubInvoicePaymentService::class)->record($this->invoice->fresh(), ['amount' => 30, 'method' => 'cash'], $this->owner, allowOverpayment: true);
+        $this->importReturns($csv, $token)->assertUnprocessable();
+        $this->assertSame('paid', $this->item->settlement()->firstOrFail()->payment->status);
+        $preview = $this->previewReturns($csv)->assertOk()
+            ->assertJsonPath('data.rows.0.received_cents', 13000)
+            ->assertJsonPath('data.rows.0.outstanding_after_return_cents', 5000);
+        $this->importReturns($csv, $preview->json('data.preview_token'))->assertOk();
+        $this->assertSame(5000, $this->invoice->fresh()->outstandingCents());
+        $this->assertSame(5000, $this->invoice->fresh()->receivedCents());
+        $this->assertDatabaseHas('club_sepa_settlements', [
+            'club_sepa_batch_item_id' => $this->item->id, 'status' => 'returned',
+            'return_reference' => 'BANK-RETURN-1', 'return_reason' => 'MS03',
+        ]);
+        $this->assertDatabaseCount('payments', 3);
+        $this->previewReturns($csv)->assertOk()->assertJsonPath('data.rows.0.status', 'already_returned')
+            ->assertJsonPath('data.rows.0.outstanding_after_return_cents', 5000);
+    }
+
+    public function test_return_preview_preserves_unlinked_and_cancelled_invoice_balances(): void
+    {
+        $this->previewReturns($this->returnCsv())->assertOk()
+            ->assertJsonPath('data.rows.0.outstanding_cents', 8000)
+            ->assertJsonPath('data.rows.0.outstanding_after_return_cents', 8000);
+        $this->postJson($this->path('settle'), $this->receipt())->assertOk();
+        $this->invoice->update(['status' => 'cancelled']);
+        $preview = $this->previewReturns($this->returnCsv())->assertOk()
+            ->assertJsonPath('data.rows.0.outstanding_after_return_cents', 0);
+        $this->importReturns($this->returnCsv(), $preview->json('data.preview_token'))->assertOk();
+        $this->assertSame('cancelled', $this->invoice->fresh()->status);
+        $this->assertSame(0, $this->invoice->fresh()->outstandingCents());
+    }
+
+    public function test_return_preview_does_not_expose_a_reassigned_invoice_balance(): void
+    {
+        $foreign = Club::factory()->create();
+        $this->invoice->update(['club_id' => $foreign->id]);
+        $preview = $this->previewReturns($this->returnCsv())->assertOk()
+            ->assertJsonPath('data.can_import', false)
+            ->assertJsonPath('data.rows.0.errors', ['invoice_changed'])
+            ->assertJsonPath('data.rows.0.received_cents', null)
+            ->assertJsonPath('data.rows.0.outstanding_cents', null)
+            ->assertJsonPath('data.rows.0.outstanding_after_return_cents', null);
+        $this->importReturns($this->returnCsv(), $preview->json('data.preview_token'), true)->assertUnprocessable();
+        $this->assertDatabaseCount('club_sepa_settlements', 0);
     }
 
     public function test_pain002_reject_preview_and_import_use_original_debit_evidence(): void

@@ -78,7 +78,8 @@ final class ClubSepaReturnImportService
     private function inspect(ClubSepaBatch $batch, string $path, ?array $mapping = null, array $ignored = []): array
     {
         abort_unless($batch->status === 'exported', 422, __('sepa.export_required'));
-        $items = $batch->items()->with('settlement.payment')->get()->groupBy(fn ($item) => (string) $item->debtor_snapshot['number']);
+        $items = $batch->items()->with(['settlement.payment', 'invoice' => fn ($query) => $query->withSum('settledPayments', 'amount')])
+            ->get()->groupBy(fn ($item) => (string) $item->debtor_snapshot['number']);
         $rows = [];
         $seenItems = [];
         $seenReferences = [];
@@ -142,6 +143,12 @@ final class ClubSepaReturnImportService
                 $errors[] = 'iban_mismatch';
             }
             $result = $item?->settlement;
+            $invoice = $item?->invoice;
+            if ($item && (! $invoice || $invoice->club_id !== $batch->club_id)) {
+                $errors[] = 'invoice_changed';
+                // Never disclose an invoice that no longer belongs to this club.
+                $invoice = null;
+            }
             if (ClubSepaSettlement::where('club_id', $batch->club_id)->where('return_reference', $reference)
                 ->when($result, fn ($query) => $query->where('id', '!=', $result->id))->exists()) {
                 $errors[] = 'reference_used';
@@ -156,6 +163,13 @@ final class ClubSepaReturnImportService
                 || (int) round((float) $result->payment->amount * 100) !== $item->amount_cents)) {
                 $errors[] = 'payment_changed';
             }
+            $received = $invoice?->receivedCents();
+            $outstanding = $invoice?->outstandingCents();
+            $after = $outstanding;
+            if ($invoice && $errors === [] && ! $duplicate && $result?->status === 'settled'
+                && ! in_array($invoice->status, ['cancelled', 'waived'], true)) {
+                $after = max(0, (int) round((float) $invoice->amount * 100) - ($received - $item->amount_cents));
+            }
             $rows[] = [
                 'row' => $index + 2, 'item_id' => $item?->id, 'end_to_end_id' => $id,
                 'amount_cents' => $cents, 'currency' => $currency, 'booking_date' => $date,
@@ -163,6 +177,11 @@ final class ClubSepaReturnImportService
                 'status' => $errors !== [] ? 'invalid' : ($duplicate ? 'already_returned' : 'ready'),
                 'has_linked_receipt' => $result?->payment_id !== null,
                 'receipt_id' => $result?->payment_id, 'result_status' => $result?->status,
+                // Included in the preview proof so changed balances require review.
+                'invoice_status' => $invoice?->status,
+                'invoice_amount_cents' => $invoice ? (int) round((float) $invoice->amount * 100) : null,
+                'received_cents' => $received, 'outstanding_cents' => $outstanding,
+                'outstanding_after_return_cents' => $errors === [] ? $after : null,
             ];
         }
 

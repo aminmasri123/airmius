@@ -271,6 +271,45 @@ void main() {
     },
   );
 
+  testWidgets(
+    'leaving return import reloads bank results even without a success response',
+    (tester) async {
+      final transport = _Transport()
+        ..enableResults = true
+        ..status = 'exported';
+      await _screen(tester, transport);
+      final before = transport.requests
+          .where((request) => request.method == 'GET')
+          .length;
+      final open = find.text('Rücklastschriften importieren');
+      await tester.ensureVisible(open);
+      await tester.tap(open);
+      await tester.pumpAndSettle();
+      // The server may have committed even if the upload response was lost.
+      transport.settlement = {
+        'status': 'returned',
+        'payment_id': 55,
+        'returned_on': '2026-10-11',
+        'return_reference': 'BANK-RETURN',
+        'return_reason': 'MS03',
+      };
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(
+        transport.requests.where((request) => request.method == 'GET').length,
+        before + 1,
+      );
+      expect(find.textContaining('Rückgabe erfasst'), findsOneWidget);
+      expect(find.textContaining('Restbetrag aktuell: 80,00'), findsOneWidget);
+      expect(find.text('Zahlungseingang verknüpft #55'), findsOneWidget);
+      expect(
+        transport.requests.where((request) => request.method == 'POST'),
+        isEmpty,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test(
     'approval settings never retry or queue after a transport failure',
     () async {
@@ -679,6 +718,7 @@ void main() {
         'fee_cents': 350,
       });
       expect(find.textContaining(labels['result_returned']!), findsOneWidget);
+      expect(find.textContaining('Restbetrag aktuell: 80,00'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
@@ -882,6 +922,8 @@ void main() {
       expect(post.path, '/api/v1/clubs/2/sepa-batches/7/items/1/settle');
       expect(post.body?['payment_id'], 55);
       expect(post.body?['confirmed'], true);
+      expect(find.textContaining('Restbetrag aktuell: 0,00'), findsOneWidget);
+      expect(find.text('Zahlungseingang verknüpft #55'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

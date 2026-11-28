@@ -9,18 +9,37 @@ import { createI18n } from 'vue-i18n'
 const root = new URL('../../', import.meta.url)
 const source = await readFile(new URL('resources/js/Components/ClubMemberships/ClubSepaReturnImport.vue', root), 'utf8')
 const texts = JSON.parse(await readFile(new URL('resources/js/i18n/sepaReturnImportLocalization.json', root), 'utf8'))
-const { descriptor } = parse(source)
-let script = compileScript(descriptor, { id: 'sepa-return-import-test', inlineTemplate: true }).content
-script = script.replace(/from ["']vue["']/g, `from '${import.meta.resolve('vue')}'`)
-    .replace(/from ["']vue-i18n["']/g, `from '${import.meta.resolve('vue-i18n')}'`)
-    .replace("import translations from '@/i18n/sepaReturnImportLocalization.json'", `const translations = ${JSON.stringify(texts)}`)
-const Component = (await import(`data:text/javascript;base64,${Buffer.from(script).toString('base64')}`)).default
-
-async function render(locale) {
+async function render(locale, report = null) {
+    const { descriptor } = parse(source.replace('report = ref(null)', `report = ref(${JSON.stringify(report)})`))
+    let script = compileScript(descriptor, { id: 'sepa-return-import-test', inlineTemplate: true }).content
+    script = script.replace(/from ["']vue["']/g, `from '${import.meta.resolve('vue')}'`)
+        .replace(/from ["']vue-i18n["']/g, `from '${import.meta.resolve('vue-i18n')}'`)
+        .replace("import translations from '@/i18n/sepaReturnImportLocalization.json'", `const translations = ${JSON.stringify(texts)}`)
+    const Component = (await import(`data:text/javascript;base64,${Buffer.from(script).toString('base64')}`)).default
     const app = createSSRApp(Component, { clubId: 1, batchId: 2, disabled: false })
     app.use(createI18n({ legacy: false, locale, messages: {} }))
     return renderToString(app)
 }
+
+test('preview displays the current and expected balance without enabling unconfirmed import', async () => {
+    const html = await render('de', {
+        can_import: true, unlinked_count: 0, rows: [{
+            row: 2, end_to_end_id: 'R-1', amount_cents: -8000, currency: 'EUR',
+            booking_date: '2026-10-11', reference: 'BANK-RETURN', reason: 'MS03',
+            status: 'ready', has_linked_receipt: true, errors: [],
+            outstanding_cents: 0, outstanding_after_return_cents: 8000,
+        }],
+    })
+    assert.match(html, /Restbetrag aktuell: 0,00/)
+    assert.match(html, /Restbetrag nach Rückgabe: 80,00/)
+    assert.match(html, /<button[^>]*disabled[^>]*>Rückgaben importieren<\/button>/)
+})
+
+test('empty preview explains why there are no rows to import', async () => {
+    const html = await render('de', { can_import: false, unlinked_count: 0, rows: [] })
+    assert.match(html, /Keine Zeilen vorhanden/)
+    assert.match(html, /<button[^>]*disabled[^>]*>Rückgaben importieren<\/button>/)
+})
 
 test('return import accepts CSV and ISO 20022 XML without weakening explicit preview', async () => {
     const html = await render('de')

@@ -13,7 +13,10 @@ const columns = ref(null), mapping = ref({}), ignoreConfirmed = ref(false)
 const fileFormat = ref('')
 const fields = ['end_to_end_id', 'booking_date', 'amount', 'currency', 'reference', 'reason', 'iban']
 const ignored = computed(() => (columns.value || []).map((_, index) => index).filter(index => !Object.values(mapping.value).includes(index)))
-const mappingReady = computed(() => !columns.value || (fields.slice(0, 6).every(key => Number.isInteger(mapping.value[key])) && (!ignored.value.length || ignoreConfirmed.value)))
+const mappingReady = computed(() => {
+    const selected = Object.values(mapping.value).filter(Number.isInteger)
+    return !columns.value || (fields.slice(0, 6).every(key => Number.isInteger(mapping.value[key])) && new Set(selected).size === selected.length && (!ignored.value.length || ignoreConfirmed.value))
+})
 watch(mapping, () => { report.value = null; confirmed.value = false; confirmUnlinked.value = false; ignoreConfirmed.value = false }, { deep: true })
 watch(ignoreConfirmed, () => { report.value = null; confirmed.value = false; confirmUnlinked.value = false })
 const base = computed(() => `/api/v1/clubs/${props.clubId}/sepa-batches/${props.batchId}/returns`)
@@ -84,12 +87,15 @@ async function send(importing = false) {
             </div>
             <button type="button" :disabled="!file || !mappingReady" class="rounded border border-border px-3 py-2" @click="send(false)">{{ c('preview') }}</button>
             <template v-if="report">
+                <p v-if="!report.rows.length">{{ c('empty') }}</p>
                 <p v-if="report.ignored_columns?.length" class="text-sm">{{ c('ignoredColumns') }}: {{ report.ignored_columns.join(', ') }}</p>
                 <ol class="space-y-2">
                     <li v-for="row in report.rows" :key="row.row" class="rounded border border-border p-2 text-sm">
                         <p>{{ row.row }} · {{ row.end_to_end_id }} · {{ row.booking_date || '—' }} · {{ row.amount_cents === null ? '—' : new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(row.amount_cents / 100) }} {{ row.currency }}</p>
                         <p>{{ row.reference }} · {{ row.reason }}</p>
                         <p>{{ c(row.status) }} · {{ c(row.has_linked_receipt ? 'linked' : 'unlinked') }}</p>
+                        <p v-if="row.outstanding_cents != null">{{ c('outstandingBefore') }}: {{ new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(row.outstanding_cents / 100) }}</p>
+                        <p v-if="row.outstanding_after_return_cents != null">{{ c('outstandingAfter') }}: {{ new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(row.outstanding_after_return_cents / 100) }}</p>
                         <ul v-if="row.errors.length" class="text-error"><li v-for="issue in row.errors" :key="issue">{{ c(issue) }}</li></ul>
                     </li>
                 </ol>

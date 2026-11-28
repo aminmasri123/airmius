@@ -9401,16 +9401,19 @@ class _ClubMembershipManagementScreenState
                             AirmiusButton(
                               label: t('membership.sepaBatch'),
                               icon: Icons.fact_check_outlined,
-                              onPressed: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => ClubSepaBatchesScreen(
-                                    clubId: club.id,
-                                    invoices:
-                                        management?.invoices ??
-                                        const <AirmiusJson>[],
+                              onPressed: () async {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => ClubSepaBatchesScreen(
+                                      clubId: club.id,
+                                      invoices:
+                                          management?.invoices ??
+                                          const <AirmiusJson>[],
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                                if (mounted) _reloadClub();
+                              },
                             ),
                             AirmiusButton(
                               label: t('membership.configureDatev'),
