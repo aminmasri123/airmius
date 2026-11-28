@@ -1459,8 +1459,9 @@ const {
                                 <th class="px-5 py-3">Erstellt</th>
                                 <th class="px-5 py-3">Impressionen</th>
                                 <th class="px-5 py-3">Klicks</th>
-                                <th class="px-5 py-3">CTR</th>
+                                <th scope="col" class="px-5 py-3" :title="campaignCt('ctr_help')">{{ campaignCt('ctr_label') }}</th>
                                 <th class="px-5 py-3">Budget</th>
+                                <th scope="col" class="px-5 py-3">{{ campaignCt('spent_label') }}</th>
                                 <th class="px-5 py-3 text-right">Aktionen</th>
                             </tr>
                         </thead>
@@ -1482,6 +1483,7 @@ const {
                                 <td class="px-5 py-3 text-secondary">{{ campaign.clicks || 0 }}</td>
                                 <td class="px-5 py-3 text-secondary">{{ formatPercent(ctr(campaign.clicks, campaign.impressions)) }}</td>
                                 <td class="px-5 py-3 text-secondary">{{ formatMoney(campaign.budget_cents) }}</td>
+                                <td class="px-5 py-3 text-secondary">{{ formatMoney(campaign.spent_cents) }}</td>
                                 <td class="px-5 py-3 text-right">
                                     <div v-if="!currentSponsor || currentSponsor.can_manage_campaigns" class="flex flex-wrap justify-end gap-2">
                                         <button
@@ -1552,7 +1554,7 @@ const {
                                 </td>
                             </tr>
                             <tr v-if="campaign.groups?.length">
-                                <td colspan="8" class="bg-bg px-5 py-3">
+                                <td colspan="9" class="bg-bg px-5 py-3">
                                     <div class="mb-2 flex items-center justify-between gap-3">
                                         <p class="text-xs font-semibold uppercase text-secondary">Anzeigegruppen</p>
                                         <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="openAdGroupModal(campaign)">
@@ -1603,7 +1605,7 @@ const {
                                                             <p class="font-semibold text-primary">{{ creative.clicks || 0 }}</p>
                                                         </div>
                                                         <div>
-                                                            <p class="text-secondary">CTR</p>
+                                                            <p class="text-secondary" :title="campaignCt('ctr_help')">{{ campaignCt('ctr_label') }}</p>
                                                             <p class="font-semibold text-primary">{{ formatPercent(ctr(creative.clicks, creative.impressions)) }}</p>
                                                         </div>
                                                         <div>
@@ -1618,7 +1620,7 @@ const {
                                 </td>
                             </tr>
                             <tr v-if="campaignRootCreatives(campaign).length">
-                                <td colspan="8" class="bg-bg px-5 py-3">
+                                <td colspan="9" class="bg-bg px-5 py-3">
                                     <div class="grid gap-2 md:grid-cols-2">
                                         <div v-for="creative in campaignRootCreatives(campaign)" :key="creative.id" class="rounded-lg border border-border bg-card p-3">
                                             <div class="flex items-start justify-between gap-3">
@@ -1638,7 +1640,7 @@ const {
                                                     <p class="font-semibold text-primary">{{ creative.clicks || 0 }}</p>
                                                 </div>
                                                 <div>
-                                                    <p class="text-secondary">CTR</p>
+                                                    <p class="text-secondary" :title="campaignCt('ctr_help')">{{ campaignCt('ctr_label') }}</p>
                                                     <p class="font-semibold text-primary">{{ formatPercent(ctr(creative.clicks, creative.impressions)) }}</p>
                                                 </div>
                                                 <div>

@@ -4,6 +4,7 @@ import AppButton from '@/Components/UI/AppButton.vue'
 import AppLoadingState from '@/Components/UI/AppLoadingState.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import commerceCampaignCopy from '@/Pages/Auth/Dashboard/Commerce/commerceCampaignCopy.json'
 
 defineProps({
     campaignForm: { type: Object, required: true },
@@ -230,6 +231,7 @@ copy.ar = copy.en
 
 const labels = computed(() => copy[locale.value] || copy.de)
 const c = (key) => labels.value[key] || copy.de[key] || key
+const campaignCt = (key) => commerceCampaignCopy[String(locale.value || 'de').split('-')[0]]?.[key] || commerceCampaignCopy.de[key] || key
 </script>
 
 <template>
@@ -378,8 +380,9 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                                 <th class="px-5 py-3">{{ c('created') }}</th>
                                 <th class="px-5 py-3">{{ c('impressions') }}</th>
                                 <th class="px-5 py-3">{{ c('clicks') }}</th>
-                                <th class="px-5 py-3">{{ c('ctrLabel') }}</th>
+                                <th scope="col" class="px-5 py-3" :title="campaignCt('ctr_help')">{{ campaignCt('ctr_label') }}</th>
                                 <th class="px-5 py-3">{{ c('budget') }}</th>
+                                <th scope="col" class="px-5 py-3">{{ campaignCt('spent_label') }}</th>
                                 <th class="px-5 py-3 text-right">{{ c('actions') }}</th>
                             </tr>
                         </thead>
@@ -401,6 +404,7 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                                 <td class="px-5 py-3 text-secondary">{{ campaign.clicks || 0 }}</td>
                                 <td class="px-5 py-3 text-secondary">{{ formatPercent(ctr(campaign.clicks, campaign.impressions)) }}</td>
                                 <td class="px-5 py-3 text-secondary">{{ formatMoney(campaign.budget_cents) }}</td>
+                                <td class="px-5 py-3 text-secondary">{{ formatMoney(campaign.spent_cents) }}</td>
                                 <td class="px-5 py-3 text-right">
                                     <div class="flex flex-wrap justify-end gap-2">
                                         <button
@@ -461,7 +465,7 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                                 </td>
                             </tr>
                             <tr v-if="campaign.groups?.length">
-                                <td colspan="8" class="bg-bg px-5 py-3">
+                                <td colspan="9" class="bg-bg px-5 py-3">
                                     <div class="mb-2 flex items-center justify-between gap-3">
                                         <p class="text-xs font-semibold uppercase text-secondary">{{ c('adGroups') }}</p>
                                         <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="emit('open-ad-group-modal', campaign)">
@@ -512,7 +516,7 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                                                             <p class="font-semibold text-primary">{{ creative.clicks || 0 }}</p>
                                                         </div>
                                                         <div>
-                                                            <p class="text-secondary">{{ c('ctrLabel') }}</p>
+                                                            <p class="text-secondary" :title="campaignCt('ctr_help')">{{ campaignCt('ctr_label') }}</p>
                                                             <p class="font-semibold text-primary">{{ formatPercent(ctr(creative.clicks, creative.impressions)) }}</p>
                                                         </div>
                                                         <div>
@@ -527,7 +531,7 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                                 </td>
                             </tr>
                             <tr v-if="campaignRootCreatives(campaign).length">
-                                <td colspan="8" class="bg-bg px-5 py-3">
+                                <td colspan="9" class="bg-bg px-5 py-3">
                                     <div class="grid gap-2 md:grid-cols-2">
                                         <div v-for="creative in campaignRootCreatives(campaign)" :key="creative.id" class="rounded-lg border border-border bg-card p-3">
                                             <div class="flex items-start justify-between gap-3">
@@ -547,7 +551,7 @@ const c = (key) => labels.value[key] || copy.de[key] || key
                                                     <p class="font-semibold text-primary">{{ creative.clicks || 0 }}</p>
                                                 </div>
                                                 <div>
-                                                    <p class="text-secondary">{{ c('ctrLabel') }}</p>
+                                                    <p class="text-secondary" :title="campaignCt('ctr_help')">{{ campaignCt('ctr_label') }}</p>
                                                     <p class="font-semibold text-primary">{{ formatPercent(ctr(creative.clicks, creative.impressions)) }}</p>
                                                 </div>
                                                 <div>

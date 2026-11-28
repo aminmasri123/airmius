@@ -1886,6 +1886,12 @@ class _CampaignCard extends StatelessWidget {
     final status = _text(campaign['status'], fallback: 'draft');
     final budget = _int(campaign['budget_cents']);
     final spent = _int(campaign['spent_cents']);
+    final impressions = _int(campaign['impressions']);
+    final clicks = _int(campaign['clicks']);
+    final clickRate = NumberFormat.decimalPercentPattern(
+      locale: AirmiusScope.of(context).language.locale.toLanguageTag(),
+      decimalDigits: 2,
+    ).format(impressions > 0 ? clicks / impressions : 0);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1949,11 +1955,14 @@ class _CampaignCard extends StatelessWidget {
                   '${t('commerceAdv.spent')}: ${_money(spent)}',
                   color: _commerceTone(context, AirmiusColors.amber),
                 ),
-                StatusPill(
-                  '${_int(campaign['impressions'])} ${t('commerceAdv.impressions')}',
-                ),
-                StatusPill(
-                  '${_int(campaign['clicks'])} ${t('commerceAdv.clicks')}',
+                StatusPill('$impressions ${t('commerceAdv.impressions')}'),
+                StatusPill('$clicks ${t('commerceAdv.clicks')}'),
+                Tooltip(
+                  message:
+                      '${t('commerceAdv.clicks')} ÷ ${t('commerceAdv.impressions')} × 100',
+                  child: StatusPill(
+                    '${t('sponsorCockpit.ctr')} (CTR): $clickRate',
+                  ),
                 ),
                 if (campaign['payment_completed'] == true)
                   StatusPill(

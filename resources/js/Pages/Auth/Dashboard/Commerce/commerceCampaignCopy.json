@@ -1,17 +1,29 @@
 {
   "de": {
+    "ctr_label": "Klickrate (CTR)",
+    "ctr_help": "Klicks ÷ Ansichten × 100. Ohne Ansichten beträgt die Klickrate 0 %.",
+    "spent_label": "Verbrauch",
     "format_help": "Empfohlene Bildformate",
     "format_upload_hint": "JPG, PNG oder WebP bis 8 MB."
   },
   "en": {
+    "ctr_label": "Click-through rate (CTR)",
+    "ctr_help": "Clicks ÷ impressions × 100. With no impressions, the click-through rate is 0%.",
+    "spent_label": "Spent",
     "format_help": "Recommended image formats",
     "format_upload_hint": "JPG, PNG or WebP, up to 8 MB."
   },
   "fr": {
+    "ctr_label": "Taux de clics (CTR)",
+    "ctr_help": "Clics ÷ impressions × 100. Sans impression, le taux de clics est de 0 %.",
+    "spent_label": "Dépenses",
     "format_help": "Formats d’image recommandés",
     "format_upload_hint": "JPG, PNG ou WebP, 8 Mo maximum."
   },
   "ar": {
+    "ctr_label": "معدل النقر (CTR)",
+    "ctr_help": "النقرات ÷ مرات الظهور × 100. عند عدم وجود مرات ظهور، يكون معدل النقر 0٪.",
+    "spent_label": "الإنفاق",
     "format_help": "مقاسات الصور الموصى بها",
     "format_upload_hint": "JPG أو PNG أو WebP، حتى 8 ميغابايت."
   }
