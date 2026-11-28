@@ -242,6 +242,118 @@ class ClubSepaNoticeTest extends TestCase
         $this->assertSame('prepared', $this->batch->notices()->first()->status);
     }
 
+    public function test_deadline_is_inclusive_and_exposed_without_changing_collection_date(): void
+    {
+        $this->travelTo(now()->setDate(2026, 9, 26)->setTime(23, 59));
+        $this->getJson($this->base())->assertOk()
+            ->assertJsonPath('data.data.0.notice_deadline_on', '2026-09-26')
+            ->assertJsonPath('data.data.0.notice_window_open', true)
+            ->assertJsonPath('data.data.0.collection_date', '2026-10-10');
+        $notice = $this->acceptedNotice();
+        $this->assertSame('sent', $notice->status);
+        $this->assertSame('notified', $this->batch->fresh()->status);
+    }
+
+    public function test_expired_deadline_blocks_preparation_and_enqueue_without_sending(): void
+    {
+        $notice = $this->prepare();
+        $this->travelTo(now()->setDate(2026, 9, 27)->startOfDay());
+        $this->getJson($this->base())->assertOk()
+            ->assertJsonPath('data.data.0.notice_window_open', false);
+        $this->postJson($this->path('/notices'))->assertUnprocessable();
+        $this->postJson($this->path('/notices/send'), ['confirmed' => true])->assertUnprocessable();
+        $this->assertSame('prepared', $notice->fresh()->status);
+        Queue::assertNothingPushed();
+    }
+
+    public function test_completed_dispatch_retry_returns_saved_result_even_after_export_and_deadline(): void
+    {
+        $notice = $this->acceptedNotice();
+        $this->enqueue();
+        $this->postJson($this->path('/export'))->assertOk();
+        $this->travel(30)->days();
+        $this->member->update(['email' => 'changed@example.test']);
+        $mock = $this->mock(ClubSepaNoticeMailer::class);
+        $mock->shouldNotReceive('transport');
+        $mock->shouldNotReceive('send');
+        $this->postJson($this->path('/notices/send'), ['confirmed' => true])->assertAccepted()
+            ->assertJsonPath('data.status', 'exported')
+            ->assertJsonPath('data.notices.0.status', 'sent');
+        Queue::assertPushed(SendClubSepaNotice::class, 1);
+        $this->assertDatabaseCount('mail_deliveries', 1);
+        $this->assertSame($notice->content, $notice->fresh()->content);
+    }
+
+    public function test_refresh_reports_interrupted_worker_as_uncertain_without_mutating_or_resending(): void
+    {
+        $notice = $this->prepare();
+        $notice->update(['status' => 'sending', 'started_at' => now()]);
+        $this->getJson($this->base())->assertOk()->assertJsonPath('data.data.0.notices.0.status', 'sending');
+        $this->travel(11)->minutes();
+        $this->getJson($this->base())->assertOk()
+            ->assertJsonPath('data.data.0.notices.0.status', 'uncertain')
+            ->assertJsonPath('data.data.0.notices.0.error_code', 'transport_uncertain');
+        $this->assertSame('sending', $notice->fresh()->status);
+        $mock = $this->mock(ClubSepaNoticeMailer::class);
+        $mock->shouldReceive('transport')->andReturn(['mailer' => 'test']);
+        $mock->shouldNotReceive('send');
+        $this->enqueue();
+        app(ClubSepaNoticeService::class)->deliver($notice->id);
+        $this->assertSame('uncertain', $notice->fresh()->status);
+        Queue::assertNothingPushed();
+    }
+
+    public function test_blocked_recipient_can_be_retried_only_after_original_address_is_restored(): void
+    {
+        $notice = $this->prepare();
+        $this->mailer();
+        $this->enqueue();
+        $this->member->update(['email' => 'changed@example.test']);
+        $service = app(ClubSepaNoticeService::class);
+        $service->deliver($notice->id);
+        $this->assertSame('blocked', $notice->fresh()->status);
+        $this->member->update(['email' => $notice->content['email']]);
+        $this->enqueue();
+        $service->deliver($notice->id);
+        $service->deliver($notice->id);
+        $this->assertSame('sent', $notice->fresh()->status);
+        $this->assertDatabaseCount('mail_deliveries', 1);
+    }
+
+    public function test_missing_or_invalid_recipient_does_not_prepare_or_enqueue_partial_notices(): void
+    {
+        $second = User::factory()->create(['email' => 'invalid-address']);
+        $this->club->users()->attach($second->id, [
+            'role' => 'member', 'roles' => ['member'], 'sepa_iban' => 'DE12500105170648489890',
+            'sepa_mandate_reference' => 'MANDATE-2', 'sepa_mandate_signed_on' => '2026-09-01', 'sepa_mandate_active' => true,
+        ]);
+        $invoice = $this->invoice->replicate();
+        $invoice->fill(['user_id' => $second->id, 'number' => 'N-2']);
+        $invoice->save();
+        $this->batch->items()->create([
+            'invoice_id' => $invoice->id, 'reserved_invoice_id' => $invoice->id, 'amount_cents' => 10000,
+            'debtor_snapshot' => array_replace($this->batch->items()->first()->debtor_snapshot, [
+                'name' => $second->name, 'number' => 'N-2', 'sepa_mandate_reference' => 'MANDATE-2',
+            ]),
+        ]);
+        $this->postJson($this->path('/notices'))->assertUnprocessable();
+        $this->assertDatabaseCount('club_sepa_notices', 0);
+        Queue::assertNothingPushed();
+        $second->update(['email' => 'second@example.test']);
+        $this->prepare();
+        $this->assertSame([$this->member->email, 'second@example.test'],
+            $this->batch->notices()->orderBy('id')->get()->map(fn ($notice) => $notice->content['email'])->all());
+        $this->assertDatabaseCount('club_sepa_notices', 2);
+    }
+
+    public function test_foreign_club_cannot_prepare_or_send_a_batch(): void
+    {
+        $other = Club::factory()->create(['owner_id' => $this->reviewer->id]);
+        $this->postJson("/api/v1/clubs/{$other->id}/sepa-batches/{$this->batch->id}/notices")->assertNotFound();
+        $this->postJson("/api/v1/clubs/{$other->id}/sepa-batches/{$this->batch->id}/notices/send", ['confirmed' => true])->assertNotFound();
+        Queue::assertNothingPushed();
+    }
+
     public function test_actual_mail_adapter_passes_frozen_content_to_laravel_transport(): void
     {
         $notice = $this->prepare();
@@ -292,6 +404,9 @@ class ClubSepaNoticeTest extends TestCase
         $service->deliver($notices[0]->id);
         $this->assertSame('approved', $this->batch->fresh()->status);
         $this->postJson($this->path('/export'))->assertUnprocessable();
+        $this->enqueue();
+        Queue::assertPushed(SendClubSepaNotice::class, 3);
+        $service->deliver($notices[0]->id);
         $service->deliver($notices[1]->id);
         $this->assertSame('notified', $this->batch->fresh()->status);
         $this->assertDatabaseCount('mail_deliveries', 2);

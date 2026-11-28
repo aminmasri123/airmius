@@ -113,6 +113,8 @@ async function act(path, data = {}, download = false) {
                 <h4 class="font-semibold">{{ batch.reference }} · {{ c(batch.status) }}</h4>
                 <p>{{ batch.creditor_name }} · {{ batch.creditor_id }}</p>
                 <p>{{ c('date') }}: {{ batch.collection_date }} · {{ c('total') }}: {{ money(batch.total_cents) }}</p>
+                <p v-if="batch.notice_deadline_on">{{ c('noticeDeadline') }}: {{ batch.notice_deadline_on }} · {{ c('days') }}: {{ batch.notice_days }}</p>
+                <p v-if="batch.status === 'approved' && batch.notice_window_open === false" class="text-error" role="alert">{{ c('noticeExpired') }}</p>
                 <ClubSepaReturnImport v-if="canManage && resultsAvailable && batch.status === 'exported'" :club-id="clubId" :batch-id="batch.id" :disabled="busy" @imported="load()" />
                 <ul class="text-sm">
                     <li v-for="item in batch.items" :key="item.invoice_id">
@@ -127,7 +129,8 @@ async function act(path, data = {}, download = false) {
                     <button type="button" :disabled="busy || !batch.approvalConfirmed" class="rounded border border-border px-3 py-2" @click="act(`/${batch.id}/approve`, { confirmed: batch.approvalConfirmed })">{{ c('approve') }}</button>
                 </template>
                 <template v-if="canManage && noticesAvailable">
-                    <button v-if="batch.status === 'approved' && !batch.notices?.length" type="button" :disabled="busy" class="rounded border border-border px-3 py-2" @click="act(`/${batch.id}/notices`)">{{ c('prepareMessages') }}</button>
+                    <button v-if="batch.status === 'approved' && !batch.notices?.length" type="button" :disabled="busy || batch.notice_window_open === false" class="rounded border border-border px-3 py-2" @click="act(`/${batch.id}/notices`)">{{ c('prepareMessages') }}</button>
+                    <p v-if="batch.notices?.some(n => ['blocked', 'uncertain'].includes(n.status) || n.provider_status === 'bounced')" class="text-error" role="alert">{{ c('noticeAttention') }}</p>
                     <details v-if="batch.notices?.length" class="rounded border border-border p-3">
                         <summary>{{ c('noticePreview') }}</summary>
                         <div v-for="notice in batch.notices" :key="notice.id" class="my-3 border-b border-border pb-3">
@@ -142,9 +145,10 @@ async function act(path, data = {}, download = false) {
                         </div>
                     </details>
                     <p v-if="batch.notices?.length" class="text-sm text-secondary">{{ c('sendNoticeHelp') }}</p>
+                    <p v-if="batch.notices?.length" class="text-sm text-secondary">{{ c('retryNoticeHelp') }}</p>
                     <form v-if="batch.status === 'approved' && batch.notices?.some(n => ['prepared', 'queued', 'blocked'].includes(n.status))" class="space-y-2" @submit.prevent="act(`/${batch.id}/notices/send`, { confirmed: batch.mailConfirmed })">
                         <label class="flex gap-2"><input v-model="batch.mailConfirmed" type="checkbox" required :disabled="busy"> {{ c('sendConfirm') }}</label>
-                        <button type="submit" :disabled="busy || !batch.mailConfirmed" class="rounded border border-border px-3 py-2">{{ c('sendMessages') }}</button>
+                        <button type="submit" :disabled="busy || !batch.mailConfirmed || batch.notice_window_open === false" class="rounded border border-border px-3 py-2">{{ c('sendMessages') }}</button>
                     </form>
                 </template>
                 <form v-if="canManage && batch.status === 'approved'" class="space-y-2" @submit.prevent="act(`/${batch.id}/notice`, batch.notice)">

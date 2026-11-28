@@ -770,7 +770,7 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
       children: [
         if (batch['status'] == 'approved' && notices.isEmpty)
           OutlinedButton(
-            onPressed: _busy
+            onPressed: _busy || batch['notice_window_open'] == false
                 ? null
                 : () => _run(() async {
                     await _client.updateClubSepaBatch(
@@ -781,6 +781,15 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                     );
                   }),
             child: Text(c('prepareMessages')),
+          ),
+        if (notices.any(
+          (notice) =>
+              ['blocked', 'uncertain'].contains(notice['status']) ||
+              notice['provider_status'] == 'bounced',
+        ))
+          Text(
+            c('noticeAttention'),
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         if (notices.isNotEmpty)
           ExpansionTile(
@@ -822,13 +831,16 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
             ],
           ),
         if (notices.isNotEmpty) Text(c('sendNoticeHelp')),
+        if (notices.isNotEmpty) Text(c('retryNoticeHelp')),
         if (batch['status'] == 'approved' &&
             notices.any(
               (notice) =>
                   ['prepared', 'queued', 'blocked'].contains(notice['status']),
             ))
           OutlinedButton(
-            onPressed: _busy ? null : () => _sendNotices(batch),
+            onPressed: _busy || batch['notice_window_open'] == false
+                ? null
+                : () => _sendNotices(batch),
             child: Text(c('sendMessages')),
           ),
       ],
@@ -1056,6 +1068,18 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                     Text(
                       '${c('date')}: ${batch['collection_date']} · ${c('total')}: ${money(batch['total_cents'])}',
                     ),
+                    if (batch['notice_deadline_on'] != null)
+                      Text(
+                        '${c('noticeDeadline')}: ${batch['notice_deadline_on']} · ${c('days')}: ${batch['notice_days']}',
+                      ),
+                    if (batch['status'] == 'approved' &&
+                        batch['notice_window_open'] == false)
+                      Text(
+                        c('noticeExpired'),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
                     for (final item
                         in (batch['items'] as List).cast<AirmiusJson>()) ...[
                       Text(

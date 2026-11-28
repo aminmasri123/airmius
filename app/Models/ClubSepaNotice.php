@@ -10,6 +10,12 @@ class ClubSepaNotice extends Model
 
     protected $hidden = ['content'];
 
+    public function hasInterruptedDispatch(): bool
+    {
+        return $this->status === 'sending'
+            && $this->started_at?->lt(now()->subMinutes(10));
+    }
+
     protected function casts(): array
     {
         return [

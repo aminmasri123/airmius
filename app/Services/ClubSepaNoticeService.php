@@ -56,11 +56,22 @@ class ClubSepaNoticeService
 
     public function enqueue(ClubSepaBatch $batch, User $actor): ClubSepaBatch
     {
-        app(ClubSepaNoticeMailer::class)->transport();
         $ids = DB::transaction(function () use ($batch, $actor) {
             $batch = $this->lockBatch($batch->id);
+            $this->validateAccess($batch, $actor);
+            // A lost HTTP response may be retried after the worker has completed.
+            // Return the recorded result without checking a new dispatch window or
+            // mail transport, and without creating another delivery.
+            if (in_array($batch->status, ['notified', 'exported'], true)
+                && $batch->notice_channel === 'email'
+                && $batch->notices()->count() === $batch->items()->count()
+                && $batch->notices()->exists()
+                && ! $batch->notices()->where('status', '!=', 'sent')->exists()) {
+                return [];
+            }
             $this->recoverInterrupted($batch);
             $this->validateDispatch($batch, $actor);
+            app(ClubSepaNoticeMailer::class)->transport();
             $notices = $batch->notices()->lockForUpdate()->get();
             abort_unless($notices->count() === $batch->items->count(), 422, __('sepa.notice_prepare_first'));
             $ids = [];
@@ -189,11 +200,16 @@ class ClubSepaNoticeService
 
     private function validateDispatch(ClubSepaBatch $batch, ?User $actor, ?int $itemId = null): void
     {
-        abort_unless($actor && ClubPermissions::allows($batch->club, $actor, ClubPermissions::FINANCE_MANAGE), 403);
-        app(PlanFeatureService::class)->ensureAllows($batch->club, 'sepa_export');
+        $this->validateAccess($batch, $actor);
         abort_unless($batch->status === 'approved', 422, __('sepa.state'));
         abort_if($batch->collection_date->lt(today()->addDays($batch->notice_days)), 422, __('sepa.lead_time'));
         app(ClubSepaBatchService::class)->assertUnchanged($batch, $itemId);
+    }
+
+    private function validateAccess(ClubSepaBatch $batch, ?User $actor): void
+    {
+        abort_unless($actor && ClubPermissions::allows($batch->club, $actor, ClubPermissions::FINANCE_MANAGE), 403);
+        app(PlanFeatureService::class)->ensureAllows($batch->club, 'sepa_export');
     }
 
     private function lockBatch(int $id): ClubSepaBatch

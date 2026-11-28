@@ -30,6 +30,7 @@ class _Transport implements AirmiusApiTransport {
   bool enableFeeRechargeCredits = false;
   AirmiusJson? settlement;
   bool preparedNotices = false;
+  bool noticeWindowOpen = true;
   String mailStatus = 'prepared';
   String? providerStatus;
   String? bounceType;
@@ -102,6 +103,9 @@ class _Transport implements AirmiusApiTransport {
               'creditor_name': 'Testverein',
               'creditor_id': 'DE-TEST',
               'collection_date': '2026-10-10',
+              'notice_days': 14,
+              'notice_deadline_on': '2026-09-26',
+              'notice_window_open': noticeWindowOpen,
               'total_cents': 8000,
               'notices': preparedNotices
                   ? [
@@ -353,6 +357,8 @@ void main() {
       '',
       '/7/approve',
       '/7/notice',
+      '/7/notices',
+      '/7/notices/send',
       '/7/cancel',
       '/7/export',
       '/7/items/8/fee',
@@ -493,6 +499,8 @@ void main() {
   testWidgets(
     'mail preview does not send until recipients are explicitly confirmed',
     (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
       final transport = _Transport()..enableNotices = true;
       await _screen(tester, transport);
       final labels = sepaBatchLabels['de']!;
@@ -512,6 +520,7 @@ void main() {
       await tester.pumpAndSettle();
       final send = find.widgetWithText(OutlinedButton, labels['sendMessages']!);
       await tester.ensureVisible(send);
+      await tester.pumpAndSettle();
       await tester.tap(send);
       await tester.pumpAndSettle();
       final confirm = find.widgetWithText(
@@ -541,6 +550,7 @@ void main() {
       ..bounceType = 'HardBounce';
     await _screen(tester, transport);
     final labels = sepaBatchLabels['de']!;
+    expect(find.text(labels['noticeAttention']!), findsOneWidget);
     await tester.tap(find.text(labels['noticePreview']!));
     await tester.pumpAndSettle();
     expect(find.textContaining(labels['mail_sent']!), findsOneWidget);
@@ -548,6 +558,83 @@ void main() {
     expect(find.textContaining('HardBounce'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final prepared in [false, true]) {
+    testWidgets('expired notice window disables dispatch, prepared=$prepared', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final transport = _Transport()
+        ..enableNotices = true
+        ..preparedNotices = prepared
+        ..noticeWindowOpen = false;
+      await _screen(tester, transport);
+      final labels = sepaBatchLabels['de']!;
+      expect(
+        find.textContaining('${labels['noticeDeadline']}: 2026-09-26'),
+        findsOneWidget,
+      );
+      expect(find.text(labels['noticeExpired']!), findsOneWidget);
+      final button = find.widgetWithText(
+        OutlinedButton,
+        labels[prepared ? 'sendMessages' : 'prepareMessages']!,
+      );
+      expect(tester.widget<OutlinedButton>(button).onPressed, isNull);
+      expect(transport.requests.where((r) => r.method == 'POST'), isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final state in ['sent', 'uncertain', 'sending', 'cancelled']) {
+    testWidgets('non-retryable mail $state has no send action', (tester) async {
+      final transport = _Transport()
+        ..enableNotices = true
+        ..preparedNotices = true
+        ..mailStatus = state;
+      await _screen(tester, transport);
+      final labels = sepaBatchLabels['de']!;
+      expect(
+        find.widgetWithText(OutlinedButton, labels['sendMessages']!),
+        findsNothing,
+      );
+      expect(find.text(labels['retryNoticeHelp']!), findsOneWidget);
+      if (state == 'uncertain') {
+        expect(find.text(labels['noticeAttention']!), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets(
+    'refresh updates queued delivery without submitting another send',
+    (tester) async {
+      final transport = _Transport()
+        ..enableNotices = true
+        ..preparedNotices = true
+        ..mailStatus = 'queued';
+      await _screen(tester, transport);
+      transport.mailStatus = 'sent';
+      transport.providerStatus = 'delivered';
+      transport.status = 'notified';
+      final labels = sepaBatchLabels['de']!;
+      await tester.tap(find.byTooltip(labels['refresh']!));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(labels['noticePreview']!));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(labels['mail_sent']!), findsOneWidget);
+      expect(
+        find.textContaining(labels['provider_delivered']!),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(OutlinedButton, labels['sendMessages']!),
+        findsNothing,
+      );
+      expect(transport.requests.where((r) => r.method == 'POST'), isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'return requires evidence and confirmation and submits fee in cents',

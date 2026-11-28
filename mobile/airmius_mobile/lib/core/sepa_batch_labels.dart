@@ -9,6 +9,13 @@ const sepaBatchLabels = <String, Map<String, String>>{
     "noEligible":
         "Keine passenden offenen Rechnungen in dieser Auswahl. Prüfe Einzugsdatum, Reservierungen und die aktuelle Rechnungsliste.",
 
+    "noticeDeadline": "Spätester Versandtag",
+    "noticeExpired":
+        "Die Vorabfrist ist abgelaufen. Ein neuer E-Mail-Versand ist gesperrt. Bereits fristgerecht erfolgten Versand nur mit Nachweis dokumentieren; andernfalls den Lauf stornieren und mit späterem Einzugsdatum neu vorbereiten.",
+    "retryNoticeHelp":
+        "Erneutes Senden berücksichtigt nur vorbereitete, wartende oder gesperrte Nachrichten. Bereits übergebene oder unklare Nachrichten werden nicht erneut versendet. Geänderte Empfänger erfordern einen neuen Lauf; vorher den bisherigen Versand prüfen.",
+    "noticeAttention":
+        "Mindestens eine Nachricht benötigt Prüfung. Öffne „Nachrichten prüfen“. Bei unklarem Versand oder Zurückweisung zuerst den Mailanbieter und den Empfänger prüfen; kein automatischer Neuversand.",
     "introSingle":
         "Einzel-Freigabe: Prüfe Rechnungen, Empfänger, Beträge und Einzugsdatum vor der Freigabe. Danach Vorabinformationen versenden und die Bankdatei herunterladen.",
     "approvalMode": "Freigaberegel",
@@ -114,6 +121,13 @@ const sepaBatchLabels = <String, Map<String, String>>{
     "noEligible":
         "No matching outstanding invoices in this selection. Check the collection date, reservations and current invoice list.",
 
+    "noticeDeadline": "Latest dispatch date",
+    "noticeExpired":
+        "The notice period has expired. New email dispatch is blocked. Record an earlier timely dispatch only with evidence; otherwise cancel this batch and prepare a new one with a later collection date.",
+    "retryNoticeHelp":
+        "Sending again processes only prepared, queued or blocked messages. Accepted or uncertain messages are never resent. Changed recipients require a new batch; check previous dispatch first.",
+    "noticeAttention":
+        "At least one message needs attention. Open “Review messages”. For uncertain dispatch or a bounce, check the mail provider and recipient first; there is no automatic resend.",
     "introSingle":
         "Single approval: Check invoices, recipients, amounts and collection date before approval. Then send advance notices and download the bank file.",
     "approvalMode": "Approval rule",
@@ -218,6 +232,13 @@ const sepaBatchLabels = <String, Map<String, String>>{
     "noEligible":
         "Aucune facture ouverte correspondante. Vérifiez la date de prélèvement, les réservations et la liste actuelle des factures.",
 
+    "noticeDeadline": "Dernière date d’envoi",
+    "noticeExpired":
+        "Le délai de préavis est dépassé. Tout nouvel envoi est bloqué. Documentez un envoi antérieur dans les délais uniquement avec un justificatif ; sinon annulez le lot et préparez-en un nouveau avec une date de prélèvement ultérieure.",
+    "retryNoticeHelp":
+        "Un nouvel envoi traite uniquement les messages préparés, en attente ou bloqués. Les messages acceptés ou incertains ne sont jamais renvoyés. Un destinataire modifié nécessite un nouveau lot ; vérifiez d’abord les envois précédents.",
+    "noticeAttention":
+        "Au moins un message doit être vérifié. Ouvrez « Vérifier les messages ». En cas d’envoi incertain ou de rejet, vérifiez d’abord le prestataire et le destinataire ; aucun renvoi automatique.",
     "introSingle":
         "Validation individuelle : vérifiez les factures, destinataires, montants et date de prélèvement. Envoyez ensuite les préavis et téléchargez le fichier bancaire.",
     "approvalMode": "Règle de validation",
@@ -324,6 +345,13 @@ const sepaBatchLabels = <String, Map<String, String>>{
     "noEligible":
         "لا توجد فواتير مفتوحة مطابقة. تحقق من تاريخ التحصيل والحجوزات وقائمة الفواتير الحالية.",
 
+    "noticeDeadline": "آخر موعد للإرسال",
+    "noticeExpired":
+        "انتهت مهلة الإشعار. تم حظر إرسال بريد جديد. وثّق الإرسال السابق ضمن المهلة فقط مع دليل؛ وإلا ألغِ الدفعة وأعد إعدادها بتاريخ تحصيل لاحق.",
+    "retryNoticeHelp":
+        "تعالج إعادة الإرسال الرسائل المعدّة أو المنتظرة أو المحظورة فقط. لا تُرسل الرسائل المقبولة أو غير المؤكدة مجددًا. يتطلب تغيير المستلم دفعة جديدة؛ تحقّق من الإرسال السابق أولًا.",
+    "noticeAttention":
+        "تحتاج رسالة واحدة على الأقل إلى مراجعة. افتح مراجعة الرسائل. عند غموض الإرسال أو رفضه، تحقّق من مزوّد البريد والمستلم أولًا؛ لا توجد إعادة إرسال تلقائية.",
     "introSingle":
         "موافقة فردية: تحقق من الفواتير والمستلمين والمبالغ وتاريخ الخصم قبل الموافقة، ثم أرسل الإشعارات المسبقة ونزّل الملف البنكي.",
     "approvalMode": "قاعدة الموافقة",
