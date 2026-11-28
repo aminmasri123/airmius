@@ -16,6 +16,7 @@ use App\Models\ClubProcurementReceipt;
 use App\Models\ClubSepaBatch;
 use App\Models\ClubSepaFeeCorrection;
 use App\Models\ClubSepaFeeRecharge;
+use App\Models\ClubSepaFeeRechargeCredit;
 use App\Models\ClubSepaSettlement;
 use App\Models\ClubYearPeriod;
 use App\Models\Folder;
@@ -2624,13 +2625,24 @@ class ClubMembershipController extends Controller
         $feeAccount = $club->datev_fee_account;
         abort_if($fees->isNotEmpty() && (! preg_match('/^[0-9]{1,20}$/D', (string) $feeAccount)
             || ltrim($feeAccount, '0') === ltrim(trim($bankAccount), '0')), 422, __('sepa.fee_export_account_required'));
-        abort_if($payments->isEmpty() && $fees->isEmpty(), 422, __('organization.club.datev_no_payments'));
+        $refunds = Schema::hasTable('club_sepa_fee_recharge_credits')
+            ? ClubSepaFeeRechargeCredit::where('club_id', $club->id)->where('status', 'refunded')
+                ->whereBetween('refund_booked_on', [$from->toDateString(), $to->toDateString()])
+                ->with('recharge')->orderBy('refund_booked_on')->orderBy('id')->get()
+            : collect();
+        foreach ($refunds as $refund) {
+            $account = $refund->recharge?->revenue_account;
+            abort_unless($refund->recharge?->club_id === $club->id
+                && preg_match('/^[0-9]{1,20}$/D', (string) $account)
+                && ltrim($account, '0') !== ltrim(trim($bankAccount), '0'), 422, __('sepa.recharge_account'));
+        }
+        abort_if($payments->isEmpty() && $fees->isEmpty() && $refunds->isEmpty(), 422, __('organization.club.datev_no_payments'));
 
         $rechargeAccounts = collect();
         $rechargeInvoices = $payments->filter(fn ($payment) => $payment->invoice?->source === 'sepa_fee_recharge')->pluck('invoice_id')->unique();
         if ($rechargeInvoices->isNotEmpty()) {
             abort_unless(Schema::hasColumn('club_sepa_fee_recharges', 'invoice_id'), 422, __('sepa.recharge_account'));
-            $rechargeAccounts = ClubSepaFeeRecharge::where('club_id', $club->id)->where('status', 'approved')
+            $rechargeAccounts = ClubSepaFeeRecharge::where('club_id', $club->id)->whereIn('status', ['approved', 'credited'])
                 ->whereIn('invoice_id', $rechargeInvoices)->pluck('revenue_account', 'invoice_id');
             foreach ($rechargeInvoices as $invoiceId) {
                 $account = $rechargeAccounts->get($invoiceId);
@@ -2641,7 +2653,7 @@ class ClubMembershipController extends Controller
 
         $fileName = 'airmius-datev-'.$club->id.'-'.$from->format('Ymd').'-'.$to->format('Ymd').'.csv';
 
-        return response()->streamDownload(function () use ($club, $payments, $fees, $revenueAccount, $bankAccount, $feeAccount, $rechargeAccounts) {
+        return response()->streamDownload(function () use ($club, $payments, $fees, $refunds, $revenueAccount, $bankAccount, $feeAccount, $rechargeAccounts) {
             $handle = fopen('php://output', 'w');
             fwrite($handle, "\xEF\xBB\xBF");
 
@@ -2702,6 +2714,14 @@ class ClubMembershipController extends Controller
                     number_format(abs((float) $fee->amount), 2, ',', ''), (float) $fee->amount < 0 ? 'S' : 'H', 'EUR',
                     $bankAccount, $feeAccount, '', $fee->booked_on->format('dm'),
                     $fee->reference, $fee->booked_on->format('Y'), mb_substr($bookingText, 0, 60),
+                    '', '', $club->datev_client_number ?? '', $club->datev_consultant_number ?? '',
+                ], ';');
+            }
+            foreach ($refunds as $refund) {
+                fputcsv($handle, [
+                    number_format($refund->refund_due_cents / 100, 2, ',', ''), 'H', 'EUR',
+                    $bankAccount, $refund->recharge->revenue_account, '', $refund->refund_booked_on->format('dm'),
+                    $refund->credit_note_number, $refund->refund_booked_on->format('Y'), 'Erstattung Gebührenweiterbelastung',
                     '', '', $club->datev_client_number ?? '', $club->datev_consultant_number ?? '',
                 ], ';');
             }

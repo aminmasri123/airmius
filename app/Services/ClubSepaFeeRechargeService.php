@@ -15,6 +15,7 @@ use App\Models\Invoice;
 use App\Models\User;
 use App\Support\ClubAuditLog;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 final class ClubSepaFeeRechargeService
 {
@@ -161,6 +162,10 @@ final class ClubSepaFeeRechargeService
     private function lockVoidableInvoice(ClubSepaFeeRecharge $proposal): Invoice
     {
         abort_unless($proposal->status === 'approved' && $proposal->invoice_id, 422, __('sepa.recharge_changed'));
+        // Credit support is additive: older installations still allow ordinary voids.
+        abort_if(Schema::hasTable('club_sepa_fee_recharge_credits')
+            && ClubSepaFeeRechargeCredit::where('active_recharge_id', $proposal->id)->exists(),
+            422, __('sepa.recharge_changed'));
         $invoice = Invoice::lockForUpdate()->findOrFail($proposal->invoice_id);
         abort_unless($invoice->club_id === $proposal->club_id && $invoice->user_id === $proposal->member_id
             && $invoice->source === 'sepa_fee_recharge'
@@ -252,6 +257,7 @@ final class ClubSepaFeeRechargeService
                 && $proposal->status === 'credited' && $request->club_id === $club->id
                 && $request->recharge_id === $proposal->id && $request->refund_due_cents > 0, 422, __('sepa.recharge_changed'));
             $reference = mb_strtoupper(trim($data['reference']));
+            abort_if(mb_strlen($reference) > 180, 422, __('sepa.recharge_changed'));
             $matches = fn ($entry) => $entry && $entry->club_id === $club->id && $entry->type === 'expense'
                 && $entry->account === 'bank' && (int) round((float) $entry->amount * 100) === $request->refund_due_cents
                 && $entry->booked_on->toDateString() === $data['booked_on']

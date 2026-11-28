@@ -437,10 +437,16 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
       final voids = (proposal['void_requests'] as List? ?? const [])
           .cast<AirmiusJson>();
       final pending = voids.where((v) => v['status'] == 'pending').toList();
+      final credits = (proposal['credit_requests'] as List? ?? const [])
+          .cast<AirmiusJson>();
+      final pendingCredits = credits
+          .where((credit) => credit['status'] == 'pending')
+          .toList();
       final invoice = proposal['invoice'] as AirmiusJson?;
       if (proposal['status'] == 'approved' &&
           widget.voidsAvailable &&
-          pending.isEmpty) {
+          pending.isEmpty &&
+          pendingCredits.isEmpty) {
         actions.add(
           _actionButton(
             c('requestVoid'),
@@ -479,14 +485,10 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
           );
         }
       }
-      final credits = (proposal['credit_requests'] as List? ?? const [])
-          .cast<AirmiusJson>();
-      final pendingCredits = credits
-          .where((credit) => credit['status'] == 'pending')
-          .toList();
       if (proposal['status'] == 'approved' &&
           widget.creditsAvailable &&
-          pendingCredits.isEmpty) {
+          pendingCredits.isEmpty &&
+          pending.isEmpty) {
         actions.add(
           _actionButton(c('requestCredit'), 'request_credit', proposalId: id),
         );
@@ -585,6 +587,14 @@ class _ClubSepaFeeRechargeScreenState extends State<ClubSepaFeeRechargeScreen> {
             Text(c('help')),
             SepaFeeRechargeSummary(result: widget.result),
             if (_busy) const LinearProgressIndicator(),
+            if (_action == null && _error != null)
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
             if (_action == null) Wrap(spacing: 8, children: _actions()),
             if (_action != null) ...[
               if (_action == 'propose') ...[

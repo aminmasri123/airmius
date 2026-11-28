@@ -197,6 +197,75 @@ void main() {
     },
   );
 
+  testWidgets('pending corrections hide both new request actions', (
+    tester,
+  ) async {
+    for (final isCredit in [false, true]) {
+      final pending = <String, dynamic>{
+        'id': 51,
+        'status': 'pending',
+        'requested_by': 11,
+        'reason': 'Prüfung',
+        'amount_cents': 250,
+      };
+      await _screen(
+        tester,
+        _Transport(),
+        result: _result(
+          proposals: [
+            _proposal(
+              status: 'approved',
+              voids: isCredit ? [] : [pending],
+              credits: isCredit ? [pending] : [],
+            ),
+          ],
+        ),
+      );
+      expect(
+        find.byKey(const ValueKey('recharge-request_void-31-0')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('recharge-request_credit-31-0')),
+        findsNothing,
+      );
+    }
+  });
+
+  testWidgets('failed document opening displays an accessible error', (
+    tester,
+  ) async {
+    await _screen(
+      tester,
+      _Transport(),
+      result: _result(
+        proposals: [
+          _proposal(
+            status: 'credited',
+            credits: [
+              {
+                'id': 51,
+                'status': 'completed',
+                'amount_cents': 250,
+                'refund_due_cents': 0,
+                'credit_note_number': 'AIR-GS-FEE-2-51',
+              },
+            ],
+          ),
+        ],
+      ),
+      documentOpener: (_) async => false,
+    );
+    final action = find.byKey(const ValueKey('recharge-credit-document-31-51'));
+    await tester.ensureVisible(action);
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    expect(
+      find.text(sepaFeeRechargeLabels['de']!['documentError']!),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('proposal validates, confirms and sends a revision snapshot', (
     tester,
   ) async {

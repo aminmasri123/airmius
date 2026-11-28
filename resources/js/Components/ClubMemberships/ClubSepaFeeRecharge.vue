@@ -25,6 +25,7 @@ const selectedCredit = computed(() => selected.value?.credit_requests?.find(v =>
 const blocked = computed(() => state.busy || props.disabled || !!state.request)
 const needsReason = computed(() => ['propose', 'cancel', 'requestVoid', 'withdrawVoid', 'requestCredit', 'withdrawCredit'].includes(state.action?.kind))
 const secondPerson = id => Number.isInteger(props.userId) && id != null && props.userId !== id
+const pendingCorrection = p => [...(p.void_requests || []), ...(p.credit_requests || [])].some(v => v.status === 'pending')
 watch(() => props.item, reset)
 function save() { if (props.canManage && !props.disabled) return submit() }
 </script>
@@ -48,8 +49,8 @@ function save() { if (props.canManage && !props.disabled) return submit() }
             <div v-if="canManage" class="flex flex-wrap gap-2">
                 <button v-if="p.status === 'draft' && draftsAvailable" type="button" :disabled="blocked" @click="select('cancel', p.id)">{{ c('cancel') }}</button>
                 <button v-if="p.status === 'draft' && approvalsAvailable && secondPerson(p.proposed_by)" type="button" :disabled="blocked || p.fee_revision !== current.revision" @click="select('approve', p.id)">{{ c('approve') }}</button>
-                <button v-if="p.status === 'approved' && voidsAvailable && !p.void_requests?.some(v => v.status === 'pending')" type="button" :disabled="blocked || (p.invoice && !['open', 'overdue'].includes(p.invoice.status))" @click="select('requestVoid', p.id)">{{ c('requestVoid') }}</button>
-                <button v-if="p.status === 'approved' && creditsAvailable && !p.credit_requests?.some(v => v.status === 'pending')" type="button" :disabled="blocked" @click="select('requestCredit', p.id)">{{ c('requestCredit') }}</button>
+                <button v-if="p.status === 'approved' && voidsAvailable && !pendingCorrection(p)" type="button" :disabled="blocked || (p.invoice && !['open', 'overdue'].includes(p.invoice.status))" @click="select('requestVoid', p.id)">{{ c('requestVoid') }}</button>
+                <button v-if="p.status === 'approved' && creditsAvailable && !pendingCorrection(p)" type="button" :disabled="blocked" @click="select('requestCredit', p.id)">{{ c('requestCredit') }}</button>
             </div>
             <ol class="space-y-2">
                 <li v-for="v in p.void_requests || []" :key="v.id" class="border-l border-border pl-2">

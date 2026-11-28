@@ -963,6 +963,10 @@ XML);
         $this->get($signedUrl)->assertOk()->assertHeader('Content-Type', 'application/pdf')
             ->assertHeader('X-Content-Type-Options', 'nosniff');
         $this->get($signedUrl.'&tampered=1')->assertForbidden();
+        $documentTime = now();
+        $this->travel(6)->minutes();
+        $this->get($signedUrl)->assertForbidden();
+        $this->travelTo($documentTime);
         Sanctum::actingAs($this->invoice->user);
         $this->getJson($documentPath)->assertForbidden();
         $this->getJson("{$documentPath}-link")->assertForbidden();
@@ -1024,6 +1028,63 @@ XML);
             'booked_on' => '2026-10-11', 'reference' => 'NO-REFUND'])->assertUnprocessable();
         $this->assertSame('cancelled', $invoice->fresh()->status);
         $this->assertDatabaseCount('payments', 1);
+    }
+
+    public function test_pending_credit_blocks_void_even_when_bank_activity_is_removed(): void
+    {
+        [$id, $invoice, $voidPath] = $this->approvedRecharge();
+        $invoice->update(['sepa_exported_at' => now()]);
+        $path = $this->path("fee-recharges/{$id}/credit-requests");
+        $creditId = $this->postJson($path, $this->creditData())->assertOk()->json('data.id');
+        $invoice->update(['sepa_exported_at' => null]);
+        $this->postJson($voidPath, $this->voidData())->assertUnprocessable();
+        $this->assertDatabaseCount('club_sepa_fee_recharge_voids', 0);
+        $this->postJson("{$path}/{$creditId}/withdraw", ['confirmed' => true, 'reason' => 'Use ordinary void'])->assertOk();
+        $this->postJson($voidPath, $this->voidData())->assertOk();
+        $this->assertSame('open', $invoice->fresh()->status);
+    }
+
+    public function test_refund_audit_failure_rolls_back_bank_expense_and_can_be_retried(): void
+    {
+        [$id, $invoice] = $this->approvedRecharge();
+        app(ClubInvoicePaymentService::class)->record($invoice, ['amount' => 0.5], $this->owner);
+        $path = $this->path("fee-recharges/{$id}/credit-requests");
+        $creditId = $this->postJson($path, $this->creditData())->assertOk()->json('data.id');
+        Sanctum::actingAs($this->reviewer);
+        $this->postJson("{$path}/{$creditId}/approve", ['confirmed' => true])->assertOk();
+        $this->travelTo(now()->setDate(2026, 11, 1));
+        $body = ['confirmed' => true, 'request_id' => (string) Str::uuid(),
+            'booked_on' => '2026-11-01', 'reference' => 'REFUND-ROLLBACK'];
+        $count = ClubFinanceEntry::count();
+        $event = 'eloquent.creating: '.Activity::class;
+        Event::listen($event, function ($activity) {
+            if ($activity->type === 'club.sepa.fee_recharge_refunded') {
+                throw new \RuntimeException('Refund audit failure');
+            }
+        });
+        try {
+            app(ClubSepaFeeRechargeService::class)->recordRefund($this->item, ClubSepaFeeRecharge::findOrFail($id),
+                ClubSepaFeeRechargeCredit::findOrFail($creditId), $this->reviewer, $body);
+            $this->fail('Expected refund audit failure');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Refund audit failure', $exception->getMessage());
+        } finally {
+            Event::forget($event);
+        }
+        $this->assertSame($count, ClubFinanceEntry::count());
+        $this->assertDatabaseHas('club_sepa_fee_recharge_credits', ['id' => $creditId, 'status' => 'issued', 'refund_request_id' => null]);
+        $this->postJson("{$path}/{$creditId}/refund", array_replace($body, ['reference' => str_repeat('ß', 100)]))->assertUnprocessable();
+        $this->postJson("{$path}/{$creditId}/refund", $body)->assertOk();
+        $this->postJson("{$path}/{$creditId}/refund", $body)->assertOk();
+        $this->assertSame($count + 1, ClubFinanceEntry::count());
+        $this->assertSame(1, Activity::where('type', 'club.sepa.fee_recharge_refunded')->count());
+        $this->club->update(['datev_fee_account' => '6855']);
+        $october = $this->get("/api/v1/clubs/{$this->club->id}/membership/datev-export?from=2026-10-01&to=2026-10-31")->assertOk()->streamedContent();
+        $this->assertStringContainsString('0,50;S;EUR;1200;4990;', $october);
+        $this->assertStringNotContainsString('0,50;H;EUR;1200;4990;', $october);
+        $november = $this->get("/api/v1/clubs/{$this->club->id}/membership/datev-export?from=2026-11-01&to=2026-11-30")->assertOk()->streamedContent();
+        $this->assertSame(1, substr_count($november, '0,50;H;EUR;1200;4990;'));
+        $this->assertStringContainsString("AIR-GS-FEE-{$this->club->id}-{$creditId}", $november);
     }
 
     public function test_fee_recharge_refund_links_matching_bank_expense_without_copying_it(): void

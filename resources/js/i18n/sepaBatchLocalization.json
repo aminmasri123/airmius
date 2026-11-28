@@ -82,7 +82,7 @@
     "selectedCount": "Ausgewählt",
     "noEligible": "Keine passenden offenen Rechnungen in dieser Auswahl. Prüfe Einzugsdatum, Reservierungen und die aktuelle Rechnungsliste.",
     "introSingle": "Einzel-Freigabe: Prüfe Rechnungen, Empfänger, Beträge und Einzugsdatum vor der Freigabe. Danach Vorabinformationen versenden und die Bankdatei herunterladen.",
-    "reviewApproval": "Ich habe Empfänger, Beträge und Einzugsdatum dieses Laufs geprüft und gebe ihn frei."
+    "reviewApproval": "Ich habe Empfänger, Beträge und Einzugsdatum dieses Laufs geprüft und gebe ihn frei.",
     "cancelHelp": "Der Lauf wird endgültig geschlossen. Die Rechnungen werden für einen neuen Lauf freigegeben. Bereits versendete Vorabinformationen bleiben versendet.",
     "cancelConfirm": "Ich bestätige die Stornierung dieses Laufs.",
     "cancelledHelp": "Dieser Lauf ist storniert und kann nicht mehr freigegeben oder exportiert werden.",
@@ -173,7 +173,7 @@
     "selectedCount": "Selected",
     "noEligible": "No matching outstanding invoices in this selection. Check the collection date, reservations and current invoice list.",
     "introSingle": "Single approval: Check invoices, recipients, amounts and collection date before approval. Then send advance notices and download the bank file.",
-    "reviewApproval": "I have checked the recipients, amounts and collection date and approve this batch."
+    "reviewApproval": "I have checked the recipients, amounts and collection date and approve this batch.",
     "cancelHelp": "This run will be closed permanently. Its invoices will be released for a new run. Notices already sent remain sent.",
     "cancelConfirm": "I confirm cancellation of this run.",
     "cancelledHelp": "This run is cancelled and can no longer be approved or exported.",
@@ -264,7 +264,7 @@
     "selectedCount": "Sélectionnées",
     "noEligible": "Aucune facture ouverte correspondante. Vérifiez la date de prélèvement, les réservations et la liste actuelle des factures.",
     "introSingle": "Validation individuelle : vérifiez les factures, destinataires, montants et date de prélèvement. Envoyez ensuite les préavis et téléchargez le fichier bancaire.",
-    "reviewApproval": "J’ai vérifié les destinataires, montants et date de prélèvement et je valide ce lot."
+    "reviewApproval": "J’ai vérifié les destinataires, montants et date de prélèvement et je valide ce lot.",
     "cancelHelp": "Ce lot sera clôturé définitivement. Les factures seront libérées pour un nouveau lot. Les avis déjà envoyés restent envoyés.",
     "cancelConfirm": "Je confirme l’annulation de ce lot.",
     "cancelledHelp": "Ce lot est annulé et ne peut plus être approuvé ni exporté.",
@@ -355,7 +355,7 @@
     "selectedCount": "المحدد",
     "noEligible": "لا توجد فواتير مفتوحة مطابقة. تحقق من تاريخ التحصيل والحجوزات وقائمة الفواتير الحالية.",
     "introSingle": "موافقة فردية: تحقق من الفواتير والمستلمين والمبالغ وتاريخ الخصم قبل الموافقة، ثم أرسل الإشعارات المسبقة ونزّل الملف البنكي.",
-    "reviewApproval": "راجعت المستلمين والمبالغ وتاريخ الخصم وأوافق على هذه الدفعة."
+    "reviewApproval": "راجعت المستلمين والمبالغ وتاريخ الخصم وأوافق على هذه الدفعة.",
     "cancelHelp": "سيتم إغلاق هذه الدفعة نهائياً وتحرير الفواتير لدفعة جديدة. الإشعارات المرسلة تبقى مرسلة.",
     "cancelConfirm": "أؤكد إلغاء هذه الدفعة.",
     "cancelledHelp": "هذه الدفعة ملغاة ولا يمكن اعتمادها أو تصديرها مجدداً.",

@@ -59,6 +59,17 @@ test('credit history exposes document and refund state with second-person contro
     assert.match(html, /Erstattung dokumentieren/); assert.match(html, /0,50/)
 })
 
+test('either pending correction hides both new request actions', async () => {
+    for (const field of ['void_requests', 'credit_requests']) {
+        const pending = { ...proposal, status: 'approved',
+            [field]: [{ id: 6, status: 'pending', requested_by: 8, reason: 'Review', amount_cents: 200 }] }
+        const html = await render({ canManage: true, item: { ...item, settlement: { ...item.settlement, fee_recharges: [pending] } } })
+        assert.ok(!html.includes(texts.de.requestVoid))
+        assert.ok(!html.includes(texts.de.requestCredit))
+        assert.ok(html.includes(field === 'void_requests' ? texts.de.withdrawVoid : texts.de.withdrawCredit))
+    }
+})
+
 test('all supported languages have complete keys and render localized proposal statuses', async () => {
     for (const locale of ['de', 'en', 'fr', 'ar']) {
         assert.deepEqual(Object.keys(texts[locale]).sort(), Object.keys(texts.de).sort())
