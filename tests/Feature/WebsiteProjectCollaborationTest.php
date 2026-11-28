@@ -36,6 +36,7 @@ class WebsiteProjectCollaborationTest extends TestCase
             'desired_deadline' => now()->addMonth()->toDateString(),
             'brand_guidelines' => 'Blau, sachlich und barrierearm',
             'contact_preference' => 'app',
+            'quote_details' => ['product' => 'Flyer', 'quantity' => '500'],
         ]);
 
         $this->assertSame('agency_brief', $project->package);
@@ -46,6 +47,8 @@ class WebsiteProjectCollaborationTest extends TestCase
             ->assertJsonPath('data.request_type', 'campaign')
             ->assertJsonPath('data.budget_range', '500–1.000 EUR')
             ->assertJsonPath('data.contact_preference', 'app');
+        $this->getJson('/api/v1/commerce/website-requests/'.$project->id)
+            ->assertJsonPath('data.quote_details.quantity', '500');
         Sanctum::actingAs($stranger);
         $this->getJson('/api/v1/commerce/website-requests/'.$project->id)->assertForbidden();
     }

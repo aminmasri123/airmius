@@ -388,6 +388,20 @@ class _WebsiteProjectScreenState extends State<WebsiteProjectScreen> {
                             ],
                           ),
                         ),
+                    if ((project['quote_details'] as Map? ?? {}).isNotEmpty)
+                      for (final entry in (project['quote_details'] as Map).entries)
+                        if ('${entry.value}'.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('${entry.key}', style: Theme.of(context).textTheme.titleSmall),
+                                const SizedBox(height: 6),
+                                SelectableText('${entry.value}'),
+                              ],
+                            ),
+                          ),
                     for (final entry in {
                       'deliverables': websiteText(context, 'deliverables'),
                       'channels': websiteText(context, 'channels'),

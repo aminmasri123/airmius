@@ -41,6 +41,7 @@ class WebsiteProjectController extends Controller
                     'id', 'request_type', 'project_title', 'domain', 'goals', 'deliverables',
                     'channels', 'budget_range', 'desired_deadline', 'brand_guidelines',
                     'contact_preference', 'notes', 'target_audience', 'inspiration_urls',
+                    'quote_details',
                     'status', 'created_at', 'withdrawn_at',
                 ]),
                 'can_edit' => $this->access->edit($user, $websiteRequest),

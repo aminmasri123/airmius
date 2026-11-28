@@ -279,6 +279,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
       'provider' => _provider(data),
       'ads' => _campaigns(data),
       'websites' => _websiteRequests(data),
+      'design' => _websiteRequests(data),
       _ => _overview(data),
     };
   }
@@ -796,7 +797,10 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
 
   Widget _websiteRequests(Map<String, dynamic> data) {
     final t = AirmiusScope.of(context).t;
-    final requests = _maps(data['website_requests']);
+    final design = _section == 'design';
+    final requests = _maps(data['website_requests']).where((request) =>
+      design ? _text(request['request_type']) != 'website' :
+      ['website', ''].contains(_text(request['request_type']))).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -805,10 +809,10 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Eyebrow(t('commerceAdv.websiteEyebrow')),
+              Eyebrow(design ? websiteText(context, 'designTab') : t('commerceAdv.websiteEyebrow')),
               const SizedBox(height: 7),
               Text(
-                t('commerceAdv.websiteHeadline'),
+                design ? websiteText(context, 'designHeadline') : t('commerceAdv.websiteHeadline'),
                 style: TextStyle(
                   color: airmiusTextColor(context),
                   fontSize: 21,
@@ -817,7 +821,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                t('commerceAdv.websiteBody'),
+                design ? websiteText(context, 'designBody') : t('commerceAdv.websiteBody'),
                 style: TextStyle(
                   color: airmiusMutedColor(context),
                   height: 1.4,
@@ -825,7 +829,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
               ),
               const SizedBox(height: 12),
               AirmiusButton(
-                label: t('commerceAdv.requestWebsite'),
+                label: design ? websiteText(context, 'designRequest') : t('commerceAdv.requestWebsite'),
                 icon: Icons.language_outlined,
                 onPressed: () => _showWebsiteRequest(data),
               ),
@@ -1048,11 +1052,12 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
         builder: (_) => Scaffold(
           appBar: AppBar(
             title: Text(
-              websiteText(context, 'agencyRequest'),
+              _section == 'design' ? websiteText(context, 'designRequest') : AirmiusScope.of(context).t('commerceAdv.requestWebsite'),
             ),
           ),
           body: SafeArea(
             child: _WebsiteRequestSheet(
+              design: _section == 'design',
               clubs: _maps(
                 data['clubs'],
               ).where((club) => club['can_request_website'] == true).toList(),
@@ -1379,7 +1384,7 @@ class _SectionPicker extends StatelessWidget {
             'provider': t('seller.provider'),
           }
         : sponsorTools
-        ? {'ads': t('commerceAdv.ads'), 'websites': t('commerceAdv.websites')}
+        ? {'ads': t('commerceAdv.ads'), 'websites': t('commerceAdv.websites'), 'design': websiteText(context, 'designTab')}
         : {
             'overview': t('seller.overview'),
             'products': t('seller.products'),
@@ -1388,6 +1393,7 @@ class _SectionPicker extends StatelessWidget {
             'provider': t('seller.provider'),
             'ads': t('commerceAdv.ads'),
             'websites': t('commerceAdv.websites'),
+            'design': websiteText(context, 'designTab'),
           };
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -2846,9 +2852,10 @@ class _CampaignSheetState extends State<_CampaignSheet> {
 }
 
 class _WebsiteRequestSheet extends StatefulWidget {
-  const _WebsiteRequestSheet({required this.clubs, this.preferredClubId});
+  const _WebsiteRequestSheet({required this.clubs, required this.design, this.preferredClubId});
 
   final List<Map<String, dynamic>> clubs;
+  final bool design;
   final int? preferredClubId;
 
   @override
@@ -2866,6 +2873,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
   final _budget = TextEditingController();
   final _deadline = TextEditingController();
   final _brandGuidelines = TextEditingController();
+  final _quoteDetails = <String, TextEditingController>{};
   String _requestType = 'campaign';
   String _contactPreference = 'app';
   final Set<String> _deliverables = {};
@@ -2878,6 +2886,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
   @override
   void initState() {
     super.initState();
+    _requestType = widget.design ? 'print' : 'website';
     if (widget.clubs.any(
       (club) => _int(club['id']) == widget.preferredClubId,
     )) {
@@ -2896,6 +2905,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
     _budget.dispose();
     _deadline.dispose();
     _brandGuidelines.dispose();
+    for (final controller in _quoteDetails.values) { controller.dispose(); }
     super.dispose();
   }
 
@@ -2913,14 +2923,13 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
             const SizedBox(height: 16),
             Text(websiteText(context, 'noCharge')),
             const SizedBox(height: 24),
-            DropdownButtonFormField<String>(
+            if (widget.design) DropdownButtonFormField<String>(
               initialValue: _requestType,
               decoration: InputDecoration(
                 labelText: websiteText(context, 'requestType'),
               ),
               items: const [
-                'campaign', 'social_media', 'print', 'logo_branding',
-                'video', 'photo', 'website', 'other',
+                'print', 'logo_branding', 'video', 'photo', 'other',
               ].map((value) => DropdownMenuItem(
                 value: value,
                 child: Text(websiteText(context, 'type.$value')),
@@ -2928,6 +2937,30 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
               onChanged: (value) => setState(() => _requestType = value ?? 'other'),
             ),
             const SizedBox(height: 20),
+            for (final entry in (widget.design ? {
+              'product': 'Produkt (Flyer, Visitenkarten, Kleidung …)',
+              'service': 'Nur Gestaltung, nur Druck oder beides?',
+              'quantity': 'Stückzahl und Größenverteilung',
+              'dimensions': 'Maße, Format und Material',
+              'finish': 'Farben, Druckseiten und Veredelung',
+              'delivery': 'Lieferort und benötigter Liefertermin',
+            } : {
+              'existing_site': 'Bestehende Website und Domain',
+              'pages': 'Gewünschte Seiten und Sprachen',
+              'features': 'Shop, Buchung, Mitgliederbereich und weitere Funktionen',
+              'content': 'Vorhandene Texte, Bilder und Logo',
+              'hosting': 'Hosting, E-Mail und spätere Betreuung',
+              'integrations': 'Schnittstellen und besondere Anforderungen',
+            }).entries) ...[
+              TextFormField(
+                controller: _quoteDetails.putIfAbsent(entry.key, () => TextEditingController()),
+                maxLength: 1000,
+                minLines: 1,
+                maxLines: 4,
+                decoration: InputDecoration(labelText: entry.value),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextFormField(
               controller: _title,
               maxLength: 255,
@@ -3133,6 +3166,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
                 }
                 Navigator.pop(context, {
                   'request_type': _requestType,
+                  'quote_details': _quoteDetails.map((key, value) => MapEntry(key, value.text.trim())),
                   'club_id': _clubId,
                   'project_title': _title.text.trim(),
                   'target_audience': _audience.text.trim(),

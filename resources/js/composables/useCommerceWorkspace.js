@@ -673,6 +673,8 @@ export function useCommerceWorkspace(props) {
         { key: 'bulk_orders', label: tx('commerce.tabs.bulk_orders', 'Sammelbestellungen'), icon: 'las la-users', count: 0 },
         { key: 'invoices', label: tx('commerce.tabs.invoices', 'Rechnungen'), icon: 'las la-file-invoice', count: props.purchaseHistory.length },
         { key: 'ads', label: tx('commerce.tabs.ads', 'Ads'), icon: 'las la-bullhorn', count: props.myCampaigns.length },
+        { key: 'websites', label: 'Webseite', icon: 'las la-globe', count: props.websiteRequests.filter(item => !item.request_type || item.request_type === 'website').length },
+        { key: 'design', label: 'Design & Druck', icon: 'las la-palette', count: props.websiteRequests.filter(item => item.request_type && item.request_type !== 'website').length },
         { key: 'create', label: tx('commerce.tabs.create', 'Verkaufen'), icon: 'las la-plus-circle', count: props.myProducts.length + props.websiteRequests.length },
         { key: 'provider', label: tx('commerce.tabs.provider', 'Anbieterprofil'), icon: 'las la-store', count: props.providerLocations.length },
         { key: 'payouts', label: tx('commerce.tabs.payouts', 'Auszahlung'), icon: 'las la-wallet', count: props.payoutSummary.pending_orders || 0 },

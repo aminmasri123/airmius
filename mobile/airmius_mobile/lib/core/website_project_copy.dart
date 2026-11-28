@@ -9,6 +9,10 @@ String websiteText(BuildContext context, String key) =>
 
 const _copy = {
   'de': {
+    'designTab': 'Design & Druck',
+    'designHeadline': 'Design und Druck anfragen',
+    'designBody': 'Flyer, Visitenkarten, Kleidung und digitale Gestaltung: Beschreibe dein Projekt für ein passendes Angebot.',
+    'designRequest': 'Design- oder Druckauftrag erstellen',
     'agencyRequest': 'Agenturauftrag erstellen',
     'requestType': 'Welche Art von Auftrag ist es?',
     'type.campaign': 'Kampagne',
@@ -95,6 +99,10 @@ const _copy = {
         'Beschreibe dein Vorhaben. Inhalte, Zielgruppe und Beispiele helfen uns, ein passendes Angebot vorzubereiten.',
   },
   'en': {
+    'designTab': 'Design & print',
+    'designHeadline': 'Request design or print',
+    'designBody': 'Flyers, business cards, clothing and digital designs: describe your project for a tailored quote.',
+    'designRequest': 'Create design or print request',
     'agencyRequest': 'Create agency request',
     'requestType': 'What kind of request is this?',
     'type.campaign': 'Campaign',

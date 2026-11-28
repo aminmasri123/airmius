@@ -401,6 +401,7 @@ class UserPrivacyExportService
                     'desired_deadline' => $agencyRequest->desired_deadline?->toDateString(),
                     'brand_guidelines' => $agencyRequest->brand_guidelines,
                     'contact_preference' => $agencyRequest->contact_preference,
+                    'quote_details' => $agencyRequest->quote_details,
                     'notes' => $agencyRequest->notes,
                     'status' => $agencyRequest->status,
                     'consent_at' => $agencyRequest->consent_at?->toJSON(),

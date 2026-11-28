@@ -102,6 +102,7 @@ onMounted(() => load())
             <p class="text-sm text-secondary">{{ w('Anfrage → Rückfragen → Angebot → Umsetzung → Abschluss') }}</p>
             <p class="text-sm text-secondary">{{ w('Erstellt') }}: {{ date(project.created_at) }} · {{ w('Unverbindliche Anfrage, keine automatische kostenpflichtige Aktivierung.') }}</p>
             <dl class="grid gap-5 sm:grid-cols-2">
+                <div v-for="(value, key) in (project.quote_details || {})" :key="key"><dt class="font-semibold">{{ w(key.replaceAll('_', ' ')) }}</dt><dd class="mt-2 whitespace-pre-wrap break-words text-secondary">{{ value }}</dd></div>
                 <div><dt class="font-semibold">{{ w('Auftragsart') }}</dt><dd class="mt-2 text-secondary">{{ w(requestTypes[project.request_type || 'website']) }}</dd></div>
                 <div v-for="(label, key) in { domain: 'Gewünschte Domain', goals: 'Ziele und Funktionen', target_audience: 'Zielgruppe', notes: 'Weitere Hinweise' }" :key="key">
                     <dt class="font-semibold">{{ w(label) }}</dt><dd class="mt-2 whitespace-pre-wrap break-words text-secondary">{{ project[key] || w('Noch nicht angegeben') }}</dd>

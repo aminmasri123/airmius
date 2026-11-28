@@ -993,9 +993,21 @@ const {
                 </div>
             </article>
 
-            <CommerceWebsiteRequestsPanel :clubs="websiteClubs" :website-requests="websiteRequests" :website-form="websiteForm" :website-request-modal="websiteRequestModal" @open-website-request-modal="openWebsiteRequestModal" @update:website-request-modal="websiteRequestModal = $event" @store-website-request="storeWebsiteRequest" />
         </section>
 
+        <section v-if="activeTab === 'websites' || activeTab === 'design'" class="grid gap-6">
+            <CommerceWebsiteRequestsPanel
+                :key="activeTab"
+                :design="activeTab === 'design'"
+                :clubs="websiteClubs"
+                :website-requests="websiteRequests.filter(item => activeTab === 'design' ? item.request_type && item.request_type !== 'website' : !item.request_type || item.request_type === 'website')"
+                :website-form="websiteForm"
+                :website-request-modal="websiteRequestModal"
+                @open-website-request-modal="websiteForm.request_type = activeTab === 'design' ? 'print' : 'website'; websiteForm.quote_details = {}; openWebsiteRequestModal()"
+                @update:website-request-modal="websiteRequestModal = $event"
+                @store-website-request="storeWebsiteRequest"
+            />
+        </section>
         <section v-if="activeTab === 'provider'" class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
             <article class="surface-card p-5">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">

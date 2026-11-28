@@ -50,6 +50,8 @@ class WebsiteRequestService
             'desired_deadline' => ['nullable', 'date', 'after_or_equal:today'],
             'brand_guidelines' => ['nullable', 'string', 'max:2000'],
             'contact_preference' => ['nullable', Rule::in(['app', 'email', 'phone'])],
+            'quote_details' => ['nullable', 'array'],
+            'quote_details.*' => ['nullable', 'string', 'max:1000'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'accepted_privacy' => ['accepted'],
         ];
