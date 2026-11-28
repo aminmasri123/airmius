@@ -151,7 +151,10 @@ class ClubSepaBatchTest extends TestCase
         Sanctum::actingAs($this->reviewer);
         $this->postJson($this->base()."/{$id}/approve")->assertUnprocessable();
         $this->invoice->update(['club_id' => $this->club->id]);
-        $this->postJson($this->base()."/{$id}/cancel", ['reason' => 'Korrigieren'])->assertOk();
+        $this->postJson($this->base()."/{$id}/cancel", [
+            'reason' => 'Korrigieren',
+            'confirmed' => true,
+        ])->assertOk();
         app(ClubInvoicePaymentService::class)->record($this->invoice, ['amount' => 100], $this->owner);
         $this->postJson($this->base(), [
             'invoice_ids' => [$this->invoice->id], 'collection_date' => '2026-10-10', 'notice_days' => 14,

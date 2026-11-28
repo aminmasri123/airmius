@@ -292,7 +292,9 @@ void main() {
           .where((request) => request.method == 'GET')
           .length;
       final open = find.text('Rücklastschriften importieren');
-      await tester.ensureVisible(open);
+      await tester.scrollUntilVisible(open, 300);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+      await tester.pumpAndSettle();
       await tester.tap(open);
       await tester.pumpAndSettle();
       // The server may have committed even if the upload response was lost.
@@ -802,7 +804,9 @@ void main() {
         };
       await _screen(tester, transport);
       final labels = sepaBatchLabels['de']!;
-      await tester.ensureVisible(find.text(labels['retryItem']!));
+      await tester.scrollUntilVisible(find.text(labels['retryItem']!), 300);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+      await tester.pumpAndSettle();
       await tester.tap(find.text(labels['retryItem']!));
       await tester.pumpAndSettle();
       final submit = find.widgetWithText(FilledButton, labels['retryItem']!);
@@ -812,6 +816,9 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
       await tester.pumpAndSettle();
       expect(transport.requests.where((r) => r.method == 'POST'), isEmpty);
+      await tester.scrollUntilVisible(find.text(labels['retryItem']!), 300);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+      await tester.pumpAndSettle();
       await tester.tap(find.text(labels['retryItem']!));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextFormField), 'Bank cause checked');
@@ -906,7 +913,12 @@ void main() {
         expect(action, available ? findsOneWidget : findsNothing);
         if (available) {
           final before = transport.requests.length;
-          await tester.ensureVisible(action);
+          await tester.scrollUntilVisible(action, 300);
+          await tester.drag(
+            find.byType(Scrollable).first,
+            const Offset(0, -160),
+          );
+          await tester.pumpAndSettle();
           await tester.tap(action);
           await tester.pumpAndSettle();
           expect(find.byType(TextField), findsNWidgets(4));
@@ -969,7 +981,9 @@ void main() {
       );
       expect(action, findsOneWidget);
       final before = transport.requests.length;
-      await tester.ensureVisible(action);
+      await tester.scrollUntilVisible(action, 300);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+      await tester.pumpAndSettle();
       await tester.tap(action);
       await tester.pumpAndSettle();
       expect(find.text(sepaFeeRechargeLabels['de']!['help']!), findsOneWidget);
