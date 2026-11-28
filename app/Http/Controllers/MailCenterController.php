@@ -12,6 +12,7 @@ use App\Notifications\AdminInvoiceCreated;
 use App\Notifications\AdminInvoiceStatusUpdated;
 use App\Notifications\ClubInvoiceCreated;
 use App\Notifications\InactiveAccountNotice;
+use App\Support\QueueInspection;
 use App\Support\TransactionalMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -280,8 +281,7 @@ class MailCenterController extends Controller
 
     private function queueSummary(): array
     {
-        return [
-            'pending_jobs' => Schema::hasTable('jobs') ? DB::table('jobs')->count() : 0,
+        return app(QueueInspection::class)->summary() + [
             'failed_jobs' => Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0,
             'recent_failed_jobs' => Schema::hasTable('failed_jobs')
                 ? DB::table('failed_jobs')

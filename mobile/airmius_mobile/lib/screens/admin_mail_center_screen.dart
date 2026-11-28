@@ -361,6 +361,8 @@ class _AdminMailCenterScreenState extends State<AdminMailCenterScreen> {
   Widget _queue(AirmiusJson data) {
     final queue = _mailMap(data['queue']);
     final failures = _mailList(queue['recent_failed_jobs']);
+    final groups = _mailList(queue['job_types']);
+    final recent = _mailList(queue['recent_jobs']);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -372,6 +374,39 @@ class _AdminMailCenterScreenState extends State<AdminMailCenterScreen> {
           ),
         ),
         const SizedBox(height: 12),
+        if (groups.isNotEmpty) ...[
+          ...groups.map((raw) {
+            final item = _mailMap(raw);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AirmiusPanel(
+                title: '${item['type'] ?? t('mailAdmin.unknownJob')}',
+                child: Text(
+                  '${t('mailAdmin.queueName')}: ${item['queue'] ?? '—'}\n'
+                  '${t('mailAdmin.count')}: ${_mailInt(item['total'])}\n'
+                  '${t('mailAdmin.oldest')}: ${item['oldest_at'] ?? '—'}\n'
+                  '${t('mailAdmin.attempts')}: ${_mailInt(item['max_attempts'])}',
+                ),
+              ),
+            );
+          }),
+          if (recent.isNotEmpty)
+            ExpansionTile(
+              title: Text(t('mailAdmin.recentJobs')),
+              children: recent.map((raw) {
+                final item = _mailMap(raw);
+                return ListTile(
+                  dense: true,
+                  title: Text('#${item['id']} · ${item['type'] ?? '—'}'),
+                  subtitle: Text(
+                    '${item['queue'] ?? '—'} · ${item['created_at'] ?? '—'} · '
+                    '${t('mailAdmin.attempts')}: ${_mailInt(item['attempts'])}',
+                  ),
+                );
+              }).toList(),
+            ),
+          const SizedBox(height: 12),
+        ],
         if (failures.isEmpty)
           EmptyPanel(t('mailAdmin.noQueueErrors'))
         else

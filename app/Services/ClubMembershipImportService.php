@@ -137,7 +137,9 @@ XML);
 </Relationships>
 XML);
 
-        $logoPath = public_path('img/logo/Logo-Airmius-Quervormat.png');
+        // Keep template generation usable in isolated unit tests and CLI jobs
+        // where Laravel's application container may not be bootstrapped.
+        $logoPath = dirname(__DIR__, 2).DIRECTORY_SEPARATOR.'public'.DIRECTORY_SEPARATOR.'img'.DIRECTORY_SEPARATOR.'logo'.DIRECTORY_SEPARATOR.'Logo-Airmius-Quervormat.png';
         if (is_file($logoPath)) {
             $zip->addFile($logoPath, 'xl/media/airmius-logo.png');
         } else {

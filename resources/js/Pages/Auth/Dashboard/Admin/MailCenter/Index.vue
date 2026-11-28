@@ -81,6 +81,8 @@ const preferenceForm = useForm({
 
 const deliveryRows = computed(() => props.deliveries.data || [])
 const recentFailedJobs = computed(() => props.queue.recent_failed_jobs || [])
+const queueJobTypes = computed(() => props.queue.job_types || [])
+const recentQueueJobs = computed(() => props.queue.recent_jobs || [])
 const resendCategories = reactive({})
 const senderForms = reactive(Object.fromEntries(props.senders.map((sender) => [
     sender.category,
@@ -364,6 +366,37 @@ const readyLabel = (sender) => {
                     </div>
                 </div>
                 <div class="mt-4 space-y-3">
+                    <div v-if="queueJobTypes.length" class="overflow-x-auto rounded-lg border border-border bg-bg">
+                        <table class="min-w-full divide-y divide-border text-sm">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-secondary">
+                                    <th class="px-4 py-3">{{ t('mail_center.queue.type') }}</th>
+                                    <th class="px-4 py-3">{{ t('mail_center.queue.queue_name') }}</th>
+                                    <th class="px-4 py-3">{{ t('mail_center.queue.count') }}</th>
+                                    <th class="px-4 py-3">{{ t('mail_center.queue.oldest') }}</th>
+                                    <th class="px-4 py-3">{{ t('mail_center.queue.attempts') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-border">
+                                <tr v-for="group in queueJobTypes" :key="`${group.queue}:${group.type}`">
+                                    <td class="px-4 py-3 font-semibold text-primary">{{ group.type }}</td>
+                                    <td class="px-4 py-3 text-secondary">{{ group.queue }}</td>
+                                    <td class="px-4 py-3 text-primary">{{ formatNumber(group.total) }}</td>
+                                    <td class="px-4 py-3 text-secondary">{{ formatDate(group.oldest_at) }}</td>
+                                    <td class="px-4 py-3 text-secondary">{{ group.max_attempts }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <details v-if="recentQueueJobs.length" class="rounded-lg border border-border bg-bg p-4">
+                        <summary class="cursor-pointer font-semibold text-primary">{{ t('mail_center.queue.recent') }}</summary>
+                        <div class="mt-3 space-y-2">
+                            <div v-for="job in recentQueueJobs" :key="job.id" class="flex flex-col gap-1 rounded-lg border border-border p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+                                <span class="font-semibold text-primary">#{{ job.id }} · {{ job.type }}</span>
+                                <span class="text-secondary">{{ job.queue }} · {{ formatDate(job.created_at) }} · {{ t('mail_center.queue.attempts') }}: {{ job.attempts }}</span>
+                            </div>
+                        </div>
+                    </details>
                     <div v-if="!recentFailedJobs.length" class="rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
                         {{ t('mail_center.queue.empty') }}
                     </div>

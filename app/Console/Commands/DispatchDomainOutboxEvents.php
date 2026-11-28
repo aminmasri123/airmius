@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Jobs\PublishDomainOutboxEvent;
 use App\Models\DomainOutboxEvent;
 use Illuminate\Console\Command;
+use Throwable;
 
 class DispatchDomainOutboxEvents extends Command
 {
@@ -19,14 +20,40 @@ class DispatchDomainOutboxEvents extends Command
             ->whereNull('published_at')
             ->where('available_at', '<=', now())
             ->where(function ($query) {
-                $query->whereNull('processing_at')
-                    ->orWhere('processing_at', '<', now()->subMinutes(5));
+                $query->whereNull('queued_at')
+                    ->orWhere('queued_at', '<', now()->subMinutes(5));
             })
+            ->whereNull('processing_at')
             ->orderBy('occurred_at')
             ->limit($limit)
             ->pluck('id');
 
-        $ids->each(fn (string $id) => PublishDomainOutboxEvent::dispatch($id));
+        $enqueued = 0;
+        foreach ($ids as $id) {
+            $claimed = DomainOutboxEvent::query()
+                ->whereKey($id)
+                ->whereNull('published_at')
+                ->whereNull('processing_at')
+                ->where(function ($query) {
+                    $query->whereNull('queued_at')
+                        ->orWhere('queued_at', '<', now()->subMinutes(5));
+                })
+                ->update(['queued_at' => now(), 'updated_at' => now()]);
+
+            if ($claimed === 1) {
+                try {
+                    PublishDomainOutboxEvent::dispatch($id);
+                    $enqueued++;
+                } catch (Throwable $exception) {
+                    DomainOutboxEvent::query()->whereKey($id)->update([
+                        'queued_at' => null,
+                        'updated_at' => now(),
+                    ]);
+
+                    throw $exception;
+                }
+            }
+        }
 
         $pruned = 0;
         if ($this->option('prune-days') !== null) {
@@ -37,7 +64,7 @@ class DispatchDomainOutboxEvents extends Command
                 ->delete();
         }
 
-        $this->info("Enqueued {$ids->count()} domain event(s); pruned {$pruned}.");
+        $this->info("Enqueued {$enqueued} domain event(s); pruned {$pruned}.");
 
         return self::SUCCESS;
     }

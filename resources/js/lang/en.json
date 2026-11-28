@@ -5631,7 +5631,13 @@
       "pending": "Open jobs",
       "failed": "Failed jobs",
       "empty": "No current failed jobs found.",
-      "job": "Job"
+      "job": "Job",
+      "type": "Task type",
+      "queue_name": "Queue",
+      "count": "Count",
+      "oldest": "Oldest entry",
+      "attempts": "Attempts",
+      "recent": "Latest individual tasks"
     },
     "audit": {
       "title": "Mailbox audit",

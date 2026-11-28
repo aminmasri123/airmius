@@ -10383,14 +10383,19 @@ const _membershipActionsDe = {
   'membership.permissionsFailed':
       'Berechtigungen konnten nicht gespeichert werden',
   'membership.access.title': 'Rollen und Zugriff',
-  'membership.access.templateIntro': 'Standardrollen für typische Vereinsaufgaben. Tippe auf eine Rolle, um Beispiel und Umfang zu sehen.',
+  'membership.access.templateIntro':
+      'Standardrollen für typische Vereinsaufgaben. Tippe auf eine Rolle, um Beispiel und Umfang zu sehen.',
   'membership.access.templateSearch': 'Standardrolle suchen',
-  'membership.access.templateRisk': 'Erweiterter Zugriff: nur bewusst an vertrauenswürdige Personen vergeben.',
+  'membership.access.templateRisk':
+      'Erweiterter Zugriff: nur bewusst an vertrauenswürdige Personen vergeben.',
   'membership.access.templateAssign': 'Diese Rolle zuweisen',
   'membership.access.templatePermissions': 'Enthaltene Rechte',
-  'membership.access.templateUnavailable': 'Du kannst nur Rechte vergeben, die du selbst besitzt.',
-  'membership.access.templateFirst': 'Noch keine Rolle vorhanden. Wähle unten eine Standardrolle.',
-  'membership.access.templateChanged': 'Diese Standardrolle wurde angepasst oder deaktiviert. Prüfe die vorhandene Rolle vor der Zuweisung.',
+  'membership.access.templateUnavailable':
+      'Du kannst nur Rechte vergeben, die du selbst besitzt.',
+  'membership.access.templateFirst':
+      'Noch keine Rolle vorhanden. Wähle unten eine Standardrolle.',
+  'membership.access.templateChanged':
+      'Diese Standardrolle wurde angepasst oder deaktiviert. Prüfe die vorhandene Rolle vor der Zuweisung.',
   'membership.access.permissions': 'Einzelrechte',
   'membership.access.roles': 'Rollen',
   'membership.access.delegations': 'Vertretungen',
@@ -10594,7 +10599,8 @@ const _membershipActionsDe = {
   'membership.importAction.import': 'Import',
   'membership.bankPreviewTitle': 'Bankdatei prüfen',
   'membership.bankMap.title': 'Bankspalten zuordnen',
-  'membership.bankMap.body': 'Wähle mindestens Datum und eingegangenen Betrag. Prüfe die weiteren Spalten für passende Rechnungsvorschläge.',
+  'membership.bankMap.body':
+      'Wähle mindestens Datum und eingegangenen Betrag. Prüfe die weiteren Spalten für passende Rechnungsvorschläge.',
   'membership.bankMap.noColumns': 'Keine CSV-Spalten erkannt.',
   'membership.bankMap.none': 'Nicht zuordnen',
   'membership.bankMap.date': 'Buchungsdatum',
@@ -10900,14 +10906,19 @@ final _membershipActionsEn = {
   'membership.permissionsUpdated': 'Permissions updated.',
   'membership.permissionsFailed': 'Permissions could not be saved',
   'membership.access.title': 'Roles and access',
-  'membership.access.templateIntro': 'Standard roles for common club tasks. Open a role to see its example and scope.',
+  'membership.access.templateIntro':
+      'Standard roles for common club tasks. Open a role to see its example and scope.',
   'membership.access.templateSearch': 'Search standard roles',
-  'membership.access.templateRisk': 'Elevated access: assign only to trusted people deliberately.',
+  'membership.access.templateRisk':
+      'Elevated access: assign only to trusted people deliberately.',
   'membership.access.templateAssign': 'Assign this role',
   'membership.access.templatePermissions': 'Included permissions',
-  'membership.access.templateUnavailable': 'You can only grant permissions that you hold yourself.',
-  'membership.access.templateFirst': 'No role exists yet. Choose a standard role below.',
-  'membership.access.templateChanged': 'This standard role was changed or disabled. Review the existing role before assigning it.',
+  'membership.access.templateUnavailable':
+      'You can only grant permissions that you hold yourself.',
+  'membership.access.templateFirst':
+      'No role exists yet. Choose a standard role below.',
+  'membership.access.templateChanged':
+      'This standard role was changed or disabled. Review the existing role before assigning it.',
   'membership.access.permissions': 'Individual permissions',
   'membership.access.roles': 'Roles',
   'membership.access.delegations': 'Delegations',
@@ -11110,7 +11121,8 @@ final _membershipActionsEn = {
   'membership.importAction.import': 'Import',
   'membership.bankPreviewTitle': 'Review bank file',
   'membership.bankMap.title': 'Map bank columns',
-  'membership.bankMap.body': 'Select at least the booking date and incoming amount. Check the other columns for invoice suggestions.',
+  'membership.bankMap.body':
+      'Select at least the booking date and incoming amount. Check the other columns for invoice suggestions.',
   'membership.bankMap.noColumns': 'No CSV columns found.',
   'membership.bankMap.none': 'Do not map',
   'membership.bankMap.date': 'Booking date',
@@ -11414,14 +11426,19 @@ final _membershipActionsFr = {
   'membership.permissionsUpdated': 'Autorisations mises à jour.',
   'membership.permissionsFailed': 'Impossible d’enregistrer les autorisations',
   'membership.access.title': 'Rôles et accès',
-  'membership.access.templateIntro': 'Rôles types pour les tâches du club. Ouvrez un rôle pour voir un exemple et sa portée.',
+  'membership.access.templateIntro':
+      'Rôles types pour les tâches du club. Ouvrez un rôle pour voir un exemple et sa portée.',
   'membership.access.templateSearch': 'Rechercher un rôle type',
-  'membership.access.templateRisk': 'Accès étendu : à confier uniquement à une personne de confiance.',
+  'membership.access.templateRisk':
+      'Accès étendu : à confier uniquement à une personne de confiance.',
   'membership.access.templateAssign': 'Attribuer ce rôle',
   'membership.access.templatePermissions': 'Autorisations incluses',
-  'membership.access.templateUnavailable': 'Vous ne pouvez accorder que les droits que vous possédez.',
-  'membership.access.templateFirst': 'Aucun rôle disponible. Choisissez un rôle type ci-dessous.',
-  'membership.access.templateChanged': 'Ce rôle type a été modifié ou désactivé. Vérifiez le rôle existant avant de l’attribuer.',
+  'membership.access.templateUnavailable':
+      'Vous ne pouvez accorder que les droits que vous possédez.',
+  'membership.access.templateFirst':
+      'Aucun rôle disponible. Choisissez un rôle type ci-dessous.',
+  'membership.access.templateChanged':
+      'Ce rôle type a été modifié ou désactivé. Vérifiez le rôle existant avant de l’attribuer.',
   'membership.access.permissions': 'Droits individuels',
   'membership.access.roles': 'Rôles',
   'membership.access.delegations': 'Délégations',
@@ -11624,7 +11641,8 @@ final _membershipActionsFr = {
   'membership.importAction.import': 'Import',
   'membership.bankPreviewTitle': 'Vérifier le fichier bancaire',
   'membership.bankMap.title': 'Associer les colonnes bancaires',
-  'membership.bankMap.body': 'Choisissez au moins la date et le montant reçu. Vérifiez les autres colonnes pour les suggestions de factures.',
+  'membership.bankMap.body':
+      'Choisissez au moins la date et le montant reçu. Vérifiez les autres colonnes pour les suggestions de factures.',
   'membership.bankMap.noColumns': 'Aucune colonne CSV trouvée.',
   'membership.bankMap.none': 'Ne pas associer',
   'membership.bankMap.date': 'Date de comptabilisation',
@@ -11926,14 +11944,19 @@ final _membershipActionsAr = {
   'membership.permissionsUpdated': 'تم تحديث الصلاحيات.',
   'membership.permissionsFailed': 'تعذر حفظ الصلاحيات',
   'membership.access.title': 'الأدوار والوصول',
-  'membership.access.templateIntro': 'أدوار جاهزة لمهام النادي المعتادة. افتح الدور لمعرفة المثال ونطاقه.',
+  'membership.access.templateIntro':
+      'أدوار جاهزة لمهام النادي المعتادة. افتح الدور لمعرفة المثال ونطاقه.',
   'membership.access.templateSearch': 'البحث عن دور جاهز',
-  'membership.access.templateRisk': 'صلاحيات واسعة: امنحها فقط لشخص موثوق بعد مراجعتها.',
+  'membership.access.templateRisk':
+      'صلاحيات واسعة: امنحها فقط لشخص موثوق بعد مراجعتها.',
   'membership.access.templateAssign': 'تعيين هذا الدور',
   'membership.access.templatePermissions': 'الصلاحيات المضمنة',
-  'membership.access.templateUnavailable': 'يمكنك منح الصلاحيات التي تملكها فقط.',
-  'membership.access.templateFirst': 'لا يوجد دور بعد. اختر دوراً جاهزاً أدناه.',
-  'membership.access.templateChanged': 'تم تعديل هذا الدور أو تعطيله. راجع الدور الحالي قبل تعيينه.',
+  'membership.access.templateUnavailable':
+      'يمكنك منح الصلاحيات التي تملكها فقط.',
+  'membership.access.templateFirst':
+      'لا يوجد دور بعد. اختر دوراً جاهزاً أدناه.',
+  'membership.access.templateChanged':
+      'تم تعديل هذا الدور أو تعطيله. راجع الدور الحالي قبل تعيينه.',
   'membership.access.permissions': 'الصلاحيات الفردية',
   'membership.access.roles': 'الأدوار',
   'membership.access.delegations': 'التفويضات',
@@ -12134,7 +12157,8 @@ final _membershipActionsAr = {
   'membership.importAction.import': 'استيراد',
   'membership.bankPreviewTitle': 'مراجعة الملف البنكي',
   'membership.bankMap.title': 'ربط أعمدة البنك',
-  'membership.bankMap.body': 'اختر تاريخ القيد والمبلغ الوارد على الأقل. راجع الأعمدة الأخرى لاقتراحات الفواتير.',
+  'membership.bankMap.body':
+      'اختر تاريخ القيد والمبلغ الوارد على الأقل. راجع الأعمدة الأخرى لاقتراحات الفواتير.',
   'membership.bankMap.noColumns': 'لم يتم العثور على أعمدة CSV.',
   'membership.bankMap.none': 'عدم الربط',
   'membership.bankMap.date': 'تاريخ القيد',
@@ -16993,6 +17017,12 @@ const _mailAdminDe = {
   'mailAdmin.noDeliveries': 'Keine Mail-Zustellungen vorhanden.',
   'mailAdmin.noSenders': 'Keine Postfächer konfiguriert.',
   'mailAdmin.noQueueErrors': 'Keine aktuellen Warteschlangenfehler.',
+  'mailAdmin.queueName': 'Warteschlange',
+  'mailAdmin.count': 'Anzahl',
+  'mailAdmin.oldest': 'Ältester Eintrag',
+  'mailAdmin.attempts': 'Versuche',
+  'mailAdmin.recentJobs': 'Neueste einzelne Aufgaben',
+  'mailAdmin.unknownJob': 'Unbekannte Aufgabe',
   'mailAdmin.resend': 'Erneut senden',
   'mailAdmin.resolve': 'Als erledigt markieren',
   'mailAdmin.resolveBody':
@@ -17341,6 +17371,12 @@ final _mailAdminEn = {
   'mailAdmin.noDeliveries': 'No mail deliveries available.',
   'mailAdmin.noSenders': 'No mailboxes configured.',
   'mailAdmin.noQueueErrors': 'No recent queue failures.',
+  'mailAdmin.queueName': 'Queue',
+  'mailAdmin.count': 'Count',
+  'mailAdmin.oldest': 'Oldest entry',
+  'mailAdmin.attempts': 'Attempts',
+  'mailAdmin.recentJobs': 'Latest individual tasks',
+  'mailAdmin.unknownJob': 'Unknown task',
   'mailAdmin.resend': 'Resend',
   'mailAdmin.resolve': 'Mark as resolved',
   'mailAdmin.resolveBody':

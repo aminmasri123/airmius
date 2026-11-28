@@ -33,6 +33,7 @@ class PublishDomainOutboxEvent implements ShouldQueue
             })
             ->update([
                 'processing_at' => now(),
+                'queued_at' => null,
                 'attempts' => DB::raw('attempts + 1'),
                 'updated_at' => now(),
             ]);
@@ -48,12 +49,14 @@ class PublishDomainOutboxEvent implements ShouldQueue
 
             $event->forceFill([
                 'published_at' => now(),
+                'queued_at' => null,
                 'processing_at' => null,
                 'last_error' => null,
             ])->save();
         } catch (Throwable $exception) {
             $event->forceFill([
                 'processing_at' => null,
+                'queued_at' => null,
                 'last_error' => mb_substr($exception->getMessage(), 0, 4000),
             ])->save();
 

@@ -5612,7 +5612,13 @@
       "pending": "Offene Jobs",
       "failed": "Fehlerjobs",
       "empty": "Keine aktuellen Fehlerjobs gefunden.",
-      "job": "Job"
+      "job": "Job",
+      "type": "Aufgabentyp",
+      "queue_name": "Warteschlange",
+      "count": "Anzahl",
+      "oldest": "Ältester Eintrag",
+      "attempts": "Versuche",
+      "recent": "Neueste einzelne Aufgaben"
     },
     "audit": {
       "title": "Mailbox-Audit",

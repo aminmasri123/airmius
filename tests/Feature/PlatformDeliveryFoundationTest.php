@@ -157,6 +157,27 @@ class PlatformDeliveryFoundationTest extends TestCase
         $this->assertNotNull(DomainOutboxEvent::query()->findOrFail($event->id)->published_at);
     }
 
+    public function test_domain_outbox_dispatcher_does_not_enqueue_the_same_pending_event_every_minute(): void
+    {
+        Queue::fake();
+        $user = User::factory()->create();
+
+        $event = app(DomainEventPublisher::class)->record(
+            'identity.user.profile_updated.v1',
+            $user,
+            payload: ['changed_fields' => ['language']],
+        );
+
+        $this->artisan('airmius:dispatch-domain-outbox --limit=20')->assertSuccessful();
+        $this->artisan('airmius:dispatch-domain-outbox --limit=20')->assertSuccessful();
+
+        Queue::assertPushed(
+            PublishDomainOutboxEvent::class,
+            1,
+        );
+        $this->assertNotNull($event->refresh()->queued_at);
+    }
+
     public function test_sensitive_data_rules_are_purpose_bound_and_deny_marketing_by_default(): void
     {
         $user = User::factory()->create();

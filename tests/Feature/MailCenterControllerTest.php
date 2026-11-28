@@ -9,7 +9,9 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\TransactionalMail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -25,7 +27,7 @@ class MailCenterControllerTest extends TestCase
             'from_name' => 'Airmius Support', 'active' => true,
         ]);
         $this->app->instance('env', 'production');
-        $mail = app(\App\Support\TransactionalMail::class);
+        $mail = app(TransactionalMail::class);
         foreach (config('airmius_mail.senders') as $category => $sender) {
             $actual = $mail->transportFor($category);
             $this->assertSame('ses', $actual['mailer']);
@@ -82,6 +84,43 @@ class MailCenterControllerTest extends TestCase
                 ->where('deliveries.data.0.mail_type', 'invoice.created')
                 ->where('deliveries.data.0.status', 'failed')
                 ->where('deliveries.data.0.resendable', false)
+            );
+    }
+
+    public function test_mail_center_lists_safe_queue_job_groups_and_recent_jobs(): void
+    {
+        $admin = User::factory()->create();
+        $this->grantPermissions($admin, ['system.manage']);
+        $now = now()->timestamp;
+
+        DB::table('jobs')->insert([
+            [
+                'queue' => 'default',
+                'payload' => json_encode(['displayName' => 'App\\Jobs\\PublishDomainOutboxEvent']),
+                'attempts' => 0,
+                'reserved_at' => null,
+                'available_at' => $now,
+                'created_at' => $now,
+            ],
+            [
+                'queue' => 'default',
+                'payload' => json_encode(['displayName' => 'App\\Jobs\\PublishDomainOutboxEvent']),
+                'attempts' => 1,
+                'reserved_at' => null,
+                'available_at' => $now,
+                'created_at' => $now,
+            ],
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.mail-center.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('queue.pending_jobs', 2)
+                ->where('queue.job_types.0.type', 'PublishDomainOutboxEvent')
+                ->where('queue.job_types.0.total', 2)
+                ->where('queue.recent_jobs.0.type', 'PublishDomainOutboxEvent')
+                ->missing('queue.recent_jobs.0.payload')
             );
     }
 

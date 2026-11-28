@@ -10,6 +10,7 @@ use App\Models\MailSenderSetting;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\ScheduledCommunicationService;
+use App\Support\QueueInspection;
 use App\Support\TransactionalMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -66,8 +67,7 @@ class AdminMailController extends Controller
                 'resolved' => MailDelivery::query()->where('status', 'resolved')->count(),
                 'last_24h' => MailDelivery::query()->where('created_at', '>=', now()->subDay())->count(),
             ],
-            'queue' => [
-                'pending_jobs' => Schema::hasTable('jobs') ? DB::table('jobs')->count() : 0,
+            'queue' => app(QueueInspection::class)->summary() + [
                 'failed_jobs' => Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0,
                 'queued_mail_deliveries' => MailDelivery::query()->where('status', 'queued')->count(),
                 'retrying_mail_deliveries' => MailDelivery::query()

@@ -48,8 +48,16 @@ class DomainEventPublisher
 
         DB::afterCommit(function () use ($event): void {
             try {
+                DomainOutboxEvent::query()
+                    ->whereKey($event->id)
+                    ->whereNull('published_at')
+                    ->whereNull('queued_at')
+                    ->update(['queued_at' => now(), 'updated_at' => now()]);
                 PublishDomainOutboxEvent::dispatch($event->id);
             } catch (Throwable $exception) {
+                DomainOutboxEvent::query()
+                    ->whereKey($event->id)
+                    ->update(['queued_at' => null, 'updated_at' => now()]);
                 report($exception);
             }
         });
