@@ -29,6 +29,41 @@ class AdDeliveryPlacementTest extends TestCase
         ], $attributes));
     }
 
+    public function test_native_click_uses_bearer_consent_without_browser_redirect_and_deduplicates(): void
+    {
+        $this->freezeTime();
+        $user = User::factory()->create(['ads_measurement_consent' => true]);
+        $campaign = $this->campaign();
+        $headers = ['Authorization' => 'Bearer '.$user->createToken('click')->plainTextToken];
+        $token = $this->getJson('/api/v1/ads/active?placement=feed&defer_impression=1', $headers)->assertOk()->json('impression_token');
+        $this->assertNotEmpty($token);
+        foreach (range(1, 2) as $attempt) {
+            $this->postJson('/api/v1/ads/click', ['token' => $token], $headers)
+                ->assertOk()->assertJsonPath('target_url', $campaign->target_url)->assertHeaderMissing('Location');
+        }
+        $this->assertSame(1, (int) $campaign->fresh()->clicks);
+        $this->assertDatabaseHas('ad_events', ['ad_campaign_id' => $campaign->id, 'user_id' => $user->id, 'event_type' => 'click']);
+        $this->postJson('/api/v1/ads/click', ['token' => 'tampered'], $headers)->assertUnprocessable();
+        $this->travel(3)->hours();
+        $this->postJson('/api/v1/ads/click', ['token' => $token], $headers)->assertForbidden();
+    }
+
+    public function test_native_click_opens_destination_without_measurement_consent_and_rejects_foreign_delivery(): void
+    {
+        $user = User::factory()->create(['ads_measurement_consent' => false]);
+        $campaign = $this->campaign();
+        $headers = ['Authorization' => 'Bearer '.$user->createToken('click')->plainTextToken];
+        $token = $this->getJson('/api/v1/ads/active?placement=feed&defer_impression=1', $headers)->assertOk()->json('impression_token');
+        $this->postJson('/api/v1/ads/click', ['token' => $token], $headers)->assertOk()->assertJsonPath('target_url', $campaign->target_url);
+        $this->assertSame(0, (int) $campaign->fresh()->clicks);
+        $this->assertDatabaseCount('ad_events', 0);
+        // A token signed for a different viewer must not count for this user.
+        $foreign = \Illuminate\Support\Facades\Crypt::encryptString(json_encode(['campaign' => $campaign->id, 'viewer' => $user->id + 1, 'expires' => now()->addHour()->timestamp]));
+        $this->postJson('/api/v1/ads/click', ['token' => $foreign], $headers)->assertForbidden();
+        $campaign->update(['status' => 'paused']);
+        $this->postJson('/api/v1/ads/click', ['token' => $token], $headers)->assertNotFound();
+    }
+
     public function test_all_placements_and_image_formats_are_delivered_on_web_and_mobile(): void
     {
         $this->freezeTime();

@@ -620,6 +620,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
         Route::post('/ads/impression', [MobileCommerceCheckoutController::class, 'confirmAdImpression'])->middleware('throttle:120,1');
+        Route::post('/ads/click', [MobileCommerceCheckoutController::class, 'clickDeliveredAd'])->middleware('throttle:120,1')->name('ads.click');
         Route::get('/users/{user}/posts', [FeedController::class, 'userPosts'])->name('users.posts.index');
         Route::post('/post-images', PostImageUploadController::class)->middleware('throttle:file-uploads')->name('post-images.store');
         Route::post('/feed', [FeedController::class, 'store'])->name('feed.store');

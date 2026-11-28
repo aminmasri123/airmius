@@ -2812,6 +2812,29 @@ class CommerceCheckoutController extends Controller
         });
     }
 
+    public function clickDeliveredAd(Request $request)
+    {
+        $data = $request->validate(['token' => ['required', 'string', 'max:4096']]);
+        try {
+            $delivery = json_decode(\Illuminate\Support\Facades\Crypt::decryptString($data['token']), true, flags: JSON_THROW_ON_ERROR);
+        } catch (\Throwable) {
+            abort(422);
+        }
+        abort_unless(($delivery['viewer'] ?? null) === $request->user()?->id && ($delivery['expires'] ?? 0) >= now()->timestamp, 403);
+        $campaign = AdCampaign::findOrFail($delivery['campaign']);
+        abort_unless($campaign->status === 'active'
+            && (! $campaign->starts_at || $campaign->starts_at->lte(now()))
+            && (! $campaign->ends_at || $campaign->ends_at->gt(now())), 404);
+        $creative = ! empty($delivery['creative']) ? $campaign->creatives()->findOrFail($delivery['creative']) : null;
+        // Return the destination instead of redirecting the authenticated API
+        // request: the bearer token must never be forwarded to the advertiser.
+        $this->recordAdEvent($request, $campaign, 'click', 0, [], $creative);
+
+        return response()->json([
+            'target_url' => $this->safeAdTargetUrl($creative?->target_url ?: $campaign->target_url),
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
     public function clickAd(Request $request, AdCampaign $campaign)
     {
         $creative = $this->creativeFromRequest($request, $campaign);

@@ -46,6 +46,7 @@ class _AirmiusAdSlotState extends State<AirmiusAdSlot>
   final _visibilityKey = GlobalKey();
   DateTime? _visibleSince;
   bool _impressionSent = false;
+  bool _opening = false;
   int _request = 0;
 
   AirmiusApiClient get _client {
@@ -191,15 +192,27 @@ class _AirmiusAdSlotState extends State<AirmiusAdSlot>
 
   Future<void> _open() async {
     final ad = _ad;
-    if (ad == null) return;
-    final uri = safeExternalHttpUrl('${ad['click_url']}', httpsOnly: false);
+    if (ad == null || _opening) return;
+    _opening = true;
     try {
+      var destination = '${ad['click_url']}';
+      if (ad['impression_token'] != null &&
+          AirmiusServicesScope.of(context).authState.session != null) {
+        final result = await _client.clickDeliveredAd(
+          '${ad['impression_token']}',
+        );
+        destination = '${result['target_url'] ?? ''}';
+      }
+      if (!mounted) return;
+      final uri = safeExternalHttpUrl(destination, httpsOnly: false);
       if (uri != null &&
           await launchUrl(uri, mode: LaunchMode.externalApplication)) {
         return;
       }
     } catch (_) {
       // Show the same friendly failure for unsupported URLs and launcher errors.
+    } finally {
+      _opening = false;
     }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'package:airmius/core/airmius_auth_state.dart';
+import 'package:airmius/core/airmius_api_models.dart';
+import 'package:flutter/services.dart';
 
 import 'package:airmius/core/airmius_api_client.dart';
 import 'package:airmius/core/airmius_l10n.dart';
@@ -27,6 +30,20 @@ class _AdTransport implements AirmiusApiTransport {
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
     requests.add(request);
+    if (request.path == '/api/v1/me') {
+      return AirmiusApiResponse(
+        statusCode: 200,
+        body: jsonEncode({
+          'data': {'id': 1, 'name': 'Viewer', 'email': 'viewer@example.test'},
+        }),
+      );
+    }
+    if (request.path == '/api/v1/ads/click') {
+      return AirmiusApiResponse(
+        statusCode: 200,
+        body: jsonEncode({'target_url': 'https://advertiser.example/club'}),
+      );
+    }
     final isAd = request.path.endsWith('/ads/active');
     return AirmiusApiResponse(
       statusCode: isAd && fail ? 503 : 200,
@@ -38,19 +55,37 @@ class _AdTransport implements AirmiusApiTransport {
 Future<void> _pump(
   WidgetTester tester,
   _AdTransport transport,
-  Widget child,
-) async {
+  Widget child, {
+  bool signedIn = false,
+}) async {
   tester.view.physicalSize = const Size(390, 1800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+  final tokens = AirmiusMemoryTokenStore();
+  if (signedIn) {
+    await tokens.write(
+      AirmiusSession(
+        token: 'viewer-bearer',
+        locale: 'de',
+        user: const AirmiusUser(
+          role: 'member',
+          id: 1,
+          name: 'Viewer',
+          email: 'viewer@example.test',
+        ),
+      ),
+    );
+  }
   final services = AirmiusServiceContainer(
     environment: const AirmiusAppEnvironment(
       apiBaseUrl: 'https://example.test',
       enableOfflineQueue: false,
     ),
     transport: transport,
+    tokenStore: tokens,
   );
+  if (signedIn) await services.authState.restore();
   await tester.pumpWidget(
     AirmiusScope(
       language: AirmiusLanguage.de,
@@ -68,6 +103,49 @@ Future<void> _pump(
 }
 
 void main() {
+  testWidgets(
+    'signed in ad click is recorded before opening the direct destination',
+    (tester) async {
+      final transport = _AdTransport();
+      transport.ad!['impression_token'] = 'signed-delivery';
+      final launches = <MethodCall>[];
+      const channel = MethodChannel('plugins.flutter.io/url_launcher');
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        launches.add(call);
+        expect(
+          transport.requests.any((r) => r.path == '/api/v1/ads/click'),
+          isTrue,
+        );
+        return true;
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+      await _pump(
+        tester,
+        transport,
+        const AirmiusAdSlot(placement: 'feed'),
+        signedIn: true,
+      );
+      await tester.tap(find.text('Verein entdecken'));
+      await tester.pumpAndSettle();
+      final request = transport.requests.singleWhere(
+        (r) => r.path == '/api/v1/ads/click',
+      );
+      expect(request.method, 'POST');
+      expect(request.body, {'token': 'signed-delivery'});
+      expect(request.headers['Authorization'], 'Bearer viewer-bearer');
+      expect(launches, isNotEmpty);
+      expect(launches.last.arguments['url'], 'https://advertiser.example/club');
+      expect('${launches.last.arguments}', isNot(contains('viewer-bearer')));
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
   for (final format in <String, double>{
     'feed_square': 1,
     'feed_portrait': 4 / 5,

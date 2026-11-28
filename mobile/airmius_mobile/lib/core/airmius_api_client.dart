@@ -3852,6 +3852,9 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> confirmAdImpression(String deliveryToken) => _json('POST', '/api/v1/ads/impression', body: {'token': deliveryToken});
 
+  Future<AirmiusJson> clickDeliveredAd(String deliveryToken) =>
+      _json('POST', '/api/v1/ads/click', body: {'token': deliveryToken});
+
   Future<AirmiusJson> publicRecruitingJobs({
     String? query,
     String? type,
