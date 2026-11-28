@@ -15,6 +15,7 @@ import 'club_governance_screen.dart';
 import 'club_organization_screen.dart';
 import 'club_service_hours_screen.dart';
 import 'club_announcement_screen.dart';
+import 'club_newsletter_subscribers_screen.dart';
 import 'club_asset_inventory_checkout_suite_screen.dart';
 import 'club_jobs_screen.dart';
 import 'club_volunteer_candidates_screen.dart';
@@ -1387,6 +1388,16 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
         color: theme.colorScheme.secondary,
         onTap: _openMessages,
       ),
+      if (club.canPublishAnnouncements)
+        _ClubArea(
+          icon: Icons.mark_email_read_outlined,
+          title: t('clubHub.newsletterManagement'),
+          body: t('clubHub.newsletterManagementBody'),
+          color: theme.colorScheme.tertiary,
+          onTap: () => _open(
+            ClubNewsletterSubscribersScreen(clubId: club.id),
+          ),
+        ),
       if (club.canViewRecruiting || club.canEditJobs)
         _ClubArea(
           icon: Icons.work_outline,
@@ -1424,15 +1435,29 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
     final permissions = club.management?.permissions['effective'];
     final website =
         permissions is JsonMap && permissions['website_request.create'] == true;
+    final advertising =
+        permissions is JsonMap && permissions['advertising.edit'] == true;
     final shop = subscription?['can_open_shop'] == true;
     final booking = subscription?['can_book_shop'] == true;
-    if (!website && !shop && !booking) return const SizedBox.shrink();
-    return Card(
+    if (!website && !advertising && !shop && !booking) {
+      return const SizedBox.shrink();
+    }
+    return AirmiusPanel(
+      padding: EdgeInsets.zero,
+      borderColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
       child: ExpansionTile(
         key: ValueKey('club-commerce-${club.id}'),
         leading: const Icon(Icons.storefront_outlined),
-        title: const Text('Commerce'),
+        title: Text(t('commerceAdv.clubArea')),
         children: [
+          if (advertising)
+            ListTile(
+              leading: const Icon(Icons.campaign_outlined),
+              title: Text(t('commerceAdv.campaigns')),
+              onTap: () => _open(
+                const CommerceCenterScreen(initialSection: 'ads'),
+              ),
+            ),
           if (shop)
             ListTile(
               title: Text(t('seller.title')),

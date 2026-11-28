@@ -68,6 +68,10 @@ Future<void> _pump(
 }
 
 Future<void> _openRecordedPayments(WidgetTester tester) async {
+  final bookings = find.byKey(const ValueKey('finance-view-bookings'));
+  await tester.ensureVisible(bookings);
+  await tester.tap(bookings);
+  await tester.pumpAndSettle();
   final section = find.text('Erfasste Zahlungen').last;
   await tester.ensureVisible(section);
   await tester.tap(section);
@@ -86,6 +90,48 @@ Map<String, dynamic> _payment(String status) => {
 };
 
 void main() {
+  testWidgets(
+    'finance overview separates balances and navigates to focused lists',
+    (tester) async {
+      await _pump(tester, {
+        'can_manage': true,
+        'payments': [_payment('paid')],
+      });
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pumpAndSettle();
+      expect(find.text('Noch nicht eingegangen'), findsOneWidget);
+      expect(find.text('Erfasste Zahlungen'), findsNothing);
+
+      for (final view in [
+        'invoices',
+        'bookings',
+        'bank',
+        'accounts',
+        'overview',
+      ]) {
+        final chip = find.byKey(ValueKey('finance-view-$view'));
+        await tester.ensureVisible(chip);
+        await tester.tap(chip);
+        await tester.pumpAndSettle();
+        expect(tester.widget<ChoiceChip>(chip).selected, isTrue);
+        expect(tester.takeException(), isNull);
+      }
+
+      final income = find.byTooltip('Einnahme buchen');
+      await tester.ensureVisible(income);
+      await tester.tap(income);
+      await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(PopupMenuItem<String>, 'Spende erfassen'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(PopupMenuItem<String>, 'Ausgabe buchen'),
+        findsNothing,
+      );
+    },
+  );
+
   testWidgets('donations from nonmembers show the donor on the receipt', (
     tester,
   ) async {
@@ -127,7 +173,7 @@ void main() {
         },
       ],
     });
-    final menu = find.byTooltip('Einnahme oder Ausgabe eintragen');
+    final menu = find.byTooltip('Einnahme buchen');
     await tester.ensureVisible(menu);
     await tester.tap(menu);
     await tester.pumpAndSettle();

@@ -144,7 +144,7 @@ class TrainingPlansLogsScreen extends StatefulWidget {
 }
 
 class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
-  String _planQuery='', _planStatus='';
+  String _planQuery = '', _planStatus = '';
   Future<_TrainingData>? _future;
   int _tab = 0;
   bool _busy = false;
@@ -177,7 +177,9 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
 
   Future<_TrainingData> _load() async {
     final responses = await Future.wait([
-      loadTrainingPlanCatalog((page)=>_client.trainingPlans(page:page,perPage:100)),
+      loadTrainingPlanCatalog(
+        (page) => _client.trainingPlans(page: page, perPage: 100),
+      ),
       loadTrainingCatalog((page) => _client.trainingLogs(page: page)),
     ]);
     final capabilities = responses[0]['capabilities'];
@@ -389,9 +391,24 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
     required bool canManagePlans,
     required bool canCreatePersonalPlans,
   }) {
-    final counts=<String,int>{'draft':0,'published':0};
-    for(final plan in plans) { counts.update(plan.status,(n)=>n+1,ifAbsent:()=>1); }
-    final filtered=plans.where((plan)=>matchesTrainingPlan(text:[plan.title,plan.description ?? '',...plan.assignedAudienceNames].join(' '),status:plan.status,query:_planQuery,selectedStatus:_planStatus)).toList();
+    final counts = <String, int>{'draft': 0, 'published': 0};
+    for (final plan in plans) {
+      counts.update(plan.status, (n) => n + 1, ifAbsent: () => 1);
+    }
+    final filtered = plans
+        .where(
+          (plan) => matchesTrainingPlan(
+            text: [
+              plan.title,
+              plan.description ?? '',
+              ...plan.assignedAudienceNames,
+            ].join(' '),
+            status: plan.status,
+            query: _planQuery,
+            selectedStatus: _planStatus,
+          ),
+        )
+        .toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -404,10 +421,24 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
           ),
           const SizedBox(height: 12),
         ],
-        if(plans.isNotEmpty) ...[
-          TrainingPlanListToolbar(query:_planQuery,status:_planStatus,counts:counts,onQuery:(v)=>setState(()=>_planQuery=v),onStatus:(v)=>setState(()=>_planStatus=v),onReset:()=>setState((){_planQuery='';_planStatus='';})),
-          const SizedBox(height:14),
-          if(filtered.isEmpty) Padding(padding:const EdgeInsets.symmetric(vertical:24),child:Text(planListText(context,'empty'))),
+        if (plans.isNotEmpty) ...[
+          TrainingPlanListToolbar(
+            query: _planQuery,
+            status: _planStatus,
+            counts: counts,
+            onQuery: (v) => setState(() => _planQuery = v),
+            onStatus: (v) => setState(() => _planStatus = v),
+            onReset: () => setState(() {
+              _planQuery = '';
+              _planStatus = '';
+            }),
+          ),
+          const SizedBox(height: 14),
+          if (filtered.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(planListText(context, 'empty')),
+            ),
         ],
         if (plans.isEmpty)
           canCreatePersonalPlans
@@ -462,7 +493,15 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(padding:const EdgeInsets.symmetric(vertical:7),child:StatusPill(_translatedStatus(t,plan.status),color:plan.status=='published'?AirmiusColors.green:AirmiusColors.amber)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    child: StatusPill(
+                      _translatedStatus(t, plan.status),
+                      color: plan.status == 'published'
+                          ? AirmiusColors.green
+                          : AirmiusColors.amber,
+                    ),
+                  ),
                   Text(
                     [
                       plan.targetType == 'self'
@@ -521,8 +560,7 @@ class _TrainingPlansLogsScreenState extends State<TrainingPlansLogsScreen> {
                     '${log.durationMinutes} ${t('trainingHub.minutes')}',
                   if (log.distanceMeters != null)
                     '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km',
-                  if (log.rpe != null)
-                    '${t('trainingHub.rpe')} ${log.rpe}/10',
+                  if (log.rpe != null) '${t('trainingHub.rpe')} ${log.rpe}/10',
                   if (log.pain != null)
                     '${t('liveWorkout.pain')} ${log.pain}/10',
                   if (log.entries.isNotEmpty)
@@ -687,6 +725,12 @@ class _TrainingPlanApiDetailScreenState
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
+              if (!plan.isTemplate)
+                ListTile(
+                  leading: const Icon(Icons.fact_check_outlined),
+                  title: Text(t('trainingHub.completedTrainings')),
+                  onTap: () => Navigator.pop(sheetContext, 'completed'),
+                ),
               if (plan.canWrite)
                 ListTile(
                   leading: const Icon(Icons.edit_calendar_outlined),
@@ -743,6 +787,16 @@ class _TrainingPlanApiDetailScreenState
 
     if (!mounted || action == null) return;
     switch (action) {
+      case 'completed':
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => TrainingPlanCompletedLogsScreen(
+              planId: plan.id,
+              planTitle: plan.title,
+            ),
+          ),
+        );
+        return;
       case 'edit':
         await _editPlan(plan);
         return;
@@ -804,7 +858,9 @@ class _TrainingPlanApiDetailScreenState
                                   ?.copyWith(fontWeight: FontWeight.w900),
                             ),
                           ),
-                          if (plan.canWrite || plan.canDelete) ...[
+                          if (!plan.isTemplate ||
+                              plan.canWrite ||
+                              plan.canDelete) ...[
                             const SizedBox(width: 12),
                             OutlinedButton.icon(
                               onPressed: _busy
@@ -953,7 +1009,9 @@ class _TrainingPlanApiDetailScreenState
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(10),
                                     child: ExerciseNetworkImage(
-                                      url: resolveAirmiusImageUrl(item.imageUrl)!,
+                                      url: resolveAirmiusImageUrl(
+                                        item.imageUrl,
+                                      )!,
                                       width: 48,
                                       height: 48,
                                       fit: BoxFit.cover,
@@ -1341,6 +1399,231 @@ class _TrainingPlanApiDetailScreenState
   }
 }
 
+class TrainingPlanCompletedLogsScreen extends StatefulWidget {
+  const TrainingPlanCompletedLogsScreen({
+    super.key,
+    required this.planId,
+    required this.planTitle,
+  });
+
+  final int planId;
+  final String planTitle;
+
+  @override
+  State<TrainingPlanCompletedLogsScreen> createState() =>
+      _TrainingPlanCompletedLogsScreenState();
+}
+
+class _TrainingPlanCompletedLogsScreenState
+    extends State<TrainingPlanCompletedLogsScreen> {
+  Future<List<_TrainingLog>>? _future;
+
+  AirmiusApiClient get _client {
+    final services = AirmiusServicesScope.of(context);
+    return services.clientForSession(services.authState.session);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _load();
+  }
+
+  Future<List<_TrainingLog>> _load() async {
+    final response = await loadTrainingCatalog(
+      (page) => _client.trainingLogs(
+        page: page,
+        perPage: 50,
+        trainingPlanId: widget.planId,
+        status: 'completed',
+      ),
+    );
+    return _dataList(response).map(_TrainingLog.fromJson).toList();
+  }
+
+  Future<void> _reload() async {
+    setState(() => _future = _load());
+    await _future;
+  }
+
+  Future<void> _openLog(int logId) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TrainingLogApiDetailScreen(logId: logId),
+      ),
+    );
+    if (mounted) await _reload();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AirmiusScope.of(context).t;
+    return Scaffold(
+      appBar: AppBar(title: Text(t('trainingHub.completedTrainings'))),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _reload,
+          child: FutureBuilder<List<_TrainingLog>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    AirmiusPanel(
+                      child: Column(
+                        children: [
+                          const Icon(
+                            Icons.cloud_off_outlined,
+                            color: AirmiusColors.red,
+                            size: 42,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(t('trainingHub.loadError')),
+                          const SizedBox(height: 12),
+                          AirmiusButton(
+                            label: t('trainingHub.retry'),
+                            icon: Icons.refresh,
+                            onPressed: _reload,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              final logs = snapshot.data ?? const <_TrainingLog>[];
+              final athletes = logs
+                  .map((log) => log.athleteName)
+                  .whereType<String>()
+                  .where((name) => name.trim().isNotEmpty)
+                  .toSet()
+                  .length;
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                children: [
+                  AirmiusPanel(
+                    gradient: true,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.planTitle,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(t('trainingHub.completedTrainingsHint')),
+                        if (logs.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              StatusPill(
+                                '${logs.length} ${t('trainingHub.status.completed')}',
+                                color: AirmiusColors.green,
+                              ),
+                              if (athletes > 0)
+                                StatusPill(
+                                  '$athletes ${t('trainingHub.athlete')}',
+                                ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  if (logs.isEmpty)
+                    AirmiusPanel(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.fact_check_outlined,
+                              size: 44,
+                              color: AirmiusColors.blue,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              t('trainingHub.noCompletedTrainings'),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    for (final log in logs) ...[
+                      AirmiusPanel(
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: IconBadge(
+                            icon: Icons.task_alt_outlined,
+                            color: AirmiusColors.green,
+                          ),
+                          title: Text(
+                            log.title,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (log.athleteName?.isNotEmpty == true) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${t('trainingHub.athlete')}: ${log.athleteName}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: 4),
+                              Text(
+                                [
+                                  _shortDate(log.performedAt),
+                                  if (log.durationMinutes != null)
+                                    '${log.durationMinutes} ${t('trainingHub.minutes')}',
+                                  if (log.distanceMeters != null)
+                                    '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                                  if (log.rpe != null)
+                                    '${t('trainingHub.rpe')} ${log.rpe}/10',
+                                ].join(' · '),
+                              ),
+                              if (log.feedbacks.isNotEmpty ||
+                                  log.trainerFeedback?.isNotEmpty == true) ...[
+                                const SizedBox(height: 7),
+                                StatusPill(
+                                  t('trainingHub.feedback'),
+                                  color: AirmiusColors.green,
+                                ),
+                              ],
+                            ],
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _openLog(log.id),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class TrainingLogApiDetailScreen extends StatefulWidget {
   const TrainingLogApiDetailScreen({super.key, required this.logId});
 
@@ -1442,10 +1725,13 @@ class _TrainingLogApiDetailScreenState
                           if (log.rpe != null)
                             StatusPill('${t('trainingHub.rpe')} ${log.rpe}/10'),
                           if (log.pain != null)
-                            StatusPill('${t('liveWorkout.pain')} ${log.pain}/10'),
+                            StatusPill(
+                              '${t('liveWorkout.pain')} ${log.pain}/10',
+                            ),
                         ],
                       ),
-                      if (log.status == 'missed' && log.missedReason != null) ...[
+                      if (log.status == 'missed' &&
+                          log.missedReason != null) ...[
                         const SizedBox(height: 14),
                         Text(
                           '${t('trainingHub.missedReason')}: '
@@ -5541,7 +5827,10 @@ class _LogFormDialogState extends State<_LogFormDialog> {
   }
 
   void _submit() {
-    if (_title.text.trim().isEmpty) { showFormFeedback(context, formMessage(context, 'required')); return; }
+    if (_title.text.trim().isEmpty) {
+      showFormFeedback(context, formMessage(context, 'required'));
+      return;
+    }
     Navigator.pop(context, _payload());
   }
 
@@ -5820,7 +6109,8 @@ class _LogFormDialogState extends State<_LogFormDialog> {
                             label: Text(t('trainingHub.privacy.$value')),
                             onSelected: (_) => setState(() {
                               _privacy = value;
-                              if (value == 'private') _notifyTrainerAgain = false;
+                              if (value == 'private')
+                                _notifyTrainerAgain = false;
                             }),
                           ),
                         )
@@ -5877,7 +6167,8 @@ class _LogFormDialogState extends State<_LogFormDialog> {
                       value: _notifyTrainerAgain,
                       onChanged: _privacy == 'private'
                           ? null
-                          : (value) => setState(() => _notifyTrainerAgain = value),
+                          : (value) =>
+                                setState(() => _notifyTrainerAgain = value),
                     ),
                   TextField(
                     controller: _notes,
@@ -7091,8 +7382,11 @@ class _WorkoutSetResult extends StatelessWidget {
   }
 }
 
-typedef _MissedTrainingInput =
-    ({String reason, String notes, bool notifyTrainer});
+typedef _MissedTrainingInput = ({
+  String reason,
+  String notes,
+  bool notifyTrainer,
+});
 
 class _MissedTrainingDialog extends StatefulWidget {
   const _MissedTrainingDialog({required this.canNotifyTrainer});

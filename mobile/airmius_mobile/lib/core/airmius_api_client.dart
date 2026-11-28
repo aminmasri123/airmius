@@ -3284,10 +3284,20 @@ class AirmiusApiClient {
   Future<AirmiusJson> saveAiTrainingPlan(AirmiusJson body) =>
       _json('POST', '/api/v1/training/ai/plans', body: body);
 
-  Future<AirmiusJson> trainingLogs({int page = 1, int perPage = 30}) => _json(
+  Future<AirmiusJson> trainingLogs({
+    int page = 1,
+    int perPage = 30,
+    int? trainingPlanId,
+    String? status,
+  }) => _json(
     'GET',
     '/api/v1/training/logs',
-    query: {'page': '$page', 'per_page': '$perPage'},
+    query: {
+      'page': '$page',
+      'per_page': '$perPage',
+      if (trainingPlanId != null) 'training_plan_id': '$trainingPlanId',
+      if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+    },
   );
 
   Future<AirmiusJson> trainingLog(int logId) =>

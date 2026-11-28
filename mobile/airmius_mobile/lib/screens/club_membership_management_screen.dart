@@ -56,6 +56,7 @@ class _ClubMembershipManagementScreenState
   String _filter = 'Alle';
   String _memberQuery = '';
   String _period = 'all';
+  String _financeView = 'overview';
   String _section = 'members';
   DateTime? _treasuryDay;
   bool _showAllInvoices = false;
@@ -1535,6 +1536,25 @@ class _ClubMembershipManagementScreenState
     });
   }
 
+  Future<void> _refreshClubAfterInvoiceMutation() async {
+    try {
+      final refreshed = await _loadManagedClub();
+      if (!mounted || refreshed == null) return;
+      setState(() {
+        _currentData = refreshed;
+        _clubFuture = Future.value(refreshed);
+      });
+    } catch (error) {
+      if (mounted) {
+        _toast(
+          _tr(
+            'membership.invoiceSavedRefreshFailed',
+          ).replaceAll('{error}', _errorText(error)),
+        );
+      }
+    }
+  }
+
   void _applyManagement(AirmiusClubManagement management) {
     final current = _currentData;
     if (current == null) return;
@@ -1822,6 +1842,24 @@ class _ClubMembershipManagementScreenState
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
   }
+
+  Future<void> _showInvoiceError({
+    required String title,
+    required String message,
+  }) => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      icon: const Icon(Icons.error_outline, color: AirmiusColors.red),
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: Text(_tr('common.close')),
+        ),
+      ],
+    ),
+  );
 
   String _errorText(Object error) => error is AirmiusApiException
       ? error.userMessage
@@ -2211,7 +2249,8 @@ class _ClubMembershipManagementScreenState
   Future<Map<String, int>?> _chooseBankImportMapping(
     Map<String, dynamic> preview,
   ) async {
-    final columns = (preview['columns'] as List?)?.map((value) => '$value').toList() ?? [];
+    final columns =
+        (preview['columns'] as List?)?.map((value) => '$value').toList() ?? [];
     if (columns.isEmpty) {
       _toast(_tr('membership.bankMap.noColumns'));
       return null;
@@ -2226,7 +2265,14 @@ class _ClubMembershipManagementScreenState
         }
       }
     }
-    const fields = ['date', 'amount', 'purpose', 'debtor_name', 'debtor_iban', 'currency'];
+    const fields = [
+      'date',
+      'amount',
+      'purpose',
+      'debtor_name',
+      'debtor_iban',
+      'currency',
+    ];
     return showDialog<Map<String, int>>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -2245,11 +2291,19 @@ class _ClubMembershipManagementScreenState
                       key: ValueKey('bank-map-$field'),
                       initialValue: selected[field],
                       isExpanded: true,
-                      decoration: InputDecoration(labelText: _tr('membership.bankMap.$field')),
+                      decoration: InputDecoration(
+                        labelText: _tr('membership.bankMap.$field'),
+                      ),
                       items: [
-                        DropdownMenuItem<int?>(value: null, child: Text(_tr('membership.bankMap.none'))),
+                        DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text(_tr('membership.bankMap.none')),
+                        ),
                         for (var index = 0; index < columns.length; index++)
-                          DropdownMenuItem<int?>(value: index, child: Text(columns[index])),
+                          DropdownMenuItem<int?>(
+                            value: index,
+                            child: Text(columns[index]),
+                          ),
                       ],
                       onChanged: (index) => setDialogState(() {
                         if (index == null) {
@@ -2269,7 +2323,8 @@ class _ClubMembershipManagementScreenState
               child: Text(_tr('membership.importPreviewCancel')),
             ),
             FilledButton(
-              onPressed: selected.containsKey('date') && selected.containsKey('amount')
+              onPressed:
+                  selected.containsKey('date') && selected.containsKey('amount')
                   ? () => Navigator.pop(dialogContext, selected)
                   : null,
               child: Text(_tr('membership.importPreviewContinue')),
@@ -2980,13 +3035,20 @@ class _ClubMembershipManagementScreenState
                             maxLines: 3,
                           ),
                           const SizedBox(height: 16),
-                          Container(
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: airmiusSurfaceSoftColor(context),
+                              color: markPaid
+                                  ? Theme.of(context).colorScheme.primary
+                                        .withValues(alpha: 0.14)
+                                  : airmiusSurfaceSoftColor(context),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: airmiusBorderColor(context),
+                                color: markPaid
+                                    ? Theme.of(context).colorScheme.primary
+                                    : airmiusBorderColor(context),
+                                width: markPaid ? 2 : 1,
                               ),
                             ),
                             child: Column(
@@ -2995,7 +3057,19 @@ class _ClubMembershipManagementScreenState
                                 Material(
                                   type: MaterialType.transparency,
                                   child: SwitchListTile(
-                                    contentPadding: EdgeInsets.zero,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 4,
+                                    ),
+                                    secondary: Icon(
+                                      markPaid
+                                          ? Icons.check_circle
+                                          : Icons.payments_outlined,
+                                      color: markPaid
+                                          ? Theme.of(context).colorScheme.primary
+                                          : airmiusMutedColor(context),
+                                      size: 30,
+                                    ),
                                     title: Text(
                                       _tr('membership.markPaidNow'),
                                       style: TextStyle(
@@ -3011,6 +3085,53 @@ class _ClubMembershipManagementScreenState
                                       ),
                                     ),
                                     value: markPaid,
+                                    thumbIcon: WidgetStateProperty.resolveWith(
+                                      (states) => Icon(
+                                        states.contains(WidgetState.selected)
+                                            ? Icons.check
+                                            : Icons.close,
+                                        size: 17,
+                                      ),
+                                    ),
+                                    thumbColor: WidgetStateProperty.resolveWith(
+                                      (states) => states.contains(
+                                        WidgetState.disabled,
+                                      )
+                                          ? airmiusMutedColor(context)
+                                          : Colors.white,
+                                    ),
+                                    trackColor: WidgetStateProperty.resolveWith(
+                                      (states) {
+                                        if (states.contains(
+                                          WidgetState.disabled,
+                                        )) {
+                                          return airmiusMutedColor(
+                                            context,
+                                          ).withValues(alpha: 0.28);
+                                        }
+                                        return states.contains(
+                                              WidgetState.selected,
+                                            )
+                                            ? Theme.of(
+                                                context,
+                                              ).colorScheme.primary
+                                            : airmiusMutedColor(
+                                                context,
+                                              ).withValues(alpha: 0.55);
+                                      },
+                                    ),
+                                    trackOutlineColor:
+                                        WidgetStateProperty.resolveWith(
+                                          (states) => states.contains(
+                                            WidgetState.selected,
+                                          )
+                                              ? Theme.of(
+                                                  context,
+                                                ).colorScheme.primary
+                                              : airmiusTextColor(
+                                                  context,
+                                                ).withValues(alpha: 0.55),
+                                        ),
                                     onChanged: waived
                                         ? null
                                         : (value) => setSheetState(
@@ -3127,7 +3248,6 @@ class _ClubMembershipManagementScreenState
 
     if (payload != null && mounted) {
       try {
-        final repo = AirmiusServicesScope.of(context).repositories.clubs;
         final selectedMember = members.firstWhere(
           (entry) => entry.id == _intFromAny(payload['member_id']),
           orElse: () => members.first,
@@ -3141,42 +3261,81 @@ class _ClubMembershipManagementScreenState
           'description': payload['description'],
           'waived': payload['waived'],
           'waiver_reason': payload['waiver_reason'],
+          'compact_response': true,
         };
-        var management = selectedMember.isExternal
-            ? await repo.createClubExternalMemberInvoice(
-                club.id,
-                selectedMember.externalId!,
-                invoicePayload,
-              )
-            : await repo.createClubMemberInvoice(
-                club.id,
-                selectedMember.id,
-                invoicePayload,
-              );
+        JsonMap response;
+        try {
+          final services = AirmiusServicesScope.of(context);
+          final client = services.clientForSession(services.authState.session);
+          response = selectedMember.isExternal
+              ? await client.createClubExternalMemberInvoice(
+                  club.id,
+                  selectedMember.externalId!,
+                  invoicePayload,
+                )
+              : await client.createClubMemberInvoice(
+                  club.id,
+                  selectedMember.id,
+                  invoicePayload,
+                );
+        } catch (error) {
+          if (mounted) {
+            await _showInvoiceError(
+              title: _tr('membership.invoiceCreateFailed'),
+              message: _errorText(error),
+            );
+          }
+          return;
+        }
+
+        final responseData = response['data'];
+        final invoiceData = responseData is JsonMap
+            ? responseData['invoice']
+            : null;
+        final invoiceId = invoiceData is JsonMap
+            ? _intFromAny(invoiceData['id'])
+            : 0;
 
         if (payload['mark_paid'] == true) {
-          final invoiceId = _newInvoiceIdFromManagement(
-            management,
-            memberId: selectedMember.id,
-            title: '${payload['title'] ?? ''}',
-            amount: '${payload['amount'] ?? ''}',
-          );
           if (invoiceId > 0) {
-            management = await repo
-                .recordMembershipPayment(club.id, invoiceId, {
-                  'invoice_id': invoiceId,
-                  'amount': payload['amount'],
-                  'method': payload['payment_method'],
-                  'paid_at': payload['paid_at'],
-                  'reference': payload['payment_reference'],
-                  'notes': payload['payment_notes'],
-                });
+            try {
+              final services = AirmiusServicesScope.of(context);
+              await services
+                  .clientForSession(services.authState.session)
+                  .recordClubMembershipPayment(club.id, invoiceId, {
+                    'invoice_id': invoiceId,
+                    'amount': payload['amount'],
+                    'method': payload['payment_method'],
+                    'paid_at': payload['paid_at'],
+                    'reference': payload['payment_reference'],
+                    'notes': payload['payment_notes'],
+                    'compact_response': true,
+                  });
+            } catch (error) {
+              if (!mounted) return;
+              unawaited(_refreshClubAfterInvoiceMutation());
+              await _showInvoiceError(
+                title: _tr('membership.invoiceCreatedPaymentFailed'),
+                message: _tr(
+                  'membership.invoiceCreatedPaymentFailedBody',
+                ).replaceAll('{error}', _errorText(error)),
+              );
+              return;
+            }
+          } else {
+            if (!mounted) return;
+            unawaited(_refreshClubAfterInvoiceMutation());
+            await _showInvoiceError(
+              title: _tr('membership.invoiceCreatedPaymentFailed'),
+              message: _tr('membership.invoiceCreatedPaymentMissing'),
+            );
+            return;
           }
         }
 
         if (!mounted) return;
-        _applyManagement(management);
         _toast(_tr('membership.invoiceCreated'));
+        unawaited(_refreshClubAfterInvoiceMutation());
       } catch (error) {
         if (mounted) _toast(_errorText(error));
       }
@@ -6486,7 +6645,8 @@ class _ClubMembershipManagementScreenState
                         final entered = parseAirmiusDate(paidAt.text);
                         final selected = await showDatePicker(
                           context: pageContext,
-                          initialDate: entered != null &&
+                          initialDate:
+                              entered != null &&
                                   !entered.isBefore(firstDay) &&
                                   !entered.isAfter(today)
                               ? entered
@@ -7903,7 +8063,10 @@ class _ClubMembershipManagementScreenState
                     setState(() {
                       _selectedClubId = clubId;
                       _filter = 'Alle';
-                      _section = 'members';
+                      _section = _section == 'payments'
+                          ? 'payments'
+                          : 'members';
+                      _financeView = 'overview';
                       _clubFuture = _loadManagedClub();
                     });
                   },
@@ -8829,254 +8992,31 @@ class _ClubMembershipManagementScreenState
                   const SizedBox(height: 14),
                 ],
                 if (_section == 'payments') ...[
-                  ClubMoneyAccountsOverview(
-                    key: ValueKey('money-accounts-${club.id}'),
-                    load: () async {
-                      final services = AirmiusServicesScope.of(context);
-                      final client = services.clientForSession(
-                        services.authState.session,
-                      );
-                      final response = await client.clubFinanceWorkspace(
-                        club.id,
-                      );
-                      return response['data'] as Map<String, dynamic>? ?? {};
-                    },
-                    onOpen: (create) async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => ClubFinanceWorkspaceScreen(
-                            club: club,
-                            initialTabIndex: 1,
-                            createAccountOnOpen: create,
-                          ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final view in [
+                        'overview',
+                        'invoices',
+                        'bookings',
+                        'accounts',
+                        'bank',
+                      ])
+                        ChoiceChip(
+                          key: ValueKey('finance-view-$view'),
+                          label: Text(t('membership.financeNav.$view')),
+                          selected: _financeView == view,
+                          onSelected: (_) =>
+                              setState(() => _financeView = view),
                         ),
-                      );
-                      if (mounted) _reloadClub();
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  AirmiusPanel(
-                    child: Row(
-                      children: [
-                        Icon(
-                          openInvoicesCount > 0
-                              ? Icons.warning_amber_outlined
-                              : Icons.task_alt_outlined,
-                          color: openInvoicesCount > 0
-                              ? Theme.of(context).colorScheme.error
-                              : Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            openInvoicesCount > 0
-                                ? t('membership.openSummary')
-                                      .replaceAll(
-                                        '{count}',
-                                        '$openInvoicesCount',
-                                      )
-                                      .replaceAll('{amount}', openInvoiceTotal)
-                                : t('membership.noCreatedInvoicesOpen'),
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
                   const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Eyebrow(t('membership.actionNow')),
-                  ),
-                  AirmiusPanel(
-                    child: Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        AirmiusButton(
-                          label: t('membership.createInvoice'),
-                          icon: Icons.receipt_long_outlined,
-                          onPressed: () => _createInvoice(club, members),
-                        ),
-                        AirmiusButton(
-                          label: t('membership.invoiceRun'),
-                          icon: Icons.playlist_add_check_circle_outlined,
-                          secondary: true,
-                          onPressed: () => _runInvoiceBatch(club),
-                        ),
-                        AirmiusButton(
-                          label: t('membership.recordPayment'),
-                          icon: Icons.payments_outlined,
-                          secondary: true,
-                          onPressed: () => _recordPayment(club, invoices),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Eyebrow(t('membership.analyzeManage')),
-                  ),
-                  TextButton.icon(
-                    icon: const Icon(Icons.account_balance_wallet_outlined),
-                    label: Text(financeWorkspaceLabel(context, 'Budgets')),
-                    onPressed: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) =>
-                              ClubFinanceWorkspaceScreen(club: club),
-                        ),
-                      );
-                      if (mounted) _reloadClub();
-                    },
-                  ),
-                  AirmiusPanel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Eyebrow('Teamkasse, Strafkasse & Bedarf'),
-                        const SizedBox(height: 8),
-                        _FinanceGuideTile(
-                          icon: Icons.account_balance_wallet_outlined,
-                          title: financeWorkspaceLabel(
-                            context,
-                            'Kassen & Bankkonten',
-                          ),
-                          body: financeWorkspaceLabel(
-                            context,
-                            'Barkassen und Bankkonten des Vereins oder Teams getrennt verwalten.',
-                          ),
-                          onTap: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => ClubFinanceWorkspaceScreen(
-                                  club: club,
-                                  initialTabIndex: 1,
-                                ),
-                              ),
-                            );
-                            if (mounted) _reloadClub();
-                          },
-                        ),
-                        _FinanceGuideTile(
-                          icon: Icons.gavel_outlined,
-                          title: 'Strafkasse',
-                          body:
-                              'Öffne Team, wähle eine Mannschaft und gehe dort zu Strafen. Bezahlte Strafen landen in der Teamkasse.',
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) =>
-                                    TeamsCenterScreen(initialClubId: club.id),
-                              ),
-                            );
-                          },
-                        ),
-                        _FinanceGuideTile(
-                          icon: Icons.shopping_bag_outlined,
-                          title: 'Antrag für Bälle, Trikots, Socken',
-                          body:
-                              'Unter Budgets & Teamkassen kannst du Beschaffung beantragen und später genehmigen, bestellen, liefern und bezahlen.',
-                          onTap: () async {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) =>
-                                    ClubFinanceWorkspaceScreen(club: club),
-                              ),
-                            );
-                            if (mounted) _reloadClub();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Material(
-                    color: Theme.of(context).colorScheme.surface,
-                    child: ExpansionTile(
-                      title: Text(t('membership.treasury')),
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                          child: Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed: _pickTreasuryDay,
-                                icon: const Icon(Icons.calendar_month_outlined),
-                                label: Text(
-                                  _treasuryDay == null
-                                      ? 'Tag wählen'
-                                      : _dateDisplay(_treasuryDay!),
-                                ),
-                              ),
-                              if (_treasuryDay != null)
-                                TextButton.icon(
-                                  onPressed: () =>
-                                      setState(() => _treasuryDay = null),
-                                  icon: const Icon(Icons.close_outlined),
-                                  label: const Text('Aktuell anzeigen'),
-                                ),
-                            ],
-                          ),
-                        ),
-                        _MembershipTreasuryKpiGrid(
-                          cards: [
-                            _MembershipKpi(
-                              title: t('membership.cashBalance'),
-                              value: treasuryCashBalance,
-                              detail:
-                                  treasuryDetailLabel ??
-                                  t('membership.currentBalance'),
-                              icon: Icons.account_balance_wallet_outlined,
-                            ),
-                            _MembershipKpi(
-                              title: t('membership.bankBalance'),
-                              value: treasuryBankBalance,
-                              detail:
-                                  treasuryDetailLabel ??
-                                  t('membership.currentBalance'),
-                              icon: Icons.account_balance_outlined,
-                            ),
-                            _MembershipKpi(
-                              title: t('membership.total'),
-                              value: treasuryTotalBalance,
-                              detail: treasuryDetailLabel != null
-                                  ? 'Saldo am $treasuryDetailLabel'
-                                  : unassignedBalance > 0
-                                  ? '${t('membership.includingManualBefore')} '
-                                        '${_formatEuroAmount(unassignedBalance)}'
-                                  : t('membership.currentTotal'),
-                              icon: Icons.layers_outlined,
-                              accent: airmiusAccentColor(context),
-                            ),
-                            _MembershipKpi(
-                              title: t('membership.income'),
-                              value: treasuryIncomeTotal ?? incomePeriodTotal,
-                              detail: treasuryDetailLabel ?? financePeriodLabel,
-                              icon: Icons.call_received_outlined,
-                              accent: AirmiusColors.green,
-                            ),
-                            _MembershipKpi(
-                              title: t('membership.expenses'),
-                              value: treasuryExpenseTotal ?? expensePeriodTotal,
-                              detail: treasuryDetailLabel ?? financePeriodLabel,
-                              icon: Icons.call_made_outlined,
-                              accent: AirmiusColors.red,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: PopupMenuButton<String>(
-                      tooltip: t('membership.addBooking'),
+                      tooltip: t('membership.bookIncome'),
                       onSelected: (value) {
                         switch (value) {
                           case 'payment':
@@ -9102,7 +9042,6 @@ class _ClubMembershipManagementScreenState
                           ('donation', 'membership.recordDonation'),
                           ('prepayment', 'membership.prepayment'),
                           ('income', 'membership.bookIncome'),
-                          ('expense', 'membership.bookExpense'),
                         ])
                           PopupMenuItem(
                             value: entry.$1,
@@ -9110,262 +9049,593 @@ class _ClubMembershipManagementScreenState
                           ),
                       ],
                       child: _FinanceAddButton(
-                        label: t('membership.addBooking'),
+                        label: t('membership.bookIncome'),
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _FinanceOverviewBlock(
-                    title: t('membership.invoicesPayments'),
-                    countLabel: '${visibleInvoices.length}',
-                    detail: openInvoicesCount > 0
-                        ? openInvoiceTotal
-                        : t('membership.period.$_period'),
-                    icon: Icons.receipt_long_outlined,
-                    accent: airmiusAccentColor(context),
-                    initiallyExpanded: true,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        DropdownButtonFormField<String>(
-                          key: ValueKey(_period),
-                          isExpanded: true,
-                          initialValue: _period,
-                          dropdownColor: airmiusSurfaceSoftColor(context),
-                          decoration: InputDecoration(
-                            labelText: t('membership.invoicePeriod'),
-                          ),
-                          items: const ['all', 'month', 'previousMonth', 'year']
-                              .map(
-                                (item) => DropdownMenuItem(
-                                  value: item,
-                                  child: Text(t('membership.period.$item')),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) => setState(() {
-                            _period = value ?? _period;
-                            _showAllInvoices = false;
-                          }),
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        _editFinanceEntry(club, initialType: 'expense'),
+                    icon: const Icon(Icons.call_made_outlined),
+                    label: Text(t('membership.bookExpense')),
+                  ),
+                  const SizedBox(height: 12),
+                  if (_financeView == 'overview') ...[
+                    _MembershipKpiGrid(
+                      cards: [
+                        _MembershipKpi(
+                          title: t('membership.cashBalance'),
+                          value: cashBalance,
+                          detail: t('membership.currentBalance'),
+                          icon: Icons.payments_outlined,
                         ),
-                        _savedViewBar('invoices', _invoiceSavedViews),
-                        const SizedBox(height: 12),
-                        for (final invoice in invoicePreview)
-                          _InvoiceLine(
-                            invoice: invoice,
-                            onOpen: () => _openReceiptDetails(
-                              club,
-                              payments,
-                              invoice: invoice,
-                            ),
-                            onManage: () =>
-                                _invoiceActions(club, invoice, invoices),
+                        _MembershipKpi(
+                          title: t('membership.bankBalance'),
+                          value: bankBalance,
+                          detail: t('membership.currentBalance'),
+                          icon: Icons.account_balance_outlined,
+                        ),
+                        _MembershipKpi(
+                          title: t('membership.financeNav.receivables'),
+                          value: openInvoiceTotal,
+                          detail: t('membership.financeNav.notCash'),
+                          icon: Icons.receipt_long_outlined,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () =>
+                          setState(() => _financeView = 'invoices'),
+                      icon: const Icon(Icons.arrow_forward),
+                      label: Text(t('membership.financeNav.invoices')),
+                    ),
+                    AirmiusPanel(
+                      child: Row(
+                        children: [
+                          Icon(
+                            openInvoicesCount > 0
+                                ? Icons.warning_amber_outlined
+                                : Icons.task_alt_outlined,
+                            color: openInvoicesCount > 0
+                                ? Theme.of(context).colorScheme.error
+                                : Theme.of(context).colorScheme.primary,
                           ),
-                        if (visibleInvoices.isEmpty)
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              openInvoicesCount > 0
+                                  ? t('membership.openSummary')
+                                        .replaceAll(
+                                          '{count}',
+                                          '$openInvoicesCount',
+                                        )
+                                        .replaceAll(
+                                          '{amount}',
+                                          openInvoiceTotal,
+                                        )
+                                  : t('membership.noCreatedInvoicesOpen'),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Material(
+                      color: Theme.of(context).colorScheme.surface,
+                      child: ExpansionTile(
+                        title: Text(t('membership.treasury')),
+                        children: [
                           Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            child: Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              crossAxisAlignment: WrapCrossAlignment.center,
                               children: [
-                                Text(
-                                  invoices.isEmpty
-                                      ? t('membership.noInvoicesLoaded')
-                                      : t('membership.noInvoicesInPeriod'),
-                                  style: TextStyle(
-                                    color: airmiusMutedColor(context),
-                                    fontWeight: FontWeight.w700,
+                                OutlinedButton.icon(
+                                  onPressed: _pickTreasuryDay,
+                                  icon: const Icon(
+                                    Icons.calendar_month_outlined,
+                                  ),
+                                  label: Text(
+                                    _treasuryDay == null
+                                        ? 'Tag wählen'
+                                        : _dateDisplay(_treasuryDay!),
                                   ),
                                 ),
-                                if (invoices.isNotEmpty)
-                                  TextButton(
-                                    onPressed: () => setState(() {
-                                      _period = 'all';
-                                      _showAllInvoices = false;
-                                    }),
-                                    child: Text(t('membership.period.all')),
+                                if (_treasuryDay != null)
+                                  TextButton.icon(
+                                    onPressed: () =>
+                                        setState(() => _treasuryDay = null),
+                                    icon: const Icon(Icons.close_outlined),
+                                    label: const Text('Aktuell anzeigen'),
                                   ),
                               ],
                             ),
                           ),
-                        if (visibleInvoices.length > invoicePreview.length)
-                          TextButton.icon(
-                            onPressed: () =>
-                                setState(() => _showAllInvoices = true),
-                            icon: Icon(Icons.unfold_more_outlined),
-                            label: Text(
-                              'Alle ${visibleInvoices.length} Rechnungen anzeigen',
-                            ),
-                          ),
-                        if (_showAllInvoices && visibleInvoices.length > 6)
-                          TextButton.icon(
-                            onPressed: () =>
-                                setState(() => _showAllInvoices = false),
-                            icon: Icon(Icons.unfold_less_outlined),
-                            label: const Text('Liste einklappen'),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _FinanceOverviewBlock(
-                    title: t('membership.cashbook'),
-                    countLabel: '${financeEntries.length}',
-                    detail: totalBalance,
-                    icon: Icons.account_balance_wallet_outlined,
-                    accent: AirmiusColors.amber,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (final entry in financeEntryPreview)
-                          _FinanceEntryLine(
-                            entry: entry,
-                            onOpenReceipt: () => _openFinanceReceipt(entry),
-                            onEdit: () => _editFinanceEntry(club, entry: entry),
-                          ),
-                        if (financeEntries.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Text(
-                              t('membership.noFinanceEntries'),
-                              style: TextStyle(
-                                color: airmiusMutedColor(context),
-                                fontWeight: FontWeight.w700,
+                          _MembershipTreasuryKpiGrid(
+                            cards: [
+                              _MembershipKpi(
+                                title: t('membership.cashBalance'),
+                                value: treasuryCashBalance,
+                                detail:
+                                    treasuryDetailLabel ??
+                                    t('membership.currentBalance'),
+                                icon: Icons.account_balance_wallet_outlined,
                               ),
-                            ),
+                              _MembershipKpi(
+                                title: t('membership.bankBalance'),
+                                value: treasuryBankBalance,
+                                detail:
+                                    treasuryDetailLabel ??
+                                    t('membership.currentBalance'),
+                                icon: Icons.account_balance_outlined,
+                              ),
+                              _MembershipKpi(
+                                title: t('membership.total'),
+                                value: treasuryTotalBalance,
+                                detail: treasuryDetailLabel != null
+                                    ? 'Saldo am $treasuryDetailLabel'
+                                    : unassignedBalance > 0
+                                    ? '${t('membership.includingManualBefore')} '
+                                          '${_formatEuroAmount(unassignedBalance)}'
+                                    : t('membership.currentTotal'),
+                                icon: Icons.layers_outlined,
+                                accent: airmiusAccentColor(context),
+                              ),
+                              _MembershipKpi(
+                                title: t('membership.income'),
+                                value: treasuryIncomeTotal ?? incomePeriodTotal,
+                                detail:
+                                    treasuryDetailLabel ?? financePeriodLabel,
+                                icon: Icons.call_received_outlined,
+                                accent: AirmiusColors.green,
+                              ),
+                              _MembershipKpi(
+                                title: t('membership.expenses'),
+                                value:
+                                    treasuryExpenseTotal ?? expensePeriodTotal,
+                                detail:
+                                    treasuryDetailLabel ?? financePeriodLabel,
+                                icon: Icons.call_made_outlined,
+                                accent: AirmiusColors.red,
+                              ),
+                            ],
                           ),
-                        if (financeEntries.length > financeEntryPreview.length)
-                          TextButton.icon(
-                            onPressed: () =>
-                                setState(() => _showAllFinanceEntries = true),
-                            icon: Icon(Icons.unfold_more_outlined),
-                            label: Text(
-                              'Alle ${financeEntries.length} Buchungen anzeigen',
-                            ),
-                          ),
-                        if (_showAllFinanceEntries && financeEntries.length > 6)
-                          TextButton.icon(
-                            onPressed: () =>
-                                setState(() => _showAllFinanceEntries = false),
-                            icon: Icon(Icons.unfold_less_outlined),
-                            label: const Text('Liste einklappen'),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  _FinanceOverviewBlock(
-                    title: t('membership.recordedPayments'),
-                    countLabel: '${payments.length}',
-                    detail: incomePeriodTotal,
-                    icon: Icons.payments_outlined,
-                    accent: AirmiusColors.green,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (final payment in paymentPreview)
-                          _PaymentLine(
-                            payment: payment,
-                            onOpen: () {
-                              _InvoiceEntry? invoice;
-                              for (final candidate in invoices) {
-                                if (candidate.id == payment.invoiceId) {
-                                  invoice = candidate;
-                                  break;
-                                }
-                              }
-                              _openReceiptDetails(
+                    const SizedBox(height: 14),
+                    TextButton.icon(
+                      onPressed: () => setState(() => _section = 'export'),
+                      icon: const Icon(Icons.ios_share_outlined),
+                      label: Text(t('membership.tab.export')),
+                    ),
+                    Material(
+                      color: Theme.of(context).colorScheme.surface,
+                      child: ExpansionTile(
+                        title: Text(t('membership.financeNav.help')),
+                        children: [
+                          const SizedBox(height: 10),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Eyebrow(t('membership.analyzeManage')),
+                          ),
+                          TextButton.icon(
+                            icon: const Icon(
+                              Icons.account_balance_wallet_outlined,
+                            ),
+                            label: Text(
+                              financeWorkspaceLabel(context, 'Budgets'),
+                            ),
+                            onPressed: () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      ClubFinanceWorkspaceScreen(club: club),
+                                ),
+                              );
+                              if (mounted) _reloadClub();
+                            },
+                          ),
+                          AirmiusPanel(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Eyebrow('Teamkasse, Strafkasse & Bedarf'),
+                                const SizedBox(height: 8),
+                                _FinanceGuideTile(
+                                  icon: Icons.account_balance_wallet_outlined,
+                                  title: financeWorkspaceLabel(
+                                    context,
+                                    'Kassen & Bankkonten',
+                                  ),
+                                  body: financeWorkspaceLabel(
+                                    context,
+                                    'Barkassen und Bankkonten des Vereins oder Teams getrennt verwalten.',
+                                  ),
+                                  onTap: () async {
+                                    await Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) =>
+                                            ClubFinanceWorkspaceScreen(
+                                              club: club,
+                                              initialTabIndex: 1,
+                                            ),
+                                      ),
+                                    );
+                                    if (mounted) _reloadClub();
+                                  },
+                                ),
+                                _FinanceGuideTile(
+                                  icon: Icons.gavel_outlined,
+                                  title: 'Strafkasse',
+                                  body:
+                                      'Öffne Team, wähle eine Mannschaft und gehe dort zu Strafen. Bezahlte Strafen landen in der Teamkasse.',
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => TeamsCenterScreen(
+                                          initialClubId: club.id,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                _FinanceGuideTile(
+                                  icon: Icons.shopping_bag_outlined,
+                                  title: 'Antrag für Bälle, Trikots, Socken',
+                                  body:
+                                      'Unter Budgets & Teamkassen kannst du Beschaffung beantragen und später genehmigen, bestellen, liefern und bezahlen.',
+                                  onTap: () async {
+                                    await Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) =>
+                                            ClubFinanceWorkspaceScreen(
+                                              club: club,
+                                            ),
+                                      ),
+                                    );
+                                    if (mounted) _reloadClub();
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (_financeView == 'invoices') ...[
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Eyebrow(t('membership.actionNow')),
+                    ),
+                    AirmiusPanel(
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          AirmiusButton(
+                            label: t('membership.createInvoice'),
+                            icon: Icons.receipt_long_outlined,
+                            onPressed: () => _createInvoice(club, members),
+                          ),
+                          AirmiusButton(
+                            label: t('membership.invoiceRun'),
+                            icon: Icons.playlist_add_check_circle_outlined,
+                            secondary: true,
+                            onPressed: () => _runInvoiceBatch(club),
+                          ),
+                          AirmiusButton(
+                            label: t('membership.recordPayment'),
+                            icon: Icons.payments_outlined,
+                            secondary: true,
+                            onPressed: () => _recordPayment(club, invoices),
+                          ),
+                        ],
+                      ),
+                    ),
+                    _FinanceOverviewBlock(
+                      title: t('membership.invoicesPayments'),
+                      countLabel: '${visibleInvoices.length}',
+                      detail: openInvoicesCount > 0
+                          ? openInvoiceTotal
+                          : t('membership.period.$_period'),
+                      icon: Icons.receipt_long_outlined,
+                      accent: airmiusAccentColor(context),
+                      initiallyExpanded: true,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          DropdownButtonFormField<String>(
+                            key: ValueKey(_period),
+                            isExpanded: true,
+                            initialValue: _period,
+                            dropdownColor: airmiusSurfaceSoftColor(context),
+                            decoration: InputDecoration(
+                              labelText: t('membership.invoicePeriod'),
+                            ),
+                            items:
+                                const ['all', 'month', 'previousMonth', 'year']
+                                    .map(
+                                      (item) => DropdownMenuItem(
+                                        value: item,
+                                        child: Text(
+                                          t('membership.period.$item'),
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                            onChanged: (value) => setState(() {
+                              _period = value ?? _period;
+                              _showAllInvoices = false;
+                            }),
+                          ),
+                          _savedViewBar('invoices', _invoiceSavedViews),
+                          const SizedBox(height: 12),
+                          for (final invoice in invoicePreview)
+                            _InvoiceLine(
+                              invoice: invoice,
+                              onOpen: () => _openReceiptDetails(
                                 club,
                                 payments,
                                 invoice: invoice,
-                                payment: payment,
-                              );
-                            },
-                            onEdit: () => _editPayment(club, payment, members),
-                          ),
-                        if (payments.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Text(
-                              t('membership.noPayments'),
-                              style: TextStyle(
-                                color: airmiusMutedColor(context),
-                                fontWeight: FontWeight.w700,
+                              ),
+                              onManage: () =>
+                                  _invoiceActions(club, invoice, invoices),
+                            ),
+                          if (visibleInvoices.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    invoices.isEmpty
+                                        ? t('membership.noInvoicesLoaded')
+                                        : t('membership.noInvoicesInPeriod'),
+                                    style: TextStyle(
+                                      color: airmiusMutedColor(context),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  if (invoices.isNotEmpty)
+                                    TextButton(
+                                      onPressed: () => setState(() {
+                                        _period = 'all';
+                                        _showAllInvoices = false;
+                                      }),
+                                      child: Text(t('membership.period.all')),
+                                    ),
+                                ],
                               ),
                             ),
-                          ),
-                        if (payments.length > paymentPreview.length)
-                          TextButton.icon(
-                            onPressed: () =>
-                                setState(() => _showAllPayments = true),
-                            icon: Icon(Icons.unfold_more_outlined),
-                            label: Text(
-                              'Alle ${payments.length} Zahlungen anzeigen',
-                            ),
-                          ),
-                        if (_showAllPayments && payments.length > 6)
-                          TextButton.icon(
-                            onPressed: () =>
-                                setState(() => _showAllPayments = false),
-                            icon: Icon(Icons.unfold_less_outlined),
-                            label: const Text('Liste einklappen'),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  AirmiusPanel(
-                    borderColor: airmiusAccentColor(
-                      context,
-                    ).withValues(alpha: 0.55),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Eyebrow(t('membership.bankReconciliation')),
-                        const SizedBox(height: 10),
-                        for (final entry in bankEntries)
-                          _BankLine(
-                            entry: entry,
-                            onConfirm:
-                                entry.status != 'matched' && entry.invoiceId > 0
-                                ? () => _runManagementAction(
-                                    () => AirmiusServicesScope.of(context)
-                                        .repositories
-                                        .clubs
-                                        .confirmClubBankTransaction(
-                                          club.id,
-                                          entry.id,
-                                        ),
-                                    success: t('membership.bankBooked'),
-                                  )
-                                : null,
-                          ),
-                        if (bankEntries.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Text(
-                              t('membership.noBankTransactions'),
-                              style: TextStyle(
-                                color: airmiusMutedColor(context),
-                                fontWeight: FontWeight.w700,
+                          if (visibleInvoices.length > invoicePreview.length)
+                            TextButton.icon(
+                              onPressed: () =>
+                                  setState(() => _showAllInvoices = true),
+                              icon: Icon(Icons.unfold_more_outlined),
+                              label: Text(
+                                'Alle ${visibleInvoices.length} Rechnungen anzeigen',
                               ),
                             ),
-                          ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            AirmiusButton(
-                              label: t('membership.importBankFile'),
-                              icon: Icons.cloud_upload_outlined,
-                              onPressed: () => _uploadImport(club, bank: true),
+                          if (_showAllInvoices && visibleInvoices.length > 6)
+                            TextButton.icon(
+                              onPressed: () =>
+                                  setState(() => _showAllInvoices = false),
+                              icon: Icon(Icons.unfold_less_outlined),
+                              label: const Text('Liste einklappen'),
                             ),
-                          ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 14),
+                    const SizedBox(height: 12),
+                  ],
+                  if (_financeView == 'bookings') ...[
+                    _FinanceOverviewBlock(
+                      title: t('membership.cashbook'),
+                      countLabel: '${financeEntries.length}',
+                      detail: totalBalance,
+                      icon: Icons.account_balance_wallet_outlined,
+                      accent: AirmiusColors.amber,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final entry in financeEntryPreview)
+                            _FinanceEntryLine(
+                              entry: entry,
+                              onOpenReceipt: () => _openFinanceReceipt(entry),
+                              onEdit: () =>
+                                  _editFinanceEntry(club, entry: entry),
+                            ),
+                          if (financeEntries.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Text(
+                                t('membership.noFinanceEntries'),
+                                style: TextStyle(
+                                  color: airmiusMutedColor(context),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          if (financeEntries.length >
+                              financeEntryPreview.length)
+                            TextButton.icon(
+                              onPressed: () =>
+                                  setState(() => _showAllFinanceEntries = true),
+                              icon: Icon(Icons.unfold_more_outlined),
+                              label: Text(
+                                'Alle ${financeEntries.length} Buchungen anzeigen',
+                              ),
+                            ),
+                          if (_showAllFinanceEntries &&
+                              financeEntries.length > 6)
+                            TextButton.icon(
+                              onPressed: () => setState(
+                                () => _showAllFinanceEntries = false,
+                              ),
+                              icon: Icon(Icons.unfold_less_outlined),
+                              label: const Text('Liste einklappen'),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _FinanceOverviewBlock(
+                      title: t('membership.recordedPayments'),
+                      countLabel: '${payments.length}',
+                      detail: incomePeriodTotal,
+                      icon: Icons.payments_outlined,
+                      accent: AirmiusColors.green,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final payment in paymentPreview)
+                            _PaymentLine(
+                              payment: payment,
+                              onOpen: () {
+                                _InvoiceEntry? invoice;
+                                for (final candidate in invoices) {
+                                  if (candidate.id == payment.invoiceId) {
+                                    invoice = candidate;
+                                    break;
+                                  }
+                                }
+                                _openReceiptDetails(
+                                  club,
+                                  payments,
+                                  invoice: invoice,
+                                  payment: payment,
+                                );
+                              },
+                              onEdit: () =>
+                                  _editPayment(club, payment, members),
+                            ),
+                          if (payments.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Text(
+                                t('membership.noPayments'),
+                                style: TextStyle(
+                                  color: airmiusMutedColor(context),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          if (payments.length > paymentPreview.length)
+                            TextButton.icon(
+                              onPressed: () =>
+                                  setState(() => _showAllPayments = true),
+                              icon: Icon(Icons.unfold_more_outlined),
+                              label: Text(
+                                'Alle ${payments.length} Zahlungen anzeigen',
+                              ),
+                            ),
+                          if (_showAllPayments && payments.length > 6)
+                            TextButton.icon(
+                              onPressed: () =>
+                                  setState(() => _showAllPayments = false),
+                              icon: Icon(Icons.unfold_less_outlined),
+                              label: const Text('Liste einklappen'),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                  if (_financeView == 'accounts') ...[
+                    ClubMoneyAccountsOverview(
+                      key: ValueKey('money-accounts-${club.id}'),
+                      load: () async {
+                        final services = AirmiusServicesScope.of(context);
+                        final client = services.clientForSession(
+                          services.authState.session,
+                        );
+                        final response = await client.clubFinanceWorkspace(
+                          club.id,
+                        );
+                        return response['data'] as Map<String, dynamic>? ?? {};
+                      },
+                      onOpen: (create) async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ClubFinanceWorkspaceScreen(
+                              club: club,
+                              initialTabIndex: 1,
+                              createAccountOnOpen: create,
+                            ),
+                          ),
+                        );
+                        if (mounted) _reloadClub();
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                  if (_financeView == 'bank') ...[
+                    AirmiusPanel(
+                      borderColor: airmiusAccentColor(
+                        context,
+                      ).withValues(alpha: 0.55),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Eyebrow(t('membership.bankReconciliation')),
+                          const SizedBox(height: 10),
+                          for (final entry in bankEntries)
+                            _BankLine(
+                              entry: entry,
+                              onConfirm:
+                                  entry.status != 'matched' &&
+                                      entry.invoiceId > 0
+                                  ? () => _runManagementAction(
+                                      () => AirmiusServicesScope.of(context)
+                                          .repositories
+                                          .clubs
+                                          .confirmClubBankTransaction(
+                                            club.id,
+                                            entry.id,
+                                          ),
+                                      success: t('membership.bankBooked'),
+                                    )
+                                  : null,
+                            ),
+                          if (bankEntries.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Text(
+                                t('membership.noBankTransactions'),
+                                style: TextStyle(
+                                  color: airmiusMutedColor(context),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: [
+                              AirmiusButton(
+                                label: t('membership.importBankFile'),
+                                icon: Icons.cloud_upload_outlined,
+                                onPressed: () =>
+                                    _uploadImport(club, bank: true),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
                 ],
                 if (_section == 'export') ...[
                   AirmiusPanel(

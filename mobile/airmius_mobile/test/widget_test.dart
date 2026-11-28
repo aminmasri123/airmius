@@ -5057,6 +5057,58 @@ void main() {
       });
     }
   }
+  testWidgets('club advertising opens campaigns from matching commerce card', (
+    WidgetTester tester,
+  ) async {
+    _setTestViewport(tester, const Size(390, 1200));
+    final transport = _SequencedTransport(
+      [],
+      responsesByPath: {
+        '/api/v1/work-automation-clubs': const AirmiusApiResponse(
+          statusCode: 200,
+          body: '{"data":[]}',
+        ),
+        '/api/v1/clubs': const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":[{"id":4,"owner_id":1,"name":"Testverein","can_manage":true}]}',
+        ),
+        '/api/v1/clubs/4': const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"id":4,"owner_id":1,"name":"Testverein","can_manage":true,"management":{"can_manage":true,"permissions":{"effective":{"advertising.edit":true}}}}}',
+        ),
+        '/api/v1/commerce/seller': const AirmiusApiResponse(
+          statusCode: 200,
+          body:
+              '{"data":{"campaigns":[],"clubs":[{"id":4,"name":"Testverein","can_manage_advertising":true}]}}',
+        ),
+      },
+    );
+
+    await _pumpAirmiusWidget(
+      tester,
+      _widgetTestContainer(transport: transport),
+      const ClubCockpitScreen(initialClubId: 4),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Werbekampagnen'), findsNothing);
+    for (final label in [
+      'Weitere Bereiche anzeigen',
+      'Shop & Werbung',
+      'Werbekampagnen',
+    ]) {
+      await tester.ensureVisible(find.text(label));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Noch keine Kampagne'), findsOneWidget);
+    expect(
+      transport.requests.map((request) => request.path),
+      contains('/api/v1/commerce/seller'),
+    );
+  });
 
   testWidgets('club website request is reachable without Commerce access', (
     WidgetTester tester,
@@ -5100,7 +5152,7 @@ void main() {
     expect(find.text('Website anfragen'), findsNothing);
     for (final label in [
       'Weitere Bereiche anzeigen',
-      'Commerce',
+      'Shop & Werbung',
       'Website anfragen',
     ]) {
       await tester.ensureVisible(find.text(label));
@@ -5108,6 +5160,7 @@ void main() {
       await tester.tap(find.text(label));
       await tester.pumpAndSettle();
     }
+    expect(find.text('Werbekampagnen'), findsNothing);
     expect(
       transport.requests.map((request) => request.path),
       contains('/api/v1/commerce/seller'),

@@ -1366,7 +1366,9 @@ final _sellerAr = {
 };
 
 const _commerceAdvDe = {
+  'commerceAdv.clubArea': 'Shop & Werbung',
   'commerceAdv.ads': 'Werbung',
+  'commerceAdv.campaigns': 'Werbekampagnen',
   'commerceAdv.websites': 'Website',
   'commerceAdv.createCampaign': 'Kampagne erstellen',
   'commerceAdv.editCampaign': 'Kampagne bearbeiten',
@@ -1462,7 +1464,9 @@ const _commerceAdvDe = {
 
 final _commerceAdvEn = {
   ..._commerceAdvDe,
+  'commerceAdv.clubArea': 'Shop & advertising',
   'commerceAdv.ads': 'Advertising',
+  'commerceAdv.campaigns': 'Ad campaigns',
   'commerceAdv.websites': 'Website',
   'commerceAdv.createCampaign': 'Create campaign',
   'commerceAdv.editCampaign': 'Edit campaign',
@@ -1557,7 +1561,9 @@ final _commerceAdvEn = {
 
 final _commerceAdvFr = {
   ..._commerceAdvEn,
+  'commerceAdv.clubArea': 'Boutique et publicité',
   'commerceAdv.ads': 'Publicité',
+  'commerceAdv.campaigns': 'Campagnes publicitaires',
   'commerceAdv.websites': 'Site web',
   'commerceAdv.createCampaign': 'Créer une campagne',
   'commerceAdv.editCampaign': 'Modifier la campagne',
@@ -1655,7 +1661,9 @@ final _commerceAdvFr = {
 
 final _commerceAdvAr = {
   ..._commerceAdvEn,
+  'commerceAdv.clubArea': 'المتجر والإعلانات',
   'commerceAdv.ads': 'الإعلانات',
+  'commerceAdv.campaigns': 'الحملات الإعلانية',
   'commerceAdv.websites': 'الموقع',
   'commerceAdv.createCampaign': 'إنشاء حملة',
   'commerceAdv.editCampaign': 'تعديل الحملة',
@@ -10471,7 +10479,17 @@ const _membershipActionsDe = {
   'membership.invitationFailed': 'Einladung konnte nicht gesendet werden',
   'membership.invitationSent': 'Einladung wurde versendet.',
   'membership.invoice': 'Rechnung',
-  'membership.invoiceCreated': 'Rechnung wurde erstellt und versendet.',
+  'membership.invoiceCreated':
+      'Rechnung wurde erstellt. Die Zustellung läuft im Hintergrund.',
+  'membership.invoiceCreateFailed': 'Rechnung wurde nicht erstellt',
+  'membership.invoiceCreatedPaymentFailed':
+      'Rechnung erstellt – Zahlung nicht erfasst',
+  'membership.invoiceCreatedPaymentFailedBody':
+      'Die Rechnung wurde gespeichert, aber die Zahlung konnte nicht erfasst werden. Öffne die Rechnung und erfasse die Zahlung erneut.\n\nFehler: {error}',
+  'membership.invoiceCreatedPaymentMissing':
+      'Die Rechnung wurde gespeichert, konnte für die Zahlung aber nicht eindeutig ermittelt werden. Öffne die Rechnung und erfasse die Zahlung erneut.',
+  'membership.invoiceSavedRefreshFailed':
+      'Die Rechnung wurde gespeichert, aber die Ansicht konnte nicht aktualisiert werden. Lade die Seite neu. Fehler: {error}',
   'membership.invoicePayment': 'Rechnungszahlung',
   'membership.invoiceSearchHint': 'Titel, Mitglied oder Betrag suchen',
   'membership.invoiceStatusUpdated': 'Rechnungsstatus wurde aktualisiert.',
@@ -10977,7 +10995,17 @@ final _membershipActionsEn = {
   'membership.invitationFailed': 'The invitation could not be sent',
   'membership.invitationSent': 'The invitation was sent.',
   'membership.invoice': 'Invoice',
-  'membership.invoiceCreated': 'The invoice was created and sent.',
+  'membership.invoiceCreated':
+      'The invoice was created. Delivery continues in the background.',
+  'membership.invoiceCreateFailed': 'Invoice was not created',
+  'membership.invoiceCreatedPaymentFailed':
+      'Invoice created – payment not recorded',
+  'membership.invoiceCreatedPaymentFailedBody':
+      'The invoice was saved, but the payment could not be recorded. Open the invoice and record the payment again.\n\nError: {error}',
+  'membership.invoiceCreatedPaymentMissing':
+      'The invoice was saved but could not be identified reliably for the payment. Open the invoice and record the payment again.',
+  'membership.invoiceSavedRefreshFailed':
+      'The invoice was saved, but the view could not be refreshed. Reload the page. Error: {error}',
   'membership.invoicePayment': 'Invoice payment',
   'membership.invoiceSearchHint': 'Search by title, member, or amount',
   'membership.invoiceStatusUpdated': 'The invoice status was updated.',
@@ -11481,7 +11509,17 @@ final _membershipActionsFr = {
   'membership.invitationFailed': 'Impossible d’envoyer l’invitation',
   'membership.invitationSent': 'L’invitation a été envoyée.',
   'membership.invoice': 'Facture',
-  'membership.invoiceCreated': 'La facture a été créée et envoyée.',
+  'membership.invoiceCreated':
+      'La facture a été créée. L’envoi se poursuit en arrière-plan.',
+  'membership.invoiceCreateFailed': 'La facture n’a pas été créée',
+  'membership.invoiceCreatedPaymentFailed':
+      'Facture créée – paiement non enregistré',
+  'membership.invoiceCreatedPaymentFailedBody':
+      'La facture a été enregistrée, mais le paiement n’a pas pu l’être. Ouvrez la facture et enregistrez à nouveau le paiement.\n\nErreur : {error}',
+  'membership.invoiceCreatedPaymentMissing':
+      'La facture a été enregistrée, mais elle n’a pas pu être identifiée de manière fiable pour le paiement. Ouvrez-la et enregistrez à nouveau le paiement.',
+  'membership.invoiceSavedRefreshFailed':
+      'La facture a été enregistrée, mais la vue n’a pas pu être actualisée. Rechargez la page. Erreur : {error}',
   'membership.invoicePayment': 'Paiement de facture',
   'membership.invoiceSearchHint': 'Rechercher par titre, membre ou montant',
   'membership.invoiceStatusUpdated': 'Le statut de la facture a été actualisé.',
@@ -11983,7 +12021,17 @@ final _membershipActionsAr = {
   'membership.invitationFailed': 'تعذر إرسال الدعوة',
   'membership.invitationSent': 'تم إرسال الدعوة.',
   'membership.invoice': 'فاتورة',
-  'membership.invoiceCreated': 'تم إنشاء الفاتورة وإرسالها.',
+  'membership.invoiceCreated':
+      'تم إنشاء الفاتورة. يستمر الإرسال في الخلفية.',
+  'membership.invoiceCreateFailed': 'لم يتم إنشاء الفاتورة',
+  'membership.invoiceCreatedPaymentFailed':
+      'تم إنشاء الفاتورة – لم يتم تسجيل الدفعة',
+  'membership.invoiceCreatedPaymentFailedBody':
+      'تم حفظ الفاتورة، ولكن تعذر تسجيل الدفعة. افتح الفاتورة وسجّل الدفعة مرة أخرى.\n\nالخطأ: {error}',
+  'membership.invoiceCreatedPaymentMissing':
+      'تم حفظ الفاتورة، ولكن تعذر تحديدها بشكل موثوق لتسجيل الدفعة. افتح الفاتورة وسجّل الدفعة مرة أخرى.',
+  'membership.invoiceSavedRefreshFailed':
+      'تم حفظ الفاتورة، ولكن تعذر تحديث العرض. أعد تحميل الصفحة. الخطأ: {error}',
   'membership.invoicePayment': 'دفع فاتورة',
   'membership.invoiceSearchHint': 'ابحث بالعنوان أو العضو أو المبلغ',
   'membership.invoiceStatusUpdated': 'تم تحديث حالة الفاتورة.',
@@ -12540,6 +12588,14 @@ const _membershipDe = {
   'membership.tab.invite': 'Einladen',
   'membership.tab.finance': 'Beiträge & Zahlungen',
   'membership.tab.financeShort': 'Finanzen',
+  'membership.financeNav.overview': 'Übersicht',
+  'membership.financeNav.invoices': 'Beiträge & Rechnungen',
+  'membership.financeNav.bookings': 'Buchungen',
+  'membership.financeNav.accounts': 'Konten & Kassen',
+  'membership.financeNav.bank': 'Bankabgleich',
+  'membership.financeNav.receivables': 'Offene Beiträge',
+  'membership.financeNav.notCash': 'Noch nicht eingegangen',
+  'membership.financeNav.help': 'Weitere Finanzfunktionen',
   'membership.tab.schedule': 'Fälligkeiten',
   'membership.tab.export': 'Export',
   'membership.tab.audit': 'Änderungen',
@@ -12905,6 +12961,14 @@ final _membershipEn = {
   'membership.tab.invite': 'Invite',
   'membership.tab.finance': 'Dues & payments',
   'membership.tab.financeShort': 'Finances',
+  'membership.financeNav.overview': 'Overview',
+  'membership.financeNav.invoices': 'Contributions & invoices',
+  'membership.financeNav.bookings': 'Transactions',
+  'membership.financeNav.accounts': 'Accounts & cash',
+  'membership.financeNav.bank': 'Bank reconciliation',
+  'membership.financeNav.receivables': 'Outstanding contributions',
+  'membership.financeNav.notCash': 'Not yet received',
+  'membership.financeNav.help': 'More finance tools',
   'membership.tab.schedule': 'Due dates',
   'membership.tab.export': 'Export',
   'membership.tab.audit': 'Changes',
@@ -13252,6 +13316,14 @@ final _membershipFr = {
   'membership.tab.invite': 'Inviter',
   'membership.tab.finance': 'Cotisations et paiements',
   'membership.tab.financeShort': 'Finances',
+  'membership.financeNav.overview': 'Vue d’ensemble',
+  'membership.financeNav.invoices': 'Cotisations et factures',
+  'membership.financeNav.bookings': 'Écritures',
+  'membership.financeNav.accounts': 'Comptes et caisses',
+  'membership.financeNav.bank': 'Rapprochement bancaire',
+  'membership.financeNav.receivables': 'Cotisations à recevoir',
+  'membership.financeNav.notCash': 'Pas encore encaissé',
+  'membership.financeNav.help': 'Autres outils financiers',
   'membership.tab.schedule': 'Échéances',
   'membership.tab.export': 'Export',
   'membership.tab.audit': 'Modifications',
@@ -13587,6 +13659,14 @@ final _membershipAr = {
   'membership.tab.invite': 'دعوة',
   'membership.tab.finance': 'الاشتراكات والمدفوعات',
   'membership.tab.financeShort': 'المالية',
+  'membership.financeNav.overview': 'نظرة عامة',
+  'membership.financeNav.invoices': 'الاشتراكات والفواتير',
+  'membership.financeNav.bookings': 'المعاملات',
+  'membership.financeNav.accounts': 'الحسابات والصناديق',
+  'membership.financeNav.bank': 'التسوية البنكية',
+  'membership.financeNav.receivables': 'الاشتراكات المستحقة',
+  'membership.financeNav.notCash': 'لم يتم استلامها بعد',
+  'membership.financeNav.help': 'أدوات مالية إضافية',
   'membership.tab.schedule': 'الاستحقاقات',
   'membership.tab.export': 'تصدير',
   'membership.tab.audit': 'التغييرات',
@@ -16254,6 +16334,9 @@ const _clubHubDe = {
       'Aktuell sind keine erstellten Rechnungen offen.',
   'clubHub.communication': 'Chats',
   'clubHub.communicationBody': 'Mit Personen, Teams und Gruppen schreiben.',
+  'clubHub.newsletterManagement': 'Newsletter-Verwaltung',
+  'clubHub.newsletterManagementBody':
+      'Anmeldungen, Versand, Zustellfehler und Sperrliste verwalten.',
   'clubHub.events': 'Events & Training',
   'clubHub.eventsBody': 'Termine, Veranstaltungen und Einheiten planen.',
   'clubHub.management': 'Verwaltung',
@@ -16442,6 +16525,9 @@ final _clubHubEn = {
       'There are currently no created invoices open.',
   'clubHub.communication': 'Chats',
   'clubHub.communicationBody': 'Message people, teams and groups.',
+  'clubHub.newsletterManagement': 'Newsletter management',
+  'clubHub.newsletterManagementBody':
+      'Manage subscriptions, delivery, bounces and blocked addresses.',
   'clubHub.events': 'Events & training',
   'clubHub.eventsBody': 'Plan appointments, events and sessions.',
   'clubHub.management': 'Management',
@@ -16585,6 +16671,9 @@ final _clubHubFr = {
       'Aucune facture créée n’est actuellement ouverte.',
   'clubHub.communication': 'Discussions',
   'clubHub.communicationBody': 'Écrivez aux personnes, équipes et groupes.',
+  'clubHub.newsletterManagement': 'Gestion de la newsletter',
+  'clubHub.newsletterManagementBody':
+      'Gérez les inscriptions, les envois, les erreurs et les adresses bloquées.',
   'clubHub.events': 'Événements et entraînement',
   'clubHub.eventsBody': 'Planifiez rendez-vous, événements et séances.',
   'clubHub.management': 'Gestion',
@@ -16723,6 +16812,9 @@ final _clubHubAr = {
   'clubReports.financeClearHelp': 'لا توجد حاليًا فواتير منشأة مفتوحة.',
   'clubHub.communication': 'المحادثات',
   'clubHub.communicationBody': 'راسل الأشخاص والفرق والمجموعات.',
+  'clubHub.newsletterManagement': 'إدارة النشرة الإخبارية',
+  'clubHub.newsletterManagementBody':
+      'إدارة الاشتراكات والإرسال وأخطاء التسليم والعناوين المحظورة.',
   'clubHub.events': 'الفعاليات والتدريب',
   'clubHub.eventsBody': 'تخطيط المواعيد والفعاليات والحصص.',
   'clubHub.management': 'الإدارة',
@@ -26865,6 +26957,11 @@ final _strings = {
     'trainingHub.sendPlan': 'Plan senden',
     'trainingHub.planSent':
         'Der Trainingsplan wurde zugewiesen und veröffentlicht.',
+    'trainingHub.completedTrainings': 'Abgeschlossene Trainings ansehen',
+    'trainingHub.completedTrainingsHint':
+        'Hier siehst du die abgeschlossenen Einheiten der betreuten Sportler, die zu diesem Plan gehören und für Trainer freigegeben wurden.',
+    'trainingHub.noCompletedTrainings':
+        'Für diesen Plan wurden noch keine freigegebenen Trainings abgeschlossen.',
     'trainingHub.emptyLogs': 'Noch keine Trainingseinheiten dokumentiert.',
     'trainingHub.loadError': 'Die Trainingsdaten konnten nicht geladen werden.',
     'trainingHub.retry': 'Erneut laden',
@@ -29600,6 +29697,11 @@ final _strings = {
     'trainingHub.manageRecipients': 'Manage recipients',
     'trainingHub.sendPlan': 'Send plan',
     'trainingHub.planSent': 'The training plan was assigned and published.',
+    'trainingHub.completedTrainings': 'View completed training sessions',
+    'trainingHub.completedTrainingsHint':
+        'See completed sessions from coached athletes that belong to this plan and were shared with coaches.',
+    'trainingHub.noCompletedTrainings':
+        'No shared training sessions have been completed for this plan yet.',
     'trainingHub.emptyLogs': 'No training sessions recorded yet.',
     'trainingHub.loadError': 'The training data could not be loaded.',
     'trainingHub.retry': 'Load again',
@@ -32257,6 +32359,11 @@ final _strings = {
     'trainingHub.manageRecipients': 'Gérer les destinataires',
     'trainingHub.sendPlan': 'Envoyer le plan',
     'trainingHub.planSent': 'Le plan a été attribué et publié.',
+    'trainingHub.completedTrainings': 'Voir les entraînements terminés',
+    'trainingHub.completedTrainingsHint':
+        'Consultez les séances terminées des sportifs suivis qui appartiennent à ce plan et sont partagées avec les entraîneurs.',
+    'trainingHub.noCompletedTrainings':
+        'Aucun entraînement partagé n’a encore été terminé pour ce plan.',
     'trainingHub.emptyLogs': 'Aucune séance enregistrée pour le moment.',
     'trainingHub.loadError':
         'Les données d’entraînement ne peuvent pas être chargées.',
@@ -34851,6 +34958,11 @@ final _strings = {
     'trainingHub.manageRecipients': 'إدارة المستلمين',
     'trainingHub.sendPlan': 'إرسال الخطة',
     'trainingHub.planSent': 'تم تعيين خطة التدريب ونشرها.',
+    'trainingHub.completedTrainings': 'عرض التدريبات المكتملة',
+    'trainingHub.completedTrainingsHint':
+        'اعرض الحصص المكتملة للرياضيين الذين تشرف عليهم والمرتبطة بهذه الخطة والمشاركة مع المدربين.',
+    'trainingHub.noCompletedTrainings':
+        'لا توجد تدريبات مشتركة مكتملة لهذه الخطة حتى الآن.',
     'trainingHub.emptyLogs': 'لم يتم تسجيل جلسات تدريب حتى الآن.',
     'trainingHub.loadError': 'تعذر تحميل بيانات التدريب.',
     'trainingHub.retry': 'إعادة التحميل',

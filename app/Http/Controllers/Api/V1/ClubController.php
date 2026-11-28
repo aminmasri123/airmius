@@ -761,23 +761,42 @@ class ClubController extends Controller
         $payment = app(ClubInvoicePaymentService::class)->record($invoice, $data, $request->user());
 
         if ($invoice->user_id) {
-            try {
-                AppNotification::sendLocalized(
-                    (int) $invoice->user_id,
-                    $invoice->status === 'paid' ? 'invoice.paid' : 'invoice.payment_received',
-                    'organization.notifications.payment_title',
-                    'organization.notifications.payment_body',
-                    ['invoice' => $invoice->number],
-                    [
-                        'url' => '/club-memberships?tab=payments&club_id='.$club->id.'&invoice_id='.$invoice->id,
-                        'invoice_id' => $invoice->id,
-                        'club_id' => $club->id,
+            defer(function () use ($invoice, $club, $payment): void {
+                try {
+                    AppNotification::sendLocalized(
+                        (int) $invoice->user_id,
+                        $invoice->status === 'paid' ? 'invoice.paid' : 'invoice.payment_received',
+                        'organization.notifications.payment_title',
+                        'organization.notifications.payment_body',
+                        ['invoice' => $invoice->number],
+                        [
+                            'url' => '/club-memberships?tab=payments&club_id='.$club->id.'&invoice_id='.$invoice->id,
+                            'invoice_id' => $invoice->id,
+                            'club_id' => $club->id,
+                        ],
+                        ['dedupe_key' => 'invoice-payment-'.$payment->id],
+                    );
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+            });
+        }
+
+        if ($request->boolean('compact_response')) {
+            return response()->json([
+                'message' => __('organization.club.payment_recorded'),
+                'data' => [
+                    'payment' => [
+                        'id' => $payment->id,
+                        'amount' => $payment->amount,
+                        'paid_at' => $payment->paid_at?->toJSON(),
                     ],
-                    ['dedupe_key' => 'invoice-payment-'.$payment->id],
-                );
-            } catch (Throwable $exception) {
-                report($exception);
-            }
+                    'invoice' => [
+                        'id' => $invoice->id,
+                        'status' => $invoice->fresh()->status,
+                    ],
+                ],
+            ]);
         }
 
         return response()->json([
@@ -1688,6 +1707,16 @@ class ClubController extends Controller
         abort_unless($this->canManageFinance($request, $club), 403);
         app(WebClubMembershipController::class)->storeInvoice($request, $club, $user);
 
+        if ($request->boolean('compact_response')) {
+            /** @var Invoice|null $invoice */
+            $invoice = $request->attributes->get('created_membership_invoice');
+
+            return response()->json([
+                'message' => __('organization.club.invoice_created_short'),
+                'data' => ['invoice' => $this->compactInvoicePayload($invoice)],
+            ], 201);
+        }
+
         return $this->membershipManagementResponse($request, $club, __('organization.club.invoice_created_short'), 201);
     }
 
@@ -1698,7 +1727,35 @@ class ClubController extends Controller
         abort_unless((int) $externalMember->club_id === (int) $club->id, 404);
         app(WebClubMembershipController::class)->storeExternalMemberInvoice($request, $club, $externalMember);
 
+        if ($request->boolean('compact_response')) {
+            /** @var Invoice|null $invoice */
+            $invoice = $request->attributes->get('created_membership_invoice');
+
+            return response()->json([
+                'message' => __('organization.club.invoice_created_short'),
+                'data' => ['invoice' => $this->compactInvoicePayload($invoice)],
+            ], 201);
+        }
+
         return $this->membershipManagementResponse($request, $club, __('organization.club.invoice_created_short'), 201);
+    }
+
+    /** @return array<string, mixed>|null */
+    private function compactInvoicePayload(?Invoice $invoice): ?array
+    {
+        if (! $invoice) {
+            return null;
+        }
+
+        return [
+            'id' => $invoice->id,
+            'number' => $invoice->number,
+            'title' => $invoice->title,
+            'amount' => $invoice->amount,
+            'status' => $invoice->status,
+            'due_date' => $invoice->due_date?->toJSON(),
+            'created_at' => $invoice->created_at?->toJSON(),
+        ];
     }
 
     public function previewContributionInvoiceRun(Request $request, Club $club, ClubContributionInvoiceRunService $invoiceRuns)

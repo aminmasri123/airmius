@@ -121,6 +121,63 @@ class TrainingWorkflowIntegrationTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_coach_can_filter_completed_shared_logs_for_one_assigned_plan(): void
+    {
+        [$coach, $athlete, $team, $plan, $item] = $this->assignedPlan();
+
+        $completed = TrainingLog::query()->create([
+            'user_id' => $athlete->id,
+            'created_by' => $athlete->id,
+            'team_id' => $team->id,
+            'training_plan_id' => $plan->id,
+            'training_plan_item_id' => $item->id,
+            'title' => 'Abgeschlossene Intervalle',
+            'status' => 'completed',
+            'performed_at' => now(),
+            'metrics' => ['privacy_scope' => 'trainer'],
+        ]);
+        TrainingLog::query()->create([
+            'user_id' => $athlete->id,
+            'created_by' => $athlete->id,
+            'team_id' => $team->id,
+            'training_plan_id' => $plan->id,
+            'training_plan_item_id' => $item->id,
+            'title' => 'Teilweise erledigt',
+            'status' => 'partial',
+            'performed_at' => now()->subMinute(),
+            'metrics' => ['privacy_scope' => 'trainer'],
+        ]);
+        TrainingLog::query()->create([
+            'user_id' => $athlete->id,
+            'created_by' => $athlete->id,
+            'team_id' => $team->id,
+            'training_plan_id' => $plan->id,
+            'training_plan_item_id' => $item->id,
+            'title' => 'Privates Training',
+            'status' => 'completed',
+            'performed_at' => now()->subMinutes(2),
+            'metrics' => ['privacy_scope' => 'private'],
+        ]);
+
+        Sanctum::actingAs($coach);
+
+        $this->getJson('/api/v1/training/logs?'.http_build_query([
+            'training_plan_id' => $plan->id,
+            'status' => 'completed',
+            'per_page' => 50,
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $completed->id)
+            ->assertJsonPath('data.0.athlete.id', $athlete->id)
+            ->assertJsonMissing(['title' => 'Teilweise erledigt'])
+            ->assertJsonMissing(['title' => 'Privates Training']);
+
+        $this->getJson('/api/v1/training/logs?status=invalid')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+    }
+
     public function test_plan_item_deep_link_is_server_validated_and_prefills_documentation(): void
     {
         [, $athlete, , $plan, $item] = $this->assignedPlan();

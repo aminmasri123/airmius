@@ -302,6 +302,8 @@ return [
         'removal_objection_body' => ':user appealed the removal from :club.',
         'invoice_created_title' => 'New invoice from :club',
         'invoice_created_body' => ':title – :amount EUR',
+        'invoice_email_failed_title' => 'Invoice saved – email delivery failed',
+        'invoice_email_failed_body' => 'Invoice :invoice was saved but could not be delivered by email. Check the address or send the invoice again.',
         'invoice_reminder_title' => 'Payment reminder',
         'invoice_reminder_body' => 'Please review the open invoice :invoice.',
         'payment_received_title' => 'Payment received',

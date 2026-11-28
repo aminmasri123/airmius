@@ -302,6 +302,8 @@ return [
         'removal_objection_body' => 'يعترض :user على إزالته من :club.',
         'invoice_created_title' => 'فاتورة جديدة من :club',
         'invoice_created_body' => ':title – :amount يورو',
+        'invoice_email_failed_title' => 'تم حفظ الفاتورة – فشل إرسال البريد',
+        'invoice_email_failed_body' => 'تم حفظ الفاتورة :invoice ولكن تعذر إرسالها عبر البريد الإلكتروني. تحقق من العنوان أو أرسل الفاتورة مرة أخرى.',
         'invoice_reminder_title' => 'تذكير بالدفع',
         'invoice_reminder_body' => 'يرجى مراجعة الفاتورة المفتوحة :invoice.',
         'payment_received_title' => 'تم استلام الدفعة',

@@ -444,7 +444,20 @@ class TrainingController extends Controller
 
     public function logs(Request $request)
     {
+        $filters = $request->validate([
+            'training_plan_id' => ['nullable', 'integer', 'min:1'],
+            'status' => ['nullable', Rule::in(['planned', 'in_progress', 'partial', 'completed', 'missed'])],
+        ]);
+
         $logs = $this->visibleLogs($request)
+            ->when(
+                isset($filters['training_plan_id']),
+                fn ($query) => $query->where('training_plan_id', $filters['training_plan_id'])
+            )
+            ->when(
+                isset($filters['status']),
+                fn ($query) => $query->where('status', $filters['status'])
+            )
             ->with(['athlete', 'trainer', 'team', 'plan', 'planItem', 'entries', ...$this->logRouteRelations($request)])
             ->latest('performed_at')
             ->latest('id')

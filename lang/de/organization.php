@@ -302,6 +302,8 @@ return [
         'removal_objection_body' => ':user widerspricht der Entfernung aus :club.',
         'invoice_created_title' => 'Neue Rechnung von :club',
         'invoice_created_body' => ':title – :amount EUR',
+        'invoice_email_failed_title' => 'Rechnung gespeichert – E-Mail fehlgeschlagen',
+        'invoice_email_failed_body' => 'Die Rechnung :invoice wurde gespeichert, konnte aber nicht per E-Mail zugestellt werden. Bitte prüfe die Adresse oder sende die Rechnung erneut.',
         'invoice_reminder_title' => 'Zahlungserinnerung',
         'invoice_reminder_body' => 'Bitte prüfe die offene Rechnung :invoice.',
         'payment_received_title' => 'Zahlung eingegangen',

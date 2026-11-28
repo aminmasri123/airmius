@@ -302,6 +302,8 @@ return [
         'removal_objection_body' => ':user conteste son retrait de :club.',
         'invoice_created_title' => 'Nouvelle facture de :club',
         'invoice_created_body' => ':title – :amount EUR',
+        'invoice_email_failed_title' => 'Facture enregistrée – échec de l’e-mail',
+        'invoice_email_failed_body' => 'La facture :invoice a été enregistrée, mais n’a pas pu être envoyée par e-mail. Vérifiez l’adresse ou renvoyez la facture.',
         'invoice_reminder_title' => 'Rappel de paiement',
         'invoice_reminder_body' => 'Veuillez vérifier la facture ouverte :invoice.',
         'payment_received_title' => 'Paiement reçu',

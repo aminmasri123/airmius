@@ -1885,33 +1885,59 @@ class ClubMembershipController extends Controller
             return $invoice;
         });
 
+        $request->attributes->set('created_membership_invoice', $invoice);
+
         if ($isWaived) {
             return back()->with('success', __('organization.club.invoice_created'));
         }
 
-        AppNotification::sendLocalized(
-            $payer,
-            'invoice.created',
-            'organization.notifications.invoice_created_title',
-            'organization.notifications.invoice_created_body',
-            [
-                'club' => $club->name,
-                'title' => $invoice->title,
-                'amount' => number_format((float) $invoice->amount, 2, ',', '.'),
-            ],
-            [
-                'url' => route('auth.club-memberships.index', [
-                    'tab' => 'payments',
-                    'club_id' => $club->id,
-                    'invoice_id' => $invoice->id,
-                ]),
-                'club_id' => $club->id,
-                'invoice_id' => $invoice->id,
-                'invoice_kind' => 'club_invoice',
-            ],
-        );
+        $actor = $request->user();
+        defer(function () use ($payer, $invoice, $actor, $club): void {
+            try {
+                AppNotification::sendLocalized(
+                    $payer,
+                    'invoice.created',
+                    'organization.notifications.invoice_created_title',
+                    'organization.notifications.invoice_created_body',
+                    [
+                        'club' => $club->name,
+                        'title' => $invoice->title,
+                        'amount' => number_format((float) $invoice->amount, 2, ',', '.'),
+                    ],
+                    [
+                        'url' => route('auth.club-memberships.index', [
+                            'tab' => 'payments',
+                            'club_id' => $club->id,
+                            'invoice_id' => $invoice->id,
+                        ]),
+                        'club_id' => $club->id,
+                        'invoice_id' => $invoice->id,
+                        'invoice_kind' => 'club_invoice',
+                    ],
+                );
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
 
-        $this->sendClubInvoiceCreatedEmail($payer, $invoice->loadMissing('club'));
+            if (! $this->sendClubInvoiceCreatedEmail($payer, $invoice->loadMissing('club'))) {
+                AppNotification::sendLocalized(
+                    $actor,
+                    'club.invoice.email_failed',
+                    'organization.notifications.invoice_email_failed_title',
+                    'organization.notifications.invoice_email_failed_body',
+                    ['invoice' => $invoice->number],
+                    [
+                        'url' => route('auth.club-memberships.index', [
+                            'tab' => 'payments',
+                            'club_id' => $invoice->club_id,
+                            'invoice_id' => $invoice->id,
+                        ]),
+                        'club_id' => $invoice->club_id,
+                        'invoice_id' => $invoice->id,
+                    ],
+                );
+            }
+        });
 
         return back()->with('success', __('organization.club.invoice_created'));
     }
@@ -1990,22 +2016,44 @@ class ClubMembershipController extends Controller
             return $invoice;
         });
 
+        $request->attributes->set('created_membership_invoice', $invoice);
+
         if (! $isWaived) {
-            $this->sendClubInvoiceCreatedEmailToExternalMember($externalMember, $invoice->loadMissing('club', 'externalMember'));
+            $actor = $request->user();
+            defer(function () use ($externalMember, $invoice, $actor): void {
+                if (! $this->sendClubInvoiceCreatedEmailToExternalMember($externalMember, $invoice->loadMissing('club', 'externalMember'))) {
+                    AppNotification::sendLocalized(
+                        $actor,
+                        'club.invoice.email_failed',
+                        'organization.notifications.invoice_email_failed_title',
+                        'organization.notifications.invoice_email_failed_body',
+                        ['invoice' => $invoice->number],
+                        [
+                            'url' => route('auth.club-memberships.index', [
+                                'tab' => 'payments',
+                                'club_id' => $invoice->club_id,
+                                'invoice_id' => $invoice->id,
+                            ]),
+                            'club_id' => $invoice->club_id,
+                            'invoice_id' => $invoice->id,
+                        ],
+                    );
+                }
+            });
         }
 
         return back()->with('success', __('organization.club.invoice_created'));
     }
 
-    private function sendClubInvoiceCreatedEmail(User $user, Invoice $invoice): void
+    private function sendClubInvoiceCreatedEmail(User $user, Invoice $invoice): bool
     {
         if (! $user->email) {
-            return;
+            return false;
         }
 
         $mailer = app(TransactionalMail::class);
 
-        $mailer->notifyWithFallback(
+        return $mailer->notifyWithFallback(
             $user,
             fn (array $transport) => new ClubInvoiceCreated(
                 $invoice,
@@ -2025,22 +2073,30 @@ class ClubMembershipController extends Controller
         );
     }
 
-    private function sendClubInvoiceCreatedEmailToExternalMember(ClubExternalMember $externalMember, Invoice $invoice): void
+    private function sendClubInvoiceCreatedEmailToExternalMember(ClubExternalMember $externalMember, Invoice $invoice): bool
     {
         if (! $externalMember->email) {
-            return;
+            return false;
         }
 
         $mailer = app(TransactionalMail::class);
         $transport = $mailer->transportFor($mailer->invoicePrimaryCategory());
 
-        Notification::route('mail', $externalMember->email)
-            ->notify(new ClubInvoiceCreated(
-                $invoice,
-                $transport['mailer'],
-                $transport['address'],
-                $transport['name'],
-            ));
+        try {
+            Notification::route('mail', $externalMember->email)
+                ->notify(new ClubInvoiceCreated(
+                    $invoice,
+                    $transport['mailer'],
+                    $transport['address'],
+                    $transport['name'],
+                ));
+
+            return true;
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
     }
 
     private function invoicePayload(Invoice $invoice): array

@@ -19,7 +19,14 @@ import 'sponsor_application_screen.dart';
 import 'sponsors_center_screen.dart';
 
 class SponsorCockpitScreen extends StatefulWidget {
-  const SponsorCockpitScreen({super.key, this.initialSponsorId, this.initialSection = 0, this.clubPartnerships = false, this.initialClubId, this.initialDeliverableId});
+  const SponsorCockpitScreen({
+    super.key,
+    this.initialSponsorId,
+    this.initialSection = 0,
+    this.clubPartnerships = false,
+    this.initialClubId,
+    this.initialDeliverableId,
+  });
 
   final int? initialSponsorId;
   final int? initialClubId;
@@ -40,8 +47,11 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
 
   bool _isTargetPartner(Map<String, dynamic> partner) =>
       widget.initialDeliverableId != null &&
-      (widget.initialClubId == null || _int(_map(partner['club'])['id']) == widget.initialClubId) &&
-      _list(partner['deliverables']).any((item) => _int(item['id']) == widget.initialDeliverableId);
+      (widget.initialClubId == null ||
+          _int(_map(partner['club'])['id']) == widget.initialClubId) &&
+      _list(
+        partner['deliverables'],
+      ).any((item) => _int(item['id']) == widget.initialDeliverableId);
 
   AirmiusApiClient get _client {
     final services = AirmiusServicesScope.of(context);
@@ -54,7 +64,10 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   void initState() {
     super.initState();
     _selectedSponsorId = widget.initialSponsorId;
-    _selectedSection = widget.clubPartnerships || widget.initialDeliverableId != null ? 2 : widget.initialSection;
+    _selectedSection =
+        widget.clubPartnerships || widget.initialDeliverableId != null
+        ? 2
+        : widget.initialSection;
   }
 
   @override
@@ -386,7 +399,11 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          t(widget.clubPartnerships ? 'sponsorCockpit.clubTitle' : 'sponsorCockpit.title'),
+          t(
+            widget.clubPartnerships
+                ? 'sponsorCockpit.clubTitle'
+                : 'sponsorCockpit.title',
+          ),
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
@@ -425,10 +442,16 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           final campaigns = _list(data['campaigns']);
           final partners = _list(data['partners']);
           if (widget.initialDeliverableId != null) {
-            partners.sort((a, b) => (_isTargetPartner(a) ? 0 : 1).compareTo(_isTargetPartner(b) ? 0 : 1));
+            partners.sort(
+              (a, b) => (_isTargetPartner(a) ? 0 : 1).compareTo(
+                _isTargetPartner(b) ? 0 : 1,
+              ),
+            );
             WidgetsBinding.instance.addPostFrameCallback((_) {
               final targetContext = _targetDeliverableKey.currentContext;
-              if (!mounted || _scrolledToDeliverable || targetContext == null) return;
+              if (!mounted || _scrolledToDeliverable || targetContext == null) {
+                return;
+              }
               _scrolledToDeliverable = true;
               Scrollable.ensureVisible(targetContext, alignment: 0.15);
             });
@@ -442,20 +465,31 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           final currentId = _int(currentOrganization['id']);
 
           return PageFrame(
-            title: t(widget.clubPartnerships ? 'sponsorCockpit.clubTitle' : 'sponsorCockpit.title'),
-            subtitle: widget.clubPartnerships ? t('sponsorCockpit.tabPartnerships') : t('sponsorCockpit.subtitle'),
+            title: t(
+              widget.clubPartnerships
+                  ? 'sponsorCockpit.clubTitle'
+                  : 'sponsorCockpit.title',
+            ),
+            subtitle: widget.clubPartnerships
+                ? t('sponsorCockpit.tabPartnerships')
+                : t('sponsorCockpit.subtitle'),
             onRefresh: () async => _reload(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (organizations.isNotEmpty)
-                  _organizationSwitcher(organizations, currentOrganization, profile),
+                  _organizationSwitcher(
+                    organizations,
+                    currentOrganization,
+                    profile,
+                  ),
                 if (invitations.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   _pendingInvitations(invitations),
                 ],
                 if (organizations.isNotEmpty) const SizedBox(height: 14),
-                if (!widget.clubPartnerships) _hero(profile, capabilities, currentId),
+                if (!widget.clubPartnerships)
+                  _hero(profile, capabilities, currentId),
                 if (profile == null && capabilities['edit_own_profile'] == true)
                   Padding(
                     padding: const EdgeInsets.only(top: 12),
@@ -471,17 +505,18 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                 ] else if (_selectedSection == 1)
                   _campaigns(campaigns, currentId)
                 else if (_selectedSection == 2) ...[
-                  if (incomingInquiries.isNotEmpty) _incomingInquiries(
-                    incomingInquiries, capabilities['manage_partnerships'] == true,
-                  ),
+                  if (incomingInquiries.isNotEmpty)
+                    _incomingInquiries(
+                      incomingInquiries,
+                      capabilities['manage_partnerships'] == true,
+                    ),
                   _partners(
                     partners,
                     partnershipClubs,
                     currentId,
                     capabilities['manage_partnerships'] == true,
                   ),
-                ]
-                else if (_selectedSection == 3)
+                ] else if (_selectedSection == 3)
                   _campaignOperations(assets, agencyBriefs)
                 else ...[
                   if (currentId > 0) ...[
@@ -547,14 +582,23 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [
-                  Expanded(child: Eyebrow(t('sponsorCockpit.organization'))),
-                  if (profile != null)
-                    Text(
-                      _profileCopy(context, 'status_${_text(profile['verification_status'], fallback: 'pending_review')}'),
-                      style: TextStyle(color: airmiusAccentColor(context), fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                ]),
+                Row(
+                  children: [
+                    Expanded(child: Eyebrow(t('sponsorCockpit.organization'))),
+                    if (profile != null)
+                      Text(
+                        _profileCopy(
+                          context,
+                          'status_${_text(profile['verification_status'], fallback: 'pending_review')}',
+                        ),
+                        style: TextStyle(
+                          color: airmiusAccentColor(context),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 3),
                 if (organizations.length == 1)
                   Text(
@@ -893,7 +937,10 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
                   ),
                 ),
               if (_text(profile?['verification_status']) != 'verified' &&
-                  AirmiusServicesScope.of(context).authState.user?.hasAnyRole(const ['sponsor']) != true)
+                  AirmiusServicesScope.of(
+                        context,
+                      ).authState.user?.hasAnyRole(const ['sponsor']) !=
+                      true)
                 OutlinedButton.icon(
                   onPressed: () => _open(const SponsorApplicationScreen()),
                   icon: const Icon(Icons.fact_check_outlined),
@@ -1074,17 +1121,35 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     );
   }
 
-  Future<void> _respondInquiry(Map<String, dynamic> inquiry, String decision) async {
+  Future<void> _respondInquiry(
+    Map<String, dynamic> inquiry,
+    String decision,
+  ) async {
     final note = TextEditingController();
-    final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
-      title: Text(decision == 'interested' ? 'Interesse bestätigen' : 'Anfrage absagen'),
-      content: TextField(controller: note, maxLines: 4, maxLength: 2000,
-        decoration: const InputDecoration(labelText: 'Antwort an den Verein')),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Abbrechen')),
-        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Senden')),
-      ],
-    ));
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          decision == 'interested' ? 'Interesse bestätigen' : 'Anfrage absagen',
+        ),
+        content: TextField(
+          controller: note,
+          maxLines: 4,
+          maxLength: 2000,
+          decoration: const InputDecoration(labelText: 'Antwort an den Verein'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Senden'),
+          ),
+        ],
+      ),
+    );
     final reply = note.text.trim();
     note.dispose();
     if (confirmed != true || !mounted) return;
@@ -1097,14 +1162,25 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   }
 
   Future<void> _ignoreInquiry(Map<String, dynamic> inquiry) async {
-    final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
-      title: const Text('Anfrage ignorieren?'),
-      content: const Text('Die Anfrage wird als ignoriert markiert. Der Verein erhält keine Benachrichtigung.'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Abbrechen')),
-        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Ignorieren')),
-      ],
-    ));
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Anfrage ignorieren?'),
+        content: const Text(
+          'Die Anfrage wird als ignoriert markiert. Der Verein erhält keine Benachrichtigung.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Ignorieren'),
+          ),
+        ],
+      ),
+    );
     if (confirmed != true || !mounted) return;
     try {
       await _client.respondSponsorInquiry(_int(inquiry['id']), 'ignored', '');
@@ -1115,14 +1191,25 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
   }
 
   Future<void> _deleteInquiry(Map<String, dynamic> inquiry) async {
-    final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
-      title: const Text('Anfrage löschen?'),
-      content: const Text('Die Anfrage wird aus deinem Sponsor-Cockpit entfernt. Dieser Vorgang kann nicht rückgängig gemacht werden.'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Abbrechen')),
-        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Löschen')),
-      ],
-    ));
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Anfrage löschen?'),
+        content: const Text(
+          'Die Anfrage wird aus deinem Sponsor-Cockpit entfernt. Dieser Vorgang kann nicht rückgängig gemacht werden.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
     if (confirmed != true || !mounted) return;
     try {
       await _client.deleteSponsorInquiryForRecipient(_int(inquiry['id']));
@@ -1140,30 +1227,71 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     _ => status,
   };
 
-  Widget _incomingInquiries(List<Map<String, dynamic>> inquiries, bool canManage) {
-    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text('Anfragen von Vereinen', style: Theme.of(context).textTheme.titleMedium),
-      ...inquiries.map((inquiry) => Padding(padding: const EdgeInsets.only(top: 12), child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('${_text(_map(inquiry['club'])['name'])} · ${_text(inquiry['subject'])}',
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(_text(inquiry['message'])),
-          Text(_inquiryStatusLabel(_text(inquiry['status'])), style: TextStyle(color: airmiusMutedColor(context))),
-          if (_text(inquiry['response_note']).isNotEmpty) Text(_text(inquiry['response_note'])),
-          if (canManage && inquiry['status'] == 'pending') Wrap(spacing: 8, children: [
-            TextButton(onPressed: () => _respondInquiry(inquiry, 'interested'), child: const Text('Interesse bestätigen')),
-            TextButton(onPressed: () => _respondInquiry(inquiry, 'declined'), child: const Text('Absagen')),
-            TextButton(onPressed: () => _ignoreInquiry(inquiry), child: const Text('Ignorieren')),
-          ]),
-          if (canManage) Align(alignment: Alignment.centerLeft, child: TextButton.icon(
-            onPressed: () => _deleteInquiry(inquiry),
-            icon: const Icon(Icons.delete_outline),
-            label: const Text('Löschen'),
-          )),
-          const Divider(),
+  Widget _incomingInquiries(
+    List<Map<String, dynamic>> inquiries,
+    bool canManage,
+  ) {
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Anfragen von Vereinen',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          ...inquiries.map(
+            (inquiry) => Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_text(_map(inquiry['club'])['name'])} · ${_text(inquiry['subject'])}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(_text(inquiry['message'])),
+                  Text(
+                    _inquiryStatusLabel(_text(inquiry['status'])),
+                    style: TextStyle(color: airmiusMutedColor(context)),
+                  ),
+                  if (_text(inquiry['response_note']).isNotEmpty)
+                    Text(_text(inquiry['response_note'])),
+                  if (canManage && inquiry['status'] == 'pending')
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        TextButton(
+                          onPressed: () =>
+                              _respondInquiry(inquiry, 'interested'),
+                          child: const Text('Interesse bestätigen'),
+                        ),
+                        TextButton(
+                          onPressed: () => _respondInquiry(inquiry, 'declined'),
+                          child: const Text('Absagen'),
+                        ),
+                        TextButton(
+                          onPressed: () => _ignoreInquiry(inquiry),
+                          child: const Text('Ignorieren'),
+                        ),
+                      ],
+                    ),
+                  if (canManage)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => _deleteInquiry(inquiry),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Löschen'),
+                      ),
+                    ),
+                  const Divider(),
+                ],
+              ),
+            ),
+          ),
         ],
-      ))),
-    ]));
+      ),
+    );
   }
 
   Widget _partners(
@@ -1361,8 +1489,11 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     final evidence = _text(deliverable['fulfillment_evidence']);
     final status = _text(deliverable['status'], fallback: 'open');
     return Container(
-      key: _isTargetPartner(partner) && _int(deliverable['id']) == widget.initialDeliverableId
-          ? _targetDeliverableKey : null,
+      key:
+          _isTargetPartner(partner) &&
+              _int(deliverable['id']) == widget.initialDeliverableId
+          ? _targetDeliverableKey
+          : null,
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -1435,7 +1566,10 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
           for (final image in (deliverable['evidence_images'] as List? ?? []))
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Image.memory(base64Decode((image as String).split(',').last), height: 180),
+              child: Image.memory(
+                base64Decode((image as String).split(',').last),
+                height: 180,
+              ),
             ),
         ],
       ),
@@ -1832,27 +1966,30 @@ class _SponsorPartnershipEditorState extends State<_SponsorPartnershipEditor> {
                 optionsBuilder: (text) {
                   final query = text.text.trim().toLowerCase();
                   return widget.clubs.where(
-                    (club) => query.isEmpty ||
+                    (club) =>
+                        query.isEmpty ||
                         _text(club['name']).toLowerCase().contains(query),
                   );
                 },
-                onSelected: (club) => setState(() => _clubId = _int(club['id'])),
-                fieldViewBuilder: (context, controller, focusNode, onSubmitted) =>
-                    TextFormField(
-                      controller: controller,
-                      focusNode: focusNode,
-                      decoration: InputDecoration(
-                        labelText: t('sponsorCockpit.club'),
-                        hintText: t('sponsorCockpit.clubSearch'),
-                        prefixIcon: const Icon(Icons.search),
-                      ),
-                      onChanged: (_) {
-                        if (_clubId != null) setState(() => _clubId = null);
-                      },
-                      validator: (_) => _clubId == null
-                          ? t('sponsorCockpit.clubRequired')
-                          : null,
-                    ),
+                onSelected: (club) =>
+                    setState(() => _clubId = _int(club['id'])),
+                fieldViewBuilder:
+                    (context, controller, focusNode, onSubmitted) =>
+                        TextFormField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            labelText: t('sponsorCockpit.club'),
+                            hintText: t('sponsorCockpit.clubSearch'),
+                            prefixIcon: const Icon(Icons.search),
+                          ),
+                          onChanged: (_) {
+                            if (_clubId != null) setState(() => _clubId = null);
+                          },
+                          validator: (_) => _clubId == null
+                              ? t('sponsorCockpit.clubRequired')
+                              : null,
+                        ),
               ),
               const SizedBox(height: 6),
               Text(
@@ -1949,9 +2086,16 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
 
   Future<void> _notifySponsor() async {
     if (_busy || _notified) return;
-    setState(() { _busy = true; _error = null; });
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
-      await widget.client.notifySponsorDeliverable(widget.sponsorId, _int(widget.deliverable?['id']), widget.clubId);
+      await widget.client.notifySponsorDeliverable(
+        widget.sponsorId,
+        _int(widget.deliverable?['id']),
+        widget.clubId,
+      );
       if (mounted) setState(() => _notified = true);
     } on AirmiusApiException catch (e) {
       if (mounted) setState(() => _error = e.userMessage);
@@ -1966,7 +2110,11 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
 
   Future<void> _pickEvidenceImages() async {
     try {
-      final picked = await ImagePicker().pickMultiImage(maxWidth: 1600, maxHeight: 1600, imageQuality: 75);
+      final picked = await ImagePicker().pickMultiImage(
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 75,
+      );
       final additions = <String>[];
       for (final file in picked.take(10 - _images.length)) {
         final bytes = await file.readAsBytes();
@@ -1975,9 +2123,12 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
       }
       if (mounted) setState(() => _images.addAll(additions));
     } catch (_) {
-      if (mounted) setState(() => _error = t('sponsorCockpit.deliverableSaveFailed'));
+      if (mounted) {
+        setState(() => _error = t('sponsorCockpit.deliverableSaveFailed'));
+      }
     }
   }
+
   static const _statuses = [
     'planned',
     'in_progress',
@@ -2001,7 +2152,9 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
   void initState() {
     super.initState();
     final deliverable = widget.deliverable ?? const <String, dynamic>{};
-    _images.addAll((deliverable['evidence_images'] as List? ?? []).cast<String>());
+    _images.addAll(
+      (deliverable['evidence_images'] as List? ?? []).cast<String>(),
+    );
     _title = TextEditingController(text: _text(deliverable['title']));
     _location = TextEditingController(text: _text(deliverable['location']));
     _evidence = TextEditingController(
@@ -2032,7 +2185,9 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
 
   Future<void> _save() async {
     if (_busy || !_form.currentState!.validate()) return;
-    if (_status == 'fulfilled' && _evidence.text.trim().isEmpty && _images.isEmpty) {
+    if (_status == 'fulfilled' &&
+        _evidence.text.trim().isEmpty &&
+        _images.isEmpty) {
       setState(() => _error = t('sponsorCockpit.deliverableEvidence'));
       return;
     }
@@ -2207,16 +2362,35 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
               Wrap(
                 children: [
                   for (final image in _images)
-                    Stack(children: [
-                      Padding(padding: const EdgeInsets.all(6), child: Image.memory(base64Decode(image.split(',').last), width: 100, height: 100, fit: BoxFit.cover)),
-                      IconButton(onPressed: _busy ? null : () => setState(() => _images.remove(image)), icon: const Icon(Icons.close)),
-                    ]),
+                    Stack(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Image.memory(
+                            base64Decode(image.split(',').last),
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _busy
+                              ? null
+                              : () => setState(() => _images.remove(image)),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
                 ],
               ),
               OutlinedButton.icon(
-                onPressed: _busy || _images.length >= 10 ? null : _pickEvidenceImages,
+                onPressed: _busy || _images.length >= 10
+                    ? null
+                    : _pickEvidenceImages,
                 icon: const Icon(Icons.add_photo_alternate_outlined),
-                label: Text('${t('sponsorCockpit.deliverableEvidence')} (${_images.length}/10)'),
+                label: Text(
+                  '${t('sponsorCockpit.deliverableEvidence')} (${_images.length}/10)',
+                ),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 10),
@@ -2240,10 +2414,21 @@ class _SponsorDeliverableEditorState extends State<_SponsorDeliverableEditor> {
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   onPressed: _busy || _notified ? null : _notifySponsor,
-                  icon: Icon(_notified ? Icons.check : Icons.notifications_outlined),
-                  label: Text(t(_notified ? 'sponsorCockpit.notified' : 'sponsorCockpit.notifySponsor')),
+                  icon: Icon(
+                    _notified ? Icons.check : Icons.notifications_outlined,
+                  ),
+                  label: Text(
+                    t(
+                      _notified
+                          ? 'sponsorCockpit.notified'
+                          : 'sponsorCockpit.notifySponsor',
+                    ),
+                  ),
                 ),
-                Text(t('sponsorCockpit.notifySavedHint'), textAlign: TextAlign.center),
+                Text(
+                  t('sponsorCockpit.notifySavedHint'),
+                  textAlign: TextAlign.center,
+                ),
               ],
             ],
           ),
@@ -2648,7 +2833,10 @@ class _SponsorProfileEditorState extends State<_SponsorProfileEditor> {
               _field('vat_id', _profileCopy(context, 'vat_id'), max: 80),
               _field('contact_name', t('sponsorCockpit.contact')),
               _field('email', t('sponsorCockpit.email')),
-              _field('website', '${t('sponsorCockpit.website')} (${_profileCopy(context, 'optional')})'),
+              _field(
+                'website',
+                '${t('sponsorCockpit.website')} (${_profileCopy(context, 'optional')})',
+              ),
               const SizedBox(height: 4),
               Text(
                 t('sponsorCockpit.logoUploadTitle'),
