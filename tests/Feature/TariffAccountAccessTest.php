@@ -1417,7 +1417,7 @@ class TariffAccountAccessTest extends TestCase
                 'status' => 'active', 'billing_interval' => 'monthly']);
             $member = User::factory()->create();
             $club->users()->attach($member, ['role' => 'member', 'membership_status' => 'active', 'sepa_iban' => 'DE12500105170648489890',
-                'sepa_mandate_reference' => 'TEST-MANDAT', 'sepa_mandate_signed_on' => now()->subMonth(), 'sepa_mandate_active' => true]);
+                'sepa_mandate_reference' => 'TEST-MANDAT', 'sepa_mandate_signed_on' => now()->subMonth()->toDateString(), 'sepa_mandate_active' => true]);
             $number = 'TEST-SEPA-'.$club->id;
             \App\Models\Invoice::create(['club_id' => $club->id, 'user_id' => $member->id, 'number' => $number,
                 'title' => 'Testbeitrag', 'amount' => 19.90, 'status' => 'open', 'due_date' => now()->addWeek()]);

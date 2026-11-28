@@ -42,11 +42,14 @@ class InputUsabilityPhase35ContractTest extends TestCase
 
         foreach ([
             'resources/js/Components/ClubMemberships/ClubFinanceWorkspace.vue',
-            'resources/js/Components/ClubMemberships/ClubSepaFee.vue',
             'resources/js/Components/ClubMemberships/ClubDonationForm.vue',
         ] as $form) {
             self::assertStringContainsString("@/utils/localizedNumber.js", $this->source($form));
         }
+
+        $fee = $this->source('resources/js/Components/ClubMemberships/ClubSepaFee.vue');
+        self::assertStringContainsString("import { parseFeeCents } from './feeAmount.js'", $fee);
+        self::assertStringContainsString('const cents = parseFeeCents(amount.value)', $fee);
     }
 
     public function test_api_errors_are_structured_rate_limited_and_do_not_expose_production_traces(): void

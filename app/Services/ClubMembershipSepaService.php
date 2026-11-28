@@ -10,6 +10,13 @@ class ClubMembershipSepaService
 {
     public function buildDebitXml(Club $club, $invoices, $memberships, ?string $collectionDate = null, ?string $messageId = null): string
     {
+        abort_if($invoices->isEmpty(), 422, __('organization.club.sepa_no_open_invoices'));
+        foreach ($invoices as $invoice) {
+            abort_if(($invoice->club_id !== null && (int) $invoice->club_id !== (int) $club->id)
+                || $invoice->outstandingCents() <= 0 || ! $memberships->has($invoice->user_id),
+                422, __('sepa.invoices'));
+        }
+
         \App\Support\SepaData::assertCreditor([
             'sepa_creditor_id' => $club->sepa_creditor_id,
             'sepa_iban' => $club->sepa_iban, 'sepa_bic' => $club->sepa_bic,
@@ -27,11 +34,7 @@ class ClubMembershipSepaService
         $controlSum = $invoices->sum(fn (Invoice $invoice) => $invoice->outstandingCents()) / 100;
         $collectionDate ??= now()->addDays(3)->toDateString();
         $creditorName = $club->sepa_account_holder ?: $club->name;
-        abort_if($invoices->isEmpty(), 422, __('organization.club.sepa_no_open_invoices'));
         foreach ($invoices as $invoice) {
-            abort_if(($invoice->club_id !== null && (int) $invoice->club_id !== (int) $club->id)
-                || $invoice->outstandingCents() <= 0 || ! $memberships->has($invoice->user_id),
-                422, __('sepa.invoices'));
             $membership = $memberships->get($invoice->user_id);
             abort_unless($this->validIban($membership->sepa_iban ?? null)
                 && filled($membership->sepa_mandate_reference ?? null)

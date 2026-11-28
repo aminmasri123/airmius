@@ -3480,7 +3480,7 @@ XML);
             ['Füllen Sie ab Zeile 5 die Mitglieder aus. Pflichtfeld ist E-Mail. Gleicher Familiengruppen-Schlüssel verbindet aktive Mitglieder für automatische Familienbeiträge. Mitgliedschaft: active, non_member, pending, paused, former. Intervall: none, monthly, quarterly, four_monthly, semi_yearly, yearly, once. SEPA aktiv: ja/nein.'],
             [],
             ['Name', 'E-Mail', 'Familiengruppe', 'Mitgliedschaft', 'Mitgliedsnummer', 'Lizenznummer', 'Lizenz_Gueltig_Bis', 'Beitrag', 'Intervall', 'Nächste_Rechnung', 'IBAN', 'BIC', 'Mandatsreferenz', 'Mandatsdatum', 'SEPA_Aktiv', 'Eintritt', 'Ende', 'Notiz'],
-            ['Max Mustermann', 'max@example.org', 'family-7', 'active', 'MV-1001', 'LIC-2026-001', '12,50', 'monthly', '2026-06-01', 'DE02120300000000202051', '', 'MANDAT-1001', '2026-05-02', 'ja', '2026-05-02', '2027-05-01', 'Beispielzeile entfernen'],
+            ['Max Mustermann', 'max@example.org', 'family-7', 'active', 'MV-1001', 'LIC-2026-001', '2026-12-31', '12,50', 'monthly', '2026-06-01', 'DE02120300000000202051', '', 'MANDAT-1001', '2026-05-02', 'ja', '2026-05-02', '2027-05-01', 'Beispielzeile entfernen'],
         ];
 
         $sheetXml = $this->buildTemplateSheetXml($sheetRows);
