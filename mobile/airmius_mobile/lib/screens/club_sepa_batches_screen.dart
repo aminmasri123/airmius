@@ -33,6 +33,8 @@ class ClubSepaBatchesScreen extends StatefulWidget {
 class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
   bool _started = false, _busy = false, _more = false;
   bool _canManage = false;
+  bool _canExport = false;
+  Set<int> _reservedInvoiceIds = {};
   bool _canApprove = false, _canConfigureApproval = false;
   String _approvalMode = 'dual';
   bool _noticesAvailable = false;
@@ -164,6 +166,10 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
     if (!mounted) return;
     setState(() {
       _canManage = response['can_manage'] == true;
+      _canExport = response['can_export'] == true;
+      _reservedInvoiceIds = (response['reserved_invoice_ids'] as List? ?? [])
+          .cast<int>()
+          .toSet();
       _canApprove = response['can_approve'] == true;
       _canConfigureApproval = response['can_configure_approval'] == true;
       _approvalMode = response['approval_mode'] == 'single' ? 'single' : 'dual';
@@ -236,13 +242,17 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      Text(c('selectionHelp')),
                       for (final invoice in _currentInvoices().where(
-                        (i) => ['open', 'overdue'].contains(i['status']),
+                        (i) => _eligibleInvoice(i, date.text),
                       ))
                         CheckboxListTile(
                           value: selected.contains(invoice['id']),
                           title: Text(
                             '${invoice['number'] ?? invoice['title']} · ${invoice['outstanding_amount'] ?? invoice['amount']} EUR',
+                          ),
+                          subtitle: Text(
+                            '${c('dueDate')}: ${invoice['due_date']?.toString().split('T').first ?? '—'}',
                           ),
                           onChanged: (value) => change(() {
                             if (value == true) {
@@ -254,6 +264,15 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                         ),
                       TextFormField(
                         controller: date,
+                        onChanged: (_) => change(
+                          () => selected.removeWhere(
+                            (id) => !_currentInvoices().any(
+                              (i) =>
+                                  i['id'] == id &&
+                                  _eligibleInvoice(i, date.text),
+                            ),
+                          ),
+                        ),
                         keyboardType: TextInputType.datetime,
                         inputFormatters: const [AirmiusDateInputFormatter()],
                         decoration: InputDecoration(
@@ -262,6 +281,13 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                         ),
                         validator: (v) =>
                             parseAirmiusDate(v) == null ? c('date') : null,
+                      ),
+                      if (!_currentInvoices().any(
+                        (i) => _eligibleInvoice(i, date.text),
+                      ))
+                        Text(c('noEligible')),
+                      Text(
+                        '${c('selectedCount')}: ${selected.length} / 200 · ${c('total')}: ${money(_currentInvoices().where((i) => selected.contains(i['id'])).fold<int>(0, (sum, i) => sum + ((num.tryParse('${i['outstanding_amount'] ?? i['amount']}') ?? 0) * 100).round()))}',
                       ),
                       TextFormField(
                         controller: days,
@@ -287,7 +313,7 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                 ),
               ),
               FilledButton(
-                onPressed: selected.isEmpty
+                onPressed: selected.isEmpty || selected.length > 200
                     ? null
                     : () {
                         if (form.currentState!.validate()) {
@@ -325,11 +351,26 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
       for (final item in (batch['items'] as List).cast<AirmiusJson>()) {
         if (item['invoice'] is AirmiusJson) {
           final invoice = item['invoice'] as AirmiusJson;
-          invoices[invoice['id']] = invoice;
+          invoices[invoice['id']] = {...?invoices[invoice['id']], ...invoice};
         }
       }
     }
     return invoices.values.toList();
+  }
+
+  bool _eligibleInvoice(AirmiusJson invoice, String date) {
+    final collection = parseAirmiusDate(date);
+    final due = DateTime.tryParse('${invoice['due_date']}');
+    return ['open', 'overdue'].contains(invoice['status']) &&
+        (num.tryParse(
+                  '${invoice['outstanding_amount'] ?? invoice['amount']}',
+                ) ??
+                0) >
+            0 &&
+        !_reservedInvoiceIds.contains(invoice['id']) &&
+        (collection == null ||
+            (due != null &&
+                !DateTime(due.year, due.month, due.day).isAfter(collection)));
   }
 
   Future<void> _bankResult(
@@ -971,6 +1012,7 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Text(c(_approvalMode == 'single' ? 'introSingle' : 'intro')),
+          Text(c('exportHelp')),
           ListTile(
             title: Text(c('approvalMode')),
             subtitle: Text(
@@ -1059,7 +1101,7 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                               sepaReturnLabels['en']!)['title']!,
                         ),
                       ),
-                    if (_canManage || _canApprove)
+                    if (_canManage || _canApprove || _canExport)
                       Wrap(
                         spacing: 8,
                         children: [
@@ -1078,7 +1120,7 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                               onPressed: _busy ? null : () => _notice(batch),
                               child: Text(c('record')),
                             ),
-                          if (_canManage &&
+                          if (_canExport &&
                               [
                                 'notified',
                                 'exported',

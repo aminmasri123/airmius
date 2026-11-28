@@ -1,5 +1,14 @@
 const sepaBatchLabels = <String, Map<String, String>>{
   "de": {
+    "selectionHelp":
+        "Wähle offene Restbeträge, die spätestens am Einzugsdatum fällig sind. Bereits reservierte Rechnungen sind ausgeblendet. Mandate und Bankdaten werden beim Vorbereiten erneut geprüft. Höchstens 200 Rechnungen je Lauf.",
+    "exportHelp":
+        "Der Download löst keine Bankzahlung aus. Wiederholtes Herunterladen liefert dieselbe Datei. Reiche einen Lauf nur einmal bei der Bank ein; ein Export markiert Rechnungen nicht als bezahlt.",
+    "dueDate": "Fällig am",
+    "selectedCount": "Ausgewählt",
+    "noEligible":
+        "Keine passenden offenen Rechnungen in dieser Auswahl. Prüfe Einzugsdatum, Reservierungen und die aktuelle Rechnungsliste.",
+
     "introSingle":
         "Einzel-Freigabe: Prüfe Rechnungen, Empfänger, Beträge und Einzugsdatum vor der Freigabe. Danach Vorabinformationen versenden und die Bankdatei herunterladen.",
     "approvalMode": "Freigaberegel",
@@ -96,6 +105,15 @@ const sepaBatchLabels = <String, Map<String, String>>{
     "paymentReturned": "Zurückgegeben",
   },
   "en": {
+    "selectionHelp":
+        "Select outstanding balances due on or before collection. Reserved invoices are hidden. Mandates and bank details are checked again when preparing the batch. Maximum 200 invoices per batch.",
+    "exportHelp":
+        "Downloading does not trigger a bank payment. Repeated downloads return the same file. Submit each batch to the bank only once; exporting does not mark invoices as paid.",
+    "dueDate": "Due on",
+    "selectedCount": "Selected",
+    "noEligible":
+        "No matching outstanding invoices in this selection. Check the collection date, reservations and current invoice list.",
+
     "introSingle":
         "Single approval: Check invoices, recipients, amounts and collection date before approval. Then send advance notices and download the bank file.",
     "approvalMode": "Approval rule",
@@ -191,6 +209,15 @@ const sepaBatchLabels = <String, Map<String, String>>{
     "paymentReturned": "Returned",
   },
   "fr": {
+    "selectionHelp":
+        "Sélectionnez les soldes dus au plus tard à la date de prélèvement. Les factures réservées sont masquées. Les mandats et coordonnées bancaires sont revérifiés à la préparation. Maximum 200 factures par lot.",
+    "exportHelp":
+        "Le téléchargement ne déclenche aucun paiement bancaire. Un nouveau téléchargement fournit le même fichier. Ne transmettez chaque lot à la banque qu’une fois ; l’export ne marque pas les factures comme payées.",
+    "dueDate": "Échéance",
+    "selectedCount": "Sélectionnées",
+    "noEligible":
+        "Aucune facture ouverte correspondante. Vérifiez la date de prélèvement, les réservations et la liste actuelle des factures.",
+
     "introSingle":
         "Validation individuelle : vérifiez les factures, destinataires, montants et date de prélèvement. Envoyez ensuite les préavis et téléchargez le fichier bancaire.",
     "approvalMode": "Règle de validation",
@@ -288,6 +315,15 @@ const sepaBatchLabels = <String, Map<String, String>>{
     "paymentReturned": "Retourné",
   },
   "ar": {
+    "selectionHelp":
+        "اختر الأرصدة المستحقة في تاريخ التحصيل أو قبله. تُخفى الفواتير المحجوزة. يتم التحقق مجدداً من التفويضات والبيانات المصرفية عند إعداد الدفعة. الحد الأقصى 200 فاتورة.",
+    "exportHelp":
+        "التنزيل لا ينفذ دفعة مصرفية. التنزيل المتكرر يعيد الملف نفسه. أرسل كل دفعة إلى البنك مرة واحدة فقط؛ التصدير لا يحدد الفواتير كمدفوعة.",
+    "dueDate": "تاريخ الاستحقاق",
+    "selectedCount": "المحدد",
+    "noEligible":
+        "لا توجد فواتير مفتوحة مطابقة. تحقق من تاريخ التحصيل والحجوزات وقائمة الفواتير الحالية.",
+
     "introSingle":
         "موافقة فردية: تحقق من الفواتير والمستلمين والمبالغ وتاريخ الخصم قبل الموافقة، ثم أرسل الإشعارات المسبقة ونزّل الملف البنكي.",
     "approvalMode": "قاعدة الموافقة",

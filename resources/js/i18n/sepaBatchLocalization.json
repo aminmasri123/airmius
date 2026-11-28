@@ -71,7 +71,14 @@
     "retryAllowed": "Neuer Lauf freigegeben",
     "returnHelp": "Ist der Zahlungseingang schon verbucht, ordne ihn zuerst über „Zahlungseingang bestätigen“ zu. Sonst wird keine vorhandene Zahlung zurückgenommen.",
     "bankHelp": "Hier werden belegte Bankergebnisse dokumentiert. Es wird keine Banktransaktion ausgelöst.",
-    "paymentReturned": "Zurückgegeben"
+    "paymentReturned": "Zurückgegeben",
+    "selectionHelp": "Wähle offene Restbeträge, die spätestens am Einzugsdatum fällig sind. Bereits reservierte Rechnungen sind ausgeblendet. Mandate und Bankdaten werden beim Vorbereiten erneut geprüft. Höchstens 200 Rechnungen je Lauf.",
+    "exportHelp": "Der Download löst keine Bankzahlung aus. Wiederholtes Herunterladen liefert dieselbe Datei. Reiche einen Lauf nur einmal bei der Bank ein; ein Export markiert Rechnungen nicht als bezahlt.",
+    "dueDate": "Fällig am",
+    "selectedCount": "Ausgewählt",
+    "noEligible": "Keine passenden offenen Rechnungen in dieser Auswahl. Prüfe Einzugsdatum, Reservierungen und die aktuelle Rechnungsliste.",
+    "introSingle": "Einzel-Freigabe: Prüfe Rechnungen, Empfänger, Beträge und Einzugsdatum vor der Freigabe. Danach Vorabinformationen versenden und die Bankdatei herunterladen.",
+    "reviewApproval": "Ich habe Empfänger, Beträge und Einzugsdatum dieses Laufs geprüft und gebe ihn frei."
   },
   "en": {
     "title": "Direct debit batches",
@@ -145,7 +152,14 @@
     "retryAllowed": "New batch authorized",
     "returnHelp": "If the incoming payment is already recorded, link it first using “Confirm payment receipt”. Otherwise no existing payment will be reversed.",
     "bankHelp": "Document verified bank results here. No bank transaction is initiated.",
-    "paymentReturned": "Returned"
+    "paymentReturned": "Returned",
+    "selectionHelp": "Select outstanding balances due on or before collection. Reserved invoices are hidden. Mandates and bank details are checked again when preparing the batch. Maximum 200 invoices per batch.",
+    "exportHelp": "Downloading does not trigger a bank payment. Repeated downloads return the same file. Submit each batch to the bank only once; exporting does not mark invoices as paid.",
+    "dueDate": "Due on",
+    "selectedCount": "Selected",
+    "noEligible": "No matching outstanding invoices in this selection. Check the collection date, reservations and current invoice list.",
+    "introSingle": "Single approval: Check invoices, recipients, amounts and collection date before approval. Then send advance notices and download the bank file.",
+    "reviewApproval": "I have checked the recipients, amounts and collection date and approve this batch."
   },
   "fr": {
     "title": "Lots de prélèvement",
@@ -219,7 +233,14 @@
     "retryAllowed": "Nouveau lot autorisé",
     "returnHelp": "Si l’encaissement est déjà enregistré, affectez-le d’abord via « Confirmer l’encaissement ». Sinon, aucun paiement existant ne sera annulé.",
     "bankHelp": "Documentez ici les résultats bancaires vérifiés. Aucune transaction bancaire n’est déclenchée.",
-    "paymentReturned": "Retourné"
+    "paymentReturned": "Retourné",
+    "selectionHelp": "Sélectionnez les soldes dus au plus tard à la date de prélèvement. Les factures réservées sont masquées. Les mandats et coordonnées bancaires sont revérifiés à la préparation. Maximum 200 factures par lot.",
+    "exportHelp": "Le téléchargement ne déclenche aucun paiement bancaire. Un nouveau téléchargement fournit le même fichier. Ne transmettez chaque lot à la banque qu’une fois ; l’export ne marque pas les factures comme payées.",
+    "dueDate": "Échéance",
+    "selectedCount": "Sélectionnées",
+    "noEligible": "Aucune facture ouverte correspondante. Vérifiez la date de prélèvement, les réservations et la liste actuelle des factures.",
+    "introSingle": "Validation individuelle : vérifiez les factures, destinataires, montants et date de prélèvement. Envoyez ensuite les préavis et téléchargez le fichier bancaire.",
+    "reviewApproval": "J’ai vérifié les destinataires, montants et date de prélèvement et je valide ce lot."
   },
   "ar": {
     "title": "دفعات الخصم المباشر",
@@ -293,6 +314,13 @@
     "retryAllowed": "تم السماح بدفعة جديدة",
     "returnHelp": "إذا كان التحصيل مسجلًا بالفعل، فاربطه أولًا عبر «تأكيد التحصيل». وإلا فلن يتم عكس أي دفع مسجل.",
     "bankHelp": "وثّق هنا النتائج البنكية المتحقّق منها. لا يتم تنفيذ أي معاملة بنكية.",
-    "paymentReturned": "أُعيد"
+    "paymentReturned": "أُعيد",
+    "selectionHelp": "اختر الأرصدة المستحقة في تاريخ التحصيل أو قبله. تُخفى الفواتير المحجوزة. يتم التحقق مجدداً من التفويضات والبيانات المصرفية عند إعداد الدفعة. الحد الأقصى 200 فاتورة.",
+    "exportHelp": "التنزيل لا ينفذ دفعة مصرفية. التنزيل المتكرر يعيد الملف نفسه. أرسل كل دفعة إلى البنك مرة واحدة فقط؛ التصدير لا يحدد الفواتير كمدفوعة.",
+    "dueDate": "تاريخ الاستحقاق",
+    "selectedCount": "المحدد",
+    "noEligible": "لا توجد فواتير مفتوحة مطابقة. تحقق من تاريخ التحصيل والحجوزات وقائمة الفواتير الحالية.",
+    "introSingle": "موافقة فردية: تحقق من الفواتير والمستلمين والمبالغ وتاريخ الخصم قبل الموافقة، ثم أرسل الإشعارات المسبقة ونزّل الملف البنكي.",
+    "reviewApproval": "راجعت المستلمين والمبالغ وتاريخ الخصم وأوافق على هذه الدفعة."
   }
 }

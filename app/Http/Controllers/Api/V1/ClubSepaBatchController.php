@@ -72,6 +72,9 @@ class ClubSepaBatchController extends Controller
             'approval_mode' => $club->sepa_approval_mode === 'single' ? 'single' : 'dual',
             'can_configure_approval' => (int) $club->owner_id === (int) $request->user()->id,
             'can_approve' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_APPROVE),
+            'can_export' => ClubPermissions::allows($club, $request->user(), ClubPermissions::FINANCE_EXPORT),
+            'reserved_invoice_ids' => ClubSepaBatchItem::whereHas('batch', fn ($query) => $query->where('club_id', $club->id))
+                ->whereNotNull('reserved_invoice_id')->pluck('reserved_invoice_id'),
             'data' => ClubSepaBatch::where('club_id', $club->id)->with($relations)->latest('id')
                 ->paginate(25)->through(fn ($batch) => $this->payload($batch, $manage))])->header('Cache-Control', 'private, no-store');
     }
@@ -499,6 +502,7 @@ class ClubSepaBatchController extends Controller
                 'settlement' => $item->relationLoaded('settlement') ? $item->settlement : null,
                 'invoice' => $item->relationLoaded('invoice') && $item->invoice ? [
                     'id' => $item->invoice->id, 'number' => $item->invoice->number, 'amount' => $item->invoice->amount,
+                    'due_date' => $item->invoice->due_date?->toDateString(),
                     'status' => $item->invoice->status, ...$item->invoice->balancePayload(),
                 ] : null,
                 'payment_options' => $includeNoticeContent && $item->relationLoaded('invoice') && $item->invoice

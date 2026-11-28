@@ -15,6 +15,9 @@ class _Transport implements AirmiusApiTransport {
   final requests = <AirmiusApiRequest>[];
   bool fail = false;
   bool canManage = true;
+  bool? canExport;
+  bool? canApprove;
+  List<int> reservedInvoiceIds = [];
   bool canConfigureApproval = false;
   String approvalMode = 'dual';
   bool enableNotices = false;
@@ -43,8 +46,9 @@ class _Transport implements AirmiusApiTransport {
       );
     }
     if (request.method == 'POST') {
-      if (request.path.endsWith('/sepa-approval-settings'))
+      if (request.path.endsWith('/sepa-approval-settings')) {
         approvalMode = request.body!['approval_mode'] as String;
+      }
       if (request.path.endsWith('/approve')) status = 'approved';
       if (request.path.endsWith('/notice')) status = 'notified';
       if (request.path.endsWith('/notices')) preparedNotices = true;
@@ -73,7 +77,9 @@ class _Transport implements AirmiusApiTransport {
       statusCode: 200,
       body: jsonEncode({
         'can_manage': canManage,
-        'can_approve': canManage,
+        'can_approve': canApprove ?? canManage,
+        'can_export': canExport ?? canManage,
+        'reserved_invoice_ids': reservedInvoiceIds,
         'can_configure_approval': canConfigureApproval,
         'approval_mode': approvalMode,
         'notices_available': enableNotices,
@@ -187,6 +193,7 @@ Future<void> _screen(
                 'status': 'open',
                 'amount': '100.00',
                 'outstanding_amount': '80.00',
+                'due_date': '2026-10-10',
               },
               {'id': 2, 'number': 'R-2', 'status': 'paid', 'amount': '100.00'},
             ],
@@ -199,6 +206,67 @@ Future<void> _screen(
 }
 
 void main() {
+  testWidgets('export-only role sees download without management actions', (
+    tester,
+  ) async {
+    await _screen(
+      tester,
+      _Transport()
+        ..canManage = false
+        ..canExport = true
+        ..status = 'notified',
+    );
+    await tester.scrollUntilVisible(find.text('Bankdatei herunterladen'), 200);
+    expect(find.text('Bankdatei herunterladen'), findsOneWidget);
+    expect(find.text('Lauf vorbereiten'), findsNothing);
+    expect(find.text('Lauf stornieren'), findsNothing);
+  });
+
+  testWidgets('management does not override denied export permission', (
+    tester,
+  ) async {
+    await _screen(
+      tester,
+      _Transport()
+        ..canExport = false
+        ..status = 'notified',
+    );
+    expect(find.text('Bankdatei herunterladen'), findsNothing);
+  });
+
+  testWidgets(
+    'reserved invoices are excluded even when their batch is on another page',
+    (tester) async {
+      await _screen(tester, _Transport()..reservedInvoiceIds = [1]);
+      await tester.tap(find.text('Lauf vorbereiten'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CheckboxListTile), findsNothing);
+      expect(find.text(sepaBatchLabels['de']!['noEligible']!), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'collection date excludes later due invoices and clears their selection',
+    (tester) async {
+      await _screen(tester, _Transport());
+      await tester.tap(find.text('Lauf vorbereiten'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.enterText(find.byType(TextFormField).first, '09.10.2026');
+      await tester.pumpAndSettle();
+      expect(find.byType(CheckboxListTile), findsNothing);
+      expect(find.textContaining('Ausgewählt: 0 / 200'), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField).first, '10.10.2026');
+      await tester.pumpAndSettle();
+      expect(find.byType(CheckboxListTile), findsOneWidget);
+      expect(
+        tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
+        false,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test(
     'approval settings never retry or queue after a transport failure',
     () async {

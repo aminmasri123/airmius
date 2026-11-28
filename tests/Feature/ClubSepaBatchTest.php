@@ -58,6 +58,128 @@ class ClubSepaBatchTest extends TestCase
         return "/api/v1/clubs/{$this->club->id}/sepa-batches";
     }
 
+    public function test_only_invoices_due_by_collection_can_be_reserved(): void
+    {
+        $this->invoice->update(['due_date' => '2026-10-11']);
+        $this->postJson($this->base(), [
+            'invoice_ids' => [$this->invoice->id], 'collection_date' => '2026-10-10', 'notice_days' => 14,
+        ])->assertUnprocessable()->assertJsonPath('message', __('sepa.not_due'));
+        $this->assertDatabaseCount('club_sepa_batches', 0);
+        $this->assertDatabaseCount('club_sepa_batch_items', 0);
+        $this->invoice->update(['due_date' => '2026-10-10']);
+        $this->prepare();
+    }
+
+    public function test_multiple_partial_balances_have_exact_xml_counts_and_control_sum(): void
+    {
+        $this->invoice->update(['amount' => 100.99]);
+        app(ClubInvoicePaymentService::class)->record($this->invoice, ['amount' => 20.11], $this->owner);
+        $second = $this->invoice->replicate();
+        $second->number = 'SEP-2';
+        $second->amount = 0.12;
+        $second->save();
+        $id = $this->postJson($this->base(), [
+            'invoice_ids' => [$second->id, $this->invoice->id], 'collection_date' => '2026-10-10', 'notice_days' => 14,
+        ])->assertCreated()->assertJsonPath('data.total_cents', 8100)->json('data.id');
+        $this->approve($id);
+        $this->notice($id);
+        $xml = $this->postJson($this->base()."/{$id}/export")->assertOk()
+            ->assertSee('<NbOfTxs>2</NbOfTxs>', false)->assertSee('<CtrlSum>81.00</CtrlSum>', false)
+            ->assertSee('<InstdAmt Ccy="EUR">80.88</InstdAmt>', false)
+            ->assertSee('<InstdAmt Ccy="EUR">0.12</InstdAmt>', false)->getContent();
+        $this->assertSame(2, substr_count($xml, '<DrctDbtTxInf>'));
+        $this->assertSame($xml, $this->postJson($this->base()."/{$id}/export")->assertOk()->getContent());
+        $this->postJson($this->base(), [
+            'invoice_ids' => [$second->id], 'collection_date' => '2026-10-10', 'notice_days' => 14,
+        ])->assertUnprocessable();
+        $this->assertDatabaseCount('club_sepa_batches', 1);
+    }
+
+    public function test_invalid_second_invoice_rolls_back_first_reservation(): void
+    {
+        $second = $this->invoice->replicate();
+        $second->number = 'SEP-2';
+        $second->due_date = '2026-10-11';
+        $second->save();
+        $this->postJson($this->base(), [
+            'invoice_ids' => [$this->invoice->id, $second->id], 'collection_date' => '2026-10-10', 'notice_days' => 14,
+        ])->assertUnprocessable();
+        $this->assertDatabaseCount('club_sepa_batches', 0);
+        $this->assertDatabaseCount('club_sepa_batch_items', 0);
+        $this->prepare();
+    }
+
+    public function test_postponing_due_date_after_notice_blocks_export(): void
+    {
+        $id = $this->prepare();
+        $this->approve($id);
+        $this->notice($id);
+        $this->invoice->update(['due_date' => '2026-10-11']);
+        $this->postJson($this->base()."/{$id}/export")->assertUnprocessable();
+        $this->assertNull(ClubSepaBatch::findOrFail($id)->export_xml);
+    }
+
+    public function test_invalid_mandates_and_bank_details_do_not_leave_partial_batches(): void
+    {
+        $valid = ['sepa_iban' => 'DE12500105170648489890', 'sepa_bic' => null,
+            'sepa_mandate_reference' => 'MANDATE-1', 'sepa_mandate_signed_on' => '2026-09-01', 'sepa_mandate_active' => true];
+        foreach ([
+            ['sepa_iban' => 'DE00500105170648489890'], ['sepa_iban' => 'invalid'],
+            ['sepa_bic' => 'NOT-A-BIC'], ['sepa_mandate_reference' => '   '],
+            ['sepa_mandate_reference' => str_repeat('M', 36)], ['sepa_mandate_signed_on' => '2026-09-24'],
+            ['sepa_mandate_active' => false],
+        ] as $invalid) {
+            $this->club->users()->updateExistingPivot($this->invoice->user_id, array_merge($valid, $invalid));
+            $this->postJson($this->base(), [
+                'invoice_ids' => [$this->invoice->id], 'collection_date' => '2026-10-10', 'notice_days' => 14,
+            ])->assertUnprocessable();
+            $this->assertDatabaseCount('club_sepa_batches', 0);
+            $this->assertDatabaseCount('club_sepa_batch_items', 0);
+        }
+        $this->club->users()->updateExistingPivot($this->invoice->user_id, $valid);
+        $this->club->update(['sepa_iban' => 'DE00120300000000202051']);
+        $this->postJson($this->base(), [
+            'invoice_ids' => [$this->invoice->id], 'collection_date' => '2026-10-10', 'notice_days' => 14,
+        ])->assertUnprocessable();
+        $this->assertDatabaseCount('club_sepa_batches', 0);
+    }
+
+    public function test_zero_balance_and_wrong_club_after_preparation_are_rejected(): void
+    {
+        $id = $this->prepare();
+        $this->invoice->update(['club_id' => Club::factory()->create()->id]);
+        Sanctum::actingAs($this->reviewer);
+        $this->postJson($this->base()."/{$id}/approve")->assertUnprocessable();
+        $this->invoice->update(['club_id' => $this->club->id]);
+        $this->postJson($this->base()."/{$id}/cancel", ['reason' => 'Korrigieren'])->assertOk();
+        app(ClubInvoicePaymentService::class)->record($this->invoice, ['amount' => 100], $this->owner);
+        $this->postJson($this->base(), [
+            'invoice_ids' => [$this->invoice->id], 'collection_date' => '2026-10-10', 'notice_days' => 14,
+        ])->assertUnprocessable();
+        $this->assertDatabaseCount('club_sepa_batches', 1);
+    }
+
+    public function test_index_reports_action_permissions_and_reservations_outside_current_page(): void
+    {
+        $id = $this->prepare();
+        $batch = ClubSepaBatch::findOrFail($id);
+        for ($i = 0; $i < 25; $i++) {
+            $copy = $batch->replicate();
+            $copy->reference = 'PAGE-'.$i;
+            $copy->status = 'cancelled';
+            $copy->save();
+        }
+        $this->club->users()->updateExistingPivot($this->reviewer->id, ['permission_overrides' => [
+            ClubPermissions::FINANCE_APPROVE => false, ClubPermissions::FINANCE_EXPORT => false,
+        ]]);
+        Sanctum::actingAs($this->reviewer);
+        $this->getJson($this->base())->assertOk()->assertJsonPath('can_manage', true)
+            ->assertJsonPath('can_approve', false)->assertJsonPath('can_export', false)
+            ->assertJsonPath('reserved_invoice_ids', [$this->invoice->id]);
+        $this->postJson($this->base()."/{$id}/approve")->assertForbidden();
+        $this->postJson($this->base()."/{$id}/export")->assertForbidden();
+    }
+
     public function test_owner_can_enable_confirmed_self_approval_for_existing_draft(): void
     {
         $id = $this->prepare();

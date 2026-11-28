@@ -20,7 +20,6 @@ final class ClubSepaBatchService
         return DB::transaction(function () use ($club, $actor, $data) {
             $club = Club::query()->lockForUpdate()->findOrFail($club->id);
             $creditor = $this->creditor($club);
-            abort_unless($creditor['sepa_creditor_id'] && $creditor['sepa_iban'], 422, __('sepa.credentials'));
             $this->checkLeadTime($data['collection_date'], $data['notice_days'], today());
             $invoices = Invoice::query()->where('club_id', $club->id)
                 ->whereIn('id', $data['invoice_ids'])->orderBy('id')->lockForUpdate()->get();
@@ -34,6 +33,7 @@ final class ClubSepaBatchService
             foreach ($invoices as $invoice) {
                 abort_if(ClubSepaBatchItem::where('reserved_invoice_id', $invoice->id)->exists(), 422, __('sepa.reserved'));
                 abort_unless(in_array($invoice->status, ['open', 'overdue'], true) && $invoice->outstandingCents() > 0, 422, __('sepa.invoices'));
+                $this->assertDue($invoice, $data['collection_date']);
                 $batch->items()->create([
                     'invoice_id' => $invoice->id, 'reserved_invoice_id' => $invoice->id,
                     'amount_cents' => $invoice->outstandingCents(), 'debtor_snapshot' => $this->debtor($club, $invoice),
@@ -149,9 +149,12 @@ final class ClubSepaBatchService
         $invoices = Invoice::whereIn('id', $batch->items->pluck('invoice_id'))->orderBy('id')->lockForUpdate()->get()->keyBy('id');
         foreach ($batch->items as $item) {
             $invoice = $invoices->get($item->invoice_id);
-            abort_unless($invoice && in_array($invoice->status, ['open', 'overdue'], true)
+            abort_unless($invoice && (int) $invoice->club_id === (int) $batch->club_id
+                && (int) $item->reserved_invoice_id === (int) $invoice->id
+                && $item->amount_cents > 0 && in_array($invoice->status, ['open', 'overdue'], true)
                 && $invoice->outstandingCents() === $item->amount_cents
                 && $this->debtor($batch->club, $invoice) === $item->debtor_snapshot, 422, __('sepa.changed'));
+            $this->assertDue($invoice, $batch->collection_date);
         }
     }
 
@@ -176,6 +179,30 @@ final class ClubSepaBatchService
     private function checkLeadTime($date, int $days, $sent): void
     {
         abort_if(Carbon::parse($date)->startOfDay()->lt(Carbon::parse($sent)->startOfDay()->addDays($days)), 422, __('sepa.lead_time'));
+    }
+
+    private function assertDue(Invoice $invoice, $collectionDate): void
+    {
+        abort_unless($invoice->due_date && $invoice->due_date->copy()->startOfDay()
+            ->lte(Carbon::parse($collectionDate)->startOfDay()), 422, __('sepa.not_due'));
+    }
+
+    private function validBankAccount(?string $iban, ?string $bic): bool
+    {
+        $iban = ClubMembershipInput::normalizeIban($iban) ?? '';
+        $bic = ClubMembershipInput::normalizeBic($bic);
+        if (! preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/D', $iban)
+            || ($bic !== null && ! preg_match('/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/D', $bic))) {
+            return false;
+        }
+        // Compute the IBAN checksum incrementally without integer overflow.
+        $remainder = 0;
+        foreach (str_split(substr($iban, 4).substr($iban, 0, 4)) as $character) {
+            $value = ctype_digit($character) ? $character : (string) (ord($character) - 55);
+            $remainder = (int) ($remainder.$value) % 97;
+        }
+
+        return $remainder === 1;
     }
 
     private function audit(ClubSepaBatch $batch, User $actor, string $event): void

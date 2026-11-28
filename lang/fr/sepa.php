@@ -8,6 +8,7 @@ return [
     'payer_required' => 'La facture doit avoir un payeur nommé appartenant au club.',
     'payer_payment_method' => 'Un autre moyen de paiement est enregistré pour le payeur. Vérifiez avant le prélèvement.',
     'ambiguous_mandate' => 'Cette référence de mandat actif appartient à plusieurs membres. Utilisez une référence unique par payeur.',
+    'not_due' => "Chaque facture doit être échue au plus tard à la date de prélèvement. Vérifiez les deux dates.",
     'self_approval_confirm' => "J’ai vérifié les destinataires, montants et date de prélèvement et je valide ce lot.",
     'recharge_void_bank' => 'Cette facture comporte des paiements ou des opérations bancaires. Vérifiez leur état et le processus distinct de remboursement.',
     'recharge_title' => 'Refacturation des frais de rejet',

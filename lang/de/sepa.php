@@ -8,6 +8,7 @@ return [
     'payer_required' => 'Der Rechnung muss ein eindeutiger Zahlungspflichtiger mit Namen und Vereinsmitgliedschaft zugeordnet sein.',
     'payer_payment_method' => 'Beim Zahlungspflichtigen ist eine andere Zahlungsart hinterlegt. Bitte vor dem Einzug prüfen.',
     'ambiguous_mandate' => 'Die aktive Mandatsreferenz ist mehreren Mitgliedern zugeordnet. Bitte eine eindeutige Referenz je Zahlungspflichtigem verwenden.',
+    'not_due' => "Jede Rechnung muss spätestens am Einzugsdatum fällig sein. Prüfe Fälligkeit und Einzugsdatum.",
     'self_approval_confirm' => "Ich habe Empfänger, Beträge und Einzugsdatum dieses Laufs geprüft und gebe ihn frei.",
     'recharge_void_bank' => 'Die Rechnung besitzt Zahlungs- oder Bankvorgänge. Bitte zuerst den Bankstatus und den gesonderten Erstattungsablauf prüfen.',
     'recharge_title' => 'Gebührenweiterbelastung',
