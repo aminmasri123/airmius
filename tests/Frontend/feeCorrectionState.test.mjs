@@ -5,7 +5,7 @@ import { createFeeCorrectionState } from '../../resources/js/Components/ClubMemb
 function setup(post) {
     let snapshot = { amount: 350, revision: 0, date: '2026-10-11' }, saved = 0, identifiers = 0
     const flow = createFeeCorrectionState({ current: () => snapshot, post, uuid: () => `request-${++identifiers}`,
-        errorText: () => 'Check inputs', onSaved: () => saved++ })
+        errorText: () => 'Check inputs', onSaved: () => saved++, today: () => '2026-10-12' })
     function fill(amount = '2,00') {
         Object.assign(flow.state.form, { amount, date: '2026-10-12', reference: 'REF-1', reason: 'Bank evidence' })
         flow.state.confirmed = true
@@ -46,7 +46,8 @@ test('edits revoke confirmation, zero cancels, and concurrent submits do not dup
 test('invalid input and unchanged amount never reach the transport', async () => {
     const calls = [], flow = setup(async body => calls.push(body))
     for (const changes of [{ amount: '-1' }, { amount: '3.50' }, { amount: '1.234' }, { amount: '1000000' },
-        { date: '2026-10-10' }, { reason: ' ' }, { reference: ' ' }]) {
+        { date: '2026-10-10' }, { date: '2026-10-13' }, { date: '2026-02-30' },
+        { date: '2026-13-01' }, { date: 'not-a-date' }, { reason: ' ' }, { reference: ' ' }]) {
         flow.fill(); Object.assign(flow.state.form, changes); flow.state.confirmed = true
         assert.equal(await flow.submit(), false)
     }

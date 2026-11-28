@@ -796,6 +796,46 @@ XML);
         $this->assertEquals(-1, $summary['bank_balance']);
     }
 
+    public function test_fee_history_keeps_each_booking_separate_through_reduction_increase_and_cancellation(): void
+    {
+        $this->postJson($this->path('return'), $this->returned())->assertOk();
+        $this->assertDatabaseCount('club_finance_entries', 0);
+        $this->postJson($this->path('fee'), $this->feeData())->assertOk();
+        $original = $this->item->settlement()->firstOrFail()->feeEntry;
+        $originalAttributes = $original->getAttributes();
+        $previousAmount = 350;
+        $entryIds = [$original->id];
+        foreach ([200, 425, 0] as $index => $amount) {
+            $data = $this->correctionData(['expected_revision' => $index, 'amount_cents' => $amount,
+                'reference' => 'HISTORY-'.($index + 1)]);
+            $response = $this->postJson($this->path('fee-corrections'), $data)->assertOk()
+                ->assertJsonPath('data.revision', $index + 1)
+                ->assertJsonPath('data.previous_amount_cents', $previousAmount)
+                ->assertJsonPath('data.amount_cents', $amount);
+            $entryId = $response->json('data.finance_entry_id');
+            $entryIds[] = $entryId;
+            $entry = ClubFinanceEntry::findOrFail($entryId);
+            $this->assertSame($amount - $previousAmount, (int) round((float) $entry->amount * 100));
+            $this->assertSame($original->id, $entry->reversal_of_id);
+            $this->assertSame($data['reference'], $entry->reference);
+            $this->postJson($this->path('fee-corrections'), $data)->assertOk()->assertJsonPath('data.finance_entry_id', $entryId);
+            $previousAmount = $amount;
+        }
+        $history = $this->getJson($this->base())->assertOk()->json('data.data.0.items.0.settlement');
+        $this->assertSame($original->id, $history['fee_entry']['id']);
+        $this->assertSame('3.50', $history['fee_entry']['amount']);
+        $this->assertSame([1, 2, 3], array_column($history['fee_corrections'], 'revision'));
+        $this->assertSame(array_slice($entryIds, 1), array_column($history['fee_corrections'], 'finance_entry_id'));
+        $this->assertCount(4, array_unique($entryIds));
+        $this->assertSame($originalAttributes, $original->fresh()->getAttributes());
+        $this->assertDatabaseCount('club_finance_entries', 4);
+        $this->assertDatabaseCount('club_sepa_fee_corrections', 3);
+        $this->assertSame(0, (int) round(ClubFinanceEntry::sum('amount') * 100));
+        $this->assertSame(8000, $this->invoice->fresh()->outstandingCents());
+        $this->assertSame(1, Activity::where('type', 'club.sepa.fee_recorded')->count());
+        $this->assertSame(3, Activity::where('type', 'club.sepa.fee_corrected')->count());
+    }
+
     public function test_fee_correction_rejects_stale_invalid_unconfirmed_and_unauthorized_requests(): void
     {
         $this->postJson($this->path('return'), $this->returned())->assertOk();

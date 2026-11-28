@@ -139,7 +139,7 @@ void main() {
         await _mode(tester, 'Neue Ausgabe anlegen');
         final fields = find.byType(TextField);
         await tester.enterText(fields.at(0), '3,50');
-        await tester.enterText(fields.at(1), '2026-10-11');
+        await tester.enterText(fields.at(1), '11.10.2026');
         await tester.enterText(fields.at(2), 'BANK-FEE');
         await tester.tap(find.byType(CheckboxListTile));
         await tester.pumpAndSettle();

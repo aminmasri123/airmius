@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import ClubSepaFeeRecharge from './ClubSepaFeeRecharge.vue'
 import ClubSepaFeeCorrection from './ClubSepaFeeCorrection.vue'
 import translations from '@/i18n/sepaFeeLocalization.json'
-import { normalizeLocalizedDecimal } from '@/utils/localizedNumber.js'
+import { parseFeeCents } from './feeAmount.js'
 
 const props = defineProps({ clubId: Number, batchId: Number, item: Object, canManage: Boolean, disabled: Boolean, correctionsAvailable: Boolean, userId: Number, draftsAvailable: Boolean, approvalsAvailable: Boolean, voidsAvailable: Boolean, creditsAvailable: Boolean })
 const emit = defineEmits(['saved'])
@@ -32,12 +32,12 @@ function choose(entry) {
 }
 async function save() {
     if (busy.value || props.disabled || !props.canManage || !confirmed.value || !mode.value || (mode.value === 'existing' && !selected.value)) return
-    const value = normalizeLocalizedDecimal(amount.value)
-    if (value === null || value <= 0 || value > 999999.99 || Math.round(value * 100) !== value * 100) { error.value = c('error'); return }
+    const cents = parseFeeCents(amount.value)
+    if (cents === null || cents <= 0) { error.value = c('error'); return }
     busy.value = true; error.value = ''
     try {
         await window.axios.post(`${base.value}/fee`, {
-            confirmed: true, amount_cents: Math.round(value * 100), booked_on: date.value, reference: reference.value,
+            confirmed: true, amount_cents: cents, booked_on: date.value, reference: reference.value,
             ...(mode.value === 'existing' ? { finance_entry_id: selected.value.id } : {}),
         })
         confirmed.value = false; mode.value = ''; emit('saved')
@@ -48,7 +48,6 @@ async function save() {
 
 <template>
     <div class="my-2 rounded border border-border p-3" :aria-busy="busy">
-        <p v-if="expense">{{ c('recorded') }} #{{ expense.id }} · {{ money(expense.amount) }} · {{ expense.booked_on?.slice(0, 10) }} · {{ expense.reference }}</p>
         <ClubSepaFeeCorrection v-if="expense" :club-id="clubId" :batch-id="batchId" :item="item" :can-manage="canManage" :disabled="disabled || busy" :available="correctionsAvailable" @saved="emit('saved')" />
         <ClubSepaFeeRecharge v-if="expense && (draftsAvailable || item.settlement?.fee_recharges?.length)" :club-id="clubId" :batch-id="batchId" :item="item" :user-id="userId" :can-manage="canManage" :disabled="disabled || busy" :drafts-available="draftsAvailable" :approvals-available="approvalsAvailable" :voids-available="voidsAvailable" :credits-available="creditsAvailable" @saved="emit('saved')" />
         <details v-if="!expense && canManage">

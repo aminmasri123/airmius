@@ -8,6 +8,7 @@ const props = defineProps({ clubId: Number, batchId: Number, item: Object, canMa
 const emit = defineEmits(['saved'])
 const { locale } = useI18n()
 const c = key => (translations[locale.value] || translations.en)[key] || key
+const original = computed(() => props.item.settlement.fee_entry)
 const history = computed(() => [...(props.item.settlement?.fee_corrections || [])].sort((a, b) => a.revision - b.revision))
 const current = computed(() => {
     const latest = history.value.at(-1), original = props.item.settlement.fee_entry
@@ -26,12 +27,14 @@ function save() { if (props.available && props.canManage && !props.disabled) ret
 
 <template>
     <section class="mt-2 space-y-2" :aria-busy="state.busy">
+        <p class="break-words">{{ c('original') }} · {{ c('booking') }} #{{ original.id }} · {{ money(Math.round(Number(original.amount) * 100)) }} · {{ original.booked_on.slice(0, 10) }} · {{ original.reference }}</p>
         <p class="font-semibold">{{ c('current') }}: {{ money(current.amount) }}</p>
         <details v-if="history.length">
             <summary class="cursor-pointer">{{ c('history') }}</summary>
             <ol class="space-y-2 break-words">
                 <li v-for="entry in history" :key="entry.id" class="rounded border border-border p-2">
                     #{{ entry.revision }} · {{ entry.booked_on.slice(0, 10) }} · {{ money(entry.previous_amount_cents) }} → {{ money(entry.amount_cents) }}
+                    <p>{{ c('delta') }}: {{ entry.amount_cents > entry.previous_amount_cents ? '+' : '' }}{{ money(entry.amount_cents - entry.previous_amount_cents) }} · {{ c('booking') }} #{{ entry.finance_entry_id }}</p>
                     <p>{{ entry.reference }}</p><p class="whitespace-pre-wrap">{{ entry.reason }}</p>
                 </li>
             </ol>

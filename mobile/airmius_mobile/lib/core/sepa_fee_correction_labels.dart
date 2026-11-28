@@ -1,6 +1,9 @@
 // Shared wording with the web fee correction workflow.
 const sepaFeeCorrectionLabels = <String, Map<String, String>>{
   'de': {
+    'original': 'Ursprüngliche Gebührenbuchung',
+    'booking': 'Buchung',
+    'delta': 'Separat gebuchte Differenz',
     'current': "Aktueller Gebührenbetrag",
     'history': "Korrekturhistorie",
     'title': "Gebühr korrigieren oder stornieren",
@@ -22,6 +25,9 @@ const sepaFeeCorrectionLabels = <String, Map<String, String>>{
         "Die Korrektur konnte nicht abgeschlossen werden. Bitte Angaben und aktuellen Stand prüfen.",
   },
   'en': {
+    'original': 'Original fee booking',
+    'booking': 'Booking',
+    'delta': 'Separately booked adjustment',
     'current': "Current fee amount",
     'history': "Correction history",
     'title': "Correct or cancel fee",
@@ -43,6 +49,9 @@ const sepaFeeCorrectionLabels = <String, Map<String, String>>{
         "The correction could not be completed. Check the details and current state.",
   },
   'fr': {
+    'original': 'Écriture initiale des frais',
+    'booking': 'Écriture',
+    'delta': 'Différence comptabilisée séparément',
     'current': "Montant actuel des frais",
     'history': "Historique des corrections",
     'title': "Corriger ou annuler les frais",
@@ -64,6 +73,9 @@ const sepaFeeCorrectionLabels = <String, Map<String, String>>{
         "La correction n’a pas pu être effectuée. Vérifiez les données et l’état actuel.",
   },
   'ar': {
+    'original': 'قيد الرسوم الأصلي',
+    'booking': 'القيد',
+    'delta': 'الفرق المقيد بشكل منفصل',
     'current': "مبلغ الرسوم الحالي",
     'history': "سجل التصحيحات",
     'title': "تصحيح الرسوم أو إلغاؤها",

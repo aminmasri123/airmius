@@ -31,9 +31,13 @@ class SepaFeeCorrectionSummary extends StatelessWidget {
       name: 'EUR',
     ).format(cents / 100);
     final history = feeCorrections(result);
+    final original = result['fee_entry'] as AirmiusJson;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text(
+          '${labels['original']} · ${labels['booking']} #${original['id']} · ${money((num.parse('${original['amount']}') * 100).round())} · ${original['booked_on'].toString().split('T').first} · ${original['reference']}',
+        ),
         Text('${labels['current']}: ${money(currentFeeCents(result))}'),
         if (history.isNotEmpty)
           ExpansionTile(
@@ -44,7 +48,9 @@ class SepaFeeCorrectionSummary extends StatelessWidget {
                   title: Text(
                     '#${entry['revision']} · ${entry['booked_on'].toString().split('T').first} · ${money(entry['previous_amount_cents'] as num)} → ${money(entry['amount_cents'] as num)}',
                   ),
-                  subtitle: Text('${entry['reference']}\n${entry['reason']}'),
+                  subtitle: Text(
+                    '${labels['delta']}: ${(entry['amount_cents'] as num) > (entry['previous_amount_cents'] as num) ? '+' : ''}${money((entry['amount_cents'] as num) - (entry['previous_amount_cents'] as num))} · ${labels['booking']} #${entry['finance_entry_id']}\n${entry['reference']}\n${entry['reason']}',
+                  ),
                 ),
             ],
           ),
@@ -120,11 +126,13 @@ class _ClubSepaFeeCorrectionScreenState
         if (!RegExp(r'^\d{1,6}(?:\.\d{1,2})?$').hasMatch(amount) ||
             (double.parse(amount) * 100).round() ==
                 currentFeeCents(widget.result) ||
-            DateFormat('yyyy-MM-dd').format(
-                  DateFormat('yyyy-MM-dd').parseStrict(date ?? ''),
-                ) !=
+            DateFormat(
+                  'yyyy-MM-dd',
+                ).format(DateFormat('yyyy-MM-dd').parseStrict(date ?? '')) !=
                 date ||
             date!.compareTo(earliest) < 0 ||
+            date.compareTo(DateFormat('yyyy-MM-dd').format(DateTime.now())) >
+                0 ||
             _reference.text.trim().isEmpty ||
             _reason.text.trim().isEmpty ||
             _reference.text.length > 180 ||

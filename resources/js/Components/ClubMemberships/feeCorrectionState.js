@@ -1,7 +1,19 @@
 import { reactive, watch } from 'vue'
+import { parseFeeCents } from './feeAmount.js'
+
+export function feeCorrectionToday() {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+function validBookingDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+    const parsed = new Date(`${value}T00:00:00Z`)
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
 
 // A transport failure never creates a new logical request or an automatic retry.
-export function createFeeCorrectionState({ current, post, uuid, errorText, onSaved }) {
+export function createFeeCorrectionState({ current, post, uuid, errorText, onSaved, today = feeCorrectionToday }) {
     const state = reactive({ form: { amount: '', date: '', reference: '', reason: '' }, confirmed: false,
         busy: false, phase: 'ready', request: null, error: '' })
     const reset = () => {
@@ -15,10 +27,9 @@ export function createFeeCorrectionState({ current, post, uuid, errorText, onSav
     async function submit() {
         if (state.busy || !state.confirmed || state.phase === 'saved') return false
         if (!state.request) {
-            const f = state.form, value = String(f.amount).replace(',', '.')
-            const cents = Math.round(Number(value) * 100)
-            if (!/^\d{1,6}(?:\.\d{1,2})?$/.test(value) || cents === current().amount
-                || !/^\d{4}-\d{2}-\d{2}$/.test(f.date) || f.date < current().date
+            const f = state.form, cents = parseFeeCents(f.amount)
+            if (cents === null || cents === current().amount
+                || !validBookingDate(f.date) || f.date < current().date || f.date > today()
                 || !f.reference.trim() || !f.reason.trim() || f.reference.length > 180 || f.reason.length > 2000) {
                 state.error = errorText(); return false
             }

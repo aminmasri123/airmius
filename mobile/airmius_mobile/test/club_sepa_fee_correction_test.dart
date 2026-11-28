@@ -16,10 +16,16 @@ class _Transport implements AirmiusApiTransport {
 }
 
 AirmiusJson result() => {
-  'fee_entry': {'amount': '3.50', 'booked_on': '2026-10-11'},
+  'fee_entry': {
+    'id': 7,
+    'amount': '3.50',
+    'booked_on': '2026-10-11',
+    'reference': 'ORIGINAL-FEE',
+  },
   'fee_corrections': [
     {
       'id': 1,
+      'finance_entry_id': 8,
       'revision': 1,
       'previous_amount_cents': 350,
       'amount_cents': 200,
@@ -77,7 +83,7 @@ Future<void> _screen(
 Future<void> fill(WidgetTester tester, String amount) async {
   final fields = find.byType(TextField);
   await tester.enterText(fields.at(0), amount);
-  await tester.enterText(fields.at(1), '2026-10-13');
+  await tester.enterText(fields.at(1), '13.10.2026');
   await tester.enterText(fields.at(2), 'BANK-CORRECTION');
   await tester.enterText(fields.at(3), 'Correct bank evidence');
   await tester.tap(find.byType(CheckboxListTile));
@@ -85,6 +91,81 @@ Future<void> fill(WidgetTester tester, String amount) async {
 }
 
 void main() {
+  testWidgets(
+    'small phone shows original and separate signed correction bookings in revision order',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 640));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final data = result();
+      (data['fee_corrections'] as List).insert(0, {
+        'id': 2,
+        'finance_entry_id': 9,
+        'revision': 2,
+        'previous_amount_cents': 200,
+        'amount_cents': 425,
+        'booked_on': '2026-10-13',
+        'reference': 'SECOND-FEE',
+        'reason': 'Additional bank evidence',
+      });
+      await tester.pumpWidget(
+        AirmiusScope(
+          language: AirmiusLanguage.de,
+          setLanguage: (_) {},
+          child: MaterialApp(
+            home: Scaffold(
+              body: ListView(
+                children: [SepaFeeCorrectionSummary(result: data)],
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(
+        find.textContaining('Ursprüngliche Gebührenbuchung · Buchung #7'),
+        findsOneWidget,
+      );
+      expect(find.text('Aktueller Gebührenbetrag: 4,25 €'), findsOneWidget);
+      await tester.tap(find.text('Korrekturhistorie'));
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('Separat gebuchte Differenz: -1,50 € · Buchung #8'),
+        findsOneWidget,
+      );
+      final second = find.textContaining(
+        'Separat gebuchte Differenz: +2,25 € · Buchung #9',
+      );
+      await tester.ensureVisible(second);
+      expect(second, findsOneWidget);
+      expect(
+        tester.getTopLeft(find.textContaining('#1 ·')).dy,
+        lessThan(tester.getTopLeft(find.textContaining('#2 ·')).dy),
+      );
+      expect(find.byType(FilledButton), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'future correction date remains editable without sending or freezing a request',
+    (tester) async {
+      final transport = _Transport();
+      await _screen(tester, transport, (_) {});
+      await fill(tester, '1,25');
+      await tester.enterText(find.byType(TextField).at(1), '31.12.9999');
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Korrektur buchen'));
+      await tester.pumpAndSettle();
+      expect(transport.requests, isEmpty);
+      expect(
+        tester.widget<TextField>(find.byType(TextField).at(1)).enabled,
+        true,
+      );
+      expect(find.text('Dieselbe Korrektur erneut prüfen'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'cancel current fee with a confirmed zero and preserve history revision',
     (tester) async {
@@ -156,7 +237,7 @@ void main() {
     final transport = _Transport();
     await _screen(tester, transport, (_) {});
     await fill(tester, '1.00');
-    await tester.enterText(find.byType(TextField).at(1), '2026-10-11');
+    await tester.enterText(find.byType(TextField).at(1), '11.10.2026');
     await tester.pumpAndSettle();
     expect(
       tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,

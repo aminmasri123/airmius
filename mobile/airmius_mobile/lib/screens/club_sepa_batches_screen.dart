@@ -616,10 +616,6 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
               '${c('bankFee')}: ${money(result!['return_fee_cents'])} · ${c('feeHelp')}',
             ),
           if (result?['retry_authorized_at'] != null) Text(c('retryAllowed')),
-          if (fee != null)
-            Text(
-              '${labels['recorded']} #${fee['id']} · ${money((num.parse('${fee['amount']}') * 100).round())} · ${fee['booked_on'].toString().split('T').first} · ${fee['reference']}',
-            ),
           if (fee != null) SepaFeeCorrectionSummary(result: result!),
           if (fee != null && feeRecharges(result!).isNotEmpty)
             SepaFeeRechargeSummary(result: result),

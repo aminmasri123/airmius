@@ -171,3 +171,96 @@ Server schützt weitere Aktionen mit der erwarteten Revision vor veraltetem Stan
 
 Automatisierte Bedienungs- und Navigationstests prüfen diese Abläufe sowie lesende
 arabische Historie. Diese Prüfungen ersetzen keine reale Geräteabnahme.
+
+## T21-13 – Bankgebühr: Prüfung vom 28.11.2026
+
+Web und App zeigen die ursprüngliche Gebührenbuchung jetzt ausdrücklich mit
+Buchungsnummer, Betrag, Datum und Referenz. Jede Korrektur enthält zusätzlich zur
+Änderung „vorher → nachher“ die separat gebuchte Differenz mit Vorzeichen und ihre
+eigene Buchungsnummer. Der aktuelle Gesamtbetrag bleibt separat sichtbar. Die
+Originalangaben stehen auch im nativen Korrekturdialog. Die Texte sind in
+Deutsch, Englisch, Französisch und Arabisch vorhanden.
+
+Die Web-Betragsprüfung liest ganze Cent direkt aus den eingegebenen Ziffern.
+Dadurch werden gültige Beträge wie 4,10 EUR und 0,29 EUR nicht mehr durch einen
+exakten Gleitkommavergleich abgewiesen. Mehr als zwei Nachkommastellen werden
+nicht still gerundet. Web und App weisen zukünftige Korrekturdatumswerte vor dem
+Versand ab; das Web prüft außerdem auf tatsächlich existierende Kalendertage.
+Die Servervalidierung und der Wiederholungsschutz bleiben maßgeblich.
+
+### Klick-für-Klick auf dem Handy
+
+Voraussetzung: Finanzverwaltungsrechte, freigeschaltete SEPA-/Zahlungsfunktionen
+und ein bereits exportierter Lastschriftlauf. Für einen Test einen Testverein
+und passende Testbelege verwenden. Die folgenden Beträge sind ein Beispiel.
+
+1. Den gewünschten Verein öffnen und **Mitglieder & Beiträge** aufrufen.
+2. In der Bereichsauswahl **Export** wählen. Zum Abschnitt
+   **SEPA-Sammellauf** scrollen und **SEPA-Sammellauf** antippen.
+3. In **Lastschriftläufe** den passenden Lauf mit Status **Exportiert** und
+   darunter die richtige Rechnung/Mitgliedsposition anhand ihrer Referenzen suchen.
+4. Falls noch keine Rückgabe dokumentiert ist: **Rückgabe erfassen** antippen.
+   **Buchungsdatum laut Bank** im Format `TT.MM.JJJJ`, die eindeutige
+   Bank-Buchungsreferenz, den Rückgabegrund und beispielsweise `3,50` in
+   **Bankgebühr (EUR)** eintragen. Bankbeleg bestätigen und **Rückgabe erfassen**
+   antippen. Dieser Gebührenwert dokumentiert den Beleg; er bucht noch keine Ausgabe.
+5. An derselben Position **Bankgebühr buchen** antippen.
+6. Unter **Buchungsweg auswählen** den passenden Weg wählen:
+   **Neue Ausgabe anlegen** für eine noch nicht erfasste Gebühr; andernfalls
+   **Vorhandene Ausgabe verknüpfen**, die Bankreferenz suchen und die passende
+   Ausgabe auswählen. Eine vorhandene Ausgabe nicht nochmals neu anlegen.
+7. Bei einer neuen Ausgabe `3,50` als **Gebühr in EUR**, das tatsächliche
+   **Buchungsdatum** und eine eigene **Bankreferenz** eintragen. Die Angaben
+   bestätigen und **Ausgabe buchen** beziehungsweise **Ausgabe verknüpfen** antippen.
+8. In der aktualisierten Übersicht **Ursprüngliche Gebührenbuchung** mit
+   Buchungsnummer, `3,50 EUR`, Datum und Referenz kontrollieren.
+9. **Gebühr korrigieren oder stornieren** antippen. Unter **Neuer Gesamtbetrag in
+   EUR** beispielsweise `2,00` eintragen. Das ist der neue Gesamtbetrag.
+   **Korrekturdatum**, eine neue **Eigene Buchungsreferenz** und eine konkrete
+   **Begründung** ergänzen. Das Datum muss zwischen der letzten Gebührenbuchung
+   beziehungsweise Korrektur und heute liegen.
+10. Die Angaben prüfen, die Bestätigung aktivieren und **Korrektur buchen** antippen.
+11. Nach Rückkehr **Korrekturhistorie** aufklappen. Erwartet: Original weiterhin
+    `3,50 EUR`, Korrektur `3,50 → 2,00 EUR`, **Separat gebuchte Differenz**
+    `−1,50 EUR` mit eigener Buchungsnummer, Datum, Referenz und Begründung.
+    **Aktueller Gebührenbetrag** zeigt `2,00 EUR`.
+12. Für ein vollständiges Storno denselben Korrekturweg mit neuem Gesamtbetrag
+    `0,00`, neuer Referenz und Begründung verwenden. Die zweite Differenz beträgt
+    dann `−2,00 EUR`; Original und beide Korrekturen bleiben erhalten.
+
+Bei unklarem Übertragungsergebnis **Aktuellen Stand laden** wählen oder dieselbe
+Korrektur nach erneuter Bestätigung über **Dieselbe Korrektur erneut prüfen**
+wiederholen. Die eingefrorene Anfrage behält ihre Kennung; es wird nicht
+automatisch erneut gebucht. Die Mitgliedsforderung wird durch die Bankgebühr
+und ihre Korrekturen nicht erhöht oder vermindert.
+
+```mermaid
+flowchart TD
+    A[Exportierter Lastschriftlauf] --> B[Rückgabe erfassen]
+    B --> C[Gebühr laut Bank nur dokumentiert]
+    C --> D{Bankgebühr buchen}
+    D --> E[Neue Ausgabe ausdrücklich buchen]
+    D --> F[Vorhandene Ausgabe verknüpfen]
+    E --> G[Originalbuchung: 3,50 EUR]
+    F --> G
+    G --> H[Neuen Gesamtbetrag 2,00 EUR bestätigen]
+    H --> I[Eigene Differenzbuchung: minus 1,50 EUR]
+    I --> J[Historie: Original und Korrektur; aktuell 2,00 EUR]
+    J --> K[Storno mit Gesamtbetrag 0,00 EUR bestätigen]
+    K --> L[Weitere Differenzbuchung: minus 2,00 EUR]
+    L --> M[Historie bleibt erhalten; aktuell 0,00 EUR]
+```
+
+### Lokale Prüfergebnisse
+
+- 38 Backend-Tests mit 661 Assertions bestanden (`ClubSepaSettlementTest`,
+  Filter `fee_`, SQLite im Arbeitsspeicher). Der neue Verlaufstest prüft
+  Verringerung, Erhöhung und Storno, vier getrennte Buchungen, unveränderte
+  Originaldaten, API-Historie, identische Wiederholungen, Audit und Mitgliedsschuld.
+- 11 Webtests für Centbeträge, Korrekturzustand und gerenderte Historie bestanden.
+- 28 Flutter-Tests für Gebühr, Korrektur und Lastschriftlauf bestanden; darunter
+  320-Pixel-Handybreite, deutsche Buchungsdetails und lesende arabische Historie.
+- Gezielte Dart-Analyse ohne Befund; isolierter Vite-Build erfolgreich.
+
+Es wurden keine produktiven Buchungen, Migrationen oder Veröffentlichungen
+ausgeführt. Eine reale Handy-/Bank-/MySQL-Abnahme ist damit nicht behauptet.
