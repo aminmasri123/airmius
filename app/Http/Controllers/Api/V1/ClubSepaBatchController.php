@@ -157,7 +157,10 @@ class ClubSepaBatchController extends Controller
     public function cancel(Request $request, Club $club, ClubSepaBatch $batch, ClubSepaBatchService $service)
     {
         $this->access($request, $club, true, $batch);
-        $data = $request->validate(['reason' => ['required', 'string', 'max:2000', 'regex:/\S/u']]);
+        $data = $request->validate([
+            'confirmed' => ['required', 'accepted'],
+            'reason' => ['required', 'string', 'max:2000', 'regex:/\S/u'],
+        ]);
 
         return response()->json(['data' => $this->payload($service->cancel($batch, $request->user(), $data['reason']))]);
     }

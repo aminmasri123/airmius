@@ -307,11 +307,47 @@ class ClubSepaBatchTest extends TestCase
         $this->postJson($this->base(), $data)->assertUnprocessable();
         $this->assertDatabaseCount('club_sepa_batches', 1);
         $this->getJson("/api/v1/clubs/{$this->club->id}/membership/sepa-export")->assertUnprocessable();
-        $this->postJson($this->base()."/{$id}/cancel", ['reason' => 'Neu planen'])->assertOk();
+        $this->postJson($this->base()."/{$id}/cancel", ['confirmed' => true, 'reason' => 'Neu planen'])->assertOk();
         $this->get("/api/v1/clubs/{$this->club->id}/membership/sepa-export")->assertOk();
         $this->postJson($this->base(), $data)->assertCreated();
+        $this->postJson($this->base()."/{$id}/cancel", ['confirmed' => true, 'reason' => 'Neu planen'])->assertOk();
+        $this->postJson($this->base(), $data)->assertUnprocessable();
         $this->assertDatabaseCount('club_sepa_batch_items', 2);
         $this->assertSame(1, DB::table('club_sepa_batch_items')->whereNotNull('reserved_invoice_id')->count());
+    }
+
+    public function test_cancellation_requires_confirmation_is_idempotent_and_terminal_in_every_cancellable_state(): void
+    {
+        foreach (['draft', 'approved', 'notified'] as $state) {
+            Sanctum::actingAs($this->owner);
+            $id = $this->prepare();
+            if ($state !== 'draft') {
+                $this->approve($id);
+            }
+            if ($state === 'notified') {
+                $this->notice($id);
+            }
+            $url = $this->base()."/{$id}";
+            foreach ([['reason' => 'Neu planen'], ['reason' => 'Neu planen', 'confirmed' => false], ['reason' => ' ', 'confirmed' => true]] as $invalid) {
+                $this->postJson($url.'/cancel', $invalid)->assertUnprocessable();
+                $this->assertSame($state, ClubSepaBatch::findOrFail($id)->status);
+                $this->assertDatabaseHas('club_sepa_batch_items', ['club_sepa_batch_id' => $id, 'reserved_invoice_id' => $this->invoice->id]);
+            }
+            $body = ['reason' => 'Neu planen', 'confirmed' => true];
+            $first = $this->postJson($url.'/cancel', $body)->assertOk()->assertJsonPath('data.status', 'cancelled')->json('data.cancelled_at');
+            $this->travel(1)->minutes();
+            $this->postJson($url.'/cancel', $body)->assertOk()->assertJsonPath('data.cancelled_at', $first);
+            $this->postJson($url.'/cancel', ['reason' => 'Anderer Grund', 'confirmed' => true])->assertUnprocessable();
+            $this->postJson($url.'/export')->assertUnprocessable();
+            $this->postJson($url.'/approve', ['confirmed' => true])->assertUnprocessable();
+            $this->postJson($url.'/notice', ['confirmed' => true, 'sent_on' => '2026-09-23', 'channel' => 'letter', 'reference' => 'proof'])->assertUnprocessable();
+            $batch = ClubSepaBatch::findOrFail($id);
+            $this->assertSame('Neu planen', $batch->cancellation_reason);
+            $this->assertNull($batch->export_xml);
+            $this->assertNull($batch->items()->firstOrFail()->reserved_invoice_id);
+        }
+        $this->assertSame(3, DB::table('activities')->where('type', 'club.sepa.cancelled')->count());
+        $this->assertDatabaseCount('payments', 0);
     }
 
     public function test_payment_change_after_notice_prevents_stale_export(): void
@@ -379,7 +415,7 @@ class ClubSepaBatchTest extends TestCase
         $this->approve($id);
         $this->notice($id);
         $this->postJson($this->base()."/{$id}/export")->assertOk();
-        $this->postJson($this->base()."/{$id}/cancel", ['reason' => 'retry'])->assertUnprocessable();
+        $this->postJson($this->base()."/{$id}/cancel", ['confirmed' => true, 'reason' => 'retry'])->assertUnprocessable();
         Sanctum::actingAs($this->owner);
         $this->getJson("/api/v1/clubs/{$this->club->id}/membership/sepa-export")->assertUnprocessable();
     }

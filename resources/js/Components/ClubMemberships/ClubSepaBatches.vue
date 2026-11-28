@@ -56,7 +56,7 @@ async function fetchPage(append = false) {
     feeRechargeVoids.value = response.data.fee_recharge_voids_available === true
     feeRechargeCredits.value = response.data.fee_recharge_credits_available === true
     const result = response.data.data
-    const rows = result.data.map(b => ({ ...b, approvalConfirmed: false, mailConfirmed: false, notice: { sent_on: '', channel: 'email', reference: '', confirmed: false }, reason: '' }))
+    const rows = result.data.map(b => ({ ...b, approvalConfirmed: false, cancelConfirmed: false, mailConfirmed: false, notice: { sent_on: '', channel: 'email', reference: '', confirmed: false }, reason: '' }))
     batches.value = append ? [...batches.value, ...rows] : rows
     page.value = result.current_page
     more.value = Boolean(result.next_page_url)
@@ -111,6 +111,11 @@ async function act(path, data = {}, download = false) {
             <p v-if="!batches.length && !busy">{{ c('empty') }}</p>
             <article v-for="batch in batches" :key="batch.id" class="my-4 space-y-2 rounded border border-border p-3">
                 <h4 class="font-semibold">{{ batch.reference }} · {{ c(batch.status) }}</h4>
+                <template v-if="batch.status === 'cancelled'">
+                    <p role="status">{{ c('cancelledHelp') }}</p>
+                    <p>{{ batch.cancelled_at }} · {{ batch.cancellation_reason }}</p>
+                </template>
+                <p v-if="batch.status === 'exported'" class="text-sm">{{ c('exportAgainHelp') }}</p>
                 <p>{{ batch.creditor_name }} · {{ batch.creditor_id }}</p>
                 <p>{{ c('date') }}: {{ batch.collection_date }} · {{ c('total') }}: {{ money(batch.total_cents) }}</p>
                 <p v-if="batch.notice_deadline_on">{{ c('noticeDeadline') }}: {{ batch.notice_deadline_on }} · {{ c('days') }}: {{ batch.notice_days }}</p>
@@ -162,10 +167,12 @@ async function act(path, data = {}, download = false) {
                     </fieldset>
                 </form>
                 <p v-if="batch.notice_sent_on" class="text-sm">{{ c('sentOn') }}: {{ batch.notice_sent_on }} · {{ batch.notice_reference }}</p>
-                <button v-if="canExport && ['notified', 'exported'].includes(batch.status)" :disabled="busy" type="button" class="rounded bg-buttonPrimary px-3 py-2 text-buttonTextPrimary" @click="act(`/${batch.id}/export`, {}, true)">{{ c('export') }}</button>
-                <form v-if="canManage && ['draft', 'approved', 'notified'].includes(batch.status)" @submit.prevent="act(`/${batch.id}/cancel`, { reason: batch.reason })">
+                <button v-if="canExport && ['notified', 'exported'].includes(batch.status)" :disabled="busy" type="button" class="rounded bg-buttonPrimary px-3 py-2 text-buttonTextPrimary" @click="act(`/${batch.id}/export`, {}, true)">{{ c(batch.status === 'exported' ? 'exportAgain' : 'export') }}</button>
+                <form v-if="canManage && ['draft', 'approved', 'notified'].includes(batch.status)" @submit.prevent="act(`/${batch.id}/cancel`, { reason: batch.reason, confirmed: batch.cancelConfirmed })">
+                    <p class="text-sm">{{ c('cancelHelp') }}</p>
                     <label class="block">{{ c('reason') }} <input v-model="batch.reason" required maxlength="2000" class="rounded border border-border bg-inputBg px-2 py-1" :disabled="busy"></label>
-                    <button type="submit" :disabled="busy" class="mt-2 rounded border border-border px-3 py-2">{{ c('cancel') }}</button>
+                    <label class="flex gap-2"><input v-model="batch.cancelConfirmed" type="checkbox" required :disabled="busy"> {{ c('cancelConfirm') }}</label>
+                    <button type="submit" :disabled="busy || !batch.cancelConfirmed || !batch.reason.trim()" class="mt-2 rounded border border-border px-3 py-2">{{ c('cancel') }}</button>
                 </form>
             </article>
             <button v-if="more" type="button" :disabled="busy" @click="load(true)">{{ c('more') }}</button>

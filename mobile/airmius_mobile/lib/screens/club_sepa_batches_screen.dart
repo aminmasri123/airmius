@@ -1,9 +1,13 @@
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+
 import '../widgets/airmius_form.dart';
+
 import 'package:intl/intl.dart';
+
 import '../core/airmius_api_client.dart';
 import '../core/airmius_date_input.dart';
 import '../core/airmius_l10n.dart';
@@ -467,11 +471,18 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                           maxLength: 2000,
                           decoration: InputDecoration(
                             labelText: c(
-                              action == 'return' ? 'returnReason' : 'reason',
+                              action == 'return'
+                                  ? 'returnReason'
+                                  : 'retryReason',
                             ),
                           ),
-                          validator: (value) =>
-                              (value ?? '').trim().isEmpty ? c('reason') : null,
+                          validator: (value) => (value ?? '').trim().isEmpty
+                              ? c(
+                                  action == 'return'
+                                      ? 'returnReason'
+                                      : 'retryReason',
+                                )
+                              : null,
                         ),
                       if (action == 'return') ...[
                         TextFormField(
@@ -964,30 +975,48 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
 
   Future<void> _cancel(AirmiusJson batch) async {
     final reason = TextEditingController();
+    bool confirmed = false;
     try {
       final result = await _showDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(c('cancel')),
-          content: TextField(
-            controller: reason,
-            maxLength: 2000,
-            decoration: InputDecoration(labelText: c('reason')),
+        builder: (context) => StatefulBuilder(
+          builder: (context, change) => AlertDialog(
+            title: Text('${c('cancel')} · ${batch['reference']}'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(c('cancelHelp')),
+                  TextField(
+                    controller: reason,
+                    maxLength: 2000,
+                    onChanged: (_) => change(() {}),
+                    decoration: InputDecoration(labelText: c('reason')),
+                  ),
+                  CheckboxListTile(
+                    value: confirmed,
+                    title: Text(c('cancelConfirm')),
+                    onChanged: (value) =>
+                        change(() => confirmed = value == true),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  MaterialLocalizations.of(context).cancelButtonLabel,
+                ),
+              ),
+              FilledButton(
+                onPressed: confirmed && reason.text.trim().isNotEmpty
+                    ? () => Navigator.pop(context, reason.text.trim())
+                    : null,
+                child: Text(c('cancel')),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (reason.text.trim().isNotEmpty) {
-                  Navigator.pop(context, reason.text);
-                }
-              },
-              child: Text(c('cancel')),
-            ),
-          ],
         ),
       );
       if (result != null && mounted) {
@@ -996,7 +1025,7 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
             widget.clubId,
             batch['id'] as int,
             'cancel',
-            {'reason': result},
+            {'reason': result, 'confirmed': true},
           );
         });
       }
@@ -1077,6 +1106,14 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text('${batch['creditor_name']} · ${batch['creditor_id']}'),
+                    if (batch['status'] == 'cancelled') ...[
+                      Text(c('cancelledHelp')),
+                      Text(
+                        '${batch['cancelled_at'] ?? ''} · ${batch['cancellation_reason'] ?? ''}',
+                      ),
+                    ],
+                    if (batch['status'] == 'exported')
+                      Text(c('exportAgainHelp')),
                     Text(
                       '${c('date')}: ${batch['collection_date']} · ${c('total')}: ${money(batch['total_cents'])}',
                     ),
@@ -1163,7 +1200,13 @@ class _ClubSepaBatchesScreenState extends State<ClubSepaBatchesScreen> {
                               ].contains(batch['status']))
                             OutlinedButton(
                               onPressed: _busy ? null : () => _export(batch),
-                              child: Text(c('export')),
+                              child: Text(
+                                c(
+                                  batch['status'] == 'exported'
+                                      ? 'exportAgain'
+                                      : 'export',
+                                ),
+                              ),
                             ),
                           if (_canManage &&
                               [

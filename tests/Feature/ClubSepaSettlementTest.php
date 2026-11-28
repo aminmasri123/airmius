@@ -139,13 +139,31 @@ class ClubSepaSettlementTest extends TestCase
         $this->assertSame($invoice->id, $this->item->fresh()->reserved_invoice_id);
         $this->postJson($this->path('retry'), ['confirmed' => true, 'reason' => 'Bank cause checked'])->assertUnprocessable();
         Sanctum::actingAs($this->owner);
+        $this->postJson($this->path('retry'), ['reason' => 'Bank cause checked'])->assertUnprocessable();
+        $this->postJson($this->path('retry'), ['confirmed' => false, 'reason' => 'Bank cause checked'])->assertUnprocessable();
+        $this->assertSame($invoice->id, $this->item->fresh()->reserved_invoice_id);
         $this->postJson($this->path('retry'), ['confirmed' => true, 'reason' => 'Bank cause checked'])->assertOk();
         $this->assertNull($this->item->fresh()->reserved_invoice_id);
         $next = $this->postJson($this->base(), ['invoice_ids' => [$invoice->id], 'collection_date' => '2026-10-28', 'notice_days' => 14])->assertCreated()->json('data.id');
-        $this->postJson($this->path('retry'), ['confirmed' => true, 'reason' => 'Same request retried'])->assertOk();
+        $this->postJson($this->path('retry'), ['confirmed' => true, 'reason' => 'Bank cause checked'])->assertOk();
         $this->assertDatabaseHas('club_sepa_batch_items', ['club_sepa_batch_id' => $next, 'reserved_invoice_id' => $invoice->id]);
         $this->postJson($this->base()."/{$next}/export")->assertUnprocessable();
         $this->assertSame($xml, $this->postJson($this->base()."/{$this->batch->id}/export")->assertOk()->getContent());
+        $this->postJson($this->path('retry'), ['confirmed' => true, 'reason' => 'Different reason'])->assertUnprocessable();
+        $this->postJson($this->path('return'), $this->returned())->assertOk();
+        $this->postJson($this->base(), ['invoice_ids' => [$invoice->id], 'collection_date' => '2026-10-28', 'notice_days' => 14])->assertUnprocessable();
+        Sanctum::actingAs($this->reviewer);
+        $this->postJson($this->base()."/{$next}/approve")->assertOk();
+        $this->postJson($this->base()."/{$next}/export")->assertUnprocessable();
+        $this->postJson($this->base()."/{$next}/notice", ['confirmed' => true, 'sent_on' => '2026-10-11', 'channel' => 'letter', 'reference' => 'New postal proof'])->assertOk();
+        $newXml = $this->postJson($this->base()."/{$next}/export")->assertOk()->getContent();
+        $this->assertNotSame($xml, $newXml);
+        $this->assertSame($newXml, $this->postJson($this->base()."/{$next}/export")->assertOk()->getContent());
+        $this->postJson($this->base()."/{$next}/cancel", ['confirmed' => true, 'reason' => 'Too late'])->assertUnprocessable();
+        $this->postJson($this->path('retry'), ['confirmed' => true, 'reason' => 'Bank cause checked'])->assertOk();
+        $this->assertDatabaseHas('club_sepa_batch_items', ['club_sepa_batch_id' => $next, 'reserved_invoice_id' => $invoice->id]);
+        $this->assertSame(1, Activity::where('type', 'club.sepa.retry_authorized')->count());
+        $this->assertSame(1, Activity::where('type', 'club.sepa.returned')->count());
         $this->assertDatabaseCount('payments', 2);
     }
 

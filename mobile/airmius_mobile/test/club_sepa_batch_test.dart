@@ -35,6 +35,7 @@ class _Transport implements AirmiusApiTransport {
   String? providerStatus;
   String? bounceType;
   String status = 'approved';
+  String? cancellationReason;
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
@@ -52,6 +53,13 @@ class _Transport implements AirmiusApiTransport {
       }
       if (request.path.endsWith('/approve')) status = 'approved';
       if (request.path.endsWith('/notice')) status = 'notified';
+      if (request.path.endsWith('/cancel')) {
+        status = 'cancelled';
+        cancellationReason = request.body?['reason'] as String?;
+      }
+      if (request.path.endsWith('/retry')) {
+        settlement = {...?settlement, 'retry_authorized_at': '2026-10-11'};
+      }
       if (request.path.endsWith('/notices')) preparedNotices = true;
       if (request.path.endsWith('/notices/send')) mailStatus = 'queued';
       if (request.path.endsWith('/settle')) {
@@ -99,6 +107,8 @@ class _Transport implements AirmiusApiTransport {
               'id': 7,
               'reference': 'AIR-TEST',
               'status': status,
+              'cancelled_at': status == 'cancelled' ? '2026-10-11' : null,
+              'cancellation_reason': cancellationReason,
               'created_by': 9,
               'creditor_name': 'Testverein',
               'creditor_id': 'DE-TEST',
@@ -525,6 +535,60 @@ void main() {
     },
   );
 
+  testWidgets(
+    'cancellation requires confirmation and leaves a terminal state',
+    (tester) async {
+      final transport = _Transport();
+      await _screen(tester, transport);
+      final label = sepaBatchLabels['de']!['cancel']!;
+      await tester.tap(find.widgetWithText(TextButton, label));
+      await tester.pumpAndSettle();
+      final submit = find.widgetWithText(FilledButton, label);
+      expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+      await tester.enterText(find.byType(TextField), 'Neu planen');
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(transport.requests.where((r) => r.method == 'POST'), isEmpty);
+      await tester.tap(find.widgetWithText(TextButton, label));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Neu planen');
+      await tester.ensureVisible(find.byType(Checkbox));
+      await tester.tap(find.byType(Checkbox));
+      await tester.pumpAndSettle();
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      final post = transport.requests.singleWhere((r) => r.method == 'POST');
+      expect(post.path, '/api/v1/clubs/2/sepa-batches/7/cancel');
+      expect(post.body, {'confirmed': true, 'reason': 'Neu planen'});
+      expect(find.textContaining('Storniert'), findsOneWidget);
+      expect(find.textContaining('Neu planen'), findsOneWidget);
+      expect(
+        find.text(sepaBatchLabels['de']!['cancelledHelp']!),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(TextButton, label), findsNothing);
+      expect(find.text(sepaBatchLabels['de']!['export']!), findsNothing);
+      expect(find.text(sepaBatchLabels['de']!['approve']!), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'exported run identifies the stored download and cannot be cancelled',
+    (tester) async {
+      await _screen(tester, _Transport()..status = 'exported');
+      expect(find.text(sepaBatchLabels['de']!['exportAgain']!), findsOneWidget);
+      expect(
+        find.text(sepaBatchLabels['de']!['exportAgainHelp']!),
+        findsOneWidget,
+      );
+      expect(find.text(sepaBatchLabels['de']!['cancel']!), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('Arabic batch list renders in RTL', (tester) async {
     await _screen(tester, _Transport(), language: AirmiusLanguage.ar);
     expect(find.text(sepaBatchLabels['ar']!['title']!), findsOneWidget);
@@ -719,6 +783,48 @@ void main() {
       });
       expect(find.textContaining(labels['result_returned']!), findsOneWidget);
       expect(find.textContaining('Restbetrag aktuell: 80,00'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'retry requires confirmation and releases only after submitting',
+    (tester) async {
+      final transport = _Transport()
+        ..enableResults = true
+        ..status = 'exported'
+        ..settlement = {
+          'status': 'returned',
+          'returned_by': 10,
+          'returned_on': '2026-10-11',
+          'return_reason': 'Bank reason',
+          'return_reference': 'RETURN',
+        };
+      await _screen(tester, transport);
+      final labels = sepaBatchLabels['de']!;
+      await tester.ensureVisible(find.text(labels['retryItem']!));
+      await tester.tap(find.text(labels['retryItem']!));
+      await tester.pumpAndSettle();
+      final submit = find.widgetWithText(FilledButton, labels['retryItem']!);
+      expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+      expect(find.text(labels['retryReason']!), findsOneWidget);
+      await tester.enterText(find.byType(TextFormField), 'Bank cause checked');
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(transport.requests.where((r) => r.method == 'POST'), isEmpty);
+      await tester.tap(find.text(labels['retryItem']!));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), 'Bank cause checked');
+      await tester.ensureVisible(find.byType(Checkbox));
+      await tester.tap(find.byType(Checkbox));
+      await tester.pumpAndSettle();
+      await tester.tap(submit);
+      await tester.pumpAndSettle();
+      final post = transport.requests.singleWhere((r) => r.method == 'POST');
+      expect(post.path, '/api/v1/clubs/2/sepa-batches/7/items/1/retry');
+      expect(post.body, {'confirmed': true, 'reason': 'Bank cause checked'});
+      expect(find.text(labels['retryAllowed']!), findsOneWidget);
+      expect(find.text(labels['retryItem']!), findsNothing);
       expect(tester.takeException(), isNull);
     },
   );

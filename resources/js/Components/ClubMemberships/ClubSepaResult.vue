@@ -50,7 +50,7 @@ function submit() {
                         </select>
                     </label>
                     <p v-if="action === 'return' && !result?.payment_id" class="text-sm text-secondary">{{ c('returnHelp') }}</p>
-                    <label v-if="action !== 'settle'" class="block">{{ c(action === 'return' ? 'returnReason' : 'reason') }} <textarea v-model="reason" required maxlength="2000" class="block w-full rounded border border-border bg-inputBg"></textarea></label>
+                    <label v-if="action !== 'settle'" class="block">{{ c(action === 'return' ? 'returnReason' : 'retryReason') }} <textarea v-model="reason" required maxlength="2000" class="block w-full rounded border border-border bg-inputBg"></textarea></label>
                     <template v-if="action === 'return'">
                         <label class="block">{{ c('bankFee') }} <input v-model="fee" type="number" min="0" max="999999.99" step="0.01" required class="rounded border border-border bg-inputBg"></label>
                         <p class="text-sm text-secondary">{{ c('feeHelp') }}</p>

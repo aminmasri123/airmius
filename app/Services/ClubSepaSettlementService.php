@@ -109,6 +109,8 @@ class ClubSepaSettlementService
             $result = $item->settlement()->lockForUpdate()->first();
             abort_unless($result?->status === 'returned', 422, __('sepa.return_required'));
             if ($result->retry_authorized_at) {
+                abort_unless($result->retry_reason === trim($reason), 422, __('sepa.result_recorded'));
+
                 return $result;
             }
             abort_if((int) $result->returned_by === $actor->id, 422, __('sepa.second_person'));

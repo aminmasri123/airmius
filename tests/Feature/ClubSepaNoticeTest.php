@@ -195,7 +195,7 @@ class ClubSepaNoticeTest extends TestCase
         $mock = $this->mock(ClubSepaNoticeMailer::class);
         $mock->shouldNotReceive('send');
         app(ClubSepaNoticeService::class)->deliver($notice->id);
-        $this->postJson($this->path('/cancel'), ['reason' => 'Replan'])->assertOk();
+        $this->postJson($this->path('/cancel'), ['confirmed' => true, 'reason' => 'Replan'])->assertOk();
         $this->assertSame('cancelled', $this->batch->fresh()->status);
     }
 
@@ -203,9 +203,9 @@ class ClubSepaNoticeTest extends TestCase
     {
         $notice = $this->prepare();
         $notice->update(['status' => 'sending', 'started_at' => now()]);
-        $this->postJson($this->path('/cancel'), ['reason' => 'Replan'])->assertUnprocessable();
+        $this->postJson($this->path('/cancel'), ['confirmed' => true, 'reason' => 'Replan'])->assertUnprocessable();
         $this->travel(11)->minutes();
-        $this->postJson($this->path('/cancel'), ['reason' => 'Check bank and mail status'])->assertOk();
+        $this->postJson($this->path('/cancel'), ['confirmed' => true, 'reason' => 'Check bank and mail status'])->assertOk();
         $this->assertSame('uncertain', $notice->fresh()->status);
     }
 

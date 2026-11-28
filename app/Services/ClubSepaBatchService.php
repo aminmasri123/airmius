@@ -122,6 +122,12 @@ final class ClubSepaBatchService
     public function cancel(ClubSepaBatch $batch, User $actor, string $reason): ClubSepaBatch
     {
         return $this->change($batch, function ($locked) use ($actor, $reason) {
+            $reason = trim($reason);
+            if ($locked->status === 'cancelled') {
+                abort_unless($locked->cancellation_reason === $reason, 422, __('sepa.state'));
+
+                return;
+            }
             abort_unless(in_array($locked->status, ['draft', 'approved', 'notified'], true), 422, __('sepa.cancel_exported'));
             app(ClubSepaNoticeService::class)->stopPending($locked);
             $locked->items()->update(['reserved_invoice_id' => null]);

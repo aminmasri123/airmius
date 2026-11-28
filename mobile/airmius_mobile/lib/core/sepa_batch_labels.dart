@@ -16,6 +16,15 @@ const sepaBatchLabels = <String, Map<String, String>>{
         "Erneutes Senden berücksichtigt nur vorbereitete, wartende oder gesperrte Nachrichten. Bereits übergebene oder unklare Nachrichten werden nicht erneut versendet. Geänderte Empfänger erfordern einen neuen Lauf; vorher den bisherigen Versand prüfen.",
     "noticeAttention":
         "Mindestens eine Nachricht benötigt Prüfung. Öffne „Nachrichten prüfen“. Bei unklarem Versand oder Zurückweisung zuerst den Mailanbieter und den Empfänger prüfen; kein automatischer Neuversand.",
+    "cancelHelp":
+        "Der Lauf wird endgültig geschlossen. Die Rechnungen werden für einen neuen Lauf freigegeben. Bereits versendete Vorabinformationen bleiben versendet.",
+    "cancelConfirm": "Ich bestätige die Stornierung dieses Laufs.",
+    "cancelledHelp":
+        "Dieser Lauf ist storniert und kann nicht mehr freigegeben oder exportiert werden.",
+    "exportAgain": "Dieselbe Bankdatei erneut herunterladen",
+    "exportAgainHelp":
+        "Der Download enthält dieselbe Bankdatei und erzeugt keinen neuen Einzug. Nicht erneut bei der Bank einreichen. Ein exportierter Lauf kann hier nicht storniert werden; den Bankstatus separat klären.",
+    "retryReason": "Grund für erneuten Einzug",
     "introSingle":
         "Einzel-Freigabe: Prüfe Rechnungen, Empfänger, Beträge und Einzugsdatum vor der Freigabe. Danach Vorabinformationen versenden und die Bankdatei herunterladen.",
     "approvalMode": "Freigaberegel",
@@ -128,6 +137,15 @@ const sepaBatchLabels = <String, Map<String, String>>{
         "Sending again processes only prepared, queued or blocked messages. Accepted or uncertain messages are never resent. Changed recipients require a new batch; check previous dispatch first.",
     "noticeAttention":
         "At least one message needs attention. Open “Review messages”. For uncertain dispatch or a bounce, check the mail provider and recipient first; there is no automatic resend.",
+    "cancelHelp":
+        "This run will be closed permanently. Its invoices will be released for a new run. Notices already sent remain sent.",
+    "cancelConfirm": "I confirm cancellation of this run.",
+    "cancelledHelp":
+        "This run is cancelled and can no longer be approved or exported.",
+    "exportAgain": "Download the same bank file again",
+    "exportAgainHelp":
+        "The download contains the same bank file and does not create a new debit. Do not submit it to the bank again. An exported run cannot be cancelled here; clarify its status with the bank.",
+    "retryReason": "Reason for a new debit",
     "introSingle":
         "Single approval: Check invoices, recipients, amounts and collection date before approval. Then send advance notices and download the bank file.",
     "approvalMode": "Approval rule",
@@ -239,6 +257,14 @@ const sepaBatchLabels = <String, Map<String, String>>{
         "Un nouvel envoi traite uniquement les messages préparés, en attente ou bloqués. Les messages acceptés ou incertains ne sont jamais renvoyés. Un destinataire modifié nécessite un nouveau lot ; vérifiez d’abord les envois précédents.",
     "noticeAttention":
         "Au moins un message doit être vérifié. Ouvrez « Vérifier les messages ». En cas d’envoi incertain ou de rejet, vérifiez d’abord le prestataire et le destinataire ; aucun renvoi automatique.",
+    "cancelHelp":
+        "Ce lot sera clôturé définitivement. Les factures seront libérées pour un nouveau lot. Les avis déjà envoyés restent envoyés.",
+    "cancelConfirm": "Je confirme l’annulation de ce lot.",
+    "cancelledHelp": "Ce lot est annulé et ne peut plus être approuvé ni exporté.",
+    "exportAgain": "Télécharger à nouveau le même fichier bancaire",
+    "exportAgainHelp":
+        "Le téléchargement contient le même fichier bancaire et ne crée aucun nouveau prélèvement. Ne le soumettez pas de nouveau à la banque. Un lot exporté ne peut pas être annulé ici ; vérifiez son statut auprès de la banque.",
+    "retryReason": "Motif du nouveau prélèvement",
     "introSingle":
         "Validation individuelle : vérifiez les factures, destinataires, montants et date de prélèvement. Envoyez ensuite les préavis et téléchargez le fichier bancaire.",
     "approvalMode": "Règle de validation",
@@ -352,6 +378,14 @@ const sepaBatchLabels = <String, Map<String, String>>{
         "تعالج إعادة الإرسال الرسائل المعدّة أو المنتظرة أو المحظورة فقط. لا تُرسل الرسائل المقبولة أو غير المؤكدة مجددًا. يتطلب تغيير المستلم دفعة جديدة؛ تحقّق من الإرسال السابق أولًا.",
     "noticeAttention":
         "تحتاج رسالة واحدة على الأقل إلى مراجعة. افتح مراجعة الرسائل. عند غموض الإرسال أو رفضه، تحقّق من مزوّد البريد والمستلم أولًا؛ لا توجد إعادة إرسال تلقائية.",
+    "cancelHelp":
+        "سيتم إغلاق هذه الدفعة نهائياً وتحرير الفواتير لدفعة جديدة. الإشعارات المرسلة تبقى مرسلة.",
+    "cancelConfirm": "أؤكد إلغاء هذه الدفعة.",
+    "cancelledHelp": "هذه الدفعة ملغاة ولا يمكن اعتمادها أو تصديرها مجدداً.",
+    "exportAgain": "تنزيل الملف البنكي نفسه مجدداً",
+    "exportAgainHelp":
+        "يحتوي التنزيل على الملف البنكي نفسه ولا ينشئ خصماً جديداً. لا ترسله إلى البنك مجدداً. لا يمكن إلغاء دفعة مصدرة هنا؛ تحقق من حالتها لدى البنك.",
+    "retryReason": "سبب الخصم الجديد",
     "introSingle":
         "موافقة فردية: تحقق من الفواتير والمستلمين والمبالغ وتاريخ الخصم قبل الموافقة، ثم أرسل الإشعارات المسبقة ونزّل الملف البنكي.",
     "approvalMode": "قاعدة الموافقة",
