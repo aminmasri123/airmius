@@ -1048,7 +1048,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
         builder: (_) => Scaffold(
           appBar: AppBar(
             title: Text(
-              AirmiusScope.of(context).t('commerceAdv.requestWebsite'),
+              websiteText(context, 'agencyRequest'),
             ),
           ),
           body: SafeArea(
@@ -2863,6 +2863,13 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
   final _title = TextEditingController();
   final _audience = TextEditingController();
   final _inspiration = TextEditingController();
+  final _budget = TextEditingController();
+  final _deadline = TextEditingController();
+  final _brandGuidelines = TextEditingController();
+  String _requestType = 'campaign';
+  String _contactPreference = 'app';
+  final Set<String> _deliverables = {};
+  final Set<String> _channels = {};
   int? _clubId;
   bool _saveDraft = false;
   bool _acceptedPrivacy = false;
@@ -2886,6 +2893,9 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
     _title.dispose();
     _audience.dispose();
     _inspiration.dispose();
+    _budget.dispose();
+    _deadline.dispose();
+    _brandGuidelines.dispose();
     super.dispose();
   }
 
@@ -2903,6 +2913,21 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
             const SizedBox(height: 16),
             Text(websiteText(context, 'noCharge')),
             const SizedBox(height: 24),
+            DropdownButtonFormField<String>(
+              initialValue: _requestType,
+              decoration: InputDecoration(
+                labelText: websiteText(context, 'requestType'),
+              ),
+              items: const [
+                'campaign', 'social_media', 'print', 'logo_branding',
+                'video', 'photo', 'website', 'other',
+              ].map((value) => DropdownMenuItem(
+                value: value,
+                child: Text(websiteText(context, 'type.$value')),
+              )).toList(),
+              onChanged: (value) => setState(() => _requestType = value ?? 'other'),
+            ),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _title,
               maxLength: 255,
@@ -2938,6 +2963,82 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
                 labelText: t('commerceAdv.domain'),
                 hintText: 'mein-verein.de',
               ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              websiteText(context, 'deliverables'),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: const ['strategy', 'copy', 'design', 'banner', 'social_post', 'print_file', 'logo', 'photo', 'video', 'landing_page', 'other'].map((value) =>
+                FilterChip(
+                  label: Text(websiteText(context, 'deliverable.$value')),
+                  selected: _deliverables.contains(value),
+                  onSelected: (selected) => setState(() => selected ? _deliverables.add(value) : _deliverables.remove(value)),
+                ),
+              ).toList(),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              websiteText(context, 'channels'),
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: const ['website', 'app', 'instagram', 'facebook', 'linkedin', 'tiktok', 'youtube', 'email', 'print', 'outdoor', 'other'].map((value) =>
+                FilterChip(
+                  label: Text(websiteText(context, 'channel.$value')),
+                  selected: _channels.contains(value),
+                  onSelected: (selected) => setState(() => selected ? _channels.add(value) : _channels.remove(value)),
+                ),
+              ).toList(),
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _budget,
+              maxLength: 80,
+              decoration: InputDecoration(labelText: websiteText(context, 'budget')),
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _deadline,
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: websiteText(context, 'deadline'),
+                suffixIcon: const Icon(Icons.calendar_today_outlined),
+              ),
+              onTap: () async {
+                final now = DateTime.now();
+                final value = await showDatePicker(
+                  context: context,
+                  firstDate: DateTime(now.year, now.month, now.day),
+                  lastDate: DateTime(now.year + 5),
+                );
+                if (value != null) _deadline.text = value.toIso8601String().split('T').first;
+              },
+            ),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _brandGuidelines,
+              minLines: 2,
+              maxLines: 5,
+              maxLength: 2000,
+              decoration: InputDecoration(labelText: websiteText(context, 'brandGuidelines')),
+            ),
+            const SizedBox(height: 20),
+            DropdownButtonFormField<String>(
+              initialValue: _contactPreference,
+              decoration: InputDecoration(labelText: websiteText(context, 'contactPreference')),
+              items: const ['app', 'email', 'phone'].map((value) => DropdownMenuItem(
+                value: value,
+                child: Text(websiteText(context, 'contact.$value')),
+              )).toList(),
+              onChanged: (value) => setState(() => _contactPreference = value ?? 'app'),
             ),
             const SizedBox(height: 20),
             TextFormField(
@@ -3031,6 +3132,7 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
                   return;
                 }
                 Navigator.pop(context, {
+                  'request_type': _requestType,
                   'club_id': _clubId,
                   'project_title': _title.text.trim(),
                   'target_audience': _audience.text.trim(),
@@ -3041,6 +3143,12 @@ class _WebsiteRequestSheetState extends State<_WebsiteRequestSheet> {
                       .toList(),
                   'domain': _domain.text.trim(),
                   'goals': _goals.text.trim(),
+                  'deliverables': _deliverables.toList(),
+                  'channels': _channels.toList(),
+                  'budget_range': _budget.text.trim(),
+                  'desired_deadline': _deadline.text.trim().isEmpty ? null : _deadline.text.trim(),
+                  'brand_guidelines': _brandGuidelines.text.trim(),
+                  'contact_preference': _contactPreference,
                   'notes': _notes.text.trim(),
                   'accepted_privacy': true,
                   'status': _saveDraft ? 'draft' : 'new',

@@ -38,6 +38,7 @@ class _AdminCommerceOperationsScreenState
   final Map<String, TextEditingController> _searches = {};
   final Set<String> _invalidSearches = {};
   final Set<int> _selectedProducts = {};
+  final Map<int, String> _campaignStatusDrafts = {};
   bool _busy = false;
 
   AirmiusApiClient get _client {
@@ -1103,13 +1104,78 @@ class _AdminCommerceOperationsScreenState
               padding: const EdgeInsets.only(bottom: 10),
               child: _simpleCard(
                 title: _text(item['name'], fallback: t('adminHub.campaign')),
-                status: _text(item['status'], fallback: 'draft'),
+                status: _campaignStatusLabel(
+                  _text(item['status'], fallback: 'draft'),
+                ),
                 subtitle:
                     '${_text(item['placement'], fallback: '–')} · ${_money(_int(item['budget_cents']))}',
                 onEdit: () => _editCampaign(item),
+                extra: _campaignStatusEditor(item),
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  String _campaignStatusLabel(String status) => status == 'pending_payment'
+      ? t('outfit.status.pending_payment')
+      : t('sponsorCockpit.status.$status');
+
+  Widget _campaignStatusEditor(Map<String, dynamic> item) {
+    final current = _text(item['status'], fallback: 'draft');
+    final id = _int(item['id']);
+    final selected = _campaignStatusDrafts[id] ?? current;
+    final statuses = [
+      'draft',
+      'pending_payment',
+      'pending_review',
+      'active',
+      'paused',
+      'completed',
+      'rejected',
+    ];
+    if (item['user_id'] != null &&
+        !['pending_review', 'paused', 'active'].contains(current)) {
+      statuses.remove('active');
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          key: ValueKey('campaign-status-$id-$current'),
+          initialValue: selected,
+          isExpanded: true,
+          decoration: InputDecoration(labelText: t('commerceOps.status')),
+          items: statuses
+              .map(
+                (status) => DropdownMenuItem(
+                  value: status,
+                  child: Text(_campaignStatusLabel(status)),
+                ),
+              )
+              .toList(),
+          onChanged: _busy
+              ? null
+              : (value) => setState(
+                  () => _campaignStatusDrafts[id] = value ?? current,
+                ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton.tonalIcon(
+          onPressed: _busy || selected == current
+              ? null
+              : () => _run(() async {
+                  final response = await _client.adminUpdateCampaign(id, {
+                    'status': selected,
+                  });
+                  _campaignStatusDrafts.remove(id);
+                  return response;
+                }, success: t('commerceOps.saved')),
+          icon: const Icon(Icons.save_outlined),
+          label: Text(t('common.save')),
+        ),
       ],
     );
   }
@@ -1371,6 +1437,7 @@ class _AdminCommerceOperationsScreenState
     VoidCallback? onEdit,
     VoidCallback? onDelete,
     String? actionLabel,
+    Widget? extra,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1383,6 +1450,7 @@ class _AdminCommerceOperationsScreenState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _cardHeader(Icons.circle_outlined, title, status),
+          ?extra,
           if (subtitle.isNotEmpty) ...[
             const SizedBox(height: 7),
             Text(subtitle),

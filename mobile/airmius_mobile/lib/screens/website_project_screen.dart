@@ -357,9 +357,14 @@ class _WebsiteProjectScreenState extends State<WebsiteProjectScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     for (final entry in {
+                      'request_type': websiteText(context, 'requestType'),
                       'domain': t('commerceAdv.domain'),
                       'goals': w('brief'),
                       'target_audience': w('audience'),
+                      'budget_range': websiteText(context, 'budget'),
+                      'desired_deadline': websiteText(context, 'deadline'),
+                      'brand_guidelines': websiteText(context, 'brandGuidelines'),
+                      'contact_preference': websiteText(context, 'contactPreference'),
                       'notes': t('commerceAdv.notes'),
                     }.entries)
                       if ('${project[entry.key] ?? ''}'.isNotEmpty)
@@ -373,7 +378,33 @@ class _WebsiteProjectScreenState extends State<WebsiteProjectScreen> {
                                 style: Theme.of(context).textTheme.titleSmall,
                               ),
                               const SizedBox(height: 6),
-                              SelectableText('${project[entry.key]}'),
+                              SelectableText(
+                                entry.key == 'request_type'
+                                    ? websiteText(context, 'type.${project[entry.key]}')
+                                    : entry.key == 'contact_preference'
+                                        ? websiteText(context, 'contact.${project[entry.key]}')
+                                        : '${project[entry.key]}',
+                              ),
+                            ],
+                          ),
+                        ),
+                    for (final entry in {
+                      'deliverables': websiteText(context, 'deliverables'),
+                      'channels': websiteText(context, 'channels'),
+                    }.entries)
+                      if ((project[entry.key] as List? ?? []).isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(entry.value, style: Theme.of(context).textTheme.titleSmall),
+                              const SizedBox(height: 6),
+                              SelectableText(
+                                (project[entry.key] as List)
+                                    .map((value) => websiteText(context, '${entry.key == 'deliverables' ? 'deliverable' : 'channel'}.$value'))
+                                    .join(' · '),
+                              ),
                             ],
                           ),
                         ),

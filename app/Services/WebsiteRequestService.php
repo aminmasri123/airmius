@@ -10,6 +10,9 @@ use Illuminate\Validation\Rule;
 class WebsiteRequestService
 {
     public const STATUSES = ['new', 'contacted', 'quoted', 'in_progress', 'done', 'cancelled'];
+    public const REQUEST_TYPES = ['website', 'campaign', 'social_media', 'print', 'logo_branding', 'video', 'photo', 'other'];
+    public const DELIVERABLES = ['strategy', 'copy', 'design', 'banner', 'social_post', 'print_file', 'logo', 'photo', 'video', 'landing_page', 'other'];
+    public const CHANNELS = ['website', 'app', 'instagram', 'facebook', 'linkedin', 'tiktok', 'youtube', 'email', 'print', 'outdoor', 'other'];
 
     /** @return array<string, array<int, mixed>> */
     public static function publicRules(): array
@@ -30,6 +33,7 @@ class WebsiteRequestService
     public static function authenticatedRules(): array
     {
         return [
+            'request_type' => ['sometimes', Rule::in(self::REQUEST_TYPES)],
             'project_title' => ['nullable', 'string', 'max:255'],
             'status' => ['sometimes', Rule::in(['draft', 'new'])],
             'target_audience' => ['nullable', 'string', 'max:2000'],
@@ -38,6 +42,14 @@ class WebsiteRequestService
             'club_id' => ['nullable', Rule::exists('clubs', 'id')],
             'domain' => ['nullable', 'string', 'max:255'],
             'goals' => ['nullable', 'string', 'max:2000'],
+            'deliverables' => ['nullable', 'array', 'max:11'],
+            'deliverables.*' => ['required', Rule::in(self::DELIVERABLES)],
+            'channels' => ['nullable', 'array', 'max:11'],
+            'channels.*' => ['required', Rule::in(self::CHANNELS)],
+            'budget_range' => ['nullable', 'string', 'max:80'],
+            'desired_deadline' => ['nullable', 'date', 'after_or_equal:today'],
+            'brand_guidelines' => ['nullable', 'string', 'max:2000'],
+            'contact_preference' => ['nullable', Rule::in(['app', 'email', 'phone'])],
             'notes' => ['nullable', 'string', 'max:2000'],
             'accepted_privacy' => ['accepted'],
         ];
@@ -98,7 +110,7 @@ class WebsiteRequestService
             $project = WebsiteRequest::query()->create([
                 ...collect($data)->except('accepted_privacy')->all(),
                 'status' => $data['status'] ?? 'new',
-                'package' => 'website_plus',
+                'package' => ($data['request_type'] ?? 'website') === 'website' ? 'website_plus' : 'agency_brief',
                 'consent_at' => now(),
                 'status_changed_at' => now(),
                 'retention_expires_at' => now()->addYear(),

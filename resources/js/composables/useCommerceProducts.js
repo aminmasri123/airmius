@@ -97,6 +97,7 @@ export function useCommerceProducts({
         inventories: [],
     })
     const websiteForm = useForm({
+        request_type: 'campaign',
         status: 'new',
         project_title: '',
         target_audience: '',
@@ -104,6 +105,12 @@ export function useCommerceProducts({
         club_id: '',
         domain: '',
         goals: '',
+        deliverables: [],
+        channels: [],
+        budget_range: '',
+        desired_deadline: '',
+        brand_guidelines: '',
+        contact_preference: 'app',
         notes: '',
         accepted_privacy: false,
     })
@@ -453,7 +460,7 @@ export function useCommerceProducts({
     const storeWebsiteRequest = () => websiteForm.post(route('auth.commerce.website-requests.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            websiteForm.reset('status', 'domain', 'goals', 'notes', 'accepted_privacy', 'project_title', 'target_audience', 'inspiration_urls')
+            websiteForm.reset('request_type', 'status', 'domain', 'goals', 'deliverables', 'channels', 'budget_range', 'desired_deadline', 'brand_guidelines', 'contact_preference', 'notes', 'accepted_privacy', 'project_title', 'target_audience', 'inspiration_urls')
             websiteRequestModal.value = false
         },
     })

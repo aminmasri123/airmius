@@ -993,7 +993,7 @@ const {
                 </div>
             </article>
 
-            <CommerceWebsiteRequestsPanel v-if="websiteClubs.length || websiteRequests.length" :clubs="websiteClubs" :website-requests="websiteRequests" :website-form="websiteForm" :website-request-modal="websiteRequestModal" @open-website-request-modal="openWebsiteRequestModal" @update:website-request-modal="websiteRequestModal = $event" @store-website-request="storeWebsiteRequest" />
+            <CommerceWebsiteRequestsPanel :clubs="websiteClubs" :website-requests="websiteRequests" :website-form="websiteForm" :website-request-modal="websiteRequestModal" @open-website-request-modal="openWebsiteRequestModal" @update:website-request-modal="websiteRequestModal = $event" @store-website-request="storeWebsiteRequest" />
         </section>
 
         <section v-if="activeTab === 'provider'" class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_28rem]">

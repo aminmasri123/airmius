@@ -14,6 +14,7 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import '../widgets/country_field.dart';
 import 'commerce_center_screen.dart';
+import 'website_project_screen.dart';
 import 'sponsor_application_screen.dart';
 import 'sponsors_center_screen.dart';
 
@@ -1590,10 +1591,14 @@ class _SponsorCockpitScreenState extends State<SponsorCockpitScreen> {
     final club = _text(_map(brief['club'])['name']);
     final package = _text(brief['package']);
     return ListTile(
+      onTap: () => _open(WebsiteProjectScreen(projectId: _int(brief['id']))),
       contentPadding: const EdgeInsetsDirectional.only(start: 32),
       dense: true,
       title: Text(
-        club.isNotEmpty ? club : package,
+        _text(
+          brief['project_title'],
+          fallback: club.isNotEmpty ? club : package,
+        ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.w800),

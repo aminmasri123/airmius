@@ -10,6 +10,9 @@ const files = ref([]), fileInput = ref(null), editing = ref(false), form = ref({
 const emit = defineEmits(['changed'])
 let retryKey = null, retryBody = null
 const statuses = { draft: 'Entwurf', new: 'Anfrage eingegangen', contacted: 'In Klärung', quoted: 'Angebot erstellt', in_progress: 'In Umsetzung', done: 'Abgeschlossen', cancelled: 'Storniert' }
+const requestTypes = { website: 'Website', campaign: 'Kampagne', social_media: 'Social Media', print: 'Printmaterial', logo_branding: 'Logo & Branding', video: 'Video', photo: 'Foto', other: 'Sonstiges' }
+const deliverableLabels = { strategy: 'Konzept & Strategie', copy: 'Texte', design: 'Design', banner: 'Banner', social_post: 'Social-Post', print_file: 'Druckdatei', logo: 'Logo', photo: 'Fotos', video: 'Video', landing_page: 'Landingpage', other: 'Sonstiges' }
+const channelLabels = { website: 'Website', app: 'App', instagram: 'Instagram', facebook: 'Facebook', linkedin: 'LinkedIn', tiktok: 'TikTok', youtube: 'YouTube', email: 'E-Mail', print: 'Print', outdoor: 'Außenwerbung', other: 'Sonstiges' }
 const date = value => value ? new Date(value).toLocaleString() : ''
 const safeLink = value => { try { return ['https:', 'http:'].includes(new URL(value).protocol) } catch { return false } }
 async function load(more = false) {
@@ -77,7 +80,7 @@ onMounted(() => load())
 <template>
     <section class="space-y-6 rounded-xl border border-border bg-bg p-5" :aria-busy="busy">
         <div class="flex flex-wrap items-center justify-between gap-4">
-            <h3 class="text-lg font-bold">{{ project?.project_title || `${w('Website-Projekt')} #${projectId}` }}</h3>
+            <h3 class="text-lg font-bold">{{ project?.project_title || `${w('Agenturauftrag')} #${projectId}` }}</h3>
             <button type="button" class="rounded-lg border border-border px-4 py-2" :disabled="busy" @click="load()">{{ w('Aktualisieren') }}</button>
         </div>
         <p v-if="error" role="alert" class="text-error">{{ error }}</p>
@@ -99,9 +102,13 @@ onMounted(() => load())
             <p class="text-sm text-secondary">{{ w('Anfrage → Rückfragen → Angebot → Umsetzung → Abschluss') }}</p>
             <p class="text-sm text-secondary">{{ w('Erstellt') }}: {{ date(project.created_at) }} · {{ w('Unverbindliche Anfrage, keine automatische kostenpflichtige Aktivierung.') }}</p>
             <dl class="grid gap-5 sm:grid-cols-2">
+                <div><dt class="font-semibold">{{ w('Auftragsart') }}</dt><dd class="mt-2 text-secondary">{{ w(requestTypes[project.request_type || 'website']) }}</dd></div>
                 <div v-for="(label, key) in { domain: 'Gewünschte Domain', goals: 'Ziele und Funktionen', target_audience: 'Zielgruppe', notes: 'Weitere Hinweise' }" :key="key">
                     <dt class="font-semibold">{{ w(label) }}</dt><dd class="mt-2 whitespace-pre-wrap break-words text-secondary">{{ project[key] || w('Noch nicht angegeben') }}</dd>
                 </div>
+                <div><dt class="font-semibold">{{ w('Gewünschte Leistungen') }}</dt><dd class="mt-2 text-secondary">{{ project.deliverables?.map(value => w(deliverableLabels[value] || value)).join(' · ') || w('Noch nicht angegeben') }}</dd></div>
+                <div><dt class="font-semibold">{{ w('Geplante Kanäle') }}</dt><dd class="mt-2 text-secondary">{{ project.channels?.map(value => w(channelLabels[value] || value)).join(' · ') || w('Noch nicht angegeben') }}</dd></div>
+                <div v-for="(label, key) in { budget_range: 'Budgetrahmen', desired_deadline: 'Gewünschter Fertigstellungstermin', brand_guidelines: 'Markenvorgaben', contact_preference: 'Bevorzugter Kontaktweg' }" :key="key"><dt class="font-semibold">{{ w(label) }}</dt><dd class="mt-2 whitespace-pre-wrap break-words text-secondary">{{ project[key] || w('Noch nicht angegeben') }}</dd></div>
             </dl>
             <div v-if="project.inspiration_urls?.length" class="space-y-3">
                 <h4 class="font-semibold">{{ w('Inspirationswebsites') }}</h4>

@@ -21,6 +21,35 @@ class WebsiteProjectCollaborationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_detailed_agency_brief_is_stored_and_only_visible_to_its_owner(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $project = app(WebsiteRequestService::class)->createForUser($owner, [
+            'request_type' => 'campaign',
+            'project_title' => 'Saisonkampagne',
+            'goals' => 'Neue Mitglieder gewinnen',
+            'target_audience' => 'Jugendliche und Eltern',
+            'deliverables' => ['strategy', 'banner', 'social_post'],
+            'channels' => ['instagram', 'website'],
+            'budget_range' => '500–1.000 EUR',
+            'desired_deadline' => now()->addMonth()->toDateString(),
+            'brand_guidelines' => 'Blau, sachlich und barrierearm',
+            'contact_preference' => 'app',
+        ]);
+
+        $this->assertSame('agency_brief', $project->package);
+        $this->assertSame(['strategy', 'banner', 'social_post'], $project->deliverables);
+        Sanctum::actingAs($owner);
+        $this->getJson('/api/v1/commerce/website-requests/'.$project->id)
+            ->assertOk()
+            ->assertJsonPath('data.request_type', 'campaign')
+            ->assertJsonPath('data.budget_range', '500–1.000 EUR')
+            ->assertJsonPath('data.contact_preference', 'app');
+        Sanctum::actingAs($stranger);
+        $this->getJson('/api/v1/commerce/website-requests/'.$project->id)->assertForbidden();
+    }
+
     private function admin(): User
     {
         $user = User::factory()->create(['two_factor_secret' => 'test', 'two_factor_confirmed_at' => now()]);

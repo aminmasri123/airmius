@@ -37,7 +37,12 @@ class WebsiteProjectController extends Controller
 
         return response()->json([
             'data' => [
-                ...$websiteRequest->only(['id', 'project_title', 'domain', 'goals', 'notes', 'target_audience', 'inspiration_urls', 'status', 'created_at', 'withdrawn_at']),
+                ...$websiteRequest->only([
+                    'id', 'request_type', 'project_title', 'domain', 'goals', 'deliverables',
+                    'channels', 'budget_range', 'desired_deadline', 'brand_guidelines',
+                    'contact_preference', 'notes', 'target_audience', 'inspiration_urls',
+                    'status', 'created_at', 'withdrawn_at',
+                ]),
                 'can_edit' => $this->access->edit($user, $websiteRequest),
                 'can_withdraw' => $this->access->withdraw($user, $websiteRequest),
                 'can_comment' => $this->access->comment($user, $websiteRequest),

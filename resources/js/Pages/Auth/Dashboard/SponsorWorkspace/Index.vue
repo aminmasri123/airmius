@@ -598,15 +598,15 @@ const roleLabel = (role) => ({
             <article class="surface-card p-5">
                 <div class="flex items-center justify-between gap-3">
                     <h2 class="text-lg font-bold text-primary">{{ t('sponsor_workspace.agency_briefs') }}</h2>
-                    <span class="rounded-full bg-inputBg px-2.5 py-1 text-xs font-bold text-secondary">{{ agencyBriefs.length }}</span>
+                    <div class="flex items-center gap-2"><span class="rounded-full bg-inputBg px-2.5 py-1 text-xs font-bold text-secondary">{{ agencyBriefs.length }}</span><Link :href="route('auth.commerce.index', { tab: 'create' })" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-bold text-buttonTextPrimary">{{ t('sponsor_workspace.new_agency_brief') }}</Link></div>
                 </div>
                 <p class="mt-2 text-xs leading-5 text-secondary">{{ t('sponsor_workspace.privacy_minimized_briefs') }}</p>
                 <div v-if="agencyBriefs.length" class="mt-4 space-y-3">
                     <Link v-for="brief in agencyBriefs.slice(0, 4)" :key="brief.key" :href="brief.action_url" class="flex items-center gap-3 rounded-lg border border-border bg-inputBg/50 p-3 hover:border-borderHover">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/10 text-violet-300"><i class="las la-clipboard-check text-xl"></i></span>
                         <span class="min-w-0 flex-1">
-                            <span class="block truncate text-sm font-bold text-primary">{{ brief.club?.name || brief.package }}</span>
-                            <span class="block text-xs text-secondary">{{ brief.has_domain ? t('sponsor_workspace.has_domain') : t('sponsor_workspace.no_domain') }} · {{ formatDate(brief.submitted_at) }}</span>
+                            <span class="block truncate text-sm font-bold text-primary">{{ brief.project_title || brief.club?.name || brief.request_type || brief.package }}</span>
+                            <span class="block text-xs text-secondary">{{ brief.request_type || 'website' }} · {{ formatDate(brief.submitted_at) }}</span>
                         </span>
                         <span class="rounded-full border px-2 py-1 text-[10px] font-bold" :class="statusTone(brief.status)">{{ statusLabel(brief.status) }}</span>
                     </Link>
